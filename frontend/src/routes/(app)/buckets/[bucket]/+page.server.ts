@@ -88,5 +88,32 @@ export const actions = {
 		}
 
 		return { success: true };
+	},
+
+	bulkDelete: async ({ params, request, locals }) => {
+		const formData = await request.formData();
+		const keys = formData.getAll('keys') as string[];
+
+		if (!keys.length) {
+			return fail(400, { error: 'At least one object key is required' });
+		}
+
+		let failCount = 0;
+		for (const key of keys) {
+			const response = await fetch(
+				`${BACKEND_URL}/api/v1/buckets/${encodeURIComponent(params.bucket)}/objects/${encodeURIComponent(key)}`,
+				{
+					method: 'DELETE',
+					headers: { Authorization: `Bearer ${locals.token}` }
+				}
+			);
+			if (!response.ok) failCount++;
+		}
+
+		if (failCount > 0) {
+			return fail(500, { error: `Failed to delete ${failCount} of ${keys.length} objects` });
+		}
+
+		return { success: true };
 	}
 } satisfies Actions;

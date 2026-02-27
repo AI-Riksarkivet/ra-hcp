@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { Dialog, Tooltip, Progress } from 'bits-ui';
+	import { AlertDialog, Dialog, Tooltip, Progress } from 'bits-ui';
 	import {
 		ArrowLeft, Upload, Trash2, Download, Folder, FileText,
-		Image, FileArchive, FileCode, X, CheckCircle, AlertCircle, Loader2
+		Image, FileArchive, FileCode, X, CheckCircle, AlertCircle, Loader2, Search
 	} from 'lucide-svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -28,6 +28,7 @@
 
 	interface FileUpload {
 		file: File;
+		key: string;
 		preview: string | null;
 		status: 'pending' | 'uploading' | 'done' | 'error';
 		progress: number;
@@ -72,7 +73,8 @@
 		if (!files) return;
 		for (const file of files) {
 			const preview = isImageFile(file) ? URL.createObjectURL(file) : null;
-			selectedFiles = [...selectedFiles, { file, preview, status: 'pending', progress: 0 }];
+			const key = (data.prefix || '') + file.name;
+			selectedFiles = [...selectedFiles, { file, key, preview, status: 'pending', progress: 0 }];
 		}
 	}
 
@@ -91,7 +93,7 @@
 	function uploadFile(index: number): Promise<void> {
 		return new Promise((resolve) => {
 			const item = selectedFiles[index];
-			const key = (data.prefix || '') + item.file.name;
+			const key = item.key;
 			const formData = new FormData();
 			formData.append('file', item.file);
 
@@ -162,6 +164,96 @@
 		parts.pop();
 		return parts.length > 0 ? parts.join('/') + '/' : '';
 	});
+
+	// Search
+	let search = $state('');
+	let filteredObjects = $derived(
+		data.objects.filter((obj: { key: string }) => {
+			if (!search) return true;
+			const q = search.toLowerCase();
+			return getDisplayName(obj.key).toLowerCase().includes(q) || obj.key.toLowerCase().includes(q);
+		})
+	);
+
+	// Multi-select
+	let selected = $state<Set<string>>(new Set());
+	let selectableObjects = $derived(
+		filteredObjects.filter((obj: { size: number; key: string }) => !isObjFolder(obj))
+	);
+	let allSelected = $derived(
+		selectableObjects.length > 0 && selectableObjects.every((obj: { key: string }) => selected.has(obj.key))
+	);
+
+	function toggleAll() {
+		if (allSelected) {
+			selected = new Set();
+		} else {
+			selected = new Set(selectableObjects.map((obj: { key: string }) => obj.key));
+		}
+	}
+
+	function toggleOne(key: string) {
+		const next = new Set(selected);
+		if (next.has(key)) {
+			next.delete(key);
+		} else {
+			next.add(key);
+		}
+		selected = next;
+	}
+
+	// Delete confirmation
+	let deleteTarget = $state<string | null>(null);
+	let bulkDeleteOpen = $state(false);
+	let deleting = $state(false);
+
+	async function confirmDelete() {
+		if (!deleteTarget) return;
+		deleting = true;
+		try {
+			const res = await fetch(
+				`/api/v1/buckets/${encodeURIComponent(data.bucket)}/objects/${encodeURIComponent(deleteTarget)}`,
+				{ method: 'DELETE' }
+			);
+			if (res.ok) {
+				toast.success(`Deleted ${getDisplayName(deleteTarget)}`);
+				await invalidateAll();
+			} else {
+				toast.error('Failed to delete object');
+			}
+		} finally {
+			deleting = false;
+			deleteTarget = null;
+		}
+	}
+
+	async function confirmBulkDelete() {
+		deleting = true;
+		const keys = [...selected];
+		let successCount = 0;
+		let failCount = 0;
+		for (const key of keys) {
+			try {
+				const res = await fetch(
+					`/api/v1/buckets/${encodeURIComponent(data.bucket)}/objects/${encodeURIComponent(key)}`,
+					{ method: 'DELETE' }
+				);
+				if (res.ok) {
+					successCount++;
+				} else {
+					failCount++;
+				}
+			} catch {
+				failCount++;
+			}
+		}
+		if (successCount > 0) toast.success(`Deleted ${successCount} object${successCount !== 1 ? 's' : ''}`);
+		if (failCount > 0) toast.error(`Failed to delete ${failCount} object${failCount !== 1 ? 's' : ''}`);
+		selected = new Set();
+		deleting = false;
+		bulkDeleteOpen = false;
+		await invalidateAll();
+	}
 </script>
 
 <svelte:head>
@@ -291,6 +383,17 @@
 									<p class="truncate text-sm font-medium text-surface-900 dark:text-surface-100">
 										{item.file.name}
 									</p>
+									{#if item.status === 'pending'}
+										<input
+											type="text"
+											value={item.key}
+											oninput={(e) => { selectedFiles[i] = { ...selectedFiles[i], key: e.currentTarget.value }; }}
+											class="mt-1 w-full rounded border border-surface-300 bg-white px-2 py-0.5 font-mono text-xs text-surface-600 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-400"
+											placeholder="Object key"
+										/>
+									{:else}
+										<p class="mt-0.5 truncate font-mono text-xs text-surface-400">{item.key}</p>
+									{/if}
 									<p class="text-xs text-surface-500">{formatBytes(item.file.size)}</p>
 									{#if item.status === 'uploading'}
 										<Progress.Root
@@ -371,11 +474,48 @@
 		</button>
 	{/if}
 
+	<!-- Search -->
+	<div class="relative">
+		<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+		<input
+			type="text"
+			bind:value={search}
+			placeholder="Search objects..."
+			class="w-full rounded-lg border border-surface-300 bg-white py-2 pl-10 pr-3 text-sm shadow-sm transition-colors placeholder:text-surface-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-100 dark:placeholder:text-surface-600"
+		/>
+	</div>
+
+	<!-- Bulk action bar -->
+	{#if selected.size > 0}
+		<div class="flex items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 px-4 py-2 dark:border-surface-800 dark:bg-surface-900">
+			<span class="text-sm font-medium text-surface-700 dark:text-surface-300">
+				{selected.size} selected
+			</span>
+			<Button variant="danger" size="sm" onclick={() => (bulkDeleteOpen = true)}>
+				<Trash2 class="h-3.5 w-3.5" />
+				Delete Selected
+			</Button>
+			<Button variant="ghost" size="sm" onclick={() => (selected = new Set())}>
+				Deselect All
+			</Button>
+		</div>
+	{/if}
+
 	<div class="overflow-x-auto rounded-lg border border-surface-200 dark:border-surface-800">
 		<table class="w-full text-left text-sm">
 			<thead class="border-b border-surface-200 bg-surface-50 text-xs uppercase tracking-wide text-surface-500 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-400">
 				<tr>
+					<th class="w-10 px-4 py-3">
+						<input
+							type="checkbox"
+							checked={allSelected}
+							onchange={toggleAll}
+							class="h-4 w-4 rounded border-surface-300 text-primary-600 focus:ring-primary-500 dark:border-surface-600"
+							disabled={selectableObjects.length === 0}
+						/>
+					</th>
 					<th class="px-4 py-3 font-medium">Name</th>
+					<th class="px-4 py-3 font-medium">Key</th>
 					<th class="w-32 px-4 py-3 font-medium">Size</th>
 					<th class="w-48 px-4 py-3 font-medium">Last Modified</th>
 					<th class="w-24 px-4 py-3 font-medium">Actions</th>
@@ -384,12 +524,18 @@
 			<tbody class="divide-y divide-surface-100 dark:divide-surface-800">
 				{#if data.objects.length === 0}
 					<tr>
-						<td colspan="4" class="px-4 py-8 text-center text-surface-500">
+						<td colspan="6" class="px-4 py-8 text-center text-surface-500">
 							No objects in this bucket
 						</td>
 					</tr>
+				{:else if filteredObjects.length === 0}
+					<tr>
+						<td colspan="6" class="px-4 py-8 text-center text-surface-500">
+							No results matching "{search}"
+						</td>
+					</tr>
 				{:else}
-					{#each data.objects as obj}
+					{#each filteredObjects as obj}
 						{@const folder = isObjFolder(obj)}
 						<tr
 							class="cursor-pointer bg-white transition-colors hover:bg-surface-50 dark:bg-surface-900 dark:hover:bg-surface-800"
@@ -398,6 +544,17 @@
 							role="button"
 							tabindex={0}
 						>
+							<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+							<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
+								{#if !folder}
+									<input
+										type="checkbox"
+										checked={selected.has(obj.key)}
+										onchange={() => toggleOne(obj.key)}
+										class="h-4 w-4 rounded border-surface-300 text-primary-600 focus:ring-primary-500 dark:border-surface-600"
+									/>
+								{/if}
+							</td>
 							<td class="px-4 py-3">
 								<span class="flex items-center gap-2">
 									{#if folder}
@@ -410,6 +567,23 @@
 										{getDisplayName(obj.key)}
 									</span>
 								</span>
+							</td>
+							<td class="px-4 py-3">
+								<Tooltip.Root>
+									<Tooltip.Trigger class="cursor-default">
+										<span class="block max-w-xs truncate font-mono text-xs text-surface-500 dark:text-surface-400">
+											{obj.key}
+										</span>
+									</Tooltip.Trigger>
+									<Tooltip.Portal>
+										<Tooltip.Content
+											sideOffset={8}
+											class="z-50 max-w-lg break-all rounded-lg border border-surface-200 bg-white px-3 py-1.5 font-mono text-xs shadow-lg dark:border-surface-700 dark:bg-surface-800"
+										>
+											{obj.key}
+										</Tooltip.Content>
+									</Tooltip.Portal>
+								</Tooltip.Root>
 							</td>
 							<td class="px-4 py-3 text-surface-500 dark:text-surface-400">
 								{folder ? '-' : formatBytes(obj.size)}
@@ -440,24 +614,13 @@
 										</Tooltip.Root>
 										<Tooltip.Root>
 											<Tooltip.Trigger class="cursor-default">
-												<form method="POST" action="?/delete" use:enhance={() => {
-													return async ({ result }) => {
-														if (result.type === 'success') {
-															toast.success(`Deleted ${getDisplayName(obj.key)}`);
-															await invalidateAll();
-														} else {
-															toast.error('Failed to delete object');
-														}
-													};
-												}}>
-													<input type="hidden" name="key" value={obj.key} />
-													<button
-														type="submit"
-														class="rounded-lg p-1.5 text-surface-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-													>
-														<Trash2 class="h-4 w-4" />
-													</button>
-												</form>
+												<button
+													type="button"
+													onclick={() => (deleteTarget = obj.key)}
+													class="rounded-lg p-1.5 text-surface-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+												>
+													<Trash2 class="h-4 w-4" />
+												</button>
 											</Tooltip.Trigger>
 											<Tooltip.Portal>
 												<Tooltip.Content
@@ -489,3 +652,56 @@
 		/>
 	{/if}
 </div>
+
+<!-- Single delete confirmation -->
+<AlertDialog.Root
+	open={deleteTarget !== null}
+	onOpenChange={(open) => { if (!open) deleteTarget = null; }}
+>
+	<AlertDialog.Portal>
+		<AlertDialog.Overlay class="fixed inset-0 z-50 bg-black/50" />
+		<AlertDialog.Content class="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-surface-200 bg-white p-6 shadow-xl dark:border-surface-800 dark:bg-surface-900">
+			<AlertDialog.Title class="text-lg font-semibold text-surface-900 dark:text-surface-100">
+				Delete Object
+			</AlertDialog.Title>
+			<AlertDialog.Description class="mt-2 text-sm text-surface-500 dark:text-surface-400">
+				Are you sure you want to delete "<strong class="text-surface-700 dark:text-surface-300">{deleteTarget ? getDisplayName(deleteTarget) : ''}</strong>"? This action cannot be undone.
+			</AlertDialog.Description>
+			<div class="mt-4 flex justify-end gap-2">
+				<AlertDialog.Cancel>
+					<Button variant="ghost" disabled={deleting}>Cancel</Button>
+				</AlertDialog.Cancel>
+				<AlertDialog.Action>
+					<Button variant="danger" onclick={confirmDelete} disabled={deleting}>
+						{deleting ? 'Deleting...' : 'Delete'}
+					</Button>
+				</AlertDialog.Action>
+			</div>
+		</AlertDialog.Content>
+	</AlertDialog.Portal>
+</AlertDialog.Root>
+
+<!-- Bulk delete confirmation -->
+<AlertDialog.Root bind:open={bulkDeleteOpen}>
+	<AlertDialog.Portal>
+		<AlertDialog.Overlay class="fixed inset-0 z-50 bg-black/50" />
+		<AlertDialog.Content class="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-surface-200 bg-white p-6 shadow-xl dark:border-surface-800 dark:bg-surface-900">
+			<AlertDialog.Title class="text-lg font-semibold text-surface-900 dark:text-surface-100">
+				Delete {selected.size} Object{selected.size !== 1 ? 's' : ''}
+			</AlertDialog.Title>
+			<AlertDialog.Description class="mt-2 text-sm text-surface-500 dark:text-surface-400">
+				Are you sure you want to delete {selected.size} object{selected.size !== 1 ? 's' : ''}? This action cannot be undone.
+			</AlertDialog.Description>
+			<div class="mt-4 flex justify-end gap-2">
+				<AlertDialog.Cancel>
+					<Button variant="ghost" disabled={deleting}>Cancel</Button>
+				</AlertDialog.Cancel>
+				<AlertDialog.Action>
+					<Button variant="danger" onclick={confirmBulkDelete} disabled={deleting}>
+						{deleting ? 'Deleting...' : `Delete ${selected.size} Object${selected.size !== 1 ? 's' : ''}`}
+					</Button>
+				</AlertDialog.Action>
+			</div>
+		</AlertDialog.Content>
+	</AlertDialog.Portal>
+</AlertDialog.Root>
