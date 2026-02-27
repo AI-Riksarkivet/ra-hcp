@@ -22,6 +22,7 @@
 - dagger build system 
 - dockerfiles
 - helm chart
+- special marker if a bycket is lakefs
 - mock more of backend but also a dev state for frontend
 - research best practices for test suite with deno and sveltkit
 - utilize more page abd layout utils of sveltekit ! and utilize sveltekit more in general 
