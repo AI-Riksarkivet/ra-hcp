@@ -1,0 +1,24 @@
+- fix docs
+- backend with namespaces
+- bucket are under tensntw, see minio ui for example
+- fix user and groups
+- fix log collector
+- fix redis cache for backend
+- fix error handling in backend 500 and how to forward to frontend
+- test so mulitipart upload is really working in frontend and in backend, and that it is atomic. 
+- fix sync between buckets
+- fix acess control
+- test how openfga would work 
+- fix nfs supoort 
+- fix what different user can see and do 
+- fix so we use superforms 
+- fix forms and add more padding to modal
+- fix skeletons when loading state in ui for differnt elements
+- use search api in tenant instead primitive in frontend
+- fix dashboard
+- add more metadata of the uploaded file a metatab that open from right sidebar
+- add support for sync between 1:1 buckets between tenants (must auth for the other tenant) can we use redis as layer between?
+- add middleware
+- dagger build system 
+- dockerfiles
+- helm chart
