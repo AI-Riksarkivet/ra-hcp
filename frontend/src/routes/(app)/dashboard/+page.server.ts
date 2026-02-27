@@ -15,10 +15,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 			? await healthRes.value.json()
 			: { status: 'unknown' };
 
-	const buckets =
+	const bucketsData =
 		bucketsRes.status === 'fulfilled' && bucketsRes.value.ok
 			? await bucketsRes.value.json()
 			: { buckets: [], owner: '' };
+
+	// Normalize to ensure consistent shape
+	const buckets = {
+		buckets: bucketsData.buckets ?? [],
+		owner: bucketsData.owner ?? ''
+	};
 
 	return { health, buckets };
 };

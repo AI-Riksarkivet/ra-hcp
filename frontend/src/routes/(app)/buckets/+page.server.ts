@@ -14,7 +14,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	const data = await response.json();
-	return { buckets: data.buckets ?? [], owner: data.owner ?? '' };
+	// Backend may return PascalCase (Name, CreationDate) — normalize
+	const buckets = (data.buckets ?? []).map((b: Record<string, unknown>) => ({
+		name: b.name ?? b.Name ?? '',
+		creation_date: b.creation_date ?? b.CreationDate ?? ''
+	}));
+	return { buckets, owner: data.owner ?? '' };
 };
 
 export const actions = {

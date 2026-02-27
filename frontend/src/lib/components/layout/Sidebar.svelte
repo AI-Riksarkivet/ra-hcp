@@ -24,17 +24,20 @@
 		{ href: '/users', label: 'Users', icon: Users }
 	] as const;
 
-	onMount(async () => {
-		if (!sidebarEl) return;
-		const { gsap } = await import('gsap');
+	let gsapModule: typeof import('gsap') | undefined = $state();
 
-		$effect(() => {
-			gsap.to(sidebarEl!, {
+	onMount(async () => {
+		gsapModule = await import('gsap');
+	});
+
+	$effect(() => {
+		if (sidebarEl && gsapModule) {
+			gsapModule.gsap.to(sidebarEl, {
 				width: collapsed ? 64 : 256,
 				duration: 0.3,
 				ease: 'power2.out'
 			});
-		});
+		}
 	});
 </script>
 
