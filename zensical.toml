@@ -1,0 +1,73 @@
+[project]
+site_name = "HCP App"
+site_description = "Hitachi Content Platform application — unified FastAPI service for S3-compatible object storage and HCP Management API operations."
+site_author = "HCP App Team"
+copyright = "Copyright &copy; 2026 HCP App"
+
+nav = [
+  { "HCP App" = [
+    "index.md",
+  ]},
+  { "Getting Started" = [
+    { "Quick Start" = "getting-started/index.md" },
+    { "Configuration" = "getting-started/configuration.md" },
+  ]},
+  { "API Reference" = [
+    { "Overview" = "api/index.md" },
+    { "Authentication" = "api/authentication.md" },
+    { "S3 Buckets" = "api/s3-buckets.md" },
+    { "S3 Objects" = "api/s3-objects.md" },
+    { "Tenants" = "api/tenants.md" },
+    { "Namespaces" = "api/namespaces.md" },
+    { "System" = "api/system.md" },
+  ]},
+]
+
+# ----------------------------------------------------------------------------
+# Theme
+# ----------------------------------------------------------------------------
+[project.theme]
+language = "en"
+
+features = [
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
+    "content.tabs.link",
+    "content.tooltips",
+    "content.footnote.tooltips",
+    "navigation.footer",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.path",
+    "navigation.tabs",
+    "navigation.tabs.sticky",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+]
+
+# ----------------------------------------------------------------------------
+# Color palette (light/dark toggle)
+# ----------------------------------------------------------------------------
+[[project.theme.palette]]
+scheme = "default"
+primary = "blue"
+accent = "light-blue"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+primary = "blue"
+accent = "light-blue"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+# ----------------------------------------------------------------------------
+# Markdown extensions
+# ----------------------------------------------------------------------------
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]

@@ -1,0 +1,249 @@
+"""Common models shared across HCP MAPI resources."""
+
+from __future__ import annotations
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List
+from enum import Enum
+
+
+# ── Enums ──────────────────────────────────────────────────────────────
+
+class Permission(str, Enum):
+    BROWSE = "BROWSE"
+    READ = "READ"
+    WRITE = "WRITE"
+    DELETE = "DELETE"
+    PURGE = "PURGE"
+    SEARCH = "SEARCH"
+    PRIVILEGED = "PRIVILEGED"
+    READ_ACL = "READ_ACL"
+    WRITE_ACL = "WRITE_ACL"
+    CHOWN = "CHOWN"
+
+
+class Role(str, Enum):
+    ADMINISTRATOR = "ADMINISTRATOR"
+    COMPLIANCE = "COMPLIANCE"
+    MONITOR = "MONITOR"
+    SECURITY = "SECURITY"
+    SERVICE = "SERVICE"
+    SEARCH = "SEARCH"
+
+
+class AuthenticationType(str, Enum):
+    LOCAL = "LOCAL"
+    RADIUS = "RADIUS"
+    EXTERNAL = "EXTERNAL"
+
+
+class HashScheme(str, Enum):
+    MD5 = "MD5"
+    SHA_1 = "SHA-1"
+    SHA_256 = "SHA-256"
+    SHA_384 = "SHA-384"
+    SHA_512 = "SHA-512"
+    RIPEMD_160 = "RIPEMD-160"
+
+
+class OptimizedFor(str, Enum):
+    CLOUD = "CLOUD"
+    ALL = "ALL"
+
+
+class AclsUsage(str, Enum):
+    NOT_ENABLED = "NOT_ENABLED"
+    ENABLED = "ENABLED"
+    ENFORCED = "ENFORCED"
+    NOT_ENFORCED = "NOT_ENFORCED"
+
+
+class DirectoryUsage(str, Enum):
+    BALANCED = "Balanced"
+    UNBALANCED = "Unbalanced"
+    DEFAULT = "Default"
+
+
+class RetentionType(str, Enum):
+    HCP = "HCP"
+    S3 = "S3"
+
+
+class CustomMetadataChanges(str, Enum):
+    ADD = "ADD"
+    ALL = "ALL"
+    NONE = "NONE"
+
+
+class ReplicationCollisionAction(str, Enum):
+    MOVE = "MOVE"
+    RENAME = "RENAME"
+
+
+class CaseForcing(str, Enum):
+    UPPER = "UPPER"
+    LOWER = "LOWER"
+    DISABLED = "DISABLED"
+
+
+class EmailFormat(str, Enum):
+    EML = ".eml"
+    MBOX = ".mbox"
+
+
+class Granularity(str, Enum):
+    HOUR = "hour"
+    DAY = "day"
+    TOTAL = "total"
+
+
+class PerformanceLevel(str, Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CUSTOM = "CUSTOM"
+    OFF = "OFF"
+    NONE = "NONE"
+
+
+class LinkType(str, Enum):
+    ACTIVE_ACTIVE = "ACTIVE_ACTIVE"
+    OUTBOUND = "OUTBOUND"
+    INBOUND = "INBOUND"
+
+
+class ECTopologyType(str, Enum):
+    FULLY_CONNECTED = "FULLY_CONNECTED"
+    RING = "RING"
+
+
+class DownstreamDNSMode(str, Enum):
+    BASIC = "BASIC"
+    ADVANCED = "ADVANCED"
+
+
+class LogContent(str, Enum):
+    ACCESS = "ACCESS"
+    SYSTEM = "SYSTEM"
+    SERVICE = "SERVICE"
+    APPLICATION = "APPLICATION"
+
+
+class SupportCredentialType(str, Enum):
+    DEFAULT = "Default"
+    EXCLUSIVE = "Exclusive"
+
+
+class RecipientImportance(str, Enum):
+    ALL = "ALL"
+    MAJOR = "MAJOR"
+
+
+class RecipientSeverity(str, Enum):
+    NOTICE = "NOTICE"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+
+
+# ── Shared Sub-Models ──────────────────────────────────────────────────
+
+class IpAddressList(BaseModel):
+    """HCP wraps IP lists in {"ipAddress": [...]}."""
+    ipAddress: Optional[List[str]] = None
+
+
+class IpSettings(BaseModel):
+    """IP address allow/deny configuration."""
+    model_config = {"populate_by_name": True}
+
+    allowAddresses: Optional[IpAddressList | List[str]] = None
+    denyAddresses: Optional[IpAddressList | List[str]] = None
+    allowIfInBothLists: Optional[bool] = None
+
+    @field_validator("allowAddresses", "denyAddresses", mode="before")
+    @classmethod
+    def _normalize_addresses(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, list):
+            return IpAddressList(ipAddress=v)
+        if isinstance(v, dict):
+            return IpAddressList(**v)
+        return v
+
+
+class PermissionList(BaseModel):
+    """A list of permissions."""
+    permission: Optional[List[Permission]] = None
+
+
+class RoleList(BaseModel):
+    """A list of roles."""
+    role: Optional[List[Role]] = None
+
+
+class TagList(BaseModel):
+    """A list of tags."""
+    tag: Optional[List[str]] = None
+
+
+class NamespacePermission(BaseModel):
+    """Data access permissions for a single namespace."""
+    namespaceName: str
+    permissions: Optional[PermissionList] = None
+
+
+class DataAccessPermissions(BaseModel):
+    """Data access permissions across namespaces."""
+    namespacePermission: Optional[List[NamespacePermission]] = None
+
+
+class VersioningSettings(BaseModel):
+    """Versioning configuration for a namespace."""
+    enabled: Optional[bool] = None
+    prune: Optional[bool] = None
+    pruneDays: Optional[int] = None
+    pruneOnPrimary: Optional[bool] = None
+    pruneOnReplica: Optional[bool] = None
+    daysOnPrimary: Optional[int] = None
+    daysOnReplica: Optional[int] = None
+    useDeleteMarkers: Optional[bool] = None
+    keepDeletionRecords: Optional[bool] = None
+
+
+# ── Query Parameter Models ─────────────────────────────────────────────
+
+class PagingParams(BaseModel):
+    """Query parameters for paging through resource lists."""
+    offset: Optional[int] = None
+    count: Optional[int] = None
+
+
+class SortParams(BaseModel):
+    """Query parameters for sorting resource lists."""
+    sortType: Optional[str] = None
+    sortOrder: Optional[str] = None
+
+
+class FilterParams(BaseModel):
+    """Query parameters for filtering resource lists."""
+    filterType: Optional[str] = None
+    filterString: Optional[str] = None
+
+
+class ListQueryParams(BaseModel):
+    """Combined query parameters for list operations."""
+    offset: Optional[int] = None
+    count: Optional[int] = None
+    sortType: Optional[str] = None
+    sortOrder: Optional[str] = None
+    filterType: Optional[str] = None
+    filterString: Optional[str] = None
+    verbose: Optional[bool] = False
+    prettyprint: Optional[bool] = False
+
+
+class ChargebackParams(BaseModel):
+    """Query parameters for chargeback reports."""
+    start: Optional[str] = None
+    end: Optional[str] = None
+    granularity: Optional[Granularity] = Granularity.TOTAL

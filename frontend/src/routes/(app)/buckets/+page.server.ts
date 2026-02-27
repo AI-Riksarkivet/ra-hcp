@@ -1,0 +1,67 @@
+import { fail } from '@sveltejs/kit';
+import { createBucketSchema } from '$lib/api/schemas.js';
+import type { Actions, PageServerLoad } from './$types.js';
+
+const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+
+export const load: PageServerLoad = async ({ locals }) => {
+	const response = await fetch(`${BACKEND_URL}/api/v1/buckets`, {
+		headers: { Authorization: `Bearer ${locals.token}` }
+	});
+
+	if (!response.ok) {
+		return { buckets: [], owner: '' };
+	}
+
+	const data = await response.json();
+	return { buckets: data.buckets ?? [], owner: data.owner ?? '' };
+};
+
+export const actions = {
+	create: async ({ request, locals }) => {
+		const formData = await request.formData();
+		const data = { bucket: formData.get('bucket') as string };
+
+		const result = createBucketSchema.safeParse(data);
+		if (!result.success) {
+			return fail(400, { error: result.error.issues[0].message });
+		}
+
+		const response = await fetch(`${BACKEND_URL}/api/v1/buckets`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${locals.token}`
+			},
+			body: JSON.stringify({ bucket: result.data.bucket })
+		});
+
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({ detail: 'Failed to create bucket' }));
+			return fail(response.status, { error: error.detail });
+		}
+
+		return { success: true };
+	},
+
+	delete: async ({ request, locals }) => {
+		const formData = await request.formData();
+		const bucket = formData.get('bucket') as string;
+
+		if (!bucket) {
+			return fail(400, { error: 'Bucket name is required' });
+		}
+
+		const response = await fetch(`${BACKEND_URL}/api/v1/buckets/${encodeURIComponent(bucket)}`, {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${locals.token}` }
+		});
+
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({ detail: 'Failed to delete bucket' }));
+			return fail(response.status, { error: error.detail });
+		}
+
+		return { success: true };
+	}
+} satisfies Actions;
