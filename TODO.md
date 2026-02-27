@@ -1,4 +1,4 @@
-- fix docs
+- fix docs (zenaical)
 - backend with namespaces
 - bucket are under tensntw, see minio ui for example
 - fix user and groups
@@ -20,6 +20,8 @@
 - add more metadata of the uploaded file a metatab that open from right sidebar, about the file , who uploaded etc.
 - add support for sync between 1:1 buckets between tenants (must auth for the other tenant) can we use redis as layer between?
 - add middleware
+- modal for preview viewer for files in bucket is to big
+- add suport for view lance and parqet. see hf dataset viewr as example or lance viewer. 
 - dagger build system 
 - dockerfiles
 - helm chart
