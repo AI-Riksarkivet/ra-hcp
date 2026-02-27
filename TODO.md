@@ -22,6 +22,9 @@
 - dagger build system 
 - dockerfiles
 - helm chart
+- mock more of backend but also a dev state for frontend
+- research best practices for test suite with deno and sveltkit
+- utilize more page abd layout utils of sveltekit ! and utilize sveltekit more in general 
 - use figma for designing ui
 - check usage of snippets and make ui composable
 - skills: figma, the other libs ib frontend and backend we are using
