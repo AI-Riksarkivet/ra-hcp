@@ -23,4 +23,5 @@
 - dockerfiles
 - helm chart
 - use figma for designing ui
+- check usage of snippets and make ui composable
 - skills: figma, the other libs ib frontend and backend we are using
