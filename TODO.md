@@ -1,4 +1,5 @@
 - fix docs (zenaical)
+- look over svelte code and be very svlete 5 and sveltekit2 idomatic, e g use snippets
 - backend with namespaces
 - bucket are under tensntw, see minio ui for example
 - fix user and groups
