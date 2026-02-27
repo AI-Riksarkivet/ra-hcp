@@ -8,6 +8,7 @@
 - test so mulitipart upload is really working in frontend and in backend, and that it is atomic. 
 - fix sync between buckets
 - fix acess control
+- handle duplicates uploads?
 - test how openfga would work 
 - fix nfs supoort 
 - fix what different user can see and do 
