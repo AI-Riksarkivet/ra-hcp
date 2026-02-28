@@ -1,5 +1,5 @@
 - fix docs (zenaical)
-- look over svelte code and be very svlete 5 and sveltekit2 idomatic, e g use snippets
+- look over svelte code and be very svlete 5 and sveltekit2 idomatic, e g use snippets, remote funcions, reavtivity, stores , context api. also chevk if we are using routing and pages [id] in svletkit 2
 - backend with namespaces
 - bucket are under tensntw, see minio ui for example
 - fix user and groups
