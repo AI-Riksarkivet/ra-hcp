@@ -26,6 +26,7 @@
 - dagger build system 
 - dockerfiles
 - helm chart
+- use in kubernetes.. s3fuse? or pvc static or NFS Subdir External Provisioner (dynamic PVCs)
 - special marker if a bycket is lakefs
 - mock more of backend but also a dev state for frontend
 - research best practices for test suite with deno and sveltkit
