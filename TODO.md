@@ -34,3 +34,8 @@
 - use figma for designing ui
 - check usage of snippets and make ui composable
 - skills: figma, the other libs ib frontend and backend we are using
+- shadcn-svelte instead of bits ui! 
+- PNPM ESLint Prettier CommitLint and Husky for cli tools
+- Playwright and vitest and storybook for testing
+- svelte sonnar for toast?
+- dotenx for .env
