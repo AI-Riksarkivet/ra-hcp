@@ -1,4 +1,5 @@
 - fix docs (zenaical)
+- deno, ts and svelte extensions
 - fix use only deno 2 and pnpm or node dep: https://github.com/denoland/svelte-adapter
 - deno otel https://docs.deno.com/runtime/fundamentals/open_telemetry/, https://deno.com/blog/zero-config-debugging-deno-opentelemetry
 - look over svelte code and be very svlete 5 and sveltekit2 idomatic, e g use snippets, remote funcions, reavtivity, stores , context api. also chevk if we are using routing and pages [id] in svletkit 2
