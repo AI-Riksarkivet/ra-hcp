@@ -1,4 +1,5 @@
 - fix docs (zenaical)
+- add pr skills and force pr and block to main if not force
 - deno, ts and svelte extensions
 - fix use only deno 2 and pnpm or node dep: https://github.com/denoland/svelte-adapter
 - deno otel https://docs.deno.com/runtime/fundamentals/open_telemetry/, https://deno.com/blog/zero-config-debugging-deno-opentelemetry
