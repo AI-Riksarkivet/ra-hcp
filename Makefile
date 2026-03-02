@@ -11,7 +11,7 @@ BUCKET ?= test-bucket-$(shell date +%s)
 # Export so all scripts share the same bucket
 export BUCKET_NAME = $(BUCKET)
 
-.PHONY: help run-api test-s3 \
+.PHONY: help run-api run-api-mock test-s3 \
         s3-list s3-create s3-head \
         s3-put s3-get \
         s3-multipart s3-head-object s3-get-large \
@@ -24,6 +24,11 @@ export BUCKET_NAME = $(BUCKET)
 ROOT_PATH ?=
 run-api:
 	cd backend && ROOT_PATH=$(ROOT_PATH) uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 $(if $(ROOT_PATH),--root-path $(ROOT_PATH))
+
+## run-api-mock: start the mock development server (no HCP credentials needed)
+## Login with: username=admin  password=password
+run-api-mock:
+	cd backend && uv run python mock_server.py
 
 ## help: list available targets
 help:
