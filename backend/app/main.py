@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_router
+from app.core.telemetry import setup_telemetry
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,9 @@ app = FastAPI(
     root_path=ROOT_PATH,
     openapi_tags=OPENAPI_TAGS,
 )
+
+# ── Telemetry ─────────────────────────────────────────────────────────
+setup_telemetry(app)
 
 # ── CORS ───────────────────────────────────────────────────────────────
 app.add_middleware(

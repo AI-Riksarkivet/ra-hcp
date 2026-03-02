@@ -12,10 +12,15 @@ import json
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 
+import logging
+
 import httpx
+from fastapi import HTTPException
 from pydantic import BaseModel
 
 from app.core.config import MapiSettings
+
+logger = logging.getLogger(__name__)
 
 
 class MapiService:
@@ -123,7 +128,17 @@ class MapiService:
                 content = body
             headers["Content-Type"] = content_type
 
-        resp = await client.request(method, url, headers=headers, content=content)
+        try:
+            resp = await client.request(method, url, headers=headers, content=content)
+        except httpx.TimeoutException:
+            logger.error("MAPI timeout: %s %s", method, url)
+            raise HTTPException(status_code=504, detail="HCP timed out")
+        except httpx.ConnectError:
+            logger.error("MAPI unreachable: %s %s", method, url)
+            raise HTTPException(status_code=502, detail="HCP unreachable")
+        except httpx.TransportError as exc:
+            logger.error("MAPI transport error: %s %s — %s", method, url, exc)
+            raise HTTPException(status_code=502, detail="HCP connection error")
         return resp
 
     # ── Convenience methods ────────────────────────────────────────────

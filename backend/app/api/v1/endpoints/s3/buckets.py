@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import asyncio
 
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, Response
 
 from app.api.dependencies import get_s3_service
-from app.api.errors import raise_for_s3_error
+from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error
 from app.schemas.s3 import (
     BucketInfo,
     BucketVersioningResponse,
@@ -27,6 +27,8 @@ async def list_buckets(s3: S3Service = Depends(get_s3_service)):
         result = await asyncio.to_thread(s3.list_buckets)
     except ClientError as exc:
         raise_for_s3_error(exc, "buckets")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, "buckets")
     buckets = [
         BucketInfo.model_validate(b) for b in result.get("Buckets", [])
     ]
@@ -42,6 +44,8 @@ async def create_bucket(
         await asyncio.to_thread(s3.create_bucket, body.bucket)
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{body.bucket}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"bucket '{body.bucket}'")
     return {"status": "created", "bucket": body.bucket}
 
 
@@ -51,6 +55,8 @@ async def head_bucket(bucket: str, s3: S3Service = Depends(get_s3_service)):
         await asyncio.to_thread(s3.head_bucket, bucket)
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
     return Response(status_code=200)
 
 
@@ -60,6 +66,8 @@ async def delete_bucket(bucket: str, s3: S3Service = Depends(get_s3_service)):
         await asyncio.to_thread(s3.delete_bucket, bucket)
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
     return {"status": "deleted", "bucket": bucket}
 
 
@@ -73,6 +81,8 @@ async def get_bucket_versioning(
         result = await asyncio.to_thread(s3.get_bucket_versioning, bucket)
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
     return BucketVersioningResponse(
         status=result.get("Status"),
         mfa_delete=result.get("MFADelete"),
@@ -89,6 +99,8 @@ async def put_bucket_versioning(
         await asyncio.to_thread(s3.put_bucket_versioning, bucket, body.status)
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
     return {"status": "updated", "versioning": body.status}
 
 
@@ -100,6 +112,8 @@ async def get_bucket_acl(bucket: str, s3: S3Service = Depends(get_s3_service)):
         result = await asyncio.to_thread(s3.get_bucket_acl, bucket)
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
     return {
         "owner": result.get("Owner", {}),
         "grants": result.get("Grants", []),
@@ -114,4 +128,6 @@ async def put_bucket_acl(
         await asyncio.to_thread(s3.put_bucket_acl, bucket, body)
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
     return {"status": "updated"}

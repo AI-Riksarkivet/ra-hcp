@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from botocore.exceptions import ClientError
+import logging
+
+from botocore.exceptions import BotoCoreError, ClientError, EndpointConnectionError, ReadTimeoutError
 from fastapi import HTTPException
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 def raise_for_s3_error(exc: ClientError, resource: str = "resource") -> None:
@@ -26,6 +30,16 @@ def raise_for_s3_error(exc: ClientError, resource: str = "resource") -> None:
     }
     http_status = mapping.get(code, status)
     raise HTTPException(status_code=http_status, detail=f"{resource}: {message}")
+
+
+def raise_for_s3_transport_error(exc: BotoCoreError, resource: str = "resource") -> None:
+    """Translate a botocore transport/connection error into an HTTPException."""
+    logger.error("S3 transport error for %s: %s", resource, exc)
+    if isinstance(exc, EndpointConnectionError):
+        raise HTTPException(status_code=502, detail=f"{resource}: S3 endpoint unreachable")
+    if isinstance(exc, ReadTimeoutError):
+        raise HTTPException(status_code=504, detail=f"{resource}: S3 read timed out")
+    raise HTTPException(status_code=502, detail=f"{resource}: S3 connection error")
 
 
 def raise_for_hcp_status(resp: httpx.Response, resource: str = "resource") -> None:

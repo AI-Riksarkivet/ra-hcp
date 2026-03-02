@@ -5,12 +5,12 @@ from __future__ import annotations
 import asyncio
 from typing import Optional
 
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.api.dependencies import get_s3_service
-from app.api.errors import raise_for_s3_error
+from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error
 from app.schemas.s3 import (
     CopyObjectRequest,
     DeleteObjectsRequest,
@@ -38,6 +38,8 @@ async def list_objects(
         )
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
     objects = [ObjectInfo.model_validate(o) for o in result.get("Contents", [])]
     return ListObjectsResponse(
         objects=objects,
@@ -59,6 +61,8 @@ async def delete_objects(
         result = await asyncio.to_thread(s3.delete_objects, bucket, body.keys)
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
     return {
         "status": "deleted",
         "deleted": len(body.keys),
@@ -76,6 +80,8 @@ async def get_object_acl(
         result = await asyncio.to_thread(s3.get_object_acl, bucket, key)
     except ClientError as exc:
         raise_for_s3_error(exc, f"object '{key}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"object '{key}'")
     return {
         "owner": result.get("Owner", {}),
         "grants": result.get("Grants", []),
@@ -91,6 +97,8 @@ async def put_object_acl(
         await asyncio.to_thread(s3.put_object_acl, bucket, key, body)
     except ClientError as exc:
         raise_for_s3_error(exc, f"object '{key}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"object '{key}'")
     return {"status": "updated"}
 
 
@@ -109,6 +117,8 @@ async def copy_object(
         )
     except ClientError as exc:
         raise_for_s3_error(exc, f"object '{key}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"object '{key}'")
     return {"status": "copied", "bucket": bucket, "key": key}
 
 
@@ -125,6 +135,8 @@ async def upload_object(
         await asyncio.to_thread(s3.put_object, bucket, key, file.file)
     except ClientError as exc:
         raise_for_s3_error(exc, f"object '{key}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"object '{key}'")
     return UploadObjectResponse(bucket=bucket, key=key)
 
 
@@ -138,6 +150,8 @@ async def download_object(
         result = await asyncio.to_thread(s3.get_object, bucket, key)
     except ClientError as exc:
         raise_for_s3_error(exc, f"object '{key}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"object '{key}'")
     body = result["Body"]
     return StreamingResponse(
         content=body.iter_chunks(),
@@ -159,6 +173,8 @@ async def head_object(
         result = await asyncio.to_thread(s3.head_object, bucket, key)
     except ClientError as exc:
         raise_for_s3_error(exc, f"object '{key}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"object '{key}'")
     return HeadObjectResponse(
         content_length=result.get("ContentLength"),
         content_type=result.get("ContentType"),
@@ -177,4 +193,6 @@ async def delete_object(
         await asyncio.to_thread(s3.delete_object, bucket, key)
     except ClientError as exc:
         raise_for_s3_error(exc, f"object '{key}'")
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, f"object '{key}'")
     return {"status": "deleted", "bucket": bucket, "key": key}
