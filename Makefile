@@ -16,7 +16,8 @@ export BUCKET_NAME = $(BUCKET)
         s3-put s3-get \
         s3-multipart s3-head-object s3-get-large \
         s3-cleanup s3-clean-bucket \
-        frontend-install frontend-dev frontend-build frontend-check
+        frontend-install frontend-dev frontend-build frontend-check \
+        redis redis-stop redis-cli
 
 ## run-api: start the unified HCP API server
 ## Pass ROOT_PATH for reverse-proxy setups (e.g. code-server proxy):
@@ -48,6 +49,10 @@ help:
 	@echo "  make s3-cleanup           Delete objects and bucket"
 	@echo ""
 	@echo "  make s3-clean-bucket BUCKET=name   Clean a specific bucket"
+	@echo ""
+	@echo "  make redis                Start Redis (Docker)"
+	@echo "  make redis-stop           Stop Redis"
+	@echo "  make redis-cli            Open Redis CLI"
 	@echo ""
 	@echo "Required env vars: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY"
 
@@ -117,6 +122,20 @@ s3-cleanup:
 s3-clean-bucket:
 	@test -n "$(BUCKET)" || { echo "Usage: make s3-clean-bucket BUCKET=name"; exit 1; }
 	@$(TESTS_S3)/09-cleanup.sh
+
+# ── Redis ────────────────────────────────────────────────────────────
+
+## redis: start Redis via Docker Compose (required for caching)
+redis:
+	docker compose up -d redis
+
+## redis-stop: stop Redis
+redis-stop:
+	docker compose down
+
+## redis-cli: open a Redis CLI session
+redis-cli:
+	docker compose exec redis redis-cli
 
 # ── Frontend ─────────────────────────────────────────────────────────
 

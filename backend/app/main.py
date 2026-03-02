@@ -18,10 +18,18 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    yield
-    # Close the MAPI httpx client on shutdown
+    # Connect cache on startup
     from app.api import dependencies
+    from app.services.cache_service import CacheService
 
+    cache = CacheService(dependencies.get_cache_settings())
+    await cache.connect()
+    dependencies.set_cache_instance(cache)
+
+    yield
+
+    # Shutdown: close cache + MAPI client
+    await cache.close()
     if dependencies._mapi_instance is not None:
         await dependencies._mapi_instance.close()
         dependencies._mapi_instance = None

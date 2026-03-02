@@ -67,6 +67,20 @@ class S3Settings(BaseSettings):
         return hashlib.md5(self.hcp_password.encode()).hexdigest()
 
 
+class CacheSettings(BaseSettings):
+    """Redis cache configuration."""
+
+    model_config = {"env_file": _ENV_FILE, "extra": "ignore"}
+
+    redis_url: str = ""  # Empty = no caching
+    cache_default_ttl: int = 300  # 5 min — MAPI tenant/namespace listings
+    cache_stats_ttl: int = 60  # 1 min — statistics, chargeback
+    cache_config_ttl: int = 600  # 10 min — consoleSecurity, permissions, etc.
+    cache_s3_list_ttl: int = 120  # 2 min — bucket/object listings
+    cache_s3_meta_ttl: int = 300  # 5 min — head_bucket, head_object, ACLs
+    cache_key_prefix: str = "hcp"
+
+
 class AuthSettings(BaseSettings):
     """API authentication settings."""
 
