@@ -21,7 +21,7 @@
 
 	.navigation-progress-bar {
 		height: 100%;
-		background: hsl(var(--primary));
+		background: var(--color-primary);
 		animation: progress 2s ease-in-out infinite;
 	}
 

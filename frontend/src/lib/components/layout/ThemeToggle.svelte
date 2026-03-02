@@ -8,7 +8,7 @@
 <Tooltip.Root>
 	<Tooltip.Trigger>
 		{#snippet child({ props })}
-			<Button variant="ghost" size="icon" onclick={toggleMode} {...props}>
+			<Button {...props} variant="ghost" size="icon" onclick={toggleMode}>
 				{#if mode.current === 'dark'}
 					<Sun class="h-5 w-5" />
 				{:else}
