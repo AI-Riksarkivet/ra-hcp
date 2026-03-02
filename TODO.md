@@ -1,4 +1,5 @@
 - fix docs (zenaical)
+- frontend/public fot assets 
 - add pr skills and force pr and block to main if not force
 - add dino skills https://github.com/denoland/skills
 - deno, ts and svelte extensions
