@@ -7,6 +7,7 @@
 - add pr skills and force pr and block to main if not force
 - add dino skills https://github.com/denoland/skills
 - deno, ts and svelte extensions
+- vsx https://open-vsx.org/extension/FastAPILabs/fastapi-vscode
 - playwright for testing and also storybook
 - use std@expect for testing (jest) from JSR
 - env.ts files?
