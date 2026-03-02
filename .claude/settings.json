@@ -1,0 +1,9 @@
+{
+  "enabledPlugins": {
+    "svelte-skills@svelte-skills-kit": true,
+    "mcp-essentials@claude-code-toolkit": true,
+    "analytics@claude-code-toolkit": true,
+    "toolkit-skills@claude-code-toolkit": true,
+    "deno-skills@denoland-skills": true
+  }
+}

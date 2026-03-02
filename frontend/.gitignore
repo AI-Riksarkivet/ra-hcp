@@ -2,11 +2,12 @@ node_modules
 
 # Output
 .output
-.vercel
-.netlify
-.wrangler
 /.svelte-kit
 /build
+/.deno-deploy
+
+# Deno
+deno.lock
 
 # OS
 .DS_Store

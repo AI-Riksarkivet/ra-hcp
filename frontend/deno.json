@@ -4,7 +4,15 @@
     "dev": "deno run -A npm:vite dev",
     "build": "deno run -A npm:vite build",
     "preview": "deno run -A npm:vite preview",
-    "sync": "node node_modules/@sveltejs/kit/svelte-kit.js sync",
-    "check": "node node_modules/@sveltejs/kit/svelte-kit.js sync && deno run -A npm:svelte-check --tsconfig ./tsconfig.json"
+    "sync": "deno run -A npm:@sveltejs/kit sync",
+    "check": "deno task sync && deno run -A npm:svelte-check --tsconfig ./tsconfig.json",
+    "fmt": "deno fmt",
+    "lint": "deno lint"
+  },
+  "fmt": {
+    "exclude": [".svelte-kit/", "node_modules/", "build/"]
+  },
+  "lint": {
+    "exclude": [".svelte-kit/", "node_modules/", "build/"]
   }
 }
