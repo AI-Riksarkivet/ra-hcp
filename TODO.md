@@ -1,4 +1,5 @@
 - fix docs (zenaical)
+- removee? https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/assets/favicon.svg
 - frontend/public fot assets 
 - add pr skills and force pr and block to main if not force
 - add dino skills https://github.com/denoland/skills
