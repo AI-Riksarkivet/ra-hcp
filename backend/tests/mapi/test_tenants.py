@@ -121,16 +121,17 @@ async def test_get_tenant_statistics(client: AsyncClient, auth_headers: dict, hc
     assert resp.json()["objectCount"] == 42
 
 
-async def test_tenant_cors_crud(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    # GET
+async def test_get_tenant_cors(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
     hcp_mock.get(f"{HCP_BASE}/tenants/t1/cors").mock(
         return_value=httpx.Response(200, json={"cors": "<CORSRule/>"})
     )
     resp = await client.get("/api/v1/mapi/tenants/t1/cors", headers=auth_headers)
     assert resp.status_code == 200
+    assert resp.json()["cors"] == "<CORSRule/>"
 
-    # PUT
-    hcp_mock.put(f"{HCP_BASE}/tenants/t1/cors").mock(
+
+async def test_put_tenant_cors(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+    route = hcp_mock.put(f"{HCP_BASE}/tenants/t1/cors").mock(
         return_value=httpx.Response(200)
     )
     resp = await client.put(
@@ -139,10 +140,13 @@ async def test_tenant_cors_crud(client: AsyncClient, auth_headers: dict, hcp_moc
         json={"cors": "<CORSRule/>"},
     )
     assert resp.status_code == 200
+    assert route.called
 
-    # DELETE
-    hcp_mock.delete(f"{HCP_BASE}/tenants/t1/cors").mock(
+
+async def test_delete_tenant_cors(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+    route = hcp_mock.delete(f"{HCP_BASE}/tenants/t1/cors").mock(
         return_value=httpx.Response(200)
     )
     resp = await client.delete("/api/v1/mapi/tenants/t1/cors", headers=auth_headers)
     assert resp.status_code == 200
+    assert route.called

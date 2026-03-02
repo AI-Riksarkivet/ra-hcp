@@ -3,10 +3,9 @@
 from fastapi import APIRouter, Depends
 
 from app.core.security import get_current_user
-from app.api.v1.endpoints import (
-    auth,
-    buckets,
-    objects,
+from app.api.v1.endpoints import auth
+from app.api.v1.endpoints.s3 import buckets, objects
+from app.api.v1.endpoints.mapi import (
     tenants,
     namespaces,
     user_accounts,
