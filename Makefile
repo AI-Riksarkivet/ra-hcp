@@ -127,15 +127,15 @@ s3-clean-bucket:
 
 ## redis: start Redis via Docker Compose (required for caching)
 redis:
-	docker compose up -d redis
+	docker compose -f .docker/docker-compose.yml up -d redis
 
 ## redis-stop: stop Redis
 redis-stop:
-	docker compose down
+	docker compose -f .docker/docker-compose.yml down
 
 ## redis-cli: open a Redis CLI session
 redis-cli:
-	docker compose exec redis redis-cli
+	docker compose -f .docker/docker-compose.yml exec redis redis-cli
 
 # ── Frontend ─────────────────────────────────────────────────────────
 
