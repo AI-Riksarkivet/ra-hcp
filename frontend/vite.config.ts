@@ -4,6 +4,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
+	ssr: {
+		noExternal: ['svelte-sonner', 'mode-watcher', 'svelte-toolbelt']
+	},
 	server: {
 		host: '0.0.0.0',
 		port: 5174,

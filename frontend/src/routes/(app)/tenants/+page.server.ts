@@ -2,15 +2,21 @@ import type { PageServerLoad } from './$types.js';
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
-export const load: PageServerLoad = async ({ locals }) => {
+async function fetchTenants(token: string) {
 	const response = await fetch(`${BACKEND_URL}/api/v1/mapi/tenants`, {
-		headers: { Authorization: `Bearer ${locals.token}` }
+		headers: { Authorization: `Bearer ${token}` }
 	});
 
 	if (!response.ok) {
-		return { tenants: [] };
+		return [];
 	}
 
 	const data = await response.json();
-	return { tenants: Array.isArray(data) ? data : data.tenants ?? [] };
+	return Array.isArray(data) ? data : data.tenants ?? [];
+}
+
+export const load: PageServerLoad = async ({ locals }) => {
+	return {
+		tenants: fetchTenants(locals.token)
+	};
 };

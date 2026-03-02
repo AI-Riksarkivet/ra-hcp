@@ -1,12 +1,14 @@
 <script lang="ts">
 	import '../app.css';
-	import { Tooltip } from 'bits-ui';
-	import Toaster from '$lib/components/ui/Toaster.svelte';
+	import { ModeWatcher } from 'mode-watcher';
+	import { Toaster } from '$lib/components/ui/sonner/index.js';
+	import { browser } from '$app/environment';
 
 	let { children } = $props();
 </script>
 
-<Tooltip.Provider delayDuration={300} skipDelayDuration={150}>
-	{@render children()}
-</Tooltip.Provider>
-<Toaster />
+<ModeWatcher />
+{@render children()}
+{#if browser}
+	<Toaster />
+{/if}

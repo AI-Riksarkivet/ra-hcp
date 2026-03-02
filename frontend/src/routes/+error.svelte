@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import Button from '$lib/components/ui/Button.svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
 
 	// Auto-redirect to login on 401
 	onMount(() => {
@@ -13,12 +13,12 @@
 </script>
 
 {#if $page.status !== 401}
-	<div class="flex min-h-screen items-center justify-center bg-surface-50 dark:bg-surface-950">
+	<div class="flex min-h-screen items-center justify-center bg-background">
 		<div class="text-center">
-			<h1 class="text-6xl font-bold text-surface-300 dark:text-surface-700">
+			<h1 class="text-6xl font-bold text-muted-foreground/50">
 				{$page.status}
 			</h1>
-			<p class="mt-4 text-lg text-surface-600 dark:text-surface-400">
+			<p class="mt-4 text-lg text-muted-foreground">
 				{$page.error?.message ?? 'Something went wrong'}
 			</p>
 			<div class="mt-8">

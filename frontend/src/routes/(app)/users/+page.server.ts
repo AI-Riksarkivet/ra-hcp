@@ -2,26 +2,39 @@ import type { PageServerLoad } from './$types.js';
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
+async function fetchUsers(token: string) {
+	try {
+		const res = await fetch(`${BACKEND_URL}/api/v1/mapi/userAccounts`, {
+			headers: { Authorization: `Bearer ${token}` }
+		});
+		if (res.ok) {
+			const data = await res.json();
+			return Array.isArray(data) ? data : data.userAccounts ?? [];
+		}
+	} catch {
+		// ignore
+	}
+	return [];
+}
+
+async function fetchGroups(token: string) {
+	try {
+		const res = await fetch(`${BACKEND_URL}/api/v1/mapi/groupAccounts`, {
+			headers: { Authorization: `Bearer ${token}` }
+		});
+		if (res.ok) {
+			const data = await res.json();
+			return Array.isArray(data) ? data : data.groupAccounts ?? [];
+		}
+	} catch {
+		// ignore
+	}
+	return [];
+}
+
 export const load: PageServerLoad = async ({ locals }) => {
-	const headers = { Authorization: `Bearer ${locals.token}` };
-
-	const [usersRes, groupsRes] = await Promise.allSettled([
-		fetch(`${BACKEND_URL}/api/v1/mapi/userAccounts`, { headers }),
-		fetch(`${BACKEND_URL}/api/v1/mapi/groupAccounts`, { headers })
-	]);
-
-	const usersData =
-		usersRes.status === 'fulfilled' && usersRes.value.ok
-			? await usersRes.value.json()
-			: [];
-
-	const groupsData =
-		groupsRes.status === 'fulfilled' && groupsRes.value.ok
-			? await groupsRes.value.json()
-			: [];
-
-	const users = Array.isArray(usersData) ? usersData : usersData.userAccounts ?? [];
-	const groups = Array.isArray(groupsData) ? groupsData : groupsData.groupAccounts ?? [];
-
-	return { users, groups };
+	return {
+		users: fetchUsers(locals.token),
+		groups: fetchGroups(locals.token)
+	};
 };

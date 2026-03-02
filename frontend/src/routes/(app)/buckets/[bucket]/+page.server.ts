@@ -3,18 +3,17 @@ import type { Actions, PageServerLoad } from './$types.js';
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
-export const load: PageServerLoad = async ({ params, locals, url }) => {
-	const prefix = url.searchParams.get('prefix') ?? '';
+async function fetchObjects(bucket: string, prefix: string, token: string) {
 	const queryParams = new URLSearchParams({ max_keys: '100' });
 	if (prefix) queryParams.set('prefix', prefix);
 
 	const response = await fetch(
-		`${BACKEND_URL}/api/v1/buckets/${encodeURIComponent(params.bucket)}/objects?${queryParams}`,
-		{ headers: { Authorization: `Bearer ${locals.token}` } }
+		`${BACKEND_URL}/api/v1/buckets/${encodeURIComponent(bucket)}/objects?${queryParams}`,
+		{ headers: { Authorization: `Bearer ${token}` } }
 	);
 
 	if (!response.ok) {
-		return { bucket: params.bucket, objects: [], prefix, isTruncated: false, keyCount: 0 };
+		return { objects: [], isTruncated: false, keyCount: 0, nextToken: null };
 	}
 
 	const data = await response.json();
@@ -27,12 +26,20 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		storage_class: o.storage_class ?? o.StorageClass ?? ''
 	}));
 	return {
-		bucket: params.bucket,
 		objects,
-		prefix,
 		isTruncated: data.is_truncated ?? false,
 		nextToken: data.next_continuation_token ?? null,
 		keyCount: data.key_count ?? 0
+	};
+}
+
+export const load: PageServerLoad = async ({ params, locals, url }) => {
+	const prefix = url.searchParams.get('prefix') ?? '';
+
+	return {
+		bucket: params.bucket,
+		prefix,
+		objectData: fetchObjects(params.bucket, prefix, locals.token)
 	};
 };
 

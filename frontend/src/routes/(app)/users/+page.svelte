@@ -1,28 +1,35 @@
 <script lang="ts">
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import DataTable from '$lib/components/ui/DataTable.svelte';
+	import type { ColumnDef } from '@tanstack/table-core';
+	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 
 	let { data } = $props();
 
-	const userColumns = [
-		{ key: 'username', label: 'Username' },
-		{ key: 'fullName', label: 'Full Name' },
+	type User = { username: string; fullName?: string; enabled?: boolean; roles?: string[] };
+	type Group = { name: string; description?: string };
+
+	const userColumns: ColumnDef<User, any>[] = [
+		{ accessorKey: 'username', header: 'Username' },
+		{ accessorKey: 'fullName', header: 'Full Name' },
 		{
-			key: 'enabled',
-			label: 'Status',
-			render: (u: { enabled?: boolean }) =>
-				u.enabled === false ? 'Disabled' : 'Active'
+			accessorKey: 'enabled',
+			header: 'Status',
+			cell: (info) => info.getValue() === false ? 'Disabled' : 'Active'
 		},
 		{
-			key: 'roles',
-			label: 'Roles',
-			render: (u: { roles?: string[] }) => u.roles?.join(', ') ?? ''
+			accessorKey: 'roles',
+			header: 'Roles',
+			cell: (info) => {
+				const roles = info.getValue() as string[] | undefined;
+				return roles?.join(', ') ?? '';
+			}
 		}
 	];
 
-	const groupColumns = [
-		{ key: 'name', label: 'Group Name' },
-		{ key: 'description', label: 'Description' }
+	const groupColumns: ColumnDef<Group, any>[] = [
+		{ accessorKey: 'name', header: 'Group Name' },
+		{ accessorKey: 'description', header: 'Description' }
 	];
 </script>
 
@@ -32,33 +39,47 @@
 
 <div class="space-y-8">
 	<div>
-		<h2 class="text-2xl font-bold text-surface-900 dark:text-surface-100">Users & Groups</h2>
-		<p class="mt-1 text-sm text-surface-500 dark:text-surface-400">
+		<h2 class="text-2xl font-bold">Users & Groups</h2>
+		<p class="mt-1 text-sm text-muted-foreground">
 			Manage user accounts and groups
 		</p>
 	</div>
 
 	<div>
-		<div class="mb-4 flex items-center gap-3">
-			<h3 class="text-lg font-semibold text-surface-900 dark:text-surface-100">User Accounts</h3>
-			<Badge>{data.users.length}</Badge>
-		</div>
-		<DataTable
-			columns={userColumns}
-			data={data.users}
-			emptyMessage="No user accounts found"
-		/>
+		{#await data.users}
+			<div class="mb-4 flex items-center gap-3">
+				<h3 class="text-lg font-semibold">User Accounts</h3>
+			</div>
+			<TableSkeleton rows={5} columns={4} />
+		{:then users}
+			<div class="mb-4 flex items-center gap-3">
+				<h3 class="text-lg font-semibold">User Accounts</h3>
+				<Badge variant="secondary">{users.length}</Badge>
+			</div>
+			<DataTable
+				columns={userColumns}
+				data={users}
+				emptyMessage="No user accounts found"
+			/>
+		{/await}
 	</div>
 
 	<div>
-		<div class="mb-4 flex items-center gap-3">
-			<h3 class="text-lg font-semibold text-surface-900 dark:text-surface-100">Groups</h3>
-			<Badge>{data.groups.length}</Badge>
-		</div>
-		<DataTable
-			columns={groupColumns}
-			data={data.groups}
-			emptyMessage="No groups found"
-		/>
+		{#await data.groups}
+			<div class="mb-4 flex items-center gap-3">
+				<h3 class="text-lg font-semibold">Groups</h3>
+			</div>
+			<TableSkeleton rows={3} columns={2} />
+		{:then groups}
+			<div class="mb-4 flex items-center gap-3">
+				<h3 class="text-lg font-semibold">Groups</h3>
+				<Badge variant="secondary">{groups.length}</Badge>
+			</div>
+			<DataTable
+				columns={groupColumns}
+				data={groups}
+				emptyMessage="No groups found"
+			/>
+		{/await}
 	</div>
 </div>

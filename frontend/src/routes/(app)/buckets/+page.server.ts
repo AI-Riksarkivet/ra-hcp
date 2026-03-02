@@ -4,9 +4,9 @@ import type { Actions, PageServerLoad } from './$types.js';
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
-export const load: PageServerLoad = async ({ locals }) => {
+async function fetchBuckets(token: string) {
 	const response = await fetch(`${BACKEND_URL}/api/v1/buckets`, {
-		headers: { Authorization: `Bearer ${locals.token}` }
+		headers: { Authorization: `Bearer ${token}` }
 	});
 
 	if (!response.ok) {
@@ -20,6 +20,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		creation_date: b.creation_date ?? b.CreationDate ?? ''
 	}));
 	return { buckets, owner: data.owner ?? '' };
+}
+
+export const load: PageServerLoad = async ({ locals }) => {
+	return {
+		bucketData: fetchBuckets(locals.token)
+	};
 };
 
 export const actions = {
