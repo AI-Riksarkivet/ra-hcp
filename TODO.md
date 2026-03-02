@@ -6,6 +6,7 @@
 - add pr skills and force pr and block to main if not force
 - add dino skills https://github.com/denoland/skills
 - deno, ts and svelte extensions
+- playwright for testing and also storybook
 - use std@expect for testing (jest) from JSR
 - env.ts files?
 - fix use only deno 2 and pnpm or node dep: https://github.com/denoland/svelte-adapter
