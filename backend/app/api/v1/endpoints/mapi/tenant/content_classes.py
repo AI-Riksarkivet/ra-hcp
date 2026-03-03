@@ -32,7 +32,9 @@ async def create_content_class(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.send(
-        "PUT", f"/tenants/{tenant_name}/contentClasses", body=body,
+        "PUT",
+        f"/tenants/{tenant_name}/contentClasses",
+        body=body,
     )
     return Response(status_code=resp.status_code)
 
@@ -57,7 +59,8 @@ async def check_content_class(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.send(
-        "HEAD", f"/tenants/{tenant_name}/contentClasses/{content_class_name}",
+        "HEAD",
+        f"/tenants/{tenant_name}/contentClasses/{content_class_name}",
     )
     return Response(status_code=resp.status_code)
 
@@ -70,7 +73,8 @@ async def update_content_class(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.send(
-        "POST", f"/tenants/{tenant_name}/contentClasses/{content_class_name}",
+        "POST",
+        f"/tenants/{tenant_name}/contentClasses/{content_class_name}",
         body=body,
     )
     return Response(status_code=resp.status_code)
@@ -83,6 +87,7 @@ async def delete_content_class(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.send(
-        "DELETE", f"/tenants/{tenant_name}/contentClasses/{content_class_name}",
+        "DELETE",
+        f"/tenants/{tenant_name}/contentClasses/{content_class_name}",
     )
     return Response(status_code=resp.status_code)

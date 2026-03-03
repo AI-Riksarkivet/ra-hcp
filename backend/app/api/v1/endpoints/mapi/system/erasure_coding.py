@@ -64,9 +64,7 @@ async def modify_or_retire_ec_topology(
     query = {}
     if retire is not None:
         query["retire"] = ""
-    resp = await hcp.send(
-        "POST", f"{TOPOS}/{topology_name}", query=query or None
-    )
+    resp = await hcp.send("POST", f"{TOPOS}/{topology_name}", query=query or None)
     return Response(status_code=resp.status_code)
 
 
@@ -79,9 +77,7 @@ async def delete_ec_topology(
     query = {}
     if force:
         query["force"] = "true"
-    resp = await hcp.send(
-        "DELETE", f"{TOPOS}/{topology_name}", query=query or None
-    )
+    resp = await hcp.send("DELETE", f"{TOPOS}/{topology_name}", query=query or None)
     return Response(status_code=resp.status_code)
 
 
@@ -129,9 +125,7 @@ async def add_tenant_to_ec_topology(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
-        "PUT", f"{TOPOS}/{topology_name}/tenants/{tenant_name}"
-    )
+    resp = await hcp.send("PUT", f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
     return Response(status_code=resp.status_code)
 
 
@@ -141,9 +135,7 @@ async def remove_tenant_from_ec_topology(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
-        "DELETE", f"{TOPOS}/{topology_name}/tenants/{tenant_name}"
-    )
+    resp = await hcp.send("DELETE", f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
     return Response(status_code=resp.status_code)
 
 

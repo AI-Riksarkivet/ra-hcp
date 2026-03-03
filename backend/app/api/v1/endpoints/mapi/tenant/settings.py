@@ -39,7 +39,9 @@ async def check_tenant(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    await hcp.send("HEAD", f"/tenants/{tenant_name}", resource=f"tenant '{tenant_name}'")
+    await hcp.send(
+        "HEAD", f"/tenants/{tenant_name}", resource=f"tenant '{tenant_name}'"
+    )
     return Response(status_code=200)
 
 
@@ -50,8 +52,10 @@ async def modify_tenant(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}",
-        resource=f"tenant '{tenant_name}'", body=body,
+        "POST",
+        f"/tenants/{tenant_name}",
+        resource=f"tenant '{tenant_name}'",
+        body=body,
     )
     return {"status": "updated"}
 

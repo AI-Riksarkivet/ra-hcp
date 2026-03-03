@@ -77,9 +77,7 @@ async def get_certificate(
     certificate_id: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    return await hcp.fetch_json(
-        f"/services/replication/certificates/{certificate_id}"
-    )
+    return await hcp.fetch_json(f"/services/replication/certificates/{certificate_id}")
 
 
 @router.delete("/services/replication/certificates/{certificate_id}")
@@ -211,9 +209,7 @@ async def add_tenant_to_link(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
-        "PUT", f"{LINKS}/{link_name}/content/tenants/{tenant_name}"
-    )
+    resp = await hcp.send("PUT", f"{LINKS}/{link_name}/content/tenants/{tenant_name}")
     return Response(status_code=resp.status_code)
 
 
@@ -223,9 +219,7 @@ async def get_link_tenant(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    return await hcp.fetch_json(
-        f"{LINKS}/{link_name}/content/tenants/{tenant_name}"
-    )
+    return await hcp.fetch_json(f"{LINKS}/{link_name}/content/tenants/{tenant_name}")
 
 
 @router.post(LINKS + "/{link_name}/content/tenants/{tenant_name}")

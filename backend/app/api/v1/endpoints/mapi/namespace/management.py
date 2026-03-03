@@ -37,7 +37,9 @@ async def list_namespaces(
     if qp.filterString:
         q["filterString"] = qp.filterString
     return await hcp.fetch_json(
-        f"/tenants/{tenant_name}/namespaces", resource="namespaces", query=q or None,
+        f"/tenants/{tenant_name}/namespaces",
+        resource="namespaces",
+        query=q or None,
     )
 
 
@@ -48,8 +50,10 @@ async def create_namespace(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "PUT", f"/tenants/{tenant_name}/namespaces",
-        resource="namespace", body=body,
+        "PUT",
+        f"/tenants/{tenant_name}/namespaces",
+        resource="namespace",
+        body=body,
     )
     return {"status": "created"}
 
@@ -78,7 +82,8 @@ async def check_namespace(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "HEAD", f"/tenants/{tenant_name}/namespaces/{ns_name}",
+        "HEAD",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}",
         resource=f"namespace '{ns_name}'",
     )
     return Response(status_code=200)
@@ -96,8 +101,11 @@ async def modify_namespace(
     if resetMQECheckpoint is not None:
         q["resetMQECheckpoint"] = resetMQECheckpoint
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/namespaces/{ns_name}",
-        resource=f"namespace '{ns_name}'", body=body, query=q or None,
+        "POST",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}",
+        resource=f"namespace '{ns_name}'",
+        body=body,
+        query=q or None,
     )
     return {"status": "updated"}
 
@@ -109,7 +117,8 @@ async def delete_namespace(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "DELETE", f"/tenants/{tenant_name}/namespaces/{ns_name}",
+        "DELETE",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}",
         resource=f"namespace '{ns_name}'",
     )
     return {"status": "deleted"}

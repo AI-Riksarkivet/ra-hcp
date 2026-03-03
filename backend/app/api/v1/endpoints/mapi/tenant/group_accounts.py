@@ -33,8 +33,10 @@ async def create_group_account(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "PUT", f"/tenants/{tenant_name}/groupAccounts",
-        resource="group account", body=body,
+        "PUT",
+        f"/tenants/{tenant_name}/groupAccounts",
+        resource="group account",
+        body=body,
     )
     return {"status": "created"}
 
@@ -71,7 +73,9 @@ async def modify_group_account(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/groupAccounts/{group_name}", body=body,
+        "POST",
+        f"/tenants/{tenant_name}/groupAccounts/{group_name}",
+        body=body,
     )
     return {"status": "updated"}
 

@@ -3,8 +3,7 @@
 	import DataTable from '$lib/components/ui/DataTable.svelte';
 	import type { ColumnDef, CellContext } from '@tanstack/table-core';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-
-	let { data } = $props();
+	import { get_users, get_groups } from '$lib/users.remote.js';
 
 	type User = { username: string; fullName?: string; enabled?: boolean; roles?: string[] };
 	type Group = { name: string; description?: string };
@@ -45,7 +44,7 @@
 	</div>
 
 	<div>
-		{#await data.users}
+		{#await get_users()}
 			<div class="mb-4 flex items-center gap-3">
 				<h3 class="text-lg font-semibold">User Accounts</h3>
 			</div>
@@ -60,7 +59,7 @@
 	</div>
 
 	<div>
-		{#await data.groups}
+		{#await get_groups()}
 			<div class="mb-4 flex items-center gap-3">
 				<h3 class="text-lg font-semibold">Groups</h3>
 			</div>

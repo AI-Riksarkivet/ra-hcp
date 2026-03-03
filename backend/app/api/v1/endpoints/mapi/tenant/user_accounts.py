@@ -49,8 +49,11 @@ async def create_user_account(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "PUT", f"/tenants/{tenant_name}/userAccounts",
-        resource="user account", body=body, query={"password": password},
+        "PUT",
+        f"/tenants/{tenant_name}/userAccounts",
+        resource="user account",
+        body=body,
+        query={"password": password},
     )
     return {"status": "created"}
 
@@ -62,8 +65,10 @@ async def reset_passwords(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/userAccounts",
-        body={}, query={"resetPasswords": resetPasswords},
+        "POST",
+        f"/tenants/{tenant_name}/userAccounts",
+        body={},
+        query={"resetPasswords": resetPasswords},
     )
     return {"status": "passwords_reset"}
 
@@ -89,7 +94,8 @@ async def check_user_account(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "HEAD", f"/tenants/{tenant_name}/userAccounts/{username}",
+        "HEAD",
+        f"/tenants/{tenant_name}/userAccounts/{username}",
         resource=f"user '{username}'",
     )
     return Response(status_code=200)
@@ -107,8 +113,11 @@ async def modify_user_account(
     if password:
         q["password"] = password
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/userAccounts/{username}",
-        resource=f"user '{username}'", body=body, query=q or None,
+        "POST",
+        f"/tenants/{tenant_name}/userAccounts/{username}",
+        resource=f"user '{username}'",
+        body=body,
+        query=q or None,
     )
     return {"status": "updated"}
 
@@ -120,7 +129,8 @@ async def delete_user_account(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "DELETE", f"/tenants/{tenant_name}/userAccounts/{username}",
+        "DELETE",
+        f"/tenants/{tenant_name}/userAccounts/{username}",
         resource=f"user '{username}'",
     )
     return {"status": "deleted"}
@@ -137,7 +147,8 @@ async def change_password(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/userAccounts/{username}/changePassword",
+        "POST",
+        f"/tenants/{tenant_name}/userAccounts/{username}/changePassword",
         body=body,
     )
     return {"status": "password_changed"}

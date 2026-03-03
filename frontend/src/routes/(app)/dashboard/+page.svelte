@@ -4,8 +4,8 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import { onMount } from 'svelte';
-
-	let { data } = $props();
+	import { get_health } from '$lib/health.remote.js';
+	import { get_buckets } from '$lib/buckets.remote.js';
 
 	let cards: HTMLElement[] = $state([]);
 
@@ -32,7 +32,7 @@
 	</div>
 
 	<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-		{#await data.health}
+		{#await get_health()}
 			<CardSkeleton />
 		{:then health}
 			<div bind:this={cards[0]}>
@@ -60,7 +60,7 @@
 			</div>
 		{/await}
 
-		{#await data.buckets}
+		{#await get_buckets()}
 			<CardSkeleton />
 			<CardSkeleton />
 		{:then buckets}

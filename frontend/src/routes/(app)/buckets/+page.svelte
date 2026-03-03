@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
 	import { Plus, Trash2, Search } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
@@ -12,14 +10,15 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import { get_buckets, create_bucket, delete_bucket } from '$lib/buckets.remote.js';
 
-	let { data, form } = $props();
+	let bucketData = get_buckets();
 
 	let search = $state('');
 	let buckets = $state<{ name: string; creation_date: string }[]>([]);
 
 	$effect(() => {
-		data.bucketData.then((bd) => {
+		bucketData.then((bd) => {
 			buckets = bd.buckets;
 		});
 	});
@@ -59,15 +58,11 @@
 		if (!deleteTarget) return;
 		deleting = true;
 		try {
-			const res = await fetch(`/api/v1/buckets/${encodeURIComponent(deleteTarget)}`, {
-				method: 'DELETE',
-			});
-			if (res.ok) {
-				toast.success(`Deleted bucket "${deleteTarget}"`);
-				await invalidateAll();
-			} else {
-				toast.error('Failed to delete bucket');
-			}
+			await delete_bucket({ bucket: deleteTarget });
+			toast.success(`Deleted bucket "${deleteTarget}"`);
+			bucketData = get_buckets.refresh();
+		} catch {
+			toast.error('Failed to delete bucket');
 		} finally {
 			deleting = false;
 			deleteTarget = null;
@@ -81,14 +76,8 @@
 			failCount = 0;
 		for (const name of names) {
 			try {
-				const res = await fetch(`/api/v1/buckets/${encodeURIComponent(name)}`, {
-					method: 'DELETE',
-				});
-				if (res.ok) {
-					successCount++;
-				} else {
-					failCount++;
-				}
+				await delete_bucket({ bucket: name });
+				successCount++;
 			} catch {
 				failCount++;
 			}
@@ -100,10 +89,33 @@
 		selected = new Set();
 		deleting = false;
 		bulkDeleteOpen = false;
-		await invalidateAll();
+		bucketData = get_buckets.refresh();
 	}
 
 	let createOpen = $state(false);
+	let createError = $state('');
+	let creating = $state(false);
+
+	async function handleCreate(e: SubmitEvent) {
+		e.preventDefault();
+		const form = e.currentTarget as HTMLFormElement;
+		const formData = new FormData(form);
+		const name = formData.get('bucket') as string;
+		if (!name) return;
+		creating = true;
+		createError = '';
+		try {
+			await create_bucket({ bucket: name });
+			toast.success('Bucket created successfully');
+			createOpen = false;
+			form.reset();
+			bucketData = get_buckets.refresh();
+		} catch (err) {
+			createError = err instanceof Error ? err.message : 'Failed to create bucket';
+		} finally {
+			creating = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -122,46 +134,30 @@
 		</Button>
 	</div>
 
-	{#if form?.error}
-		<div
-			class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-		>
-			{form.error}
-		</div>
-	{/if}
-
 	<Dialog.Root bind:open={createOpen}>
 		<Dialog.Content class="sm:max-w-md">
 			<Dialog.Header><Dialog.Title>Create Bucket</Dialog.Title></Dialog.Header>
-			<form
-				method="POST"
-				action="?/create"
-				use:enhance={() => {
-					return async ({ result, update }) => {
-						if (result.type === 'success') {
-							toast.success('Bucket created successfully');
-							createOpen = false;
-							await invalidateAll();
-						} else {
-							await update();
-						}
-					};
-				}}
-				class="space-y-4"
-			>
+			<form onsubmit={handleCreate} class="space-y-4">
+				{#if createError}
+					<div
+						class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+					>
+						{createError}
+					</div>
+				{/if}
 				<div class="space-y-2">
 					<Label for="bucket-name">Bucket Name</Label>
 					<Input id="bucket-name" name="bucket" placeholder="my-bucket" required />
 				</div>
 				<Dialog.Footer>
 					<Button variant="ghost" type="button" onclick={() => (createOpen = false)}>Cancel</Button>
-					<Button type="submit">Create</Button>
+					<Button type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create'}</Button>
 				</Dialog.Footer>
 			</form>
 		</Dialog.Content>
 	</Dialog.Root>
 
-	{#await data.bucketData}
+	{#await bucketData}
 		<TableSkeleton rows={5} columns={4} />
 	{:then _}
 		<div class="relative">

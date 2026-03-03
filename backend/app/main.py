@@ -7,15 +7,17 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.api.dependencies import get_cache_service
 from app.api.v1.router import api_router
 from app.core.config import AuthSettings
 from app.core.telemetry import setup_telemetry
+from app.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
 
@@ -228,8 +230,7 @@ app.include_router(api_router, prefix="/api/v1")
 
 # ── Health endpoint ───────────────────────────────────────────────────
 @app.get("/health", tags=["Health"])
-async def health(request: Request):
-    cache = getattr(request.app.state, "cache", None)
+async def health(cache: CacheService | None = Depends(get_cache_service)):
     return {
         "status": "ok",
         "cache": "connected" if cache and cache.enabled else "disabled",

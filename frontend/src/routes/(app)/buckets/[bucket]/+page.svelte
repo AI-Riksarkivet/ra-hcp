@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
@@ -28,6 +27,11 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import { get_objects, delete_object, bulk_delete_objects } from '$lib/buckets.remote.js';
+
+	let bucket = $derived(page.params.bucket);
+	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
+	let objectData = $derived(get_objects({ bucket, prefix }));
 
 	let viewerOpen = $state(false);
 	let viewerUrl = $state('');
@@ -50,7 +54,6 @@
 		error?: string;
 	}
 
-	let { data, form } = $props();
 	let uploadOpen = $state(false);
 	let selectedFiles = $state<FileUpload[]>([]);
 	let uploading = $state(false);
@@ -60,17 +63,17 @@
 	let keyCount = $state(0);
 
 	$effect(() => {
-		data.objectData.then((od) => {
+		objectData.then((od) => {
 			objects = od.objects;
 			keyCount = od.keyCount;
 		});
 	});
 
-	function navigatePrefix(prefix: string) {
-		goto(`/buckets/${data.bucket}?prefix=${encodeURIComponent(prefix)}`);
+	function navigatePrefix(p: string) {
+		goto(`/buckets/${bucket}?prefix=${encodeURIComponent(p)}`);
 	}
 	function downloadUrl(key: string): string {
-		return `/api/v1/buckets/${encodeURIComponent(data.bucket)}/objects/${encodeURIComponent(key)}`;
+		return `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${encodeURIComponent(key)}`;
 	}
 	function getDisplayName(key: string): string {
 		return key.split('/').filter(Boolean).pop() ?? key;
@@ -96,7 +99,7 @@
 		if (!files) return;
 		for (const file of files) {
 			const preview = isImageFile(file) ? URL.createObjectURL(file) : null;
-			const key = (data.prefix || '') + file.name;
+			const key = (prefix || '') + file.name;
 			selectedFiles = [...selectedFiles, { file, key, preview, status: 'pending', progress: 0 }];
 		}
 	}
@@ -121,7 +124,7 @@
 			const xhr = new XMLHttpRequest();
 			xhr.open(
 				'POST',
-				`/api/v1/buckets/${encodeURIComponent(data.bucket)}/objects/${encodeURIComponent(item.key)}`
+				`/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${encodeURIComponent(item.key)}`
 			);
 			xhr.upload.onprogress = (e) => {
 				if (e.lengthComputable) {
@@ -169,7 +172,7 @@
 		if (doneCount > 0)
 			toast.success(`Uploaded ${doneCount} file${doneCount !== 1 ? 's' : ''} successfully`);
 		if (errCount > 0) toast.error(`${errCount} file${errCount !== 1 ? 's' : ''} failed to upload`);
-		await invalidateAll();
+		objectData = get_objects.refresh({ bucket, prefix });
 	}
 
 	function closeUpload() {
@@ -188,8 +191,8 @@
 		return Math.round(selectedFiles.reduce((sum, f) => sum + f.progress, 0) / selectedFiles.length);
 	});
 	let parentPrefix = $derived.by(() => {
-		if (!data.prefix) return '';
-		const parts = data.prefix.replace(/\/$/, '').split('/');
+		if (!prefix) return '';
+		const parts = prefix.replace(/\/$/, '').split('/');
 		parts.pop();
 		return parts.length > 0 ? parts.join('/') + '/' : '';
 	});
@@ -237,16 +240,11 @@
 		if (!deleteTarget) return;
 		deleting = true;
 		try {
-			const res = await fetch(
-				`/api/v1/buckets/${encodeURIComponent(data.bucket)}/objects/${encodeURIComponent(deleteTarget)}`,
-				{ method: 'DELETE' }
-			);
-			if (res.ok) {
-				toast.success(`Deleted ${getDisplayName(deleteTarget)}`);
-				await invalidateAll();
-			} else {
-				toast.error('Failed to delete object');
-			}
+			await delete_object({ bucket, key: deleteTarget });
+			toast.success(`Deleted ${getDisplayName(deleteTarget)}`);
+			objectData = get_objects.refresh({ bucket, prefix });
+		} catch {
+			toast.error('Failed to delete object');
 		} finally {
 			deleting = false;
 			deleteTarget = null;
@@ -256,35 +254,20 @@
 	async function confirmBulkDelete() {
 		deleting = true;
 		const keys = [...selected];
-		let successCount = 0,
-			failCount = 0;
-		for (const key of keys) {
-			try {
-				const res = await fetch(
-					`/api/v1/buckets/${encodeURIComponent(data.bucket)}/objects/${encodeURIComponent(key)}`,
-					{ method: 'DELETE' }
-				);
-				if (res.ok) {
-					successCount++;
-				} else {
-					failCount++;
-				}
-			} catch {
-				failCount++;
-			}
+		try {
+			await bulk_delete_objects({ bucket, keys });
+			toast.success(`Deleted ${keys.length} object${keys.length !== 1 ? 's' : ''}`);
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to delete objects');
 		}
-		if (successCount > 0)
-			toast.success(`Deleted ${successCount} object${successCount !== 1 ? 's' : ''}`);
-		if (failCount > 0)
-			toast.error(`Failed to delete ${failCount} object${failCount !== 1 ? 's' : ''}`);
 		selected = new Set();
 		deleting = false;
 		bulkDeleteOpen = false;
-		await invalidateAll();
+		objectData = get_objects.refresh({ bucket, prefix });
 	}
 </script>
 
-<svelte:head><title>{data.bucket} - HCP Admin Console</title></svelte:head>
+<svelte:head><title>{bucket} - HCP Admin Console</title></svelte:head>
 
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
@@ -302,23 +285,17 @@
 				<Tooltip.Content>Back to buckets</Tooltip.Content>
 			</Tooltip.Root>
 			<div>
-				<h2 class="text-2xl font-bold">{data.bucket}</h2>
-				{#if data.prefix}<p class="mt-1 text-sm text-muted-foreground">
-						<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{data.prefix}</code>
+				<h2 class="text-2xl font-bold">{bucket}</h2>
+				{#if prefix}<p class="mt-1 text-sm text-muted-foreground">
+						<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{prefix}</code>
 					</p>{/if}
 			</div>
-			{#await data.objectData then od}
+			{#await objectData then od}
 				<Badge variant="secondary">{od.keyCount} objects</Badge>
 			{/await}
 		</div>
 		<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>
 	</div>
-
-	{#if form?.error}<div
-			class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-		>
-			{form.error}
-		</div>{/if}
 
 	<!-- Upload Modal -->
 	<Dialog.Root
@@ -328,10 +305,9 @@
 		}}
 	>
 		<Dialog.Content class="sm:max-w-lg">
-			<Dialog.Header><Dialog.Title>Upload Files to {data.bucket}</Dialog.Title></Dialog.Header>
-			{#if data.prefix}<p class="text-sm text-muted-foreground">
-					Prefix: <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{data.prefix}</code
-					>
+			<Dialog.Header><Dialog.Title>Upload Files to {bucket}</Dialog.Title></Dialog.Header>
+			{#if prefix}<p class="text-sm text-muted-foreground">
+					Prefix: <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{prefix}</code>
 				</p>{/if}
 
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -449,13 +425,13 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-	{#if data.prefix}<button
+	{#if prefix}<button
 			onclick={() => navigatePrefix(parentPrefix)}
 			class="flex items-center gap-2 text-sm text-primary hover:underline"
 			><Folder class="h-4 w-4" />.. (parent directory)</button
 		>{/if}
 
-	{#await data.objectData}
+	{#await objectData}
 		<TableSkeleton rows={5} columns={6} />
 	{:then _}
 		<div class="relative">

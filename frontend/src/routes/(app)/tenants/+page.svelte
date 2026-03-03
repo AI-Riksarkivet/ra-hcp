@@ -3,8 +3,7 @@
 	import { goto } from '$app/navigation';
 	import type { ColumnDef } from '@tanstack/table-core';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-
-	let { data } = $props();
+	import { get_tenants } from '$lib/tenants.remote.js';
 
 	type Tenant = {
 		name: string;
@@ -31,7 +30,7 @@
 		<p class="mt-1 text-sm text-muted-foreground">Manage tenants in your HCP system</p>
 	</div>
 
-	{#await data.tenants}
+	{#await get_tenants()}
 		<TableSkeleton rows={5} columns={4} />
 	{:then tenants}
 		<DataTable

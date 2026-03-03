@@ -43,7 +43,8 @@ async def modify_ns_permissions(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/namespaces/{ns_name}/permissions",
+        "POST",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/permissions",
         body=body,
     )
     return {"status": "updated"}
@@ -73,7 +74,8 @@ async def modify_default_protocols(
 ):
     """Modify default namespace protocol settings (legacy, for default namespaces only)."""
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols",
+        "POST",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols",
         body=body,
     )
     return {"status": "updated"}
@@ -99,7 +101,8 @@ async def modify_http_protocol(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/http",
+        "POST",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/http",
         body=body,
     )
     return {"status": "updated"}
@@ -113,7 +116,8 @@ async def modify_cifs_protocol(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/cifs",
+        "POST",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/cifs",
         body=body,
     )
     return {"status": "updated"}
@@ -127,7 +131,8 @@ async def modify_nfs_protocol(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/nfs",
+        "POST",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/nfs",
         body=body,
     )
     return {"status": "updated"}
@@ -141,7 +146,8 @@ async def modify_smtp_protocol(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "POST", f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/smtp",
+        "POST",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/smtp",
         body=body,
     )
     return {"status": "updated"}
@@ -185,9 +191,7 @@ async def get_ns_cors(
     ns_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    return await hcp.fetch_json(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/cors"
-    )
+    return await hcp.fetch_json(f"/tenants/{tenant_name}/namespaces/{ns_name}/cors")
 
 
 @router.put(PREFIX + "/{ns_name}/cors")
@@ -198,7 +202,9 @@ async def set_ns_cors(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "PUT", f"/tenants/{tenant_name}/namespaces/{ns_name}/cors", body=body,
+        "PUT",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/cors",
+        body=body,
     )
     return {"status": "created"}
 
@@ -210,6 +216,7 @@ async def delete_ns_cors(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
-        "DELETE", f"/tenants/{tenant_name}/namespaces/{ns_name}/cors",
+        "DELETE",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/cors",
     )
     return {"status": "deleted"}

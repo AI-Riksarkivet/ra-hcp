@@ -25,7 +25,8 @@ async def get_tenant_chargeback(
     if params.granularity:
         q["granularity"] = params.granularity
     return await hcp.fetch_json(
-        f"/tenants/{tenant_name}/chargebackReport", query=q,
+        f"/tenants/{tenant_name}/chargebackReport",
+        query=q,
     )
 
 
