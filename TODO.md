@@ -3,7 +3,7 @@
 - remove [https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/assets/favicon.svg](https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/hooks/is-mobile.svelte.ts)
 - remove? https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/utils.ts, https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/index.ts , https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/utils/cn.ts ?
 - frontend/public fot assets
-- use remote functions for data loading
+- use remote functions for data loading. update skills to utilize it svelte-skills-kit
 - add pr skills and force pr and block to main if not force
 - add dino skills https://github.com/denoland/skills
 - deno, ts and svelte extensions
