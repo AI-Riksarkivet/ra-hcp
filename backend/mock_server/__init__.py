@@ -1,0 +1,91 @@
+"""Mock development server — run the real FastAPI app with in-memory fakes.
+
+Start with:  uvicorn mock_server:app --reload          (port 8000)
+   or:       uvicorn mock_server:app --reload --port 9000
+Login with:  username=admin  password=password
+
+All S3 operations are backed by in-memory dicts (stateful within the session).
+All MAPI calls are intercepted by respx and return stateful fixture data.
+"""
+
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+from unittest.mock import patch
+
+import respx
+
+from app.api.dependencies import get_mapi_service, get_mapi_settings, get_s3_service
+from app.core.config import AuthSettings, MapiSettings
+from app.main import app
+from app.services.mapi_service import MapiService
+
+from .mapi_state import MockMapiState, seed_mapi_state, setup_mapi_routes
+from .s3_service import MockS3Service, seed_s3
+
+logger = logging.getLogger("mock_server")
+
+# ── Mock settings ────────────────────────────────────────────────────
+
+MOCK_MAPI_SETTINGS = MapiSettings(
+    hcp_host="mock.hcp.example.com",
+    hcp_port=9090,
+    hcp_username="admin",
+    hcp_password="password",
+    hcp_auth_type="hcp",
+    hcp_verify_ssl=False,
+    hcp_timeout=30,
+)
+
+MOCK_AUTH_SETTINGS = AuthSettings(
+    api_secret_key="mock-dev-secret-key-minimum-32-bytes!",
+    api_token_expire_minutes=480,
+)
+
+HCP_BASE = f"https://{MOCK_MAPI_SETTINGS.hcp_host}:{MOCK_MAPI_SETTINGS.hcp_port}/mapi"
+
+
+# ── Lifespan ─────────────────────────────────────────────────────────
+
+
+@asynccontextmanager
+async def _mock_lifespan(app_instance):
+    """Wrap the FastAPI app with mocked services for development."""
+    mock_s3 = MockS3Service()
+    seed_s3(mock_s3)
+
+    state = MockMapiState()
+    seed_mapi_state(state)
+
+    mapi_svc = MapiService(MOCK_MAPI_SETTINGS)
+
+    async def _override_s3():
+        yield mock_s3
+
+    async def _override_mapi():
+        yield mapi_svc
+
+    def _override_mapi_settings():
+        return MOCK_MAPI_SETTINGS
+
+    app_instance.dependency_overrides[get_s3_service] = _override_s3
+    app_instance.dependency_overrides[get_mapi_service] = _override_mapi
+    app_instance.dependency_overrides[get_mapi_settings] = _override_mapi_settings
+
+    with (
+        respx.mock(assert_all_mocked=False, assert_all_called=False) as mock,
+        patch("app.core.security._get_auth_settings", return_value=MOCK_AUTH_SETTINGS),
+    ):
+        setup_mapi_routes(mock, state, HCP_BASE)
+        logger.info("Mock MAPI routes registered at %s", HCP_BASE)
+        logger.info("Seeded S3 with buckets: %s", list(mock_s3._buckets.keys()))
+        logger.info("Login with username=admin password=password")
+        yield
+
+    await mapi_svc.close()
+    app_instance.dependency_overrides.clear()
+
+
+# Replace the app's lifespan with the mock lifespan
+app.router.lifespan_context = _mock_lifespan
