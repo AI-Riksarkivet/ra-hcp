@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Response, UploadFile, File
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.network import NetworkSettings
 
 router = APIRouter(tags=["System Admin: Infrastructure"])
@@ -20,9 +19,7 @@ async def get_network_settings(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get("/network", query={"verbose": str(verbose).lower()})
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json("/network", query={"verbose": str(verbose).lower()})
 
 
 @router.post("/network")
@@ -30,8 +27,7 @@ async def modify_network_settings(
     body: NetworkSettings,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post("/network", body=body)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("POST", "/network", body=body)
     return Response(status_code=resp.status_code)
 
 
@@ -43,9 +39,9 @@ async def list_licenses(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get("/storage/licenses", query={"verbose": str(verbose).lower()})
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(
+        "/storage/licenses", query={"verbose": str(verbose).lower()}
+    )
 
 
 @router.put("/storage/licenses")
@@ -54,8 +50,7 @@ async def upload_license(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     content = await file.read()
-    resp = await hcp.put("/storage/licenses", body=content)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("PUT", "/storage/licenses", body=content)
     return Response(status_code=resp.status_code)
 
 
@@ -64,9 +59,7 @@ async def get_license(
     serial_number: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/storage/licenses/{serial_number}")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"/storage/licenses/{serial_number}")
 
 
 # ── Statistics ───────────────────────────────────────────────────────
@@ -77,9 +70,9 @@ async def get_node_statistics(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get("/nodes/statistics", query={"verbose": str(verbose).lower()})
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(
+        "/nodes/statistics", query={"verbose": str(verbose).lower()}
+    )
 
 
 @router.get("/services/statistics")
@@ -87,8 +80,6 @@ async def get_service_statistics(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         "/services/statistics", query={"verbose": str(verbose).lower()}
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)

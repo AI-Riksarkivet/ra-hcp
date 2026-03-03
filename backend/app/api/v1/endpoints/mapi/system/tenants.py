@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Query
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.tenant import TenantCreate
 
 router = APIRouter(prefix="/tenants", tags=["System Admin: Tenants"])
@@ -18,12 +17,11 @@ async def list_tenants(
     prettyprint: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         "/tenants",
+        resource="tenants",
         query={"verbose": str(verbose).lower(), "prettyprint": prettyprint or None},
     )
-    raise_for_hcp_status(resp, "tenants")
-    return parse_json_response(resp)
 
 
 @router.put("")
@@ -43,6 +41,5 @@ async def create_tenant(
     }
     if initialSecurityGroup is not None:
         q["initialSecurityGroup"] = initialSecurityGroup
-    resp = await hcp.put("/tenants", body=body, query=q)
-    raise_for_hcp_status(resp, "tenant")
+    await hcp.send("PUT", "/tenants", resource="tenant", body=body, query=q)
     return {"status": "created"}

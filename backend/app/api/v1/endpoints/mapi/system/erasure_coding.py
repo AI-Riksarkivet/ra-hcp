@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.erasure_coding import ECTopologyCreate
 
 router = APIRouter(tags=["System Admin: Erasure Coding"])
@@ -24,9 +23,7 @@ async def list_ec_topologies(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(TOPOS, query={"verbose": str(verbose).lower()})
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(TOPOS, query={"verbose": str(verbose).lower()})
 
 
 @router.put(TOPOS)
@@ -34,8 +31,7 @@ async def create_ec_topology(
     body: ECTopologyCreate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.put(TOPOS, body=body)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("PUT", TOPOS, body=body)
     return Response(status_code=resp.status_code)
 
 
@@ -45,11 +41,9 @@ async def get_ec_topology(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"{TOPOS}/{topology_name}", query={"verbose": str(verbose).lower()}
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.head(TOPOS + "/{topology_name}")
@@ -57,8 +51,7 @@ async def check_ec_topology(
     topology_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.head(f"{TOPOS}/{topology_name}")
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("HEAD", f"{TOPOS}/{topology_name}")
     return Response(status_code=resp.status_code)
 
 
@@ -71,8 +64,9 @@ async def modify_or_retire_ec_topology(
     query = {}
     if retire is not None:
         query["retire"] = ""
-    resp = await hcp.post(f"{TOPOS}/{topology_name}", query=query or None)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send(
+        "POST", f"{TOPOS}/{topology_name}", query=query or None
+    )
     return Response(status_code=resp.status_code)
 
 
@@ -85,8 +79,9 @@ async def delete_ec_topology(
     query = {}
     if force:
         query["force"] = "true"
-    resp = await hcp.delete(f"{TOPOS}/{topology_name}", query=query or None)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send(
+        "DELETE", f"{TOPOS}/{topology_name}", query=query or None
+    )
     return Response(status_code=resp.status_code)
 
 
@@ -99,12 +94,10 @@ async def get_ec_tenant_candidates(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"{TOPOS}/{topology_name}/tenantCandidates",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.get(TOPOS + "/{topology_name}/tenantConflictingCandidates")
@@ -113,12 +106,10 @@ async def get_ec_tenant_conflicting_candidates(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"{TOPOS}/{topology_name}/tenantConflictingCandidates",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 # ── EC Topology – Tenants ───────────────────────────────────────────
@@ -129,9 +120,7 @@ async def list_ec_topology_tenants(
     topology_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"{TOPOS}/{topology_name}/tenants")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"{TOPOS}/{topology_name}/tenants")
 
 
 @router.put(TOPOS + "/{topology_name}/tenants/{tenant_name}")
@@ -140,8 +129,9 @@ async def add_tenant_to_ec_topology(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.request("PUT", f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
-    raise_for_hcp_status(resp)
+    resp = await hcp.send(
+        "PUT", f"{TOPOS}/{topology_name}/tenants/{tenant_name}"
+    )
     return Response(status_code=resp.status_code)
 
 
@@ -151,8 +141,9 @@ async def remove_tenant_from_ec_topology(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.delete(f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
-    raise_for_hcp_status(resp)
+    resp = await hcp.send(
+        "DELETE", f"{TOPOS}/{topology_name}/tenants/{tenant_name}"
+    )
     return Response(status_code=resp.status_code)
 
 
@@ -164,9 +155,6 @@ async def get_ec_link_candidates(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
-        f"{EC}/linkCandidates",
-        query={"verbose": str(verbose).lower()},
+    return await hcp.fetch_json(
+        f"{EC}/linkCandidates", query={"verbose": str(verbose).lower()}
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)

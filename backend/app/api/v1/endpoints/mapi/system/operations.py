@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, Query, Response, UploadFile, File
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.health_check import HealthCheckPrepare, HealthCheckDownload
 from app.schemas.logs import LogPrepare, LogDownload
 
@@ -22,9 +21,7 @@ router = APIRouter(tags=["System Admin: Operations"])
 async def get_health_check_status(
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get("/healthCheckReport")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json("/healthCheckReport")
 
 
 @router.post("/healthCheckReport/prepare")
@@ -32,8 +29,7 @@ async def prepare_health_check(
     body: HealthCheckPrepare,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post("/healthCheckReport/prepare", body=body)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("POST", "/healthCheckReport/prepare", body=body)
     return Response(status_code=resp.status_code)
 
 
@@ -42,8 +38,7 @@ async def download_health_check(
     body: HealthCheckDownload,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post("/healthCheckReport/download", body=body)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("POST", "/healthCheckReport/download", body=body)
     return Response(
         content=resp.content,
         media_type="application/octet-stream",
@@ -55,8 +50,7 @@ async def download_health_check(
 async def cancel_health_check(
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post("/healthCheckReport", query={"cancel": ""})
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("POST", "/healthCheckReport", query={"cancel": ""})
     return Response(status_code=resp.status_code)
 
 
@@ -68,9 +62,7 @@ async def get_log_status(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     """Retrieve the status of the log download in progress."""
-    resp = await hcp.get("/logs")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json("/logs")
 
 
 @router.post("/logs")
@@ -85,8 +77,7 @@ async def log_action(
         q["mark"] = mark
     if cancel is not None:
         q["cancel"] = ""
-    resp = await hcp.post("/logs", query=q or None)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("POST", "/logs", query=q or None)
     return Response(status_code=resp.status_code)
 
 
@@ -95,8 +86,7 @@ async def prepare_logs(
     body: LogPrepare,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post("/logs/prepare", body=body)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("POST", "/logs/prepare", body=body)
     return Response(status_code=resp.status_code)
 
 
@@ -105,8 +95,7 @@ async def download_logs(
     body: LogDownload,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post("/logs/download", body=body)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("POST", "/logs/download", body=body)
     return Response(
         content=resp.content,
         media_type="application/octet-stream",
@@ -121,9 +110,7 @@ async def download_logs(
 async def get_support_credentials(
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get("/supportaccesscredentials")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json("/supportaccesscredentials")
 
 
 @router.put("/supportaccesscredentials")
@@ -132,6 +119,5 @@ async def upload_support_credentials(
     hcp: MapiService = Depends(get_mapi_service),
 ):
     content = await file.read()
-    resp = await hcp.put("/supportaccesscredentials", body=content)
-    raise_for_hcp_status(resp)
+    resp = await hcp.send("PUT", "/supportaccesscredentials", body=content)
     return Response(status_code=resp.status_code)

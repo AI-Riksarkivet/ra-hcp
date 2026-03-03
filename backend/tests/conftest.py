@@ -13,7 +13,6 @@ from app.api.dependencies import (
     get_mapi_service,
     get_mapi_settings,
     get_s3_service,
-    reset_instances,
 )
 from app.core.config import AuthSettings, MapiSettings, S3Settings
 from app.core.security import create_access_token
@@ -157,6 +156,11 @@ async def client(
     app.dependency_overrides[get_mapi_service] = _override_mapi
     app.dependency_overrides[get_mapi_settings] = _override_mapi_settings
 
+    # Provide app.state so non-overridden code (e.g. health) works
+    app.state.cache = None
+    app.state.mapi = mapi_svc
+    app.state.s3_cache = {}
+
     with patch("app.core.security._get_auth_settings", return_value=auth_settings):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -164,4 +168,3 @@ async def client(
 
     await mapi_svc.close()
     app.dependency_overrides.clear()
-    reset_instances()

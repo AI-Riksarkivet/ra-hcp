@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.group_account import GroupAccountCreate, GroupAccountUpdate
 from app.schemas.common import DataAccessPermissions
 
@@ -21,12 +20,10 @@ async def list_group_accounts(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/groupAccounts",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.put(T_PREFIX)
@@ -35,8 +32,10 @@ async def create_group_account(
     body: GroupAccountCreate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.put(f"/tenants/{tenant_name}/groupAccounts", body=body)
-    raise_for_hcp_status(resp, "group account")
+    await hcp.send(
+        "PUT", f"/tenants/{tenant_name}/groupAccounts",
+        resource="group account", body=body,
+    )
     return {"status": "created"}
 
 
@@ -47,12 +46,11 @@ async def get_group_account(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/groupAccounts/{group_name}",
+        resource=f"group '{group_name}'",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp, f"group '{group_name}'")
-    return parse_json_response(resp)
 
 
 @router.head(T_PREFIX + "/{group_name}")
@@ -61,8 +59,7 @@ async def check_group_account(
     group_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.head(f"/tenants/{tenant_name}/groupAccounts/{group_name}")
-    raise_for_hcp_status(resp)
+    await hcp.send("HEAD", f"/tenants/{tenant_name}/groupAccounts/{group_name}")
     return Response(status_code=200)
 
 
@@ -73,11 +70,9 @@ async def modify_group_account(
     body: GroupAccountUpdate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(
-        f"/tenants/{tenant_name}/groupAccounts/{group_name}",
-        body=body,
+    await hcp.send(
+        "POST", f"/tenants/{tenant_name}/groupAccounts/{group_name}", body=body,
     )
-    raise_for_hcp_status(resp)
     return {"status": "updated"}
 
 
@@ -87,8 +82,7 @@ async def delete_group_account(
     group_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.delete(f"/tenants/{tenant_name}/groupAccounts/{group_name}")
-    raise_for_hcp_status(resp)
+    await hcp.send("DELETE", f"/tenants/{tenant_name}/groupAccounts/{group_name}")
     return {"status": "deleted"}
 
 
@@ -101,11 +95,9 @@ async def get_group_data_perms(
     group_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/groupAccounts/{group_name}/dataAccessPermissions"
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.post(T_PREFIX + "/{group_name}/dataAccessPermissions")
@@ -115,9 +107,9 @@ async def modify_group_data_perms(
     body: DataAccessPermissions,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(
+    await hcp.send(
+        "POST",
         f"/tenants/{tenant_name}/groupAccounts/{group_name}/dataAccessPermissions",
         body=body,
     )
-    raise_for_hcp_status(resp)
     return {"status": "updated"}

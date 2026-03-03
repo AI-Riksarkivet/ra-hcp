@@ -161,6 +161,28 @@ class MapiService:
     async def options(self, path: str, **kwargs) -> httpx.Response:
         return await self.request("OPTIONS", path, **kwargs)
 
+    # ── High-level helpers (raise on error) ───────────────────────────
+
+    async def fetch_json(
+        self, path: str, *, resource: str = "resource", **kwargs
+    ) -> dict:
+        """GET + raise_for_hcp_status + parse JSON. One-liner for read endpoints."""
+        from app.api.errors import raise_for_hcp_status, parse_json_response
+
+        resp = await self.get(path, **kwargs)
+        raise_for_hcp_status(resp, resource)
+        return parse_json_response(resp)
+
+    async def send(
+        self, method: str, path: str, *, resource: str = "resource", **kwargs
+    ) -> httpx.Response:
+        """request + raise_for_hcp_status. Returns the validated response."""
+        from app.api.errors import raise_for_hcp_status
+
+        resp = await self.request(method, path, **kwargs)
+        raise_for_hcp_status(resp, resource)
+        return resp
+
 
 class AuthenticatedMapiService(MapiService):
     """Wrapper that injects per-request credentials from the JWT."""

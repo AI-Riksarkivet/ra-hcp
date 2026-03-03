@@ -134,7 +134,7 @@ class CachedMapiService(MapiService):
                     await self._cache.set(cache_key, data, ttl=ttl)
                     span.set_attribute("cache.stored", True)
                     logger.debug("Cache SET: %s (ttl=%d)", cache_key, ttl)
-                except ValueError, TypeError:
+                except (ValueError, TypeError):
                     pass  # Non-JSON responses are not cached
             elif not is_get:
                 # Write operation: invalidate affected entries

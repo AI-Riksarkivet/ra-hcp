@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.user_account import (
     UserAccountCreate,
     UserAccountUpdate,
@@ -39,9 +38,7 @@ async def list_user_accounts(
         q["filterType"] = qp.filterType
     if qp.filterString:
         q["filterString"] = qp.filterString
-    resp = await hcp.get(f"/tenants/{tenant_name}/userAccounts", query=q)
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"/tenants/{tenant_name}/userAccounts", query=q)
 
 
 @router.put(T_PREFIX)
@@ -51,12 +48,10 @@ async def create_user_account(
     password: str = Query(...),
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.put(
-        f"/tenants/{tenant_name}/userAccounts",
-        body=body,
-        query={"password": password},
+    await hcp.send(
+        "PUT", f"/tenants/{tenant_name}/userAccounts",
+        resource="user account", body=body, query={"password": password},
     )
-    raise_for_hcp_status(resp, "user account")
     return {"status": "created"}
 
 
@@ -66,12 +61,10 @@ async def reset_passwords(
     resetPasswords: str = Query(...),
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(
-        f"/tenants/{tenant_name}/userAccounts",
-        body={},
-        query={"resetPasswords": resetPasswords},
+    await hcp.send(
+        "POST", f"/tenants/{tenant_name}/userAccounts",
+        body={}, query={"resetPasswords": resetPasswords},
     )
-    raise_for_hcp_status(resp)
     return {"status": "passwords_reset"}
 
 
@@ -82,12 +75,11 @@ async def get_user_account(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/userAccounts/{username}",
+        resource=f"user '{username}'",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp, f"user '{username}'")
-    return parse_json_response(resp)
 
 
 @router.head(T_PREFIX + "/{username}")
@@ -96,8 +88,10 @@ async def check_user_account(
     username: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.head(f"/tenants/{tenant_name}/userAccounts/{username}")
-    raise_for_hcp_status(resp, f"user '{username}'")
+    await hcp.send(
+        "HEAD", f"/tenants/{tenant_name}/userAccounts/{username}",
+        resource=f"user '{username}'",
+    )
     return Response(status_code=200)
 
 
@@ -112,12 +106,10 @@ async def modify_user_account(
     q = {}
     if password:
         q["password"] = password
-    resp = await hcp.post(
-        f"/tenants/{tenant_name}/userAccounts/{username}",
-        body=body,
-        query=q or None,
+    await hcp.send(
+        "POST", f"/tenants/{tenant_name}/userAccounts/{username}",
+        resource=f"user '{username}'", body=body, query=q or None,
     )
-    raise_for_hcp_status(resp, f"user '{username}'")
     return {"status": "updated"}
 
 
@@ -127,8 +119,10 @@ async def delete_user_account(
     username: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.delete(f"/tenants/{tenant_name}/userAccounts/{username}")
-    raise_for_hcp_status(resp, f"user '{username}'")
+    await hcp.send(
+        "DELETE", f"/tenants/{tenant_name}/userAccounts/{username}",
+        resource=f"user '{username}'",
+    )
     return {"status": "deleted"}
 
 
@@ -142,11 +136,10 @@ async def change_password(
     body: UpdatePasswordRequest,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(
-        f"/tenants/{tenant_name}/userAccounts/{username}/changePassword",
+    await hcp.send(
+        "POST", f"/tenants/{tenant_name}/userAccounts/{username}/changePassword",
         body=body,
     )
-    raise_for_hcp_status(resp)
     return {"status": "password_changed"}
 
 
@@ -169,12 +162,10 @@ async def get_user_data_perms(
         q["sortType"] = qp.sortType
     if qp.sortOrder:
         q["sortOrder"] = qp.sortOrder
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/userAccounts/{username}/dataAccessPermissions",
         query=q or None,
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.post(T_PREFIX + "/{username}/dataAccessPermissions")
@@ -184,9 +175,9 @@ async def modify_user_data_perms(
     body: DataAccessPermissions,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(
+    await hcp.send(
+        "POST",
         f"/tenants/{tenant_name}/userAccounts/{username}/dataAccessPermissions",
         body=body,
     )
-    raise_for_hcp_status(resp)
     return {"status": "updated"}

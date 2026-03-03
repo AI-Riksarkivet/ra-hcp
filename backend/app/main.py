@@ -33,21 +33,33 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Connect cache on startup
-    from app.api import dependencies
+    from app.core.config import CacheSettings, MapiSettings
     from app.services.cache_service import CacheService
+    from app.services.mapi_service import MapiService
 
-    cache = CacheService(dependencies.get_cache_settings())
+    # ── Startup ──────────────────────────────────────────────────────
+    cache_settings = CacheSettings()
+    cache = CacheService(cache_settings)
     await cache.connect()
-    dependencies.set_cache_instance(cache)
+    app.state.cache = cache
+
+    mapi_settings = MapiSettings()
+    if cache.enabled:
+        from app.services.cached_mapi import CachedMapiService
+
+        logger.info("Creating CachedMapiService singleton")
+        app.state.mapi = CachedMapiService(mapi_settings, cache, cache_settings)
+    else:
+        logger.info("Creating MapiService singleton")
+        app.state.mapi = MapiService(mapi_settings)
+
+    app.state.s3_cache = {}
 
     yield
 
-    # Shutdown: close cache + MAPI client
+    # ── Shutdown ─────────────────────────────────────────────────────
+    await app.state.mapi.close()
     await cache.close()
-    if dependencies._mapi_instance is not None:
-        await dependencies._mapi_instance.close()
-        dependencies._mapi_instance = None
 
 
 ROOT_PATH = os.getenv("ROOT_PATH", "")
@@ -216,10 +228,8 @@ app.include_router(api_router, prefix="/api/v1")
 
 # ── Health endpoint ───────────────────────────────────────────────────
 @app.get("/health", tags=["Health"])
-async def health():
-    from app.api.dependencies import get_cache_service
-
-    cache = get_cache_service()
+async def health(request: Request):
+    cache = getattr(request.app.state, "cache", None)
     return {
         "status": "ok",
         "cache": "connected" if cache and cache.enabled else "disabled",

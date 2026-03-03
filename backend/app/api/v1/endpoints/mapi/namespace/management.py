@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.namespace import NamespaceCreate, NamespaceUpdate
 from app.schemas.common import ListQueryParams, VersioningSettings
 
@@ -37,10 +36,9 @@ async def list_namespaces(
         q["filterType"] = qp.filterType
     if qp.filterString:
         q["filterString"] = qp.filterString
-
-    resp = await hcp.get(f"/tenants/{tenant_name}/namespaces", query=q or None)
-    raise_for_hcp_status(resp, "namespaces")
-    return parse_json_response(resp)
+    return await hcp.fetch_json(
+        f"/tenants/{tenant_name}/namespaces", resource="namespaces", query=q or None,
+    )
 
 
 @router.put(PREFIX)
@@ -49,8 +47,10 @@ async def create_namespace(
     body: NamespaceCreate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.put(f"/tenants/{tenant_name}/namespaces", body=body)
-    raise_for_hcp_status(resp, "namespace")
+    await hcp.send(
+        "PUT", f"/tenants/{tenant_name}/namespaces",
+        resource="namespace", body=body,
+    )
     return {"status": "created"}
 
 
@@ -64,12 +64,11 @@ async def get_namespace(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}",
+        resource=f"namespace '{ns_name}'",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp, f"namespace '{ns_name}'")
-    return parse_json_response(resp)
 
 
 @router.head(PREFIX + "/{ns_name}")
@@ -78,8 +77,10 @@ async def check_namespace(
     ns_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.head(f"/tenants/{tenant_name}/namespaces/{ns_name}")
-    raise_for_hcp_status(resp, f"namespace '{ns_name}'")
+    await hcp.send(
+        "HEAD", f"/tenants/{tenant_name}/namespaces/{ns_name}",
+        resource=f"namespace '{ns_name}'",
+    )
     return Response(status_code=200)
 
 
@@ -94,12 +95,10 @@ async def modify_namespace(
     q = {}
     if resetMQECheckpoint is not None:
         q["resetMQECheckpoint"] = resetMQECheckpoint
-    resp = await hcp.post(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}",
-        body=body,
-        query=q or None,
+    await hcp.send(
+        "POST", f"/tenants/{tenant_name}/namespaces/{ns_name}",
+        resource=f"namespace '{ns_name}'", body=body, query=q or None,
     )
-    raise_for_hcp_status(resp, f"namespace '{ns_name}'")
     return {"status": "updated"}
 
 
@@ -109,8 +108,10 @@ async def delete_namespace(
     ns_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.delete(f"/tenants/{tenant_name}/namespaces/{ns_name}")
-    raise_for_hcp_status(resp, f"namespace '{ns_name}'")
+    await hcp.send(
+        "DELETE", f"/tenants/{tenant_name}/namespaces/{ns_name}",
+        resource=f"namespace '{ns_name}'",
+    )
     return {"status": "deleted"}
 
 
@@ -123,11 +124,9 @@ async def get_versioning(
     ns_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/versioningSettings"
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.post(PREFIX + "/{ns_name}/versioningSettings")
@@ -137,11 +136,11 @@ async def modify_versioning(
     body: VersioningSettings,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(
+    await hcp.send(
+        "POST",
         f"/tenants/{tenant_name}/namespaces/{ns_name}/versioningSettings",
         body=body,
     )
-    raise_for_hcp_status(resp)
     return {"status": "updated"}
 
 
@@ -151,8 +150,8 @@ async def delete_versioning(
     ns_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.delete(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/versioningSettings"
+    await hcp.send(
+        "DELETE",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/versioningSettings",
     )
-    raise_for_hcp_status(resp)
     return {"status": "deleted"}

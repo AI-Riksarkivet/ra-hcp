@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.tenant import (
     TenantUpdate,
     ConsoleSecurity,
@@ -28,12 +27,11 @@ async def get_tenant(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}",
+        resource=f"tenant '{tenant_name}'",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp, f"tenant '{tenant_name}'")
-    return parse_json_response(resp)
 
 
 @router.head("/{tenant_name}")
@@ -41,8 +39,7 @@ async def check_tenant(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.head(f"/tenants/{tenant_name}")
-    raise_for_hcp_status(resp, f"tenant '{tenant_name}'")
+    await hcp.send("HEAD", f"/tenants/{tenant_name}", resource=f"tenant '{tenant_name}'")
     return Response(status_code=200)
 
 
@@ -52,8 +49,10 @@ async def modify_tenant(
     body: TenantUpdate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(f"/tenants/{tenant_name}", body=body)
-    raise_for_hcp_status(resp, f"tenant '{tenant_name}'")
+    await hcp.send(
+        "POST", f"/tenants/{tenant_name}",
+        resource=f"tenant '{tenant_name}'", body=body,
+    )
     return {"status": "updated"}
 
 
@@ -65,9 +64,7 @@ async def get_console_security(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/tenants/{tenant_name}/consoleSecurity")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"/tenants/{tenant_name}/consoleSecurity")
 
 
 @router.post("/{tenant_name}/consoleSecurity")
@@ -76,8 +73,7 @@ async def modify_console_security(
     body: ConsoleSecurity,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(f"/tenants/{tenant_name}/consoleSecurity", body=body)
-    raise_for_hcp_status(resp)
+    await hcp.send("POST", f"/tenants/{tenant_name}/consoleSecurity", body=body)
     return {"status": "updated"}
 
 
@@ -89,9 +85,7 @@ async def get_contact_info(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/tenants/{tenant_name}/contactInfo")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"/tenants/{tenant_name}/contactInfo")
 
 
 @router.post("/{tenant_name}/contactInfo")
@@ -100,8 +94,7 @@ async def modify_contact_info(
     body: ContactInfo,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(f"/tenants/{tenant_name}/contactInfo", body=body)
-    raise_for_hcp_status(resp)
+    await hcp.send("POST", f"/tenants/{tenant_name}/contactInfo", body=body)
     return {"status": "updated"}
 
 
@@ -113,9 +106,7 @@ async def get_email_notification(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/tenants/{tenant_name}/emailNotification")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"/tenants/{tenant_name}/emailNotification")
 
 
 @router.post("/{tenant_name}/emailNotification")
@@ -124,8 +115,7 @@ async def modify_email_notification(
     body: EmailNotification,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(f"/tenants/{tenant_name}/emailNotification", body=body)
-    raise_for_hcp_status(resp)
+    await hcp.send("POST", f"/tenants/{tenant_name}/emailNotification", body=body)
     return {"status": "updated"}
 
 
@@ -138,12 +128,10 @@ async def get_namespace_defaults(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaceDefaults",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.post("/{tenant_name}/namespaceDefaults")
@@ -152,8 +140,7 @@ async def modify_namespace_defaults(
     body: NamespaceDefaults,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(f"/tenants/{tenant_name}/namespaceDefaults", body=body)
-    raise_for_hcp_status(resp)
+    await hcp.send("POST", f"/tenants/{tenant_name}/namespaceDefaults", body=body)
     return {"status": "updated"}
 
 
@@ -165,9 +152,7 @@ async def get_search_security(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/tenants/{tenant_name}/searchSecurity")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"/tenants/{tenant_name}/searchSecurity")
 
 
 @router.post("/{tenant_name}/searchSecurity")
@@ -176,8 +161,7 @@ async def modify_search_security(
     body: SearchSecurity,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(f"/tenants/{tenant_name}/searchSecurity", body=body)
-    raise_for_hcp_status(resp)
+    await hcp.send("POST", f"/tenants/{tenant_name}/searchSecurity", body=body)
     return {"status": "updated"}
 
 
@@ -189,9 +173,7 @@ async def get_tenant_permissions(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/tenants/{tenant_name}/permissions")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"/tenants/{tenant_name}/permissions")
 
 
 @router.post("/{tenant_name}/permissions")
@@ -200,8 +182,7 @@ async def modify_tenant_permissions(
     body: dict,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(f"/tenants/{tenant_name}/permissions", body=body)
-    raise_for_hcp_status(resp)
+    await hcp.send("POST", f"/tenants/{tenant_name}/permissions", body=body)
     return {"status": "updated"}
 
 
@@ -213,9 +194,7 @@ async def list_available_service_plans(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/tenants/{tenant_name}/availableServicePlans")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"/tenants/{tenant_name}/availableServicePlans")
 
 
 @router.get("/{tenant_name}/availableServicePlans/{plan_name}")
@@ -224,9 +203,9 @@ async def get_available_service_plan(
     plan_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/tenants/{tenant_name}/availableServicePlans/{plan_name}")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(
+        f"/tenants/{tenant_name}/availableServicePlans/{plan_name}"
+    )
 
 
 # ── Tenant CORS ──────────────────────────────────────────────────────
@@ -237,9 +216,7 @@ async def get_tenant_cors(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/tenants/{tenant_name}/cors")
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
+    return await hcp.fetch_json(f"/tenants/{tenant_name}/cors")
 
 
 @router.put("/{tenant_name}/cors")
@@ -248,8 +225,7 @@ async def set_tenant_cors(
     body: CorsConfiguration,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.put(f"/tenants/{tenant_name}/cors", body=body)
-    raise_for_hcp_status(resp)
+    await hcp.send("PUT", f"/tenants/{tenant_name}/cors", body=body)
     return {"status": "created"}
 
 
@@ -258,6 +234,5 @@ async def delete_tenant_cors(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.delete(f"/tenants/{tenant_name}/cors")
-    raise_for_hcp_status(resp)
+    await hcp.send("DELETE", f"/tenants/{tenant_name}/cors")
     return {"status": "deleted"}

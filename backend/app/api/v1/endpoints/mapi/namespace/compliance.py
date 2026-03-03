@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.namespace import ComplianceSettings
 from app.schemas.retention_class import RetentionClassCreate, RetentionClassUpdate
 
@@ -25,11 +24,9 @@ async def get_compliance(
     ns_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/complianceSettings"
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.post(PREFIX + "/{ns_name}/complianceSettings")
@@ -39,10 +36,11 @@ async def modify_compliance(
     body: ComplianceSettings,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/complianceSettings", body=body
+    await hcp.send(
+        "POST",
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/complianceSettings",
+        body=body,
     )
-    raise_for_hcp_status(resp)
     return {"status": "updated"}
 
 
@@ -56,12 +54,10 @@ async def list_retention_classes(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.put(RC_PREFIX)
@@ -71,11 +67,11 @@ async def create_retention_class(
     body: RetentionClassCreate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.put(
+    resp = await hcp.send(
+        "PUT",
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses",
         body=body,
     )
-    raise_for_hcp_status(resp)
     return Response(status_code=resp.status_code)
 
 
@@ -87,12 +83,10 @@ async def get_retention_class(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(
+    return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses/{retention_class_name}",
         query={"verbose": str(verbose).lower()},
     )
-    raise_for_hcp_status(resp)
-    return parse_json_response(resp)
 
 
 @router.head(RC_PREFIX + "/{retention_class_name}")
@@ -102,10 +96,10 @@ async def check_retention_class(
     retention_class_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.head(
+    resp = await hcp.send(
+        "HEAD",
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses/{retention_class_name}",
     )
-    raise_for_hcp_status(resp)
     return Response(status_code=resp.status_code)
 
 
@@ -117,11 +111,11 @@ async def update_retention_class(
     body: RetentionClassUpdate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.post(
+    resp = await hcp.send(
+        "POST",
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses/{retention_class_name}",
         body=body,
     )
-    raise_for_hcp_status(resp)
     return Response(status_code=resp.status_code)
 
 
@@ -132,8 +126,8 @@ async def delete_retention_class(
     retention_class_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.delete(
+    resp = await hcp.send(
+        "DELETE",
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses/{retention_class_name}",
     )
-    raise_for_hcp_status(resp)
     return Response(status_code=resp.status_code)
