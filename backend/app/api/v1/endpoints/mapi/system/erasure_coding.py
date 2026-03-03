@@ -103,7 +103,10 @@ async def get_ec_tenant_candidates(
     )
 
 
-@router.get(TOPOS + "/{topology_name}/tenantConflictingCandidates")
+@router.get(
+    TOPOS + "/{topology_name}/tenantConflictingCandidates",
+    response_model=TenantCandidateList,
+)
 async def get_ec_tenant_conflicting_candidates(
     topology_name: str,
     verbose: bool = False,

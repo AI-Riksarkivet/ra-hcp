@@ -15,6 +15,7 @@ from app.schemas.namespace import (
     Protocols,
     CorsConfiguration,
 )
+from app.schemas.common import StatusResponse
 
 router = APIRouter(tags=["Namespace: Access"])
 
@@ -35,7 +36,7 @@ async def get_ns_permissions(
     )
 
 
-@router.post(PREFIX + "/{ns_name}/permissions")
+@router.post(PREFIX + "/{ns_name}/permissions", response_model=StatusResponse)
 async def modify_ns_permissions(
     tenant_name: str,
     ns_name: str,
@@ -53,7 +54,7 @@ async def modify_ns_permissions(
 # ── Protocols ────────────────────────────────────────────────────────
 
 
-@router.get(PREFIX + "/{ns_name}/protocols")
+@router.get(PREFIX + "/{ns_name}/protocols", response_model=Protocols)
 async def get_default_protocols(
     tenant_name: str,
     ns_name: str,
@@ -65,7 +66,7 @@ async def get_default_protocols(
     )
 
 
-@router.post(PREFIX + "/{ns_name}/protocols")
+@router.post(PREFIX + "/{ns_name}/protocols", response_model=StatusResponse)
 async def modify_default_protocols(
     tenant_name: str,
     ns_name: str,
@@ -93,7 +94,7 @@ async def get_protocol(
     )
 
 
-@router.post(PREFIX + "/{ns_name}/protocols/http")
+@router.post(PREFIX + "/{ns_name}/protocols/http", response_model=StatusResponse)
 async def modify_http_protocol(
     tenant_name: str,
     ns_name: str,
@@ -108,7 +109,7 @@ async def modify_http_protocol(
     return {"status": "updated"}
 
 
-@router.post(PREFIX + "/{ns_name}/protocols/cifs")
+@router.post(PREFIX + "/{ns_name}/protocols/cifs", response_model=StatusResponse)
 async def modify_cifs_protocol(
     tenant_name: str,
     ns_name: str,
@@ -123,7 +124,7 @@ async def modify_cifs_protocol(
     return {"status": "updated"}
 
 
-@router.post(PREFIX + "/{ns_name}/protocols/nfs")
+@router.post(PREFIX + "/{ns_name}/protocols/nfs", response_model=StatusResponse)
 async def modify_nfs_protocol(
     tenant_name: str,
     ns_name: str,
@@ -138,7 +139,7 @@ async def modify_nfs_protocol(
     return {"status": "updated"}
 
 
-@router.post(PREFIX + "/{ns_name}/protocols/smtp")
+@router.post(PREFIX + "/{ns_name}/protocols/smtp", response_model=StatusResponse)
 async def modify_smtp_protocol(
     tenant_name: str,
     ns_name: str,
@@ -170,7 +171,9 @@ async def get_replication_collision(
     )
 
 
-@router.post(PREFIX + "/{ns_name}/replicationCollisionSettings")
+@router.post(
+    PREFIX + "/{ns_name}/replicationCollisionSettings", response_model=StatusResponse
+)
 async def modify_replication_collision(
     tenant_name: str,
     ns_name: str,
@@ -197,7 +200,7 @@ async def get_ns_cors(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/namespaces/{ns_name}/cors")
 
 
-@router.put(PREFIX + "/{ns_name}/cors")
+@router.put(PREFIX + "/{ns_name}/cors", response_model=StatusResponse)
 async def set_ns_cors(
     tenant_name: str,
     ns_name: str,
@@ -212,7 +215,7 @@ async def set_ns_cors(
     return {"status": "created"}
 
 
-@router.delete(PREFIX + "/{ns_name}/cors")
+@router.delete(PREFIX + "/{ns_name}/cors", response_model=StatusResponse)
 async def delete_ns_cors(
     tenant_name: str,
     ns_name: str,

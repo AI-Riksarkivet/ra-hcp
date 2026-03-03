@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Response
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.namespace import ComplianceSettings
+from app.schemas.common import StatusResponse
 from app.schemas.retention_class import (
     RetentionClassCreate,
     RetentionClassList,
@@ -34,7 +35,7 @@ async def get_compliance(
     )
 
 
-@router.post(PREFIX + "/{ns_name}/complianceSettings")
+@router.post(PREFIX + "/{ns_name}/complianceSettings", response_model=StatusResponse)
 async def modify_compliance(
     tenant_name: str,
     ns_name: str,

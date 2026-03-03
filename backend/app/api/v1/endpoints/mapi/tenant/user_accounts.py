@@ -13,7 +13,7 @@ from app.schemas.user_account import (
     UserAccountList,
     UserAccountResponse,
 )
-from app.schemas.common import ListQueryParams, DataAccessPermissions
+from app.schemas.common import ListQueryParams, DataAccessPermissions, StatusResponse
 
 router = APIRouter(tags=["Tenant Admin: Identity"])
 
@@ -43,7 +43,7 @@ async def list_user_accounts(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/userAccounts", query=q)
 
 
-@router.put(T_PREFIX)
+@router.put(T_PREFIX, response_model=StatusResponse)
 async def create_user_account(
     tenant_name: str,
     body: UserAccountCreate,
@@ -60,7 +60,7 @@ async def create_user_account(
     return {"status": "created"}
 
 
-@router.post(T_PREFIX)
+@router.post(T_PREFIX, response_model=StatusResponse)
 async def reset_passwords(
     tenant_name: str,
     resetPasswords: str = Query(...),
@@ -103,7 +103,7 @@ async def check_user_account(
     return Response(status_code=200)
 
 
-@router.post(T_PREFIX + "/{username}")
+@router.post(T_PREFIX + "/{username}", response_model=StatusResponse)
 async def modify_user_account(
     tenant_name: str,
     username: str,
@@ -124,7 +124,7 @@ async def modify_user_account(
     return {"status": "updated"}
 
 
-@router.delete(T_PREFIX + "/{username}")
+@router.delete(T_PREFIX + "/{username}", response_model=StatusResponse)
 async def delete_user_account(
     tenant_name: str,
     username: str,
@@ -141,7 +141,7 @@ async def delete_user_account(
 # ── Change password ──────────────────────────────────────────────────
 
 
-@router.post(T_PREFIX + "/{username}/changePassword")
+@router.post(T_PREFIX + "/{username}/changePassword", response_model=StatusResponse)
 async def change_password(
     tenant_name: str,
     username: str,
@@ -183,7 +183,9 @@ async def get_user_data_perms(
     )
 
 
-@router.post(T_PREFIX + "/{username}/dataAccessPermissions")
+@router.post(
+    T_PREFIX + "/{username}/dataAccessPermissions", response_model=StatusResponse
+)
 async def modify_user_data_perms(
     tenant_name: str,
     username: str,

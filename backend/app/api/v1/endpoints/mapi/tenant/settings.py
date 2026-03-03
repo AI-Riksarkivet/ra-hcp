@@ -8,13 +8,16 @@ from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.tenant import (
     TenantUpdate,
+    TenantResponse,
     ConsoleSecurity,
     ContactInfo,
     EmailNotification,
     SearchSecurity,
     AvailableServicePlan,
+    AvailableServicePlanList,
 )
 from app.schemas.namespace import NamespaceDefaults, CorsConfiguration
+from app.schemas.common import StatusResponse
 
 router = APIRouter(prefix="/tenants", tags=["Tenant Admin: Settings"])
 
@@ -22,7 +25,7 @@ router = APIRouter(prefix="/tenants", tags=["Tenant Admin: Settings"])
 # ── Single tenant ────────────────────────────────────────────────────
 
 
-@router.get("/{tenant_name}")
+@router.get("/{tenant_name}", response_model=TenantResponse)
 async def get_tenant(
     tenant_name: str,
     verbose: bool = False,
@@ -46,7 +49,7 @@ async def check_tenant(
     return Response(status_code=200)
 
 
-@router.post("/{tenant_name}")
+@router.post("/{tenant_name}", response_model=StatusResponse)
 async def modify_tenant(
     tenant_name: str,
     body: TenantUpdate,
@@ -72,7 +75,7 @@ async def get_console_security(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/consoleSecurity")
 
 
-@router.post("/{tenant_name}/consoleSecurity")
+@router.post("/{tenant_name}/consoleSecurity", response_model=StatusResponse)
 async def modify_console_security(
     tenant_name: str,
     body: ConsoleSecurity,
@@ -93,7 +96,7 @@ async def get_contact_info(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/contactInfo")
 
 
-@router.post("/{tenant_name}/contactInfo")
+@router.post("/{tenant_name}/contactInfo", response_model=StatusResponse)
 async def modify_contact_info(
     tenant_name: str,
     body: ContactInfo,
@@ -114,7 +117,7 @@ async def get_email_notification(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/emailNotification")
 
 
-@router.post("/{tenant_name}/emailNotification")
+@router.post("/{tenant_name}/emailNotification", response_model=StatusResponse)
 async def modify_email_notification(
     tenant_name: str,
     body: EmailNotification,
@@ -139,7 +142,7 @@ async def get_namespace_defaults(
     )
 
 
-@router.post("/{tenant_name}/namespaceDefaults")
+@router.post("/{tenant_name}/namespaceDefaults", response_model=StatusResponse)
 async def modify_namespace_defaults(
     tenant_name: str,
     body: NamespaceDefaults,
@@ -160,7 +163,7 @@ async def get_search_security(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/searchSecurity")
 
 
-@router.post("/{tenant_name}/searchSecurity")
+@router.post("/{tenant_name}/searchSecurity", response_model=StatusResponse)
 async def modify_search_security(
     tenant_name: str,
     body: SearchSecurity,
@@ -173,7 +176,7 @@ async def modify_search_security(
 # ── Tenant permissions ───────────────────────────────────────────────
 
 
-@router.get("/{tenant_name}/permissions")
+@router.get("/{tenant_name}/permissions")  # dynamic structure from MAPI
 async def get_tenant_permissions(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -181,7 +184,7 @@ async def get_tenant_permissions(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/permissions")
 
 
-@router.post("/{tenant_name}/permissions")
+@router.post("/{tenant_name}/permissions", response_model=StatusResponse)
 async def modify_tenant_permissions(
     tenant_name: str,
     body: dict,
@@ -194,7 +197,9 @@ async def modify_tenant_permissions(
 # ── Available service plans ──────────────────────────────────────────
 
 
-@router.get("/{tenant_name}/availableServicePlans")
+@router.get(
+    "/{tenant_name}/availableServicePlans", response_model=AvailableServicePlanList
+)
 async def list_available_service_plans(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -227,7 +232,7 @@ async def get_tenant_cors(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/cors")
 
 
-@router.put("/{tenant_name}/cors")
+@router.put("/{tenant_name}/cors", response_model=StatusResponse)
 async def set_tenant_cors(
     tenant_name: str,
     body: CorsConfiguration,
@@ -237,7 +242,7 @@ async def set_tenant_cors(
     return {"status": "created"}
 
 
-@router.delete("/{tenant_name}/cors")
+@router.delete("/{tenant_name}/cors", response_model=StatusResponse)
 async def delete_tenant_cors(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),

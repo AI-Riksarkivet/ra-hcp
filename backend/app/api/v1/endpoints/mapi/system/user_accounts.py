@@ -6,14 +6,19 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.schemas.user_account import UpdatePasswordRequest
+from app.schemas.user_account import (
+    UpdatePasswordRequest,
+    UserAccountList,
+    UserAccountResponse,
+)
+from app.schemas.common import StatusResponse
 
 router = APIRouter(prefix="/userAccounts", tags=["System Admin: Identity"])
 
 PREFIX = "/userAccounts"
 
 
-@router.get("")
+@router.get("", response_model=UserAccountList)
 async def list_system_users(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
@@ -21,7 +26,7 @@ async def list_system_users(
     return await hcp.fetch_json(PREFIX, query={"verbose": str(verbose).lower()})
 
 
-@router.get("/{username}")
+@router.get("/{username}", response_model=UserAccountResponse)
 async def get_system_user(
     username: str,
     verbose: bool = False,
@@ -43,7 +48,7 @@ async def check_system_user(
     return Response(status_code=200)
 
 
-@router.post("/{username}")
+@router.post("/{username}", response_model=StatusResponse)
 async def modify_system_user_password(
     username: str,
     password: str = Query(None),
@@ -56,7 +61,7 @@ async def modify_system_user_password(
     return {"status": "updated"}
 
 
-@router.post("/{username}/changePassword")
+@router.post("/{username}/changePassword", response_model=StatusResponse)
 async def change_system_user_password(
     username: str,
     body: UpdatePasswordRequest,

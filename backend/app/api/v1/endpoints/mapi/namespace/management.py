@@ -6,8 +6,13 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.schemas.namespace import NamespaceCreate, NamespaceUpdate
-from app.schemas.common import ListQueryParams, VersioningSettings
+from app.schemas.namespace import (
+    NamespaceCreate,
+    NamespaceUpdate,
+    NamespaceResponse,
+    NamespaceList,
+)
+from app.schemas.common import ListQueryParams, VersioningSettings, StatusResponse
 
 router = APIRouter(tags=["Namespace: Management"])
 
@@ -17,7 +22,7 @@ PREFIX = "/tenants/{tenant_name}/namespaces"
 # ── Namespace list & create ──────────────────────────────────────────
 
 
-@router.get(PREFIX)
+@router.get(PREFIX, response_model=NamespaceList)
 async def list_namespaces(
     tenant_name: str,
     qp: ListQueryParams = Depends(),
@@ -43,7 +48,7 @@ async def list_namespaces(
     )
 
 
-@router.put(PREFIX)
+@router.put(PREFIX, response_model=StatusResponse)
 async def create_namespace(
     tenant_name: str,
     body: NamespaceCreate,
@@ -61,7 +66,7 @@ async def create_namespace(
 # ── Single namespace ─────────────────────────────────────────────────
 
 
-@router.get(PREFIX + "/{ns_name}")
+@router.get(PREFIX + "/{ns_name}", response_model=NamespaceResponse)
 async def get_namespace(
     tenant_name: str,
     ns_name: str,
@@ -89,7 +94,7 @@ async def check_namespace(
     return Response(status_code=200)
 
 
-@router.post(PREFIX + "/{ns_name}")
+@router.post(PREFIX + "/{ns_name}", response_model=StatusResponse)
 async def modify_namespace(
     tenant_name: str,
     ns_name: str,
@@ -110,7 +115,7 @@ async def modify_namespace(
     return {"status": "updated"}
 
 
-@router.delete(PREFIX + "/{ns_name}")
+@router.delete(PREFIX + "/{ns_name}", response_model=StatusResponse)
 async def delete_namespace(
     tenant_name: str,
     ns_name: str,
@@ -138,7 +143,7 @@ async def get_versioning(
     )
 
 
-@router.post(PREFIX + "/{ns_name}/versioningSettings")
+@router.post(PREFIX + "/{ns_name}/versioningSettings", response_model=StatusResponse)
 async def modify_versioning(
     tenant_name: str,
     ns_name: str,
@@ -153,7 +158,7 @@ async def modify_versioning(
     return {"status": "updated"}
 
 
-@router.delete(PREFIX + "/{ns_name}/versioningSettings")
+@router.delete(PREFIX + "/{ns_name}/versioningSettings", response_model=StatusResponse)
 async def delete_versioning(
     tenant_name: str,
     ns_name: str,

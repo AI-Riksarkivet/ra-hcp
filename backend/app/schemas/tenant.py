@@ -156,6 +156,51 @@ class AvailableServicePlan(BaseModel):
 # ── Chargeback ───────────────────────────────────────────────────────
 
 
+class TenantResponse(BaseModel):
+    """Full tenant response from MAPI."""
+
+    model_config = {"extra": "allow"}
+
+    name: Optional[str] = None
+    systemVisibleDescription: Optional[str] = None
+    tenantVisibleDescription: Optional[str] = None
+    hardQuota: Optional[str] = None
+    softQuota: Optional[int] = None
+    namespaceQuota: Optional[str] = None
+    authenticationTypes: Optional[dict] = None
+    complianceConfigurationEnabled: Optional[bool] = None
+    versioningConfigurationEnabled: Optional[bool] = None
+    searchConfigurationEnabled: Optional[bool] = None
+    replicationConfigurationEnabled: Optional[bool] = None
+    erasureCodingSelectionEnabled: Optional[bool] = None
+    servicePlanSelectionEnabled: Optional[bool] = None
+    servicePlan: Optional[str] = None
+    administrationAllowed: Optional[bool] = None
+    maxNamespacesPerUser: Optional[int] = None
+    snmpLoggingEnabled: Optional[bool] = None
+    syslogLoggingEnabled: Optional[bool] = None
+    tags: Optional[dict] = None
+
+
+class TenantList(BaseModel):
+    """List of tenant names."""
+
+    model_config = {"extra": "allow"}
+
+    name: Optional[List[str]] = None
+
+
+class AvailableServicePlanList(BaseModel):
+    """List of available service plans for a tenant."""
+
+    model_config = {"extra": "allow"}
+
+    name: Optional[List[str]] = None
+
+
+# ── Chargeback ───────────────────────────────────────────────────────
+
+
 class ChargebackData(BaseModel):
     """Chargeback statistics for a namespace or tenant."""
 

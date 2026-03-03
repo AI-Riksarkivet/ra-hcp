@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.namespace import CustomMetadataIndexingSettings
+from app.schemas.common import StatusResponse
 
 router = APIRouter(tags=["Namespace: Indexing"])
 
@@ -27,7 +28,9 @@ async def get_custom_metadata_indexing(
     )
 
 
-@router.post(PREFIX + "/{ns_name}/customMetadataIndexingSettings")
+@router.post(
+    PREFIX + "/{ns_name}/customMetadataIndexingSettings", response_model=StatusResponse
+)
 async def modify_custom_metadata_indexing(
     tenant_name: str,
     ns_name: str,

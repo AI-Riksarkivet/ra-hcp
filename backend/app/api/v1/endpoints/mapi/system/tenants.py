@@ -6,12 +6,13 @@ from fastapi import APIRouter, Depends, Query
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.schemas.tenant import TenantCreate
+from app.schemas.tenant import TenantCreate, TenantList
+from app.schemas.common import StatusResponse
 
 router = APIRouter(prefix="/tenants", tags=["System Admin: Tenants"])
 
 
-@router.get("")
+@router.get("", response_model=TenantList)
 async def list_tenants(
     verbose: bool = False,
     prettyprint: bool = False,
@@ -24,7 +25,7 @@ async def list_tenants(
     )
 
 
-@router.put("")
+@router.put("", response_model=StatusResponse)
 async def create_tenant(
     body: TenantCreate,
     username: str = Query(...),

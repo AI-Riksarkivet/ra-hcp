@@ -267,3 +267,12 @@ class ChargebackParams(BaseModel):
     start: Optional[str] = None
     end: Optional[str] = None
     granularity: Optional[Granularity] = Granularity.TOTAL
+
+
+# ── Generic Response Models ───────────────────────────────────────────
+
+
+class StatusResponse(BaseModel):
+    """Standard response for mutation operations."""
+
+    status: str

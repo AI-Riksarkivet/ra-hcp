@@ -12,7 +12,7 @@ from app.schemas.group_account import (
     GroupAccountList,
     GroupAccountResponse,
 )
-from app.schemas.common import DataAccessPermissions
+from app.schemas.common import DataAccessPermissions, StatusResponse
 
 router = APIRouter(tags=["Tenant Admin: Identity"])
 
@@ -31,7 +31,7 @@ async def list_group_accounts(
     )
 
 
-@router.put(T_PREFIX)
+@router.put(T_PREFIX, response_model=StatusResponse)
 async def create_group_account(
     tenant_name: str,
     body: GroupAccountCreate,
@@ -70,7 +70,7 @@ async def check_group_account(
     return Response(status_code=200)
 
 
-@router.post(T_PREFIX + "/{group_name}")
+@router.post(T_PREFIX + "/{group_name}", response_model=StatusResponse)
 async def modify_group_account(
     tenant_name: str,
     group_name: str,
@@ -85,7 +85,7 @@ async def modify_group_account(
     return {"status": "updated"}
 
 
-@router.delete(T_PREFIX + "/{group_name}")
+@router.delete(T_PREFIX + "/{group_name}", response_model=StatusResponse)
 async def delete_group_account(
     tenant_name: str,
     group_name: str,
@@ -112,7 +112,9 @@ async def get_group_data_perms(
     )
 
 
-@router.post(T_PREFIX + "/{group_name}/dataAccessPermissions")
+@router.post(
+    T_PREFIX + "/{group_name}/dataAccessPermissions", response_model=StatusResponse
+)
 async def modify_group_data_perms(
     tenant_name: str,
     group_name: str,
