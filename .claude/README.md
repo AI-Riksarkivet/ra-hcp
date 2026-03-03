@@ -6,6 +6,7 @@
 
 ```
 /plugin marketplace add spences10/svelte-skills-kit
+/plugin marketplace add astral-sh/claude-code-plugins
 /plugin marketplace add spences10/claude-code-toolkit
 /plugin marketplace add denoland/skills
 /plugin marketplace add redis/agent-skills
@@ -22,6 +23,8 @@
 /plugin install deno-skills@denoland-skills
 /plugin install redis-development@redis
 /plugin install svelte@sveltejs-ai-tools
+/plugin install astral@astral-sh
+
 ```
 
 These are tracked in `settings.json`:
@@ -29,12 +32,7 @@ These are tracked in `settings.json`:
 ```json
 {
   "enabledPlugins": {
-    "svelte-skills@svelte-skills-kit": true,
-    "mcp-essentials@claude-code-toolkit": true,
-    "analytics@claude-code-toolkit": true,
-    "toolkit-skills@claude-code-toolkit": true,
-    "deno-skills@denoland-skills": true,
-    "redis-development@redis": true
+   ...
   }
 }
 ```

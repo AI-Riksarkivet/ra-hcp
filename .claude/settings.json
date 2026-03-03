@@ -5,6 +5,7 @@
     "analytics@claude-code-toolkit": true,
     "toolkit-skills@claude-code-toolkit": true,
     "deno-skills@denoland-skills": true,
-    "redis-development@redis": true
+    "redis-development@redis": true,
+    "astral@astral-sh": true
   }
 }

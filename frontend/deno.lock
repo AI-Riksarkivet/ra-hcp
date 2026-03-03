@@ -11,6 +11,9 @@
     "npm:gsap@^3.14.2": "3.14.2",
     "npm:lucide-svelte@0.575": "0.575.0_svelte@5.53.5__acorn@8.16.0",
     "npm:mode-watcher@^1.1.0": "1.1.0_svelte@5.53.5__acorn@8.16.0",
+    "npm:prettier-plugin-svelte@^3.5.0": "3.5.0_prettier@3.8.1_svelte@5.53.5__acorn@8.16.0",
+    "npm:prettier@*": "3.8.1",
+    "npm:prettier@^3.5.3": "3.8.1",
     "npm:svelte-check@*": "4.4.4_svelte@5.53.5__acorn@8.16.0_typescript@5.9.3",
     "npm:svelte-check@^4.3.6": "4.4.4_svelte@5.53.5__acorn@8.16.0_typescript@5.9.3",
     "npm:svelte-sonner@^1.0.7": "1.0.7_svelte@5.53.5__acorn@8.16.0",
@@ -792,6 +795,17 @@
         "source-map-js"
       ]
     },
+    "prettier-plugin-svelte@3.5.0_prettier@3.8.1_svelte@5.53.5__acorn@8.16.0": {
+      "integrity": "sha512-2lLO/7EupnjO/95t+XZesXs8Bf3nYLIDfCo270h5QWbj/vjLqmrQ1LiRk9LPggxSDsnVYfehamZNf+rgQYApZg==",
+      "dependencies": [
+        "prettier",
+        "svelte"
+      ]
+    },
+    "prettier@3.8.1": {
+      "integrity": "sha512-UOnG6LftzbdaHZcKoPFtOcCKztrQ57WkHDeRD9t/PTQtmT0NHSeWWepj6pS0z/N7+08BHFDQVUrfmfMRcZwbMg==",
+      "bin": true
+    },
     "readdirp@4.1.2": {
       "integrity": "sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg=="
     },
@@ -1078,6 +1092,8 @@
         "npm:gsap@^3.14.2",
         "npm:lucide-svelte@0.575",
         "npm:mode-watcher@^1.1.0",
+        "npm:prettier-plugin-svelte@^3.5.0",
+        "npm:prettier@^3.5.3",
         "npm:svelte-check@^4.3.6",
         "npm:svelte-sonner@^1.0.7",
         "npm:svelte@^5.51.0",
