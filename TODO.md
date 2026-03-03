@@ -12,7 +12,6 @@
 - playwright for testing and also storybook
 - use std@expect for testing (jest) from JSR
 - env.ts files?
-- fix use only deno 2 and pnpm or node dep: https://github.com/denoland/svelte-adapter
 - deno otel https://docs.deno.com/runtime/fundamentals/open_telemetry/, https://deno.com/blog/zero-config-debugging-deno-opentelemetry
 - look over svelte code and be very svlete 5 and sveltekit2 idomatic, e g use snippets, remote funcions, reavtivity, stores , context api. also chevk if we are using routing and pages [id] in svletkit 2
 - backend with namespaces
@@ -48,3 +47,5 @@
 - skills: figma, the other libs ib frontend and backend we are using
 - Playwright and vitest and storybook for testing
 - dotenx for .env
+- ~~Clean up makefile~~ done
+- ~~Remove old S3 shell tests (tests/s3, .aws)~~ done

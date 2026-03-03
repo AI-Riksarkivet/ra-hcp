@@ -1,42 +1,82 @@
-# sv
+# HCP Frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+SvelteKit 2 + Svelte 5 frontend for the HCP application, running on **Deno**.
 
-## Creating a project
+## Tech Stack
 
-If you're seeing this, you've probably already done this step. Congrats!
+- **Runtime:** Deno
+- **Framework:** SvelteKit 2 + Svelte 5
+- **Styling:** Tailwind CSS 4, tw-animate-css
+- **Components:** Bits UI, Lucide Svelte icons
+- **Forms:** SvelteKit Superforms + Zod validation
+- **Theme:** Mode Watcher (light/dark toggle)
+- **Animations:** GSAP
 
-```sh
-# create a new project
-npx sv create my-app
+## Getting Started
+
+### Install dependencies
+
+```bash
+deno install
 ```
 
-To recreate this project with the same configuration:
+### Start the dev server
 
-```sh
-# recreate this project
-npx sv create --template minimal --types ts --no-install /home/coder/hcp-app/frontend
+```bash
+deno task dev
 ```
 
-## Developing
+Or via the root Makefile (also sets `BACKEND_URL`):
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```bash
+make frontend-dev
 ```
 
-## Building
+The dev server starts at `http://localhost:5173` and proxies API calls to the backend at `http://localhost:8000`.
 
-To create a production version of your app:
+### Build for production
 
-```sh
-npm run build
+```bash
+deno task build
 ```
 
-You can preview the production build with `npm run preview`.
+### Preview the production build
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```bash
+deno task preview
+```
+
+## Available Tasks
+
+| Task              | Command               | Description                       |
+|-------------------|-----------------------|-----------------------------------|
+| `dev`             | `deno task dev`       | Start Vite dev server             |
+| `build`           | `deno task build`     | Build for production              |
+| `preview`         | `deno task preview`   | Preview production build          |
+| `sync`            | `deno task sync`      | SvelteKit sync (codegen)          |
+| `check`           | `deno task check`     | TypeScript type checking          |
+| `fmt`             | `deno task fmt`       | Format code (Deno fmt)            |
+| `lint`            | `deno task lint`      | Lint code (Deno lint)             |
+
+## Project Structure
+
+```
+frontend/
+├── src/
+│   ├── routes/
+│   │   ├── login/              # Authentication
+│   │   ├── (app)/              # Protected routes
+│   │   │   ├── dashboard/      # Main dashboard
+│   │   │   ├── tenants/        # Tenant management
+│   │   │   ├── buckets/        # S3 bucket browser
+│   │   │   └── users/          # User management
+│   │   └── api/[...path]/      # API proxy
+│   └── lib/
+│       ├── components/         # Shared components
+│       └── hooks/              # Svelte hooks
+├── deno.json                   # Deno tasks and config
+├── package.json                # npm dependencies
+├── svelte.config.js            # Svelte compiler config
+├── vite.config.ts              # Vite bundler config
+└── tsconfig.json               # TypeScript config
+```
