@@ -47,36 +47,6 @@ class TenantUpdate(BaseModel):
     tags: Optional[dict] = None
 
 
-class TenantResponse(BaseModel):
-    """Full tenant response."""
-
-    name: Optional[str] = None
-    systemVisibleDescription: Optional[str] = None
-    tenantVisibleDescription: Optional[str] = None
-    hardQuota: Optional[str] = None
-    softQuota: Optional[int] = None
-    namespaceQuota: Optional[str] = None
-    authenticationTypes: Optional[dict] = None
-    complianceConfigurationEnabled: Optional[bool] = None
-    versioningConfigurationEnabled: Optional[bool] = None
-    searchConfigurationEnabled: Optional[bool] = None
-    replicationConfigurationEnabled: Optional[bool] = None
-    administrationAllowed: Optional[bool] = None
-    maxNamespacesPerUser: Optional[int] = None
-    snmpLoggingEnabled: Optional[bool] = None
-    syslogLoggingEnabled: Optional[bool] = None
-    tags: Optional[dict] = None
-    id: Optional[str] = None
-    creationTime: Optional[str] = None
-    fullyQualifiedName: Optional[str] = None
-
-
-class TenantList(BaseModel):
-    """List of tenant names."""
-
-    name: Optional[List[str]] = None
-
-
 # ── Console Security ──────────────────────────────────────────────────
 
 

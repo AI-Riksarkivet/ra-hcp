@@ -533,7 +533,7 @@ def _setup_mapi_routes(mock: respx.MockRouter) -> None:
 
     # ── Catch-all for other MAPI paths ────────────────────────────
     mock.route(url__startswith=HCP_BASE).mock(
-        side_effect=_logged_response("MAPI catch-all", {}),
+        side_effect=_logged_response("MAPI catch-all (unmatched)", {}, status_code=404),
     )
 
 
@@ -598,7 +598,6 @@ async def _mock_lifespan(app_instance):
     with (
         respx.mock(assert_all_mocked=False, assert_all_called=False) as mock,
         patch("app.core.security._get_auth_settings", return_value=MOCK_AUTH_SETTINGS),
-        patch("app.core.security._get_mapi_settings", return_value=MOCK_MAPI_SETTINGS),
     ):
         _setup_mapi_routes(mock)
         logger.info("Mock MAPI routes registered at %s", HCP_BASE)

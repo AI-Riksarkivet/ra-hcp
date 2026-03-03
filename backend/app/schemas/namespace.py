@@ -94,55 +94,6 @@ class NamespaceUpdate(BaseModel):
     tags: Optional[TagList] = None
 
 
-class NamespaceResponse(BaseModel):
-    """Full namespace response with all properties (verbose GET)."""
-
-    name: Optional[str] = None
-    description: Optional[str] = None
-    hashScheme: Optional[str] = None
-    enterpriseMode: Optional[bool] = None
-    hardQuota: Optional[str] = None
-    softQuota: Optional[int] = None
-    servicePlan: Optional[str] = None
-    optimizedFor: Optional[str] = None
-    directoryUsage: Optional[str] = None
-    aclsUsage: Optional[str] = None
-    owner: Optional[str] = None
-    ownerType: Optional[str] = None
-    searchEnabled: Optional[bool] = None
-    indexingEnabled: Optional[bool] = None
-    indexingDefault: Optional[bool] = None
-    customMetadataIndexingEnabled: Optional[bool] = None
-    customMetadataValidationEnabled: Optional[bool] = None
-    replicationEnabled: Optional[bool] = None
-    readFromReplica: Optional[bool] = None
-    allowErasureCoding: Optional[bool] = None
-    serviceRemoteSystemRequests: Optional[bool] = None
-    appendEnabled: Optional[bool] = None
-    atimeSynchronizationEnabled: Optional[bool] = None
-    allowPermissionAndOwnershipChanges: Optional[bool] = None
-    authUsersAlwaysGrantedAllPermissions: Optional[bool] = None
-    authMinimumPermissions: Optional[PermissionList] = None
-    authAndAnonymousMinimumPermissions: Optional[PermissionList] = None
-    multipartUploadAutoAbortDays: Optional[int] = None
-    retentionType: Optional[str] = None
-    s3UnversionedOverwrite: Optional[bool] = None
-    tags: Optional[TagList] = None
-    id: Optional[str] = None
-    creationTime: Optional[str] = None
-    fullyQualifiedName: Optional[str] = None
-    dpl: Optional[str] = None
-    isDplDynamic: Optional[bool] = None
-    mqeIndexingTimestamp: Optional[str] = None
-    replicationTimestamp: Optional[str] = None
-
-
-class NamespaceList(BaseModel):
-    """List of namespace names."""
-
-    name: Optional[List[str]] = None
-
-
 # ── Compliance Settings ────────────────────────────────────────────────
 
 

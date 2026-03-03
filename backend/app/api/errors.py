@@ -62,7 +62,7 @@ def raise_for_hcp_status(resp: httpx.Response, resource: str = "resource") -> No
     mapping = {
         302: (404, f"{resource} not found or no permission"),
         400: (400, detail),
-        401: (502, "HCP unable to handle request"),
+        401: (401, "HCP authentication failed"),
         403: (403, detail),
         404: (404, f"{resource} not found"),
         405: (405, "Method not allowed for this resource"),
@@ -82,6 +82,6 @@ def parse_json_response(resp: httpx.Response) -> dict:
     if 200 <= resp.status_code < 300 and resp.content:
         try:
             return resp.json()
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return {}
     return {}
