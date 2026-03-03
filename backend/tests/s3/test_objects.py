@@ -96,7 +96,7 @@ async def test_upload_object(
         headers=auth_headers,
         files={"file": ("test.txt", b"hello world", "text/plain")},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     body = resp.json()
     assert body["bucket"] == "my-bucket"
     assert body["key"] == "test.txt"

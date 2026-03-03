@@ -254,6 +254,8 @@ class ChargebackParams(BaseModel):
 class StatusResponse(BaseModel):
     """Standard response for mutation operations."""
 
+    model_config = {"extra": "allow"}
+
     status: str
 
 

@@ -50,7 +50,7 @@ async def test_create_bucket_success(
         headers=auth_headers,
         json={"bucket": "new-bucket"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     assert resp.json()["status"] == "created"
     assert resp.json()["bucket"] == "new-bucket"
     mock_s3_service.create_bucket.assert_called_once_with("new-bucket")

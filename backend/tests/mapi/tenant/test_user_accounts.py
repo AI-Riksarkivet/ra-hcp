@@ -40,8 +40,10 @@ async def test_create_user_account(
             "forcePasswordChange": False,
         },
     )
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "created"
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] == "created"
+    assert body["username"] == USER
     assert route.called
 
 

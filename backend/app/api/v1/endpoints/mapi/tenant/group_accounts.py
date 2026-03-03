@@ -31,7 +31,7 @@ async def list_group_accounts(
     )
 
 
-@router.put(T_PREFIX, response_model=StatusResponse)
+@router.put(T_PREFIX, response_model=StatusResponse, status_code=201)
 async def create_group_account(
     tenant_name: str,
     body: GroupAccountCreate,
@@ -43,7 +43,7 @@ async def create_group_account(
         resource="group account",
         body=body,
     )
-    return {"status": "created"}
+    return {"status": "created", "groupname": body.groupname}
 
 
 @router.get(T_PREFIX + "/{group_name}", response_model=GroupAccountResponse)

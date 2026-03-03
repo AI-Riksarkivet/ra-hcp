@@ -33,8 +33,10 @@ async def test_create_group_account(
         headers=auth_headers,
         json={"groupname": GRP},
     )
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "created"
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] == "created"
+    assert body["groupname"] == GRP
     assert route.called
 
 

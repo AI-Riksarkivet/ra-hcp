@@ -200,7 +200,7 @@ async def get_ns_cors(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/namespaces/{ns_name}/cors")
 
 
-@router.put(PREFIX + "/{ns_name}/cors", response_model=StatusResponse)
+@router.put(PREFIX + "/{ns_name}/cors", response_model=StatusResponse, status_code=201)
 async def set_ns_cors(
     tenant_name: str,
     ns_name: str,
@@ -212,7 +212,7 @@ async def set_ns_cors(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/cors",
         body=body,
     )
-    return {"status": "created"}
+    return {"status": "created", "namespace": ns_name}
 
 
 @router.delete(PREFIX + "/{ns_name}/cors", response_model=StatusResponse)

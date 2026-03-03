@@ -104,7 +104,8 @@ async def test_put_tenant_cors(
         headers=auth_headers,
         json={"cors": "<CORSRule/>"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
+    assert resp.json()["tenant"] == "t1"
     assert route.called
 
 

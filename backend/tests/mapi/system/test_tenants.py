@@ -39,8 +39,10 @@ async def test_create_tenant(
         params={"username": "admin", "password": "pass123"},
         json={"name": "new-tenant"},
     )
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "created"
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["status"] == "created"
+    assert body["name"] == "new-tenant"
     assert route.called
 
 

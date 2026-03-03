@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.erasure_coding import (
+    ECLinkCandidateList,
     ECTopologyCreate,
     ECTopologyList,
     ECTopologyResponse,
@@ -121,7 +122,7 @@ async def get_ec_tenant_conflicting_candidates(
 # ── EC Topology – Tenants ───────────────────────────────────────────
 
 
-@router.get(TOPOS + "/{topology_name}/tenants")
+@router.get(TOPOS + "/{topology_name}/tenants", response_model=TenantCandidateList)
 async def list_ec_topology_tenants(
     topology_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -152,7 +153,7 @@ async def remove_tenant_from_ec_topology(
 # ── EC Link Candidates ──────────────────────────────────────────────
 
 
-@router.get(f"{EC}/linkCandidates")
+@router.get(f"{EC}/linkCandidates", response_model=ECLinkCandidateList)
 async def get_ec_link_candidates(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),

@@ -48,7 +48,7 @@ async def list_namespaces(
     )
 
 
-@router.put(PREFIX, response_model=StatusResponse)
+@router.put(PREFIX, response_model=StatusResponse, status_code=201)
 async def create_namespace(
     tenant_name: str,
     body: NamespaceCreate,
@@ -60,7 +60,7 @@ async def create_namespace(
         resource="namespace",
         body=body,
     )
-    return {"status": "created"}
+    return {"status": "created", "name": body.name}
 
 
 # ── Single namespace ─────────────────────────────────────────────────

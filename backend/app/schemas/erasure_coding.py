@@ -73,3 +73,11 @@ class TenantCandidateList(BaseModel):
     model_config = {"extra": "allow"}
 
     tenantCandidate: Optional[List[TenantCandidate]] = None
+
+
+class ECLinkCandidateList(BaseModel):
+    """List of candidate replication links for EC."""
+
+    model_config = {"extra": "allow"}
+
+    name: Optional[List[str]] = None

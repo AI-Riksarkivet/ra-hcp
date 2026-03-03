@@ -232,14 +232,14 @@ async def get_tenant_cors(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/cors")
 
 
-@router.put("/{tenant_name}/cors", response_model=StatusResponse)
+@router.put("/{tenant_name}/cors", response_model=StatusResponse, status_code=201)
 async def set_tenant_cors(
     tenant_name: str,
     body: CorsConfiguration,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send("PUT", f"/tenants/{tenant_name}/cors", body=body)
-    return {"status": "created"}
+    return {"status": "created", "tenant": tenant_name}
 
 
 @router.delete("/{tenant_name}/cors", response_model=StatusResponse)

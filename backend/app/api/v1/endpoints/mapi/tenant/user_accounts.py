@@ -43,7 +43,7 @@ async def list_user_accounts(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/userAccounts", query=q)
 
 
-@router.put(T_PREFIX, response_model=StatusResponse)
+@router.put(T_PREFIX, response_model=StatusResponse, status_code=201)
 async def create_user_account(
     tenant_name: str,
     body: UserAccountCreate,
@@ -57,7 +57,7 @@ async def create_user_account(
         body=body,
         query={"password": password},
     )
-    return {"status": "created"}
+    return {"status": "created", "username": body.username}
 
 
 @router.post(T_PREFIX, response_model=StatusResponse)

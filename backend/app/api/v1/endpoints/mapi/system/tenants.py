@@ -25,7 +25,7 @@ async def list_tenants(
     )
 
 
-@router.put("", response_model=StatusResponse)
+@router.put("", response_model=StatusResponse, status_code=201)
 async def create_tenant(
     body: TenantCreate,
     username: str = Query(...),
@@ -43,4 +43,4 @@ async def create_tenant(
     if initialSecurityGroup is not None:
         q["initialSecurityGroup"] = initialSecurityGroup
     await hcp.send("PUT", "/tenants", resource="tenant", body=body, query=q)
-    return {"status": "created"}
+    return {"status": "created", "name": body.name}

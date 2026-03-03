@@ -52,7 +52,8 @@ async def test_set_ns_cors(
         headers=auth_headers,
         json={"cors": "<CORSRule/>"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
+    assert resp.json()["namespace"] == NS
     assert route.called
 
 
