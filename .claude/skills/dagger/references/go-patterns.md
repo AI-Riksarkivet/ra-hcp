@@ -297,7 +297,39 @@ func (m *Myproject) PublishPypi(
 
 ## Docker Compose integration
 
-Use the docker-compose community module:
+Install the community docker-compose module from Daggerverse:
+
+```bash
+dagger install github.com/shykes/daggerverse/docker-compose@f82c283510bac0399451dff7ffbec0274bfc3bd4
+```
+
+The module provides a native Dagger reimplementation of Docker Compose.
+Current compatibility: image, build, ports, environment, entrypoint, command.
+
+### API surface
+
+```go
+// Load a project from a directory containing docker-compose.yml
+project := dag.DockerCompose().Project(dagger.DockerComposeProjectOpts{
+    Source: source.Directory(".docker"),
+})
+
+// Get project config
+config, _ := project.Config(ctx)          // raw YAML string
+configFile := project.ConfigFile()         // *dagger.File
+
+// Work with individual services
+svc := project.Service("myapp")
+svc.Config(ctx)                            // service YAML
+svc.Container()                            // *dagger.Container (with compose config applied)
+svc.BaseContainer()                        // *dagger.Container (without compose modifications)
+svc.Up()                                   // *dagger.Service (start the service)
+
+// List all services
+services, _ := project.Services()          // []*DockerComposeComposeService
+```
+
+### Starting a compose service and health-checking it
 
 ```go
 func (m *Myproject) ComposeUp(
@@ -331,7 +363,8 @@ func (m *Myproject) ComposeTest(
 }
 ```
 
-Requires: `dagger install` the docker-compose module.
+Note: The `Source` directory should point to the folder containing
+`docker-compose.yml`, not the project root (unless compose file is at root).
 
 ## Service functions and health checks
 

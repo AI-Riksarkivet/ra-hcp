@@ -73,6 +73,15 @@ Before writing something from scratch, check if a module already exists:
 Search for common tasks: golang, python, node, docker-compose, trivy,
 helm, golangci-lint, argocd, terraform, and many more.
 
+### Notable modules
+
+**docker-compose** — native Dagger reimplementation of Docker Compose:
+```bash
+dagger install github.com/shykes/daggerverse/docker-compose@f82c283510bac0399451dff7ffbec0274bfc3bd4
+```
+API: `dag.DockerCompose().Project(source).Service("name").Up()` — see
+go-patterns.md for full usage.
+
 ### Using modules ad-hoc (without installing)
 
 ```bash
