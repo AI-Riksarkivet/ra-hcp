@@ -23,7 +23,7 @@ async function fetchBuckets(token: string) {
 
 export const load: PageServerLoad = ({ locals }) => {
   return {
-    bucketData: fetchBuckets(locals.token),
+    bucketData: fetchBuckets(locals.token!),
   };
 };
 

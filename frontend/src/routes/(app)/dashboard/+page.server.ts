@@ -29,6 +29,6 @@ async function fetchBuckets(token: string) {
 export const load: PageServerLoad = ({ locals }) => {
   return {
     health: fetchHealth(),
-    buckets: fetchBuckets(locals.token),
+    buckets: fetchBuckets(locals.token!),
   };
 };

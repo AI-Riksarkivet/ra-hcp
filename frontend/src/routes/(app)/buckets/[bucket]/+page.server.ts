@@ -40,7 +40,7 @@ export const load: PageServerLoad = ({ params, locals, url }) => {
   return {
     bucket: params.bucket,
     prefix,
-    objectData: fetchObjects(params.bucket, prefix, locals.token),
+    objectData: fetchObjects(params.bucket, prefix, locals.token!),
   };
 };
 

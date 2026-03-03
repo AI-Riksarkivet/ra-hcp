@@ -33,7 +33,7 @@ async function fetchGroups(token: string) {
 
 export const load: PageServerLoad = ({ locals }) => {
   return {
-    users: fetchUsers(locals.token),
-    groups: fetchGroups(locals.token),
+    users: fetchUsers(locals.token!),
+    groups: fetchGroups(locals.token!),
   };
 };

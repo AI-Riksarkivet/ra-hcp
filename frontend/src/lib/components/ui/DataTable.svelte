@@ -6,6 +6,7 @@
 		type ColumnDef,
 		type SortingState,
 		type TableOptionsResolved,
+		type Updater,
 	} from '@tanstack/table-core';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { cn } from '$lib/utils/cn.js';
@@ -44,7 +45,7 @@
 			globalFilter: undefined,
 			columnOrder: [],
 		},
-		onSortingChange(updater) {
+		onSortingChange(updater: Updater<SortingState>) {
 			sorting = typeof updater === 'function' ? updater(sorting) : updater;
 		},
 		getCoreRowModel: getCoreRowModel(),

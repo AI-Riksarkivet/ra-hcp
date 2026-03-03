@@ -34,7 +34,7 @@ async function fetchNamespaces(tenant: string, token: string) {
 
 export const load: PageServerLoad = ({ params, locals }) => {
   return {
-    tenant: fetchTenant(params.tenant, locals.token),
-    namespaces: fetchNamespaces(params.tenant, locals.token),
+    tenant: fetchTenant(params.tenant, locals.token!),
+    namespaces: fetchNamespaces(params.tenant, locals.token!),
   };
 };

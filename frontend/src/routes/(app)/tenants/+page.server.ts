@@ -16,6 +16,6 @@ async function fetchTenants(token: string) {
 
 export const load: PageServerLoad = ({ locals }) => {
   return {
-    tenants: fetchTenants(locals.token),
+    tenants: fetchTenants(locals.token!),
   };
 };

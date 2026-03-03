@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import DataTable from '$lib/components/ui/DataTable.svelte';
-	import type { ColumnDef } from '@tanstack/table-core';
+	import type { ColumnDef, CellContext } from '@tanstack/table-core';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 
 	let { data } = $props();
@@ -15,12 +15,13 @@
 		{
 			accessorKey: 'enabled',
 			header: 'Status',
-			cell: (info) => (info.getValue() === false ? 'Disabled' : 'Active'),
+			cell: (info: CellContext<User, unknown>) =>
+				info.getValue() === false ? 'Disabled' : 'Active',
 		},
 		{
 			accessorKey: 'roles',
 			header: 'Roles',
-			cell: (info) => {
+			cell: (info: CellContext<User, unknown>) => {
 				const roles = info.getValue() as string[] | undefined;
 				return roles?.join(', ') ?? '';
 			},
