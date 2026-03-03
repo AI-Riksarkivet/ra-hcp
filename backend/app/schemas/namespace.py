@@ -1,21 +1,32 @@
 """Namespace resource models."""
 
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional, List
 
 from .common import (
-    AclsUsage, HashScheme, OptimizedFor, DirectoryUsage, RetentionType,
-    CustomMetadataChanges, ReplicationCollisionAction, CaseForcing,
-    EmailFormat, Permission, IpSettings, PermissionList, TagList,
+    AclsUsage,
+    HashScheme,
+    OptimizedFor,
+    DirectoryUsage,
+    RetentionType,
+    CustomMetadataChanges,
+    ReplicationCollisionAction,
+    CaseForcing,
+    EmailFormat,
+    IpSettings,
+    PermissionList,
+    TagList,
     VersioningSettings,
 )
 
 
 # ── Namespace ──────────────────────────────────────────────────────────
 
+
 class NamespaceCreate(BaseModel):
     """Properties for creating a namespace (PUT)."""
+
     name: str
     description: Optional[str] = None
     hashScheme: Optional[HashScheme] = None
@@ -52,6 +63,7 @@ class NamespaceCreate(BaseModel):
 
 class NamespaceUpdate(BaseModel):
     """Properties for modifying a namespace (POST)."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     hardQuota: Optional[str] = None
@@ -84,6 +96,7 @@ class NamespaceUpdate(BaseModel):
 
 class NamespaceResponse(BaseModel):
     """Full namespace response with all properties (verbose GET)."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     hashScheme: Optional[str] = None
@@ -126,13 +139,16 @@ class NamespaceResponse(BaseModel):
 
 class NamespaceList(BaseModel):
     """List of namespace names."""
+
     name: Optional[List[str]] = None
 
 
 # ── Compliance Settings ────────────────────────────────────────────────
 
+
 class ComplianceSettings(BaseModel):
     """Namespace compliance settings."""
+
     retentionDefault: Optional[str] = None
     minimumRetentionAfterInitialUnspecified: Optional[str] = None
     shreddingDefault: Optional[bool] = None
@@ -142,8 +158,10 @@ class ComplianceSettings(BaseModel):
 
 # ── Custom Metadata Indexing ───────────────────────────────────────────
 
+
 class CustomMetadataIndexingSettings(BaseModel):
     """Namespace custom metadata indexing settings."""
+
     contentClasses: Optional[List[str]] = None
     fullIndexingEnabled: Optional[bool] = None
     excludedAnnotations: Optional[str] = None
@@ -151,8 +169,10 @@ class CustomMetadataIndexingSettings(BaseModel):
 
 # ── Replication Collision Settings ─────────────────────────────────────
 
+
 class ReplicationCollisionSettings(BaseModel):
     """Namespace replication collision handling settings."""
+
     action: Optional[ReplicationCollisionAction] = None
     deleteDays: Optional[int] = None
     deleteEnabled: Optional[bool] = None
@@ -160,8 +180,10 @@ class ReplicationCollisionSettings(BaseModel):
 
 # ── Protocol Settings ──────────────────────────────────────────────────
 
+
 class HttpProtocol(BaseModel):
     """HTTP/REST/S3/WebDAV protocol settings for a namespace."""
+
     httpsEnabled: Optional[bool] = None
     httpEnabled: Optional[bool] = None
     restEnabled: Optional[bool] = None
@@ -179,6 +201,7 @@ class HttpProtocol(BaseModel):
 
 class CifsProtocol(BaseModel):
     """CIFS protocol settings for a namespace."""
+
     enabled: Optional[bool] = None
     caseForcing: Optional[CaseForcing] = None
     caseSensitive: Optional[bool] = None
@@ -188,6 +211,7 @@ class CifsProtocol(BaseModel):
 
 class NfsProtocol(BaseModel):
     """NFS protocol settings for a namespace."""
+
     enabled: Optional[bool] = None
     uid: Optional[int] = None
     gid: Optional[int] = None
@@ -196,6 +220,7 @@ class NfsProtocol(BaseModel):
 
 class SmtpProtocol(BaseModel):
     """SMTP protocol settings for a namespace."""
+
     enabled: Optional[bool] = None
     emailFormat: Optional[EmailFormat] = None
     emailLocation: Optional[str] = None
@@ -205,6 +230,7 @@ class SmtpProtocol(BaseModel):
 
 class Protocols(BaseModel):
     """Default namespace protocol settings (legacy)."""
+
     httpEnabled: Optional[bool] = None
     httpsEnabled: Optional[bool] = None
     ipSettings: Optional[IpSettings] = None
@@ -212,15 +238,19 @@ class Protocols(BaseModel):
 
 # ── CORS ───────────────────────────────────────────────────────────────
 
+
 class CorsConfiguration(BaseModel):
     """CORS rules configuration (raw XML string in CDATA)."""
+
     cors: Optional[str] = None
 
 
 # ── Namespace Defaults ─────────────────────────────────────────────────
 
+
 class NamespaceDefaults(BaseModel):
     """Default settings for namespace creation for a tenant."""
+
     description: Optional[str] = None
     hashScheme: Optional[HashScheme] = None
     enterpriseMode: Optional[bool] = None

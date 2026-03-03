@@ -20,7 +20,9 @@ S_MAPI = f"{HCP_BASE}/groupAccounts"
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_list_group_accounts(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_list_group_accounts(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{T_MAPI}").mock(
         return_value=httpx.Response(200, json={"groupAccount": [{"groupname": GRP}]})
     )
@@ -29,19 +31,23 @@ async def test_list_group_accounts(client: AsyncClient, auth_headers: dict, hcp_
     assert resp.json()["groupAccount"][0]["groupname"] == GRP
 
 
-async def test_create_group_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    route = hcp_mock.put(f"{T_MAPI}").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_create_group_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    route = hcp_mock.put(f"{T_MAPI}").mock(return_value=httpx.Response(200))
     resp = await client.put(
-        T_PREFIX, headers=auth_headers, json={"groupname": GRP},
+        T_PREFIX,
+        headers=auth_headers,
+        json={"groupname": GRP},
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "created"
     assert route.called
 
 
-async def test_get_group_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_group_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{T_MAPI}/{GRP}").mock(
         return_value=httpx.Response(200, json={"groupname": GRP})
     )
@@ -50,53 +56,61 @@ async def test_get_group_account(client: AsyncClient, auth_headers: dict, hcp_mo
     assert resp.json()["groupname"] == GRP
 
 
-async def test_get_group_not_found(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.get(f"{T_MAPI}/missing").mock(
-        return_value=httpx.Response(404)
-    )
+async def test_get_group_not_found(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.get(f"{T_MAPI}/missing").mock(return_value=httpx.Response(404))
     resp = await client.get(f"{T_PREFIX}/missing", headers=auth_headers)
     assert resp.status_code == 404
 
 
-async def test_check_group_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.head(f"{T_MAPI}/{GRP}").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_check_group_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.head(f"{T_MAPI}/{GRP}").mock(return_value=httpx.Response(200))
     resp = await client.head(f"{T_PREFIX}/{GRP}", headers=auth_headers)
     assert resp.status_code == 200
 
 
-async def test_modify_group_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    route = hcp_mock.post(f"{T_MAPI}/{GRP}").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_modify_group_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    route = hcp_mock.post(f"{T_MAPI}/{GRP}").mock(return_value=httpx.Response(200))
     resp = await client.post(
-        f"{T_PREFIX}/{GRP}", headers=auth_headers, json={"allowNamespaceManagement": True},
+        f"{T_PREFIX}/{GRP}",
+        headers=auth_headers,
+        json={"allowNamespaceManagement": True},
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "updated"
     assert route.called
 
 
-async def test_delete_group_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    route = hcp_mock.delete(f"{T_MAPI}/{GRP}").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_delete_group_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    route = hcp_mock.delete(f"{T_MAPI}/{GRP}").mock(return_value=httpx.Response(200))
     resp = await client.delete(f"{T_PREFIX}/{GRP}", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "deleted"
     assert route.called
 
 
-async def test_get_group_data_perms(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_group_data_perms(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{T_MAPI}/{GRP}/dataAccessPermissions").mock(
         return_value=httpx.Response(200, json={"namespacePermission": []})
     )
-    resp = await client.get(f"{T_PREFIX}/{GRP}/dataAccessPermissions", headers=auth_headers)
+    resp = await client.get(
+        f"{T_PREFIX}/{GRP}/dataAccessPermissions", headers=auth_headers
+    )
     assert resp.status_code == 200
 
 
-async def test_modify_group_data_perms(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_modify_group_data_perms(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.post(f"{T_MAPI}/{GRP}/dataAccessPermissions").mock(
         return_value=httpx.Response(200)
     )
@@ -114,7 +128,9 @@ async def test_modify_group_data_perms(client: AsyncClient, auth_headers: dict, 
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_list_system_groups(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_list_system_groups(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{S_MAPI}").mock(
         return_value=httpx.Response(200, json={"groupname": ["admins"]})
     )
@@ -122,7 +138,9 @@ async def test_list_system_groups(client: AsyncClient, auth_headers: dict, hcp_m
     assert resp.status_code == 200
 
 
-async def test_get_system_group(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_system_group(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{S_MAPI}/admins").mock(
         return_value=httpx.Response(200, json={"groupname": "admins"})
     )
@@ -131,9 +149,9 @@ async def test_get_system_group(client: AsyncClient, auth_headers: dict, hcp_moc
     assert resp.json()["groupname"] == "admins"
 
 
-async def test_check_system_group(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.head(f"{S_MAPI}/admins").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_check_system_group(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.head(f"{S_MAPI}/admins").mock(return_value=httpx.Response(200))
     resp = await client.head(f"{S_PREFIX}/admins", headers=auth_headers)
     assert resp.status_code == 200

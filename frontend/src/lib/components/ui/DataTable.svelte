@@ -5,7 +5,7 @@
 		getSortedRowModel,
 		type ColumnDef,
 		type SortingState,
-		type TableOptionsResolved
+		type TableOptionsResolved,
 	} from '@tanstack/table-core';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { cn } from '$lib/utils/cn.js';
@@ -23,7 +23,7 @@
 		data,
 		class: className = '',
 		onrowclick,
-		emptyMessage = 'No data available'
+		emptyMessage = 'No data available',
 	}: Props = $props();
 
 	let sorting = $state<SortingState>([]);
@@ -42,7 +42,7 @@
 			rowPinning: { top: [], bottom: [] },
 			pagination: { pageIndex: 0, pageSize: data.length || 10 },
 			globalFilter: undefined,
-			columnOrder: []
+			columnOrder: [],
 		},
 		onSortingChange(updater) {
 			sorting = typeof updater === 'function' ? updater(sorting) : updater;
@@ -60,7 +60,7 @@
 		onRowPinningChange() {},
 		onPaginationChange() {},
 		onGlobalFilterChange() {},
-		onColumnOrderChange() {}
+		onColumnOrderChange() {},
 	});
 
 	const table = $derived(createTable(options));

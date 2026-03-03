@@ -5,7 +5,6 @@ from __future__ import annotations
 import pytest
 import fakeredis
 import respx
-from httpx import Response
 
 from app.core.config import CacheSettings, MapiSettings
 from app.services.cache_service import CacheService
@@ -64,7 +63,9 @@ def hcp_mock():
 
 
 async def test_get_cache_miss_then_hit(
-    cache: CacheService, mapi: CachedMapiService, hcp_mock,
+    cache: CacheService,
+    mapi: CachedMapiService,
+    hcp_mock,
 ):
     route = hcp_mock.get(f"{HCP_BASE}/tenants").respond(
         200, json={"name": ["t1", "t2"]}
@@ -87,7 +88,9 @@ async def test_get_cache_miss_then_hit(
 
 
 async def test_put_invalidates_cache(
-    cache: CacheService, mapi: CachedMapiService, hcp_mock,
+    cache: CacheService,
+    mapi: CachedMapiService,
+    hcp_mock,
 ):
     get_route = hcp_mock.get(f"{HCP_BASE}/tenants/t1/namespaces").respond(
         200, json={"name": ["ns1"]}
@@ -116,7 +119,9 @@ async def test_put_invalidates_cache(
 
 
 async def test_no_cache_paths(
-    cache: CacheService, mapi: CachedMapiService, hcp_mock,
+    cache: CacheService,
+    mapi: CachedMapiService,
+    hcp_mock,
 ):
     route = hcp_mock.get(f"{HCP_BASE}/logs").respond(200, json={"logs": []})
 
@@ -150,7 +155,9 @@ async def test_cache_key_includes_query(mapi: CachedMapiService):
 
 
 async def test_error_responses_not_cached(
-    cache: CacheService, mapi: CachedMapiService, hcp_mock,
+    cache: CacheService,
+    mapi: CachedMapiService,
+    hcp_mock,
 ):
     route = hcp_mock.get(f"{HCP_BASE}/tenants/t1").respond(
         404, json={"error": "not found"}

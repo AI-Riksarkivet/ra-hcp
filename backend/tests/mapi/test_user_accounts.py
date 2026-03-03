@@ -20,7 +20,9 @@ S_MAPI = f"{HCP_BASE}/userAccounts"
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_list_user_accounts(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_list_user_accounts(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{T_MAPI}").mock(
         return_value=httpx.Response(200, json={"userAccount": [{"username": "u1"}]})
     )
@@ -29,10 +31,10 @@ async def test_list_user_accounts(client: AsyncClient, auth_headers: dict, hcp_m
     assert resp.json()["userAccount"][0]["username"] == "u1"
 
 
-async def test_create_user_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    route = hcp_mock.put(f"{T_MAPI}").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_create_user_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    route = hcp_mock.put(f"{T_MAPI}").mock(return_value=httpx.Response(200))
     resp = await client.put(
         T_PREFIX,
         headers=auth_headers,
@@ -50,54 +52,62 @@ async def test_create_user_account(client: AsyncClient, auth_headers: dict, hcp_
     assert route.called
 
 
-async def test_get_user_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_user_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{T_MAPI}/{USER}").mock(
-        return_value=httpx.Response(200, json={"username": USER, "fullName": "John Doe"})
+        return_value=httpx.Response(
+            200, json={"username": USER, "fullName": "John Doe"}
+        )
     )
     resp = await client.get(f"{T_PREFIX}/{USER}", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["username"] == USER
 
 
-async def test_get_user_account_not_found(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.get(f"{T_MAPI}/nobody").mock(
-        return_value=httpx.Response(404)
-    )
+async def test_get_user_account_not_found(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.get(f"{T_MAPI}/nobody").mock(return_value=httpx.Response(404))
     resp = await client.get(f"{T_PREFIX}/nobody", headers=auth_headers)
     assert resp.status_code == 404
 
 
-async def test_check_user_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.head(f"{T_MAPI}/{USER}").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_check_user_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.head(f"{T_MAPI}/{USER}").mock(return_value=httpx.Response(200))
     resp = await client.head(f"{T_PREFIX}/{USER}", headers=auth_headers)
     assert resp.status_code == 200
 
 
-async def test_modify_user_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    route = hcp_mock.post(f"{T_MAPI}/{USER}").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_modify_user_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    route = hcp_mock.post(f"{T_MAPI}/{USER}").mock(return_value=httpx.Response(200))
     resp = await client.post(
-        f"{T_PREFIX}/{USER}", headers=auth_headers, json={"enabled": False},
+        f"{T_PREFIX}/{USER}",
+        headers=auth_headers,
+        json={"enabled": False},
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "updated"
     assert route.called
 
 
-async def test_delete_user_account(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    route = hcp_mock.delete(f"{T_MAPI}/{USER}").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_delete_user_account(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    route = hcp_mock.delete(f"{T_MAPI}/{USER}").mock(return_value=httpx.Response(200))
     resp = await client.delete(f"{T_PREFIX}/{USER}", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "deleted"
     assert route.called
 
 
-async def test_change_password(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_change_password(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.post(f"{T_MAPI}/{USER}/changePassword").mock(
         return_value=httpx.Response(200)
     )
@@ -111,15 +121,21 @@ async def test_change_password(client: AsyncClient, auth_headers: dict, hcp_mock
     assert route.called
 
 
-async def test_get_user_data_perms(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_user_data_perms(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{T_MAPI}/{USER}/dataAccessPermissions").mock(
         return_value=httpx.Response(200, json={"namespacePermission": []})
     )
-    resp = await client.get(f"{T_PREFIX}/{USER}/dataAccessPermissions", headers=auth_headers)
+    resp = await client.get(
+        f"{T_PREFIX}/{USER}/dataAccessPermissions", headers=auth_headers
+    )
     assert resp.status_code == 200
 
 
-async def test_modify_user_data_perms(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_modify_user_data_perms(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.post(f"{T_MAPI}/{USER}/dataAccessPermissions").mock(
         return_value=httpx.Response(200)
     )
@@ -137,7 +153,9 @@ async def test_modify_user_data_perms(client: AsyncClient, auth_headers: dict, h
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_list_system_users(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_list_system_users(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{S_MAPI}").mock(
         return_value=httpx.Response(200, json={"username": ["admin", "monitor"]})
     )
@@ -145,7 +163,9 @@ async def test_list_system_users(client: AsyncClient, auth_headers: dict, hcp_mo
     assert resp.status_code == 200
 
 
-async def test_get_system_user(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_system_user(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{S_MAPI}/admin").mock(
         return_value=httpx.Response(200, json={"username": "admin"})
     )
@@ -154,20 +174,22 @@ async def test_get_system_user(client: AsyncClient, auth_headers: dict, hcp_mock
     assert resp.json()["username"] == "admin"
 
 
-async def test_check_system_user(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.head(f"{S_MAPI}/admin").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_check_system_user(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.head(f"{S_MAPI}/admin").mock(return_value=httpx.Response(200))
     resp = await client.head(f"{S_PREFIX}/admin", headers=auth_headers)
     assert resp.status_code == 200
 
 
-async def test_modify_system_user_password(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    route = hcp_mock.post(f"{S_MAPI}/admin").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_modify_system_user_password(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    route = hcp_mock.post(f"{S_MAPI}/admin").mock(return_value=httpx.Response(200))
     resp = await client.post(
-        f"{S_PREFIX}/admin", headers=auth_headers, params={"password": "newpass"},
+        f"{S_PREFIX}/admin",
+        headers=auth_headers,
+        params={"password": "newpass"},
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "updated"

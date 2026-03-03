@@ -43,8 +43,12 @@ api_router.include_router(content_classes.router, prefix="/mapi", dependencies=_
 api_router.include_router(retention_classes.router, prefix="/mapi", dependencies=_auth)
 
 # ── System-level MAPI (requires HCP system admin) ───────────────────
-api_router.include_router(user_accounts.system_router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(group_accounts.system_router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(
+    user_accounts.system_router, prefix="/mapi", dependencies=_auth
+)
+api_router.include_router(
+    group_accounts.system_router, prefix="/mapi", dependencies=_auth
+)
 api_router.include_router(replication.router, prefix="/mapi", dependencies=_auth)
 api_router.include_router(erasure_coding.router, prefix="/mapi", dependencies=_auth)
 api_router.include_router(statistics.router, prefix="/mapi", dependencies=_auth)

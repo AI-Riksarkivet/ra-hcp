@@ -23,7 +23,9 @@
 	);
 </script>
 
-<header class="flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+<header
+	class="flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
+>
 	<div class="flex flex-1 items-center gap-2">
 		<Sidebar.Trigger />
 		<Separator orientation="vertical" class="mx-2 data-[orientation=vertical]:h-4" />
@@ -35,7 +37,9 @@
 
 		<div class="flex items-center gap-2">
 			<Avatar.Root class="h-8 w-8">
-				<Avatar.Fallback class="bg-primary/10 text-xs font-semibold text-primary">{initials}</Avatar.Fallback>
+				<Avatar.Fallback class="bg-primary/10 text-xs font-semibold text-primary"
+					>{initials}</Avatar.Fallback
+				>
 			</Avatar.Root>
 			<span class="hidden text-sm font-medium sm:inline">
 				{username}
@@ -53,9 +57,7 @@
 					</a>
 				{/snippet}
 			</Tooltip.Trigger>
-			<Tooltip.Content class="sm:hidden">
-				Sign out
-			</Tooltip.Content>
+			<Tooltip.Content class="sm:hidden">Sign out</Tooltip.Content>
 		</Tooltip.Root>
 	</div>
 </header>

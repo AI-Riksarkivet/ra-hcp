@@ -210,9 +210,7 @@ async def test_mapi_post_invalidates_cached_get(
     assert get_route.call_count == 1
 
     # Confirm cached
-    await cached_client.get(
-        "/api/v1/mapi/tenants/t1/namespaces", headers=auth_headers
-    )
+    await cached_client.get("/api/v1/mapi/tenants/t1/namespaces", headers=auth_headers)
     assert get_route.call_count == 1
 
     # POST modify — invalidates cache
@@ -223,9 +221,7 @@ async def test_mapi_post_invalidates_cached_get(
     )
 
     # GET now misses cache, hits HCP again
-    await cached_client.get(
-        "/api/v1/mapi/tenants/t1/namespaces", headers=auth_headers
-    )
+    await cached_client.get("/api/v1/mapi/tenants/t1/namespaces", headers=auth_headers)
     assert get_route.call_count == 2
 
 
@@ -241,9 +237,7 @@ async def test_mapi_modify_tenant_invalidates_listing(
     get_route = hcp_mock.get(f"{HCP_BASE}/tenants").mock(
         return_value=httpx.Response(200, json={"name": ["t1"]})
     )
-    hcp_mock.post(f"{HCP_BASE}/tenants/t1").mock(
-        return_value=httpx.Response(200)
-    )
+    hcp_mock.post(f"{HCP_BASE}/tenants/t1").mock(return_value=httpx.Response(200))
 
     # Cache the tenant list
     await cached_client.get("/api/v1/mapi/tenants", headers=auth_headers)
@@ -314,9 +308,7 @@ async def test_mapi_query_params_cached_separately(
         return_value=httpx.Response(200, json={"name": ["t1"]})
     )
 
-    await cached_client.get(
-        "/api/v1/mapi/tenants?verbose=true", headers=auth_headers
-    )
+    await cached_client.get("/api/v1/mapi/tenants?verbose=true", headers=auth_headers)
     assert route.call_count == 1
 
     # Different query params — cache miss
@@ -324,9 +316,7 @@ async def test_mapi_query_params_cached_separately(
     assert route.call_count == 2
 
     # Repeat both — both cached now
-    await cached_client.get(
-        "/api/v1/mapi/tenants?verbose=true", headers=auth_headers
-    )
+    await cached_client.get("/api/v1/mapi/tenants?verbose=true", headers=auth_headers)
     await cached_client.get("/api/v1/mapi/tenants", headers=auth_headers)
     assert route.call_count == 2
 
@@ -349,17 +339,13 @@ async def test_mapi_nested_resources_cached_independently(
 
     # Cache both
     await cached_client.get("/api/v1/mapi/tenants", headers=auth_headers)
-    await cached_client.get(
-        "/api/v1/mapi/tenants/t1/namespaces", headers=auth_headers
-    )
+    await cached_client.get("/api/v1/mapi/tenants/t1/namespaces", headers=auth_headers)
     assert tenant_route.call_count == 1
     assert ns_route.call_count == 1
 
     # Both cached
     await cached_client.get("/api/v1/mapi/tenants", headers=auth_headers)
-    await cached_client.get(
-        "/api/v1/mapi/tenants/t1/namespaces", headers=auth_headers
-    )
+    await cached_client.get("/api/v1/mapi/tenants/t1/namespaces", headers=auth_headers)
     assert tenant_route.call_count == 1
     assert ns_route.call_count == 1
 
@@ -382,8 +368,6 @@ async def test_s3_head_bucket_works_with_cache(
     auth_headers: dict,
     mock_s3_service: MagicMock,
 ):
-    resp = await cached_client.head(
-        "/api/v1/buckets/test-bucket", headers=auth_headers
-    )
+    resp = await cached_client.head("/api/v1/buckets/test-bucket", headers=auth_headers)
     assert resp.status_code == 200
     mock_s3_service.head_bucket.assert_called_once_with("test-bucket")

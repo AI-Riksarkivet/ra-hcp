@@ -48,15 +48,21 @@ class S3Service:
             return self._client.list_buckets()
 
     def create_bucket(self, name: str) -> dict:
-        with tracer.start_as_current_span("s3.create_bucket", attributes={"s3.bucket": name}):
+        with tracer.start_as_current_span(
+            "s3.create_bucket", attributes={"s3.bucket": name}
+        ):
             return self._client.create_bucket(Bucket=name)
 
     def head_bucket(self, name: str) -> dict:
-        with tracer.start_as_current_span("s3.head_bucket", attributes={"s3.bucket": name}):
+        with tracer.start_as_current_span(
+            "s3.head_bucket", attributes={"s3.bucket": name}
+        ):
             return self._client.head_bucket(Bucket=name)
 
     def delete_bucket(self, name: str) -> dict:
-        with tracer.start_as_current_span("s3.delete_bucket", attributes={"s3.bucket": name}):
+        with tracer.start_as_current_span(
+            "s3.delete_bucket", attributes={"s3.bucket": name}
+        ):
             return self._client.delete_bucket(Bucket=name)
 
     # ── Object operations ──────────────────────────────────────────────
@@ -69,7 +75,8 @@ class S3Service:
         continuation_token: Optional[str] = None,
     ) -> dict:
         with tracer.start_as_current_span(
-            "s3.list_objects", attributes={"s3.bucket": bucket, "s3.prefix": prefix or ""},
+            "s3.list_objects",
+            attributes={"s3.bucket": bucket, "s3.prefix": prefix or ""},
         ):
             kwargs: dict[str, Any] = {"Bucket": bucket, "MaxKeys": max_keys}
             if prefix:
@@ -80,32 +87,43 @@ class S3Service:
 
     def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
         with tracer.start_as_current_span(
-            "s3.put_object", attributes={"s3.bucket": bucket, "s3.key": key},
+            "s3.put_object",
+            attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             self._client.upload_fileobj(
-                body, bucket, key, Config=self._transfer_config,
+                body,
+                bucket,
+                key,
+                Config=self._transfer_config,
             )
 
     def get_object(self, bucket: str, key: str) -> dict:
         with tracer.start_as_current_span(
-            "s3.get_object", attributes={"s3.bucket": bucket, "s3.key": key},
+            "s3.get_object",
+            attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             return self._client.get_object(Bucket=bucket, Key=key)
 
     def head_object(self, bucket: str, key: str) -> dict:
         with tracer.start_as_current_span(
-            "s3.head_object", attributes={"s3.bucket": bucket, "s3.key": key},
+            "s3.head_object",
+            attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             return self._client.head_object(Bucket=bucket, Key=key)
 
     def delete_object(self, bucket: str, key: str) -> dict:
         with tracer.start_as_current_span(
-            "s3.delete_object", attributes={"s3.bucket": bucket, "s3.key": key},
+            "s3.delete_object",
+            attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             return self._client.delete_object(Bucket=bucket, Key=key)
 
     def copy_object(
-        self, src_bucket: str, src_key: str, dst_bucket: str, dst_key: str,
+        self,
+        src_bucket: str,
+        src_key: str,
+        dst_bucket: str,
+        dst_key: str,
     ) -> dict:
         with tracer.start_as_current_span(
             "s3.copy_object",
@@ -124,24 +142,28 @@ class S3Service:
 
     def delete_objects(self, bucket: str, keys: List[str]) -> dict:
         with tracer.start_as_current_span(
-            "s3.delete_objects", attributes={"s3.bucket": bucket, "s3.key_count": len(keys)},
+            "s3.delete_objects",
+            attributes={"s3.bucket": bucket, "s3.key_count": len(keys)},
         ):
             objects = [{"Key": k} for k in keys]
             return self._client.delete_objects(
-                Bucket=bucket, Delete={"Objects": objects, "Quiet": True},
+                Bucket=bucket,
+                Delete={"Objects": objects, "Quiet": True},
             )
 
     # ── Bucket versioning ─────────────────────────────────────────────
 
     def get_bucket_versioning(self, bucket: str) -> dict:
         with tracer.start_as_current_span(
-            "s3.get_bucket_versioning", attributes={"s3.bucket": bucket},
+            "s3.get_bucket_versioning",
+            attributes={"s3.bucket": bucket},
         ):
             return self._client.get_bucket_versioning(Bucket=bucket)
 
     def put_bucket_versioning(self, bucket: str, status: str) -> dict:
         with tracer.start_as_current_span(
-            "s3.put_bucket_versioning", attributes={"s3.bucket": bucket, "s3.versioning_status": status},
+            "s3.put_bucket_versioning",
+            attributes={"s3.bucket": bucket, "s3.versioning_status": status},
         ):
             return self._client.put_bucket_versioning(
                 Bucket=bucket,
@@ -152,28 +174,35 @@ class S3Service:
 
     def get_bucket_acl(self, bucket: str) -> dict:
         with tracer.start_as_current_span(
-            "s3.get_bucket_acl", attributes={"s3.bucket": bucket},
+            "s3.get_bucket_acl",
+            attributes={"s3.bucket": bucket},
         ):
             return self._client.get_bucket_acl(Bucket=bucket)
 
     def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
         with tracer.start_as_current_span(
-            "s3.put_bucket_acl", attributes={"s3.bucket": bucket},
+            "s3.put_bucket_acl",
+            attributes={"s3.bucket": bucket},
         ):
             return self._client.put_bucket_acl(
-                Bucket=bucket, AccessControlPolicy=acl,
+                Bucket=bucket,
+                AccessControlPolicy=acl,
             )
 
     def get_object_acl(self, bucket: str, key: str) -> dict:
         with tracer.start_as_current_span(
-            "s3.get_object_acl", attributes={"s3.bucket": bucket, "s3.key": key},
+            "s3.get_object_acl",
+            attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             return self._client.get_object_acl(Bucket=bucket, Key=key)
 
     def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
         with tracer.start_as_current_span(
-            "s3.put_object_acl", attributes={"s3.bucket": bucket, "s3.key": key},
+            "s3.put_object_acl",
+            attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             return self._client.put_object_acl(
-                Bucket=bucket, Key=key, AccessControlPolicy=acl,
+                Bucket=bucket,
+                Key=key,
+                AccessControlPolicy=acl,
             )

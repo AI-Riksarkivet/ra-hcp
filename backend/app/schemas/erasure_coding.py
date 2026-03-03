@@ -8,6 +8,7 @@ from .common import ECTopologyType
 
 class ECReplicationLink(BaseModel):
     """Replication link within an EC topology."""
+
     name: str
     uuid: Optional[str] = None
     hcpSystems: Optional[List[str]] = None
@@ -17,6 +18,7 @@ class ECReplicationLink(BaseModel):
 
 class ECTopologyCreate(BaseModel):
     """Properties for creating an erasure coding topology (PUT)."""
+
     name: str
     type: ECTopologyType
     replicationLinks: List[ECReplicationLink]
@@ -29,6 +31,7 @@ class ECTopologyCreate(BaseModel):
 
 class ECTopologyResponse(BaseModel):
     """Full erasure coding topology response."""
+
     name: Optional[str] = None
     type: Optional[str] = None
     description: Optional[str] = None
@@ -48,11 +51,13 @@ class ECTopologyResponse(BaseModel):
 
 class ECTopologyList(BaseModel):
     """List of EC topology names."""
+
     name: Optional[List[str]] = None
 
 
 class TenantCandidate(BaseModel):
     """Tenant eligible for EC topology."""
+
     name: Optional[str] = None
     uuid: Optional[str] = None
     hcpSystems: Optional[List[str]] = None
@@ -60,4 +65,5 @@ class TenantCandidate(BaseModel):
 
 class TenantCandidateList(BaseModel):
     """List of tenant candidates."""
+
     tenantCandidate: Optional[List[TenantCandidate]] = None

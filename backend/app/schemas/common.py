@@ -1,12 +1,13 @@
 """Common models shared across HCP MAPI resources."""
 
 from __future__ import annotations
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from enum import Enum
 
 
 # ── Enums ──────────────────────────────────────────────────────────────
+
 
 class Permission(str, Enum):
     BROWSE = "BROWSE"
@@ -146,13 +147,16 @@ class RecipientSeverity(str, Enum):
 
 # ── Shared Sub-Models ──────────────────────────────────────────────────
 
+
 class IpAddressList(BaseModel):
     """HCP wraps IP lists in {"ipAddress": [...]}."""
+
     ipAddress: Optional[List[str]] = None
 
 
 class IpSettings(BaseModel):
     """IP address allow/deny configuration."""
+
     model_config = {"populate_by_name": True}
 
     allowAddresses: Optional[IpAddressList | List[str]] = None
@@ -173,32 +177,38 @@ class IpSettings(BaseModel):
 
 class PermissionList(BaseModel):
     """A list of permissions."""
+
     permission: Optional[List[Permission]] = None
 
 
 class RoleList(BaseModel):
     """A list of roles."""
+
     role: Optional[List[Role]] = None
 
 
 class TagList(BaseModel):
     """A list of tags."""
+
     tag: Optional[List[str]] = None
 
 
 class NamespacePermission(BaseModel):
     """Data access permissions for a single namespace."""
+
     namespaceName: str
     permissions: Optional[PermissionList] = None
 
 
 class DataAccessPermissions(BaseModel):
     """Data access permissions across namespaces."""
+
     namespacePermission: Optional[List[NamespacePermission]] = None
 
 
 class VersioningSettings(BaseModel):
     """Versioning configuration for a namespace."""
+
     enabled: Optional[bool] = None
     prune: Optional[bool] = None
     pruneDays: Optional[int] = None
@@ -212,26 +222,31 @@ class VersioningSettings(BaseModel):
 
 # ── Query Parameter Models ─────────────────────────────────────────────
 
+
 class PagingParams(BaseModel):
     """Query parameters for paging through resource lists."""
+
     offset: Optional[int] = None
     count: Optional[int] = None
 
 
 class SortParams(BaseModel):
     """Query parameters for sorting resource lists."""
+
     sortType: Optional[str] = None
     sortOrder: Optional[str] = None
 
 
 class FilterParams(BaseModel):
     """Query parameters for filtering resource lists."""
+
     filterType: Optional[str] = None
     filterString: Optional[str] = None
 
 
 class ListQueryParams(BaseModel):
     """Combined query parameters for list operations."""
+
     offset: Optional[int] = None
     count: Optional[int] = None
     sortType: Optional[str] = None
@@ -244,6 +259,7 @@ class ListQueryParams(BaseModel):
 
 class ChargebackParams(BaseModel):
     """Query parameters for chargeback reports."""
+
     start: Optional[str] = None
     end: Optional[str] = None
     granularity: Optional[Granularity] = Granularity.TOTAL

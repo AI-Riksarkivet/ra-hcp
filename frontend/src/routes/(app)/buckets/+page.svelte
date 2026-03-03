@@ -25,9 +25,7 @@
 	});
 
 	let filteredBuckets = $derived(
-		buckets.filter((b) =>
-			b.name.toLowerCase().includes(search.toLowerCase())
-		)
+		buckets.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()))
 	);
 
 	let selected = $state<Set<string>>(new Set());
@@ -45,7 +43,11 @@
 
 	function toggleOne(name: string) {
 		const next = new Set(selected);
-		if (next.has(name)) { next.delete(name); } else { next.add(name); }
+		if (next.has(name)) {
+			next.delete(name);
+		} else {
+			next.add(name);
+		}
 		selected = next;
 	}
 
@@ -57,25 +59,47 @@
 		if (!deleteTarget) return;
 		deleting = true;
 		try {
-			const res = await fetch(`/api/v1/buckets/${encodeURIComponent(deleteTarget)}`, { method: 'DELETE' });
-			if (res.ok) { toast.success(`Deleted bucket "${deleteTarget}"`); await invalidateAll(); }
-			else { toast.error('Failed to delete bucket'); }
-		} finally { deleting = false; deleteTarget = null; }
+			const res = await fetch(`/api/v1/buckets/${encodeURIComponent(deleteTarget)}`, {
+				method: 'DELETE',
+			});
+			if (res.ok) {
+				toast.success(`Deleted bucket "${deleteTarget}"`);
+				await invalidateAll();
+			} else {
+				toast.error('Failed to delete bucket');
+			}
+		} finally {
+			deleting = false;
+			deleteTarget = null;
+		}
 	}
 
 	async function confirmBulkDelete() {
 		deleting = true;
 		const names = [...selected];
-		let successCount = 0, failCount = 0;
+		let successCount = 0,
+			failCount = 0;
 		for (const name of names) {
 			try {
-				const res = await fetch(`/api/v1/buckets/${encodeURIComponent(name)}`, { method: 'DELETE' });
-				if (res.ok) { successCount++; } else { failCount++; }
-			} catch { failCount++; }
+				const res = await fetch(`/api/v1/buckets/${encodeURIComponent(name)}`, {
+					method: 'DELETE',
+				});
+				if (res.ok) {
+					successCount++;
+				} else {
+					failCount++;
+				}
+			} catch {
+				failCount++;
+			}
 		}
-		if (successCount > 0) toast.success(`Deleted ${successCount} bucket${successCount !== 1 ? 's' : ''}`);
-		if (failCount > 0) toast.error(`Failed to delete ${failCount} bucket${failCount !== 1 ? 's' : ''}`);
-		selected = new Set(); deleting = false; bulkDeleteOpen = false;
+		if (successCount > 0)
+			toast.success(`Deleted ${successCount} bucket${successCount !== 1 ? 's' : ''}`);
+		if (failCount > 0)
+			toast.error(`Failed to delete ${failCount} bucket${failCount !== 1 ? 's' : ''}`);
+		selected = new Set();
+		deleting = false;
+		bulkDeleteOpen = false;
 		await invalidateAll();
 	}
 
@@ -99,18 +123,32 @@
 	</div>
 
 	{#if form?.error}
-		<div class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{form.error}</div>
+		<div
+			class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+		>
+			{form.error}
+		</div>
 	{/if}
 
 	<Dialog.Root bind:open={createOpen}>
 		<Dialog.Content class="sm:max-w-md">
 			<Dialog.Header><Dialog.Title>Create Bucket</Dialog.Title></Dialog.Header>
-			<form method="POST" action="?/create" use:enhance={() => {
-				return async ({ result, update }) => {
-					if (result.type === 'success') { toast.success('Bucket created successfully'); createOpen = false; await invalidateAll(); }
-					else { await update(); }
-				};
-			}} class="space-y-4">
+			<form
+				method="POST"
+				action="?/create"
+				use:enhance={() => {
+					return async ({ result, update }) => {
+						if (result.type === 'success') {
+							toast.success('Bucket created successfully');
+							createOpen = false;
+							await invalidateAll();
+						} else {
+							await update();
+						}
+					};
+				}}
+				class="space-y-4"
+			>
 				<div class="space-y-2">
 					<Label for="bucket-name">Bucket Name</Label>
 					<Input id="bucket-name" name="bucket" placeholder="my-bucket" required />
@@ -137,7 +175,9 @@
 				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}>
 					<Trash2 class="h-3.5 w-3.5" />Delete Selected
 				</Button>
-				<Button variant="ghost" size="sm" onclick={() => (selected = new Set())}>Deselect All</Button>
+				<Button variant="ghost" size="sm" onclick={() => (selected = new Set())}
+					>Deselect All</Button
+				>
 			</div>
 		{/if}
 
@@ -145,7 +185,15 @@
 			<table class="w-full text-left text-sm">
 				<thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
 					<tr>
-						<th class="w-10 px-4 py-3"><input type="checkbox" checked={allSelected} onchange={toggleAll} class="h-4 w-4 rounded border-input" disabled={filteredBuckets.length === 0} /></th>
+						<th class="w-10 px-4 py-3"
+							><input
+								type="checkbox"
+								checked={allSelected}
+								onchange={toggleAll}
+								class="h-4 w-4 rounded border-input"
+								disabled={filteredBuckets.length === 0}
+							/></th
+						>
 						<th class="px-4 py-3 font-medium">Name</th>
 						<th class="px-4 py-3 font-medium">Created</th>
 						<th class="w-16 px-4 py-3 font-medium"></th>
@@ -153,15 +201,34 @@
 				</thead>
 				<tbody class="divide-y">
 					{#if buckets.length === 0}
-						<tr><td colspan="4" class="px-4 py-8 text-center text-muted-foreground">No buckets found. Create one to get started.</td></tr>
+						<tr
+							><td colspan="4" class="px-4 py-8 text-center text-muted-foreground"
+								>No buckets found. Create one to get started.</td
+							></tr
+						>
 					{:else if filteredBuckets.length === 0}
-						<tr><td colspan="4" class="px-4 py-8 text-center text-muted-foreground">No results matching "{search}"</td></tr>
+						<tr
+							><td colspan="4" class="px-4 py-8 text-center text-muted-foreground"
+								>No results matching "{search}"</td
+							></tr
+						>
 					{:else}
 						{#each filteredBuckets as bucket}
-							<tr class="cursor-pointer bg-card transition-colors hover:bg-accent/50" onclick={() => goto(`/buckets/${bucket.name}`)} onkeydown={(e) => e.key === 'Enter' && goto(`/buckets/${bucket.name}`)} role="button" tabindex="0">
+							<tr
+								class="cursor-pointer bg-card transition-colors hover:bg-accent/50"
+								onclick={() => goto(`/buckets/${bucket.name}`)}
+								onkeydown={(e) => e.key === 'Enter' && goto(`/buckets/${bucket.name}`)}
+								role="button"
+								tabindex="0"
+							>
 								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
-									<input type="checkbox" checked={selected.has(bucket.name)} onchange={() => toggleOne(bucket.name)} class="h-4 w-4 rounded border-input" />
+									<input
+										type="checkbox"
+										checked={selected.has(bucket.name)}
+										onchange={() => toggleOne(bucket.name)}
+										class="h-4 w-4 rounded border-input"
+									/>
 								</td>
 								<td class="px-4 py-3 font-medium">{bucket.name}</td>
 								<td class="px-4 py-3 text-muted-foreground">{formatDate(bucket.creation_date)}</td>
@@ -170,7 +237,12 @@
 									<Tooltip.Root>
 										<Tooltip.Trigger>
 											{#snippet child({ props })}
-												<button type="button" onclick={() => (deleteTarget = bucket.name)} class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" {...props}>
+												<button
+													type="button"
+													onclick={() => (deleteTarget = bucket.name)}
+													class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+													{...props}
+												>
 													<Trash2 class="h-4 w-4" />
 												</button>
 											{/snippet}
@@ -187,15 +259,25 @@
 	{/await}
 </div>
 
-<AlertDialog.Root open={deleteTarget !== null} onOpenChange={(open) => { if (!open) deleteTarget = null; }}>
+<AlertDialog.Root
+	open={deleteTarget !== null}
+	onOpenChange={(open) => {
+		if (!open) deleteTarget = null;
+	}}
+>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
 			<AlertDialog.Title>Delete Bucket</AlertDialog.Title>
-			<AlertDialog.Description>Are you sure you want to delete bucket "<strong>{deleteTarget}</strong>"? This action cannot be undone.</AlertDialog.Description>
+			<AlertDialog.Description
+				>Are you sure you want to delete bucket "<strong>{deleteTarget}</strong>"? This action
+				cannot be undone.</AlertDialog.Description
+			>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel disabled={deleting}>Cancel</AlertDialog.Cancel>
-			<Button variant="destructive" onclick={confirmDelete} disabled={deleting}>{deleting ? 'Deleting...' : 'Delete'}</Button>
+			<Button variant="destructive" onclick={confirmDelete} disabled={deleting}
+				>{deleting ? 'Deleting...' : 'Delete'}</Button
+			>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
@@ -203,12 +285,21 @@
 <AlertDialog.Root bind:open={bulkDeleteOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Delete {selected.size} Bucket{selected.size !== 1 ? 's' : ''}</AlertDialog.Title>
-			<AlertDialog.Description>Are you sure you want to delete {selected.size} bucket{selected.size !== 1 ? 's' : ''}? This action cannot be undone.</AlertDialog.Description>
+			<AlertDialog.Title
+				>Delete {selected.size} Bucket{selected.size !== 1 ? 's' : ''}</AlertDialog.Title
+			>
+			<AlertDialog.Description
+				>Are you sure you want to delete {selected.size} bucket{selected.size !== 1 ? 's' : ''}?
+				This action cannot be undone.</AlertDialog.Description
+			>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel disabled={deleting}>Cancel</AlertDialog.Cancel>
-			<Button variant="destructive" onclick={confirmBulkDelete} disabled={deleting}>{deleting ? 'Deleting...' : `Delete ${selected.size} Bucket${selected.size !== 1 ? 's' : ''}`}</Button>
+			<Button variant="destructive" onclick={confirmBulkDelete} disabled={deleting}
+				>{deleting
+					? 'Deleting...'
+					: `Delete ${selected.size} Bucket${selected.size !== 1 ? 's' : ''}`}</Button
+			>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>

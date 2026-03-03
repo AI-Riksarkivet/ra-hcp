@@ -26,6 +26,8 @@ async def get_service_statistics(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get("/services/statistics", query={"verbose": str(verbose).lower()})
+    resp = await hcp.get(
+        "/services/statistics", query={"verbose": str(verbose).lower()}
+    )
     raise_for_hcp_status(resp)
     return parse_json_response(resp)

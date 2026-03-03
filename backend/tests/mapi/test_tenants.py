@@ -9,7 +9,9 @@ from httpx import AsyncClient
 HCP_BASE = "https://test.hcp.example.com:9090/mapi"
 
 
-async def test_list_tenants(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_list_tenants(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{HCP_BASE}/tenants").mock(
         return_value=httpx.Response(200, json={"name": ["tenant-a", "tenant-b"]})
     )
@@ -19,32 +21,38 @@ async def test_list_tenants(client: AsyncClient, auth_headers: dict, hcp_mock: r
     assert body["name"] == ["tenant-a", "tenant-b"]
 
 
-async def test_list_tenants_hcp_error(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.get(f"{HCP_BASE}/tenants").mock(
-        return_value=httpx.Response(403)
-    )
+async def test_list_tenants_hcp_error(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.get(f"{HCP_BASE}/tenants").mock(return_value=httpx.Response(403))
     resp = await client.get("/api/v1/mapi/tenants", headers=auth_headers)
     assert resp.status_code == 403
 
 
-async def test_get_tenant(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_tenant(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{HCP_BASE}/tenants/my-tenant").mock(
-        return_value=httpx.Response(200, json={"name": "my-tenant", "hardQuota": "10GB"})
+        return_value=httpx.Response(
+            200, json={"name": "my-tenant", "hardQuota": "10GB"}
+        )
     )
     resp = await client.get("/api/v1/mapi/tenants/my-tenant", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["name"] == "my-tenant"
 
 
-async def test_get_tenant_not_found(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.get(f"{HCP_BASE}/tenants/missing").mock(
-        return_value=httpx.Response(404)
-    )
+async def test_get_tenant_not_found(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.get(f"{HCP_BASE}/tenants/missing").mock(return_value=httpx.Response(404))
     resp = await client.get("/api/v1/mapi/tenants/missing", headers=auth_headers)
     assert resp.status_code == 404
 
 
-async def test_check_tenant_exists(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_check_tenant_exists(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.head(f"{HCP_BASE}/tenants/my-tenant").mock(
         return_value=httpx.Response(200)
     )
@@ -52,7 +60,9 @@ async def test_check_tenant_exists(client: AsyncClient, auth_headers: dict, hcp_
     assert resp.status_code == 200
 
 
-async def test_modify_tenant(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_modify_tenant(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.post(f"{HCP_BASE}/tenants/my-tenant").mock(
         return_value=httpx.Response(200)
     )
@@ -66,10 +76,10 @@ async def test_modify_tenant(client: AsyncClient, auth_headers: dict, hcp_mock: 
     assert route.called
 
 
-async def test_create_tenant(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    route = hcp_mock.put(f"{HCP_BASE}/tenants").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_create_tenant(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    route = hcp_mock.put(f"{HCP_BASE}/tenants").mock(return_value=httpx.Response(200))
     resp = await client.put(
         "/api/v1/mapi/tenants",
         headers=auth_headers,
@@ -81,10 +91,10 @@ async def test_create_tenant(client: AsyncClient, auth_headers: dict, hcp_mock: 
     assert route.called
 
 
-async def test_create_tenant_conflict(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.put(f"{HCP_BASE}/tenants").mock(
-        return_value=httpx.Response(409)
-    )
+async def test_create_tenant_conflict(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.put(f"{HCP_BASE}/tenants").mock(return_value=httpx.Response(409))
     resp = await client.put(
         "/api/v1/mapi/tenants",
         headers=auth_headers,
@@ -94,34 +104,48 @@ async def test_create_tenant_conflict(client: AsyncClient, auth_headers: dict, h
     assert resp.status_code == 409
 
 
-async def test_get_console_security(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_console_security(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{HCP_BASE}/tenants/my-tenant/consoleSecurity").mock(
         return_value=httpx.Response(200, json={"minimumPasswordLength": 8})
     )
-    resp = await client.get("/api/v1/mapi/tenants/my-tenant/consoleSecurity", headers=auth_headers)
+    resp = await client.get(
+        "/api/v1/mapi/tenants/my-tenant/consoleSecurity", headers=auth_headers
+    )
     assert resp.status_code == 200
     assert resp.json()["minimumPasswordLength"] == 8
 
 
-async def test_get_contact_info(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_contact_info(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{HCP_BASE}/tenants/my-tenant/contactInfo").mock(
         return_value=httpx.Response(200, json={"firstName": "John"})
     )
-    resp = await client.get("/api/v1/mapi/tenants/my-tenant/contactInfo", headers=auth_headers)
+    resp = await client.get(
+        "/api/v1/mapi/tenants/my-tenant/contactInfo", headers=auth_headers
+    )
     assert resp.status_code == 200
     assert resp.json()["firstName"] == "John"
 
 
-async def test_get_tenant_statistics(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_tenant_statistics(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{HCP_BASE}/tenants/my-tenant/statistics").mock(
         return_value=httpx.Response(200, json={"objectCount": 42})
     )
-    resp = await client.get("/api/v1/mapi/tenants/my-tenant/statistics", headers=auth_headers)
+    resp = await client.get(
+        "/api/v1/mapi/tenants/my-tenant/statistics", headers=auth_headers
+    )
     assert resp.status_code == 200
     assert resp.json()["objectCount"] == 42
 
 
-async def test_get_tenant_cors(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_tenant_cors(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{HCP_BASE}/tenants/t1/cors").mock(
         return_value=httpx.Response(200, json={"cors": "<CORSRule/>"})
     )
@@ -130,7 +154,9 @@ async def test_get_tenant_cors(client: AsyncClient, auth_headers: dict, hcp_mock
     assert resp.json()["cors"] == "<CORSRule/>"
 
 
-async def test_put_tenant_cors(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_put_tenant_cors(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.put(f"{HCP_BASE}/tenants/t1/cors").mock(
         return_value=httpx.Response(200)
     )
@@ -143,7 +169,9 @@ async def test_put_tenant_cors(client: AsyncClient, auth_headers: dict, hcp_mock
     assert route.called
 
 
-async def test_delete_tenant_cors(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_delete_tenant_cors(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.delete(f"{HCP_BASE}/tenants/t1/cors").mock(
         return_value=httpx.Response(200)
     )

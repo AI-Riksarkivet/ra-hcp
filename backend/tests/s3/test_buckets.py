@@ -9,18 +9,28 @@ from botocore.exceptions import ClientError
 from httpx import AsyncClient
 
 
-async def test_list_buckets_empty(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_list_buckets_empty(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     mock_s3_service.list_buckets.return_value = {"Buckets": []}
     resp = await client.get("/api/v1/buckets", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json() == {"buckets": []}
 
 
-async def test_list_buckets_with_data(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_list_buckets_with_data(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     mock_s3_service.list_buckets.return_value = {
         "Buckets": [
-            {"Name": "bucket-1", "CreationDate": datetime(2024, 1, 1, tzinfo=timezone.utc)},
-            {"Name": "bucket-2", "CreationDate": datetime(2024, 6, 15, tzinfo=timezone.utc)},
+            {
+                "Name": "bucket-1",
+                "CreationDate": datetime(2024, 1, 1, tzinfo=timezone.utc),
+            },
+            {
+                "Name": "bucket-2",
+                "CreationDate": datetime(2024, 6, 15, tzinfo=timezone.utc),
+            },
         ]
     }
     resp = await client.get("/api/v1/buckets", headers=auth_headers)
@@ -32,7 +42,9 @@ async def test_list_buckets_with_data(client: AsyncClient, auth_headers: dict, m
     assert body["buckets"][1]["Name"] == "bucket-2"
 
 
-async def test_create_bucket_success(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_create_bucket_success(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     resp = await client.post(
         "/api/v1/buckets",
         headers=auth_headers,
@@ -44,7 +56,9 @@ async def test_create_bucket_success(client: AsyncClient, auth_headers: dict, mo
     mock_s3_service.create_bucket.assert_called_once_with("new-bucket")
 
 
-async def test_create_bucket_already_exists(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_create_bucket_already_exists(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     mock_s3_service.create_bucket.side_effect = ClientError(
         error_response={
             "Error": {"Code": "BucketAlreadyOwnedByYou", "Message": "Bucket exists"},
@@ -65,7 +79,9 @@ async def test_head_bucket_exists(client: AsyncClient, auth_headers: dict):
     assert resp.status_code == 200
 
 
-async def test_head_bucket_not_found(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_head_bucket_not_found(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     mock_s3_service.head_bucket.side_effect = ClientError(
         error_response={
             "Error": {"Code": "NoSuchBucket", "Message": "Not found"},
@@ -77,14 +93,18 @@ async def test_head_bucket_not_found(client: AsyncClient, auth_headers: dict, mo
     assert resp.status_code == 404
 
 
-async def test_delete_bucket_success(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_delete_bucket_success(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     resp = await client.delete("/api/v1/buckets/my-bucket", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "deleted"
     mock_s3_service.delete_bucket.assert_called_once_with("my-bucket")
 
 
-async def test_delete_bucket_not_empty(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_delete_bucket_not_empty(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     mock_s3_service.delete_bucket.side_effect = ClientError(
         error_response={
             "Error": {"Code": "BucketNotEmpty", "Message": "Not empty"},
@@ -96,16 +116,25 @@ async def test_delete_bucket_not_empty(client: AsyncClient, auth_headers: dict, 
     assert resp.status_code == 409
 
 
-async def test_get_bucket_versioning(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
-    mock_s3_service.get_bucket_versioning.return_value = {"Status": "Enabled", "MFADelete": "Disabled"}
-    resp = await client.get("/api/v1/buckets/my-bucket/versioning", headers=auth_headers)
+async def test_get_bucket_versioning(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    mock_s3_service.get_bucket_versioning.return_value = {
+        "Status": "Enabled",
+        "MFADelete": "Disabled",
+    }
+    resp = await client.get(
+        "/api/v1/buckets/my-bucket/versioning", headers=auth_headers
+    )
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "Enabled"
     assert body["mfa_delete"] == "Disabled"
 
 
-async def test_put_bucket_versioning(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_put_bucket_versioning(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     resp = await client.put(
         "/api/v1/buckets/my-bucket/versioning",
         headers=auth_headers,
@@ -113,13 +142,19 @@ async def test_put_bucket_versioning(client: AsyncClient, auth_headers: dict, mo
     )
     assert resp.status_code == 200
     assert resp.json()["versioning"] == "Enabled"
-    mock_s3_service.put_bucket_versioning.assert_called_once_with("my-bucket", "Enabled")
+    mock_s3_service.put_bucket_versioning.assert_called_once_with(
+        "my-bucket", "Enabled"
+    )
 
 
-async def test_get_bucket_acl(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_get_bucket_acl(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     mock_s3_service.get_bucket_acl.return_value = {
         "Owner": {"ID": "owner-id"},
-        "Grants": [{"Grantee": {"Type": "CanonicalUser"}, "Permission": "FULL_CONTROL"}],
+        "Grants": [
+            {"Grantee": {"Type": "CanonicalUser"}, "Permission": "FULL_CONTROL"}
+        ],
     }
     resp = await client.get("/api/v1/buckets/my-bucket/acl", headers=auth_headers)
     assert resp.status_code == 200
@@ -128,7 +163,9 @@ async def test_get_bucket_acl(client: AsyncClient, auth_headers: dict, mock_s3_s
     assert len(body["grants"]) == 1
 
 
-async def test_put_bucket_acl(client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock):
+async def test_put_bucket_acl(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
     acl_body = {"Owner": {"ID": "owner-id"}, "Grants": []}
     resp = await client.put(
         "/api/v1/buckets/my-bucket/acl",

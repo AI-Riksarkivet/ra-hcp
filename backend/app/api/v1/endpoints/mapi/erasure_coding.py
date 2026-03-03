@@ -20,6 +20,7 @@ TOPOS = f"{EC}/ecTopologies"
 #  EC Topologies
 # ═══════════════════════════════════════════════════════════════════════
 
+
 @router.get(TOPOS)
 async def list_ec_topologies(
     verbose: bool = False,
@@ -46,7 +47,9 @@ async def get_ec_topology(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"{TOPOS}/{topology_name}", query={"verbose": str(verbose).lower()})
+    resp = await hcp.get(
+        f"{TOPOS}/{topology_name}", query={"verbose": str(verbose).lower()}
+    )
     raise_for_hcp_status(resp)
     return parse_json_response(resp)
 
@@ -93,6 +96,7 @@ async def delete_ec_topology(
 #  EC Topology – Tenant Candidates
 # ═══════════════════════════════════════════════════════════════════════
 
+
 @router.get(TOPOS + "/{topology_name}/tenantCandidates")
 async def get_ec_tenant_candidates(
     topology_name: str,
@@ -124,6 +128,7 @@ async def get_ec_tenant_conflicting_candidates(
 # ═══════════════════════════════════════════════════════════════════════
 #  EC Topology – Tenants
 # ═══════════════════════════════════════════════════════════════════════
+
 
 @router.get(TOPOS + "/{topology_name}/tenants")
 async def list_ec_topology_tenants(
@@ -160,6 +165,7 @@ async def remove_tenant_from_ec_topology(
 # ═══════════════════════════════════════════════════════════════════════
 #  EC Link Candidates
 # ═══════════════════════════════════════════════════════════════════════
+
 
 @router.get(f"{EC}/linkCandidates")
 async def get_ec_link_candidates(

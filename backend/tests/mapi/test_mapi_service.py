@@ -103,9 +103,7 @@ async def test_request_sends_correct_headers(service: MapiService):
 
 @respx.mock
 async def test_request_with_json_body(service: MapiService):
-    route = respx.post(f"{HCP_BASE}/tenants/t1").mock(
-        return_value=httpx.Response(200)
-    )
+    route = respx.post(f"{HCP_BASE}/tenants/t1").mock(return_value=httpx.Response(200))
     await service.request("POST", "/tenants/t1", body={"name": "t1"})
 
     request = route.calls.last.request
@@ -114,10 +112,10 @@ async def test_request_with_json_body(service: MapiService):
 
 @respx.mock
 async def test_request_with_raw_body(service: MapiService):
-    route = respx.put(f"{HCP_BASE}/path").mock(
-        return_value=httpx.Response(200)
+    route = respx.put(f"{HCP_BASE}/path").mock(return_value=httpx.Response(200))
+    await service.request(
+        "PUT", "/path", raw_body=b"<xml>data</xml>", content_type="application/xml"
     )
-    await service.request("PUT", "/path", raw_body=b"<xml>data</xml>", content_type="application/xml")
 
     request = route.calls.last.request
     assert request.content == b"<xml>data</xml>"
@@ -128,9 +126,7 @@ async def test_request_with_raw_body(service: MapiService):
 
 @respx.mock
 async def test_get_delegates_to_request(service: MapiService):
-    route = respx.get(f"{HCP_BASE}/tenants").mock(
-        return_value=httpx.Response(200)
-    )
+    route = respx.get(f"{HCP_BASE}/tenants").mock(return_value=httpx.Response(200))
     await service.get("/tenants")
 
     assert route.called
@@ -139,9 +135,7 @@ async def test_get_delegates_to_request(service: MapiService):
 
 @respx.mock
 async def test_post_delegates_to_request(service: MapiService):
-    route = respx.post(f"{HCP_BASE}/tenants/t1").mock(
-        return_value=httpx.Response(200)
-    )
+    route = respx.post(f"{HCP_BASE}/tenants/t1").mock(return_value=httpx.Response(200))
     await service.post("/tenants/t1", body={"key": "val"})
 
     assert route.called

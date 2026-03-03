@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import logging
 
-from botocore.exceptions import BotoCoreError, ClientError, EndpointConnectionError, ReadTimeoutError
+from botocore.exceptions import (
+    BotoCoreError,
+    ClientError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
 from fastapi import HTTPException
 import httpx
 
@@ -32,11 +37,15 @@ def raise_for_s3_error(exc: ClientError, resource: str = "resource") -> None:
     raise HTTPException(status_code=http_status, detail=f"{resource}: {message}")
 
 
-def raise_for_s3_transport_error(exc: BotoCoreError, resource: str = "resource") -> None:
+def raise_for_s3_transport_error(
+    exc: BotoCoreError, resource: str = "resource"
+) -> None:
     """Translate a botocore transport/connection error into an HTTPException."""
     logger.error("S3 transport error for %s: %s", resource, exc)
     if isinstance(exc, EndpointConnectionError):
-        raise HTTPException(status_code=502, detail=f"{resource}: S3 endpoint unreachable")
+        raise HTTPException(
+            status_code=502, detail=f"{resource}: S3 endpoint unreachable"
+        )
     if isinstance(exc, ReadTimeoutError):
         raise HTTPException(status_code=504, detail=f"{resource}: S3 read timed out")
     raise HTTPException(status_code=502, detail=f"{resource}: S3 connection error")
@@ -73,6 +82,6 @@ def parse_json_response(resp: httpx.Response) -> dict:
     if 200 <= resp.status_code < 300 and resp.content:
         try:
             return resp.json()
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return {}
     return {}

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
 
 import jwt as pyjwt
 import pytest
@@ -58,7 +57,11 @@ def test_verify_token_rejects_expired_token(settings: AuthSettings):
 
 
 def test_verify_token_rejects_invalid_signature(settings: AuthSettings):
-    token = pyjwt.encode({"sub": "alice", "exp": datetime.now(timezone.utc) + timedelta(hours=1)}, "wrong-key-that-is-at-least-32-bytes!", algorithm="HS256")
+    token = pyjwt.encode(
+        {"sub": "alice", "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
+        "wrong-key-that-is-at-least-32-bytes!",
+        algorithm="HS256",
+    )
 
     with pytest.raises(HTTPException) as exc_info:
         verify_token(token, settings=settings)

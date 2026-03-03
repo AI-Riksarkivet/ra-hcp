@@ -14,6 +14,7 @@ router = APIRouter(tags=["Health Check"])
 
 # ── Status ─────────────────────────────────────────────────────────────
 
+
 @router.get("/healthCheckReport")
 async def get_health_check_status(
     hcp: MapiService = Depends(get_mapi_service),
@@ -24,6 +25,7 @@ async def get_health_check_status(
 
 
 # ── Prepare ────────────────────────────────────────────────────────────
+
 
 @router.post("/healthCheckReport/prepare")
 async def prepare_health_check(
@@ -36,6 +38,7 @@ async def prepare_health_check(
 
 
 # ── Download ───────────────────────────────────────────────────────────
+
 
 @router.post("/healthCheckReport/download")
 async def download_health_check(
@@ -52,6 +55,7 @@ async def download_health_check(
 
 
 # ── Cancel ─────────────────────────────────────────────────────────────
+
 
 @router.post("/healthCheckReport/cancel")
 async def cancel_health_check(

@@ -17,7 +17,8 @@ T_PREFIX = "/tenants/{tenant_name}/groupAccounts"
 
 @router.get(T_PREFIX)
 async def list_group_accounts(
-    tenant_name: str, verbose: bool = False,
+    tenant_name: str,
+    verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
@@ -30,7 +31,8 @@ async def list_group_accounts(
 
 @router.put(T_PREFIX)
 async def create_group_account(
-    tenant_name: str, body: GroupAccountCreate,
+    tenant_name: str,
+    body: GroupAccountCreate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.put(f"/tenants/{tenant_name}/groupAccounts", body=body)
@@ -40,7 +42,9 @@ async def create_group_account(
 
 @router.get(T_PREFIX + "/{group_name}")
 async def get_group_account(
-    tenant_name: str, group_name: str, verbose: bool = False,
+    tenant_name: str,
+    group_name: str,
+    verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
@@ -53,7 +57,8 @@ async def get_group_account(
 
 @router.head(T_PREFIX + "/{group_name}")
 async def check_group_account(
-    tenant_name: str, group_name: str,
+    tenant_name: str,
+    group_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.head(f"/tenants/{tenant_name}/groupAccounts/{group_name}")
@@ -63,11 +68,14 @@ async def check_group_account(
 
 @router.post(T_PREFIX + "/{group_name}")
 async def modify_group_account(
-    tenant_name: str, group_name: str, body: GroupAccountUpdate,
+    tenant_name: str,
+    group_name: str,
+    body: GroupAccountUpdate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
-        f"/tenants/{tenant_name}/groupAccounts/{group_name}", body=body,
+        f"/tenants/{tenant_name}/groupAccounts/{group_name}",
+        body=body,
     )
     raise_for_hcp_status(resp)
     return {"status": "updated"}
@@ -75,7 +83,8 @@ async def modify_group_account(
 
 @router.delete(T_PREFIX + "/{group_name}")
 async def delete_group_account(
-    tenant_name: str, group_name: str,
+    tenant_name: str,
+    group_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.delete(f"/tenants/{tenant_name}/groupAccounts/{group_name}")
@@ -85,9 +94,11 @@ async def delete_group_account(
 
 # ── Data access permissions ───────────────────────────────────────────
 
+
 @router.get(T_PREFIX + "/{group_name}/dataAccessPermissions")
 async def get_group_data_perms(
-    tenant_name: str, group_name: str,
+    tenant_name: str,
+    group_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
@@ -99,7 +110,9 @@ async def get_group_data_perms(
 
 @router.post(T_PREFIX + "/{group_name}/dataAccessPermissions")
 async def modify_group_data_perms(
-    tenant_name: str, group_name: str, body: DataAccessPermissions,
+    tenant_name: str,
+    group_name: str,
+    body: DataAccessPermissions,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
@@ -119,7 +132,8 @@ system_router = APIRouter(prefix="/groupAccounts", tags=["System Group Accounts"
 
 @system_router.get("")
 async def list_system_groups(
-    verbose: bool = False, hcp: MapiService = Depends(get_mapi_service),
+    verbose: bool = False,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get("/groupAccounts", query={"verbose": str(verbose).lower()})
     raise_for_hcp_status(resp)
@@ -128,7 +142,8 @@ async def list_system_groups(
 
 @system_router.get("/{group_name}")
 async def get_system_group(
-    group_name: str, verbose: bool = False,
+    group_name: str,
+    verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
@@ -141,7 +156,8 @@ async def get_system_group(
 
 @system_router.head("/{group_name}")
 async def check_system_group(
-    group_name: str, hcp: MapiService = Depends(get_mapi_service),
+    group_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.head(f"/groupAccounts/{group_name}")
     raise_for_hcp_status(resp)

@@ -28,7 +28,9 @@ def create_access_token(username: str, settings: AuthSettings | None = None) -> 
     """Create a JWT access token for the given username."""
     if settings is None:
         settings = _get_auth_settings()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.api_token_expire_minutes)
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.api_token_expire_minutes
+    )
     payload = {"sub": username, "exp": expire}
     return jwt.encode(payload, settings.api_secret_key, algorithm="HS256")
 

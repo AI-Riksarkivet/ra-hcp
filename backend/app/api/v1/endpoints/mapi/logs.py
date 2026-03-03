@@ -16,6 +16,7 @@ router = APIRouter(tags=["Logs"])
 
 # ── Log status / mark / cancel ─────────────────────────────────────────
 
+
 @router.get("/logs")
 async def get_log_status(
     hcp: MapiService = Depends(get_mapi_service),
@@ -45,6 +46,7 @@ async def log_action(
 
 # ── Prepare ────────────────────────────────────────────────────────────
 
+
 @router.post("/logs/prepare")
 async def prepare_logs(
     body: LogPrepare,
@@ -56,6 +58,7 @@ async def prepare_logs(
 
 
 # ── Download ───────────────────────────────────────────────────────────
+
 
 @router.post("/logs/download")
 async def download_logs(

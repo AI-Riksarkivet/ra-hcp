@@ -7,6 +7,7 @@ from typing import Optional, List
 
 class RetentionClassCreate(BaseModel):
     """Properties for creating a retention class (PUT)."""
+
     name: str
     value: str
     description: Optional[str] = None
@@ -15,6 +16,7 @@ class RetentionClassCreate(BaseModel):
 
 class RetentionClassUpdate(BaseModel):
     """Properties for modifying a retention class (POST)."""
+
     value: Optional[str] = None
     description: Optional[str] = None
     allowDisposition: Optional[bool] = None
@@ -22,6 +24,7 @@ class RetentionClassUpdate(BaseModel):
 
 class RetentionClassResponse(BaseModel):
     """Full retention class response."""
+
     name: Optional[str] = None
     value: Optional[str] = None
     description: Optional[str] = None
@@ -30,4 +33,5 @@ class RetentionClassResponse(BaseModel):
 
 class RetentionClassList(BaseModel):
     """List of retention class names."""
+
     name: Optional[List[str]] = None

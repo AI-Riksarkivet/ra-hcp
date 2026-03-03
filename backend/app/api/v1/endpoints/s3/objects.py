@@ -34,7 +34,11 @@ async def list_objects(
 ):
     try:
         result = await asyncio.to_thread(
-            s3.list_objects, bucket, prefix, max_keys, continuation_token,
+            s3.list_objects,
+            bucket,
+            prefix,
+            max_keys,
+            continuation_token,
         )
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
@@ -50,6 +54,7 @@ async def list_objects(
 
 
 # ── Bulk delete (must be before {key:path} catch-all) ────────────────
+
 
 @router.post("/delete")
 async def delete_objects(
@@ -72,9 +77,12 @@ async def delete_objects(
 
 # ── Routes with /acl suffix (must be before {key:path} catch-all) ───
 
+
 @router.get("/{key:path}/acl")
 async def get_object_acl(
-    bucket: str, key: str, s3: S3Service = Depends(get_s3_service),
+    bucket: str,
+    key: str,
+    s3: S3Service = Depends(get_s3_service),
 ):
     try:
         result = await asyncio.to_thread(s3.get_object_acl, bucket, key)
@@ -90,7 +98,9 @@ async def get_object_acl(
 
 @router.put("/{key:path}/acl")
 async def put_object_acl(
-    bucket: str, key: str, body: dict,
+    bucket: str,
+    key: str,
+    body: dict,
     s3: S3Service = Depends(get_s3_service),
 ):
     try:
@@ -104,6 +114,7 @@ async def put_object_acl(
 
 # ── Copy route (must be before {key:path} catch-all) ─────────────────
 
+
 @router.post("/{key:path}/copy")
 async def copy_object(
     bucket: str,
@@ -113,7 +124,11 @@ async def copy_object(
 ):
     try:
         await asyncio.to_thread(
-            s3.copy_object, body.source_bucket, body.source_key, bucket, key,
+            s3.copy_object,
+            body.source_bucket,
+            body.source_key,
+            bucket,
+            key,
         )
     except ClientError as exc:
         raise_for_s3_error(exc, f"object '{key}'")
@@ -123,6 +138,7 @@ async def copy_object(
 
 
 # ── Single-object CRUD ({key:path} catch-all routes last) ────────────
+
 
 @router.post("/{key:path}", response_model=UploadObjectResponse)
 async def upload_object(

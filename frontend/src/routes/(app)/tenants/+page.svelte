@@ -6,13 +6,18 @@
 
 	let { data } = $props();
 
-	type Tenant = { name: string; systemVisibleDescription?: string; hardQuota?: string; softQuota?: string };
+	type Tenant = {
+		name: string;
+		systemVisibleDescription?: string;
+		hardQuota?: string;
+		softQuota?: string;
+	};
 
 	const columns: ColumnDef<Tenant, any>[] = [
 		{ accessorKey: 'name', header: 'Name' },
 		{ accessorKey: 'systemVisibleDescription', header: 'Description' },
 		{ accessorKey: 'hardQuota', header: 'Hard Quota', size: 128 },
-		{ accessorKey: 'softQuota', header: 'Soft Quota', size: 128 }
+		{ accessorKey: 'softQuota', header: 'Soft Quota', size: 128 },
 	];
 </script>
 
@@ -23,9 +28,7 @@
 <div class="space-y-6">
 	<div>
 		<h2 class="text-2xl font-bold">Tenants</h2>
-		<p class="mt-1 text-sm text-muted-foreground">
-			Manage tenants in your HCP system
-		</p>
+		<p class="mt-1 text-sm text-muted-foreground">Manage tenants in your HCP system</p>
 	</div>
 
 	{#await data.tenants}

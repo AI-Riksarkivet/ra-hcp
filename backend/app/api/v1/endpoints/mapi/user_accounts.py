@@ -7,7 +7,11 @@ from fastapi import APIRouter, Depends, Query, Response
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.api.errors import raise_for_hcp_status, parse_json_response
-from app.schemas.user_account import UserAccountCreate, UserAccountUpdate, UpdatePasswordRequest
+from app.schemas.user_account import (
+    UserAccountCreate,
+    UserAccountUpdate,
+    UpdatePasswordRequest,
+)
 from app.schemas.common import ListQueryParams, DataAccessPermissions
 
 router = APIRouter(tags=["User Accounts"])
@@ -77,7 +81,9 @@ async def reset_passwords(
 
 @router.get(T_PREFIX + "/{username}")
 async def get_user_account(
-    tenant_name: str, username: str, verbose: bool = False,
+    tenant_name: str,
+    username: str,
+    verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
@@ -90,7 +96,8 @@ async def get_user_account(
 
 @router.head(T_PREFIX + "/{username}")
 async def check_user_account(
-    tenant_name: str, username: str,
+    tenant_name: str,
+    username: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.head(f"/tenants/{tenant_name}/userAccounts/{username}")
@@ -100,7 +107,9 @@ async def check_user_account(
 
 @router.post(T_PREFIX + "/{username}")
 async def modify_user_account(
-    tenant_name: str, username: str, body: UserAccountUpdate,
+    tenant_name: str,
+    username: str,
+    body: UserAccountUpdate,
     password: str | None = Query(None),
     hcp: MapiService = Depends(get_mapi_service),
 ):
@@ -109,7 +118,8 @@ async def modify_user_account(
         q["password"] = password
     resp = await hcp.post(
         f"/tenants/{tenant_name}/userAccounts/{username}",
-        body=body, query=q or None,
+        body=body,
+        query=q or None,
     )
     raise_for_hcp_status(resp, f"user '{username}'")
     return {"status": "updated"}
@@ -117,7 +127,8 @@ async def modify_user_account(
 
 @router.delete(T_PREFIX + "/{username}")
 async def delete_user_account(
-    tenant_name: str, username: str,
+    tenant_name: str,
+    username: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.delete(f"/tenants/{tenant_name}/userAccounts/{username}")
@@ -127,9 +138,12 @@ async def delete_user_account(
 
 # ── Change password ───────────────────────────────────────────────────
 
+
 @router.post(T_PREFIX + "/{username}/changePassword")
 async def change_password(
-    tenant_name: str, username: str, body: UpdatePasswordRequest,
+    tenant_name: str,
+    username: str,
+    body: UpdatePasswordRequest,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
@@ -142,9 +156,11 @@ async def change_password(
 
 # ── Data access permissions ───────────────────────────────────────────
 
+
 @router.get(T_PREFIX + "/{username}/dataAccessPermissions")
 async def get_user_data_perms(
-    tenant_name: str, username: str,
+    tenant_name: str,
+    username: str,
     qp: ListQueryParams = Depends(),
     hcp: MapiService = Depends(get_mapi_service),
 ):
@@ -167,7 +183,9 @@ async def get_user_data_perms(
 
 @router.post(T_PREFIX + "/{username}/dataAccessPermissions")
 async def modify_user_data_perms(
-    tenant_name: str, username: str, body: DataAccessPermissions,
+    tenant_name: str,
+    username: str,
+    body: DataAccessPermissions,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
@@ -189,7 +207,8 @@ system_router = APIRouter(prefix="/userAccounts", tags=["System User Accounts"])
 
 @system_router.get("")
 async def list_system_users(
-    verbose: bool = False, hcp: MapiService = Depends(get_mapi_service),
+    verbose: bool = False,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(S_PREFIX, query={"verbose": str(verbose).lower()})
     raise_for_hcp_status(resp)
@@ -198,11 +217,13 @@ async def list_system_users(
 
 @system_router.get("/{username}")
 async def get_system_user(
-    username: str, verbose: bool = False,
+    username: str,
+    verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
-        f"{S_PREFIX}/{username}", query={"verbose": str(verbose).lower()},
+        f"{S_PREFIX}/{username}",
+        query={"verbose": str(verbose).lower()},
     )
     raise_for_hcp_status(resp, f"system user '{username}'")
     return parse_json_response(resp)
@@ -210,7 +231,8 @@ async def get_system_user(
 
 @system_router.head("/{username}")
 async def check_system_user(
-    username: str, hcp: MapiService = Depends(get_mapi_service),
+    username: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.head(f"{S_PREFIX}/{username}")
     raise_for_hcp_status(resp)
@@ -233,7 +255,8 @@ async def modify_system_user_password(
 
 @system_router.post("/{username}/changePassword")
 async def change_system_user_password(
-    username: str, body: UpdatePasswordRequest,
+    username: str,
+    body: UpdatePasswordRequest,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(f"{S_PREFIX}/{username}/changePassword", body=body)

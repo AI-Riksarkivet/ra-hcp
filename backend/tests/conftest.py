@@ -70,7 +70,11 @@ def mock_s3_service() -> MagicMock:
     mock.create_bucket.return_value = {}
     mock.head_bucket.return_value = {}
     mock.delete_bucket.return_value = {}
-    mock.list_objects.return_value = {"Contents": [], "IsTruncated": False, "KeyCount": 0}
+    mock.list_objects.return_value = {
+        "Contents": [],
+        "IsTruncated": False,
+        "KeyCount": 0,
+    }
     mock.put_object.return_value = None
     mock.get_object.return_value = {
         "Body": MagicMock(iter_chunks=lambda: iter([b"data"])),

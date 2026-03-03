@@ -15,7 +15,7 @@
 	const nsColumns: ColumnDef<Namespace, any>[] = [
 		{ accessorKey: 'name', header: 'Name' },
 		{ accessorKey: 'description', header: 'Description' },
-		{ accessorKey: 'hardQuota', header: 'Hard Quota', size: 128 }
+		{ accessorKey: 'hardQuota', header: 'Hard Quota', size: 128 },
 	];
 </script>
 
@@ -84,7 +84,7 @@
 			<CardSkeleton />
 			<CardSkeleton />
 		</div>
-	{:then _}{/await}
+	{/await}
 
 	<div>
 		<h3 class="mb-4 text-lg font-semibold">Namespaces</h3>

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import hashlib
 import io
-import json
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -88,7 +87,10 @@ class MockS3Service:
 
             raise ClientError(
                 {
-                    "Error": {"Code": "NoSuchBucket", "Message": f"Bucket '{name}' does not exist"},
+                    "Error": {
+                        "Code": "NoSuchBucket",
+                        "Message": f"Bucket '{name}' does not exist",
+                    },
                     "ResponseMetadata": {"HTTPStatusCode": 404},
                 },
                 "HeadBucket",
@@ -102,7 +104,10 @@ class MockS3Service:
 
             raise ClientError(
                 {
-                    "Error": {"Code": "NoSuchKey", "Message": f"Object '{key}' not found"},
+                    "Error": {
+                        "Code": "NoSuchKey",
+                        "Message": f"Object '{key}' not found",
+                    },
                     "ResponseMetadata": {"HTTPStatusCode": 404},
                 },
                 "HeadObject",
@@ -126,7 +131,10 @@ class MockS3Service:
 
             raise ClientError(
                 {
-                    "Error": {"Code": "BucketAlreadyOwnedByYou", "Message": "Bucket already exists"},
+                    "Error": {
+                        "Code": "BucketAlreadyOwnedByYou",
+                        "Message": "Bucket already exists",
+                    },
                     "ResponseMetadata": {"HTTPStatusCode": 409},
                 },
                 "CreateBucket",
@@ -148,7 +156,10 @@ class MockS3Service:
 
             raise ClientError(
                 {
-                    "Error": {"Code": "BucketNotEmpty", "Message": "Bucket is not empty"},
+                    "Error": {
+                        "Code": "BucketNotEmpty",
+                        "Message": "Bucket is not empty",
+                    },
                     "ResponseMetadata": {"HTTPStatusCode": 409},
                 },
                 "DeleteBucket",
@@ -187,13 +198,15 @@ class MockS3Service:
         contents = []
         for key in page:
             obj = self._objects[bucket][key]
-            contents.append({
-                "Key": key,
-                "Size": len(obj.data),
-                "LastModified": obj.last_modified,
-                "ETag": obj.etag,
-                "StorageClass": "STANDARD",
-            })
+            contents.append(
+                {
+                    "Key": key,
+                    "Size": len(obj.data),
+                    "LastModified": obj.last_modified,
+                    "ETag": obj.etag,
+                    "StorageClass": "STANDARD",
+                }
+            )
 
         result: dict[str, Any] = {
             "Contents": contents,
@@ -241,13 +254,20 @@ class MockS3Service:
         return {}
 
     def copy_object(
-        self, src_bucket: str, src_key: str, dst_bucket: str, dst_key: str,
+        self,
+        src_bucket: str,
+        src_key: str,
+        dst_bucket: str,
+        dst_key: str,
     ) -> dict:
-        self._logger.info("copy_object %s/%s -> %s/%s", src_bucket, src_key, dst_bucket, dst_key)
+        self._logger.info(
+            "copy_object %s/%s -> %s/%s", src_bucket, src_key, dst_bucket, dst_key
+        )
         src_obj = self._require_object(src_bucket, src_key)
         self._require_bucket(dst_bucket)
         self._objects[dst_bucket][dst_key] = _StoredObject(
-            src_obj.data, src_obj.content_type,
+            src_obj.data,
+            src_obj.content_type,
         )
         return {}
 
@@ -282,7 +302,11 @@ class MockS3Service:
         "Owner": {"DisplayName": "admin", "ID": "admin"},
         "Grants": [
             {
-                "Grantee": {"DisplayName": "admin", "ID": "admin", "Type": "CanonicalUser"},
+                "Grantee": {
+                    "DisplayName": "admin",
+                    "ID": "admin",
+                    "Type": "CanonicalUser",
+                },
                 "Permission": "FULL_CONTROL",
             }
         ],
@@ -438,9 +462,11 @@ def _json_response(data: Any, status_code: int = 200) -> HttpxResponse:
 
 def _logged_response(label: str, data: Any, status_code: int = 200):
     """Return a side_effect callable that logs and returns a JSON response."""
+
     def _handler(request):
         _mapi_logger.info("%s  %s", label, request.url)
         return _json_response(data, status_code)
+
     return _handler
 
 
@@ -462,25 +488,30 @@ def _setup_mapi_routes(mock: respx.MockRouter) -> None:
         ns_list = NAMESPACES.get(tname, [])
         mock.get(f"{prefix}/namespaces").mock(
             side_effect=_logged_response(
-                f"GET {tname}/namespaces", {"name": [ns["name"] for ns in ns_list]},
+                f"GET {tname}/namespaces",
+                {"name": [ns["name"] for ns in ns_list]},
             ),
         )
         for ns in ns_list:
             mock.get(f"{prefix}/namespaces/{ns['name']}").mock(
-                side_effect=_logged_response(f"GET {tname}/namespaces/{ns['name']}", ns),
+                side_effect=_logged_response(
+                    f"GET {tname}/namespaces/{ns['name']}", ns
+                ),
             )
 
         # User accounts
         users = USER_ACCOUNTS.get(tname, [])
         mock.get(f"{prefix}/userAccounts").mock(
             side_effect=_logged_response(
-                f"GET {tname}/userAccounts", {"username": [u["username"] for u in users]},
+                f"GET {tname}/userAccounts",
+                {"username": [u["username"] for u in users]},
             ),
         )
         for user in users:
             mock.get(f"{prefix}/userAccounts/{user['username']}").mock(
                 side_effect=_logged_response(
-                    f"GET {tname}/userAccounts/{user['username']}", user,
+                    f"GET {tname}/userAccounts/{user['username']}",
+                    user,
                 ),
             )
 
@@ -488,13 +519,15 @@ def _setup_mapi_routes(mock: respx.MockRouter) -> None:
         groups = GROUP_ACCOUNTS.get(tname, [])
         mock.get(f"{prefix}/groupAccounts").mock(
             side_effect=_logged_response(
-                f"GET {tname}/groupAccounts", {"groupname": [g["groupname"] for g in groups]},
+                f"GET {tname}/groupAccounts",
+                {"groupname": [g["groupname"] for g in groups]},
             ),
         )
         for group in groups:
             mock.get(f"{prefix}/groupAccounts/{group['groupname']}").mock(
                 side_effect=_logged_response(
-                    f"GET {tname}/groupAccounts/{group['groupname']}", group,
+                    f"GET {tname}/groupAccounts/{group['groupname']}",
+                    group,
                 ),
             )
 

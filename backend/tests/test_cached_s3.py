@@ -78,7 +78,9 @@ def test_list_buckets_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
 
 
 def test_head_bucket_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
-    mock_boto_client.head_bucket.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
+    mock_boto_client.head_bucket.return_value = {
+        "ResponseMetadata": {"HTTPStatusCode": 200}
+    }
 
     s3.head_bucket("mybucket")
     s3.head_bucket("mybucket")
@@ -88,9 +90,13 @@ def test_head_bucket_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
 # ── list_objects first page cached, continuation not ──────────────────
 
 
-def test_list_objects_first_page_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
+def test_list_objects_first_page_cached(
+    s3: CachedS3Service, mock_boto_client: MagicMock
+):
     mock_boto_client.list_objects_v2.return_value = {
-        "Contents": [{"Key": "a.txt"}], "IsTruncated": False, "KeyCount": 1,
+        "Contents": [{"Key": "a.txt"}],
+        "IsTruncated": False,
+        "KeyCount": 1,
     }
 
     s3.list_objects("bucket1", prefix="docs/")
@@ -98,9 +104,13 @@ def test_list_objects_first_page_cached(s3: CachedS3Service, mock_boto_client: M
     assert mock_boto_client.list_objects_v2.call_count == 1
 
 
-def test_list_objects_continuation_not_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
+def test_list_objects_continuation_not_cached(
+    s3: CachedS3Service, mock_boto_client: MagicMock
+):
     mock_boto_client.list_objects_v2.return_value = {
-        "Contents": [], "IsTruncated": False, "KeyCount": 0,
+        "Contents": [],
+        "IsTruncated": False,
+        "KeyCount": 0,
     }
 
     s3.list_objects("b", continuation_token="tok1")
@@ -164,7 +174,9 @@ def test_versioning_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
 # ── Write invalidation ───────────────────────────────────────────────
 
 
-def test_create_bucket_invalidates(s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService):
+def test_create_bucket_invalidates(
+    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+):
     mock_boto_client.list_buckets.return_value = {"Buckets": []}
     mock_boto_client.create_bucket.return_value = {}
 
@@ -180,7 +192,9 @@ def test_create_bucket_invalidates(s3: CachedS3Service, mock_boto_client: MagicM
     assert mock_boto_client.list_buckets.call_count == 2
 
 
-def test_delete_object_invalidates(s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService):
+def test_delete_object_invalidates(
+    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+):
     mock_boto_client.head_object.return_value = {"ContentLength": 10}
     mock_boto_client.delete_object.return_value = {}
 
@@ -196,9 +210,13 @@ def test_delete_object_invalidates(s3: CachedS3Service, mock_boto_client: MagicM
     assert mock_boto_client.head_object.call_count == 2
 
 
-def test_put_object_invalidates(s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService):
+def test_put_object_invalidates(
+    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+):
     mock_boto_client.list_objects_v2.return_value = {
-        "Contents": [], "IsTruncated": False, "KeyCount": 0,
+        "Contents": [],
+        "IsTruncated": False,
+        "KeyCount": 0,
     }
 
     # Populate cache
@@ -213,7 +231,9 @@ def test_put_object_invalidates(s3: CachedS3Service, mock_boto_client: MagicMock
     assert mock_boto_client.list_objects_v2.call_count == 2
 
 
-def test_put_versioning_invalidates(s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService):
+def test_put_versioning_invalidates(
+    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+):
     mock_boto_client.get_bucket_versioning.return_value = {"Status": "Enabled"}
     mock_boto_client.put_bucket_versioning.return_value = {}
 
@@ -226,7 +246,9 @@ def test_put_versioning_invalidates(s3: CachedS3Service, mock_boto_client: Magic
     assert mock_boto_client.get_bucket_versioning.call_count == 2
 
 
-def test_put_bucket_acl_invalidates(s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService):
+def test_put_bucket_acl_invalidates(
+    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+):
     mock_boto_client.get_bucket_acl.return_value = {"Owner": {}, "Grants": []}
     mock_boto_client.put_bucket_acl.return_value = {}
 
@@ -239,7 +261,9 @@ def test_put_bucket_acl_invalidates(s3: CachedS3Service, mock_boto_client: Magic
     assert mock_boto_client.get_bucket_acl.call_count == 2
 
 
-def test_put_object_acl_invalidates(s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService):
+def test_put_object_acl_invalidates(
+    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+):
     mock_boto_client.get_object_acl.return_value = {"Owner": {}, "Grants": []}
     mock_boto_client.put_object_acl.return_value = {}
 
@@ -252,9 +276,13 @@ def test_put_object_acl_invalidates(s3: CachedS3Service, mock_boto_client: Magic
     assert mock_boto_client.get_object_acl.call_count == 2
 
 
-def test_copy_object_invalidates_dst(s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService):
+def test_copy_object_invalidates_dst(
+    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+):
     mock_boto_client.list_objects_v2.return_value = {
-        "Contents": [], "IsTruncated": False, "KeyCount": 0,
+        "Contents": [],
+        "IsTruncated": False,
+        "KeyCount": 0,
     }
     mock_boto_client.copy_object.return_value = {}
 
@@ -267,7 +295,9 @@ def test_copy_object_invalidates_dst(s3: CachedS3Service, mock_boto_client: Magi
     assert mock_boto_client.list_objects_v2.call_count == 2
 
 
-def test_delete_objects_invalidates(s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService):
+def test_delete_objects_invalidates(
+    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+):
     mock_boto_client.head_object.return_value = {"ContentLength": 10}
     mock_boto_client.delete_objects.return_value = {"Deleted": [], "Errors": []}
 

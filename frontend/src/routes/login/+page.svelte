@@ -45,7 +45,9 @@
 		</div>
 
 		{#if form?.error}
-			<div class="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+			<div
+				class="mb-4 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+			>
 				{form.error}
 			</div>
 		{/if}
@@ -64,12 +66,7 @@
 			<div class="space-y-4">
 				<div class="space-y-2">
 					<Label for="username">Username</Label>
-					<Input
-						id="username"
-						name="username"
-						placeholder="Enter your HCP username"
-						required
-					/>
+					<Input id="username" name="username" placeholder="Enter your HCP username" required />
 				</div>
 				<div class="space-y-2">
 					<Label for="password">Password</Label>

@@ -29,13 +29,58 @@
 		if (e === 'pdf') return 'pdf';
 		if (
 			[
-				'txt', 'md', 'markdown', 'json', 'csv', 'tsv', 'xml', 'yaml', 'yml', 'toml',
-				'ini', 'cfg', 'conf', 'log', 'env', 'sh', 'bash', 'zsh', 'fish',
-				'js', 'ts', 'jsx', 'tsx', 'mjs', 'cjs',
-				'py', 'rb', 'rs', 'go', 'java', 'kt', 'c', 'cpp', 'h', 'hpp', 'cs',
-				'swift', 'r', 'lua', 'pl', 'php', 'sql',
-				'html', 'css', 'scss', 'less', 'svelte', 'vue',
-				'dockerfile', 'makefile', 'gitignore', 'editorconfig'
+				'txt',
+				'md',
+				'markdown',
+				'json',
+				'csv',
+				'tsv',
+				'xml',
+				'yaml',
+				'yml',
+				'toml',
+				'ini',
+				'cfg',
+				'conf',
+				'log',
+				'env',
+				'sh',
+				'bash',
+				'zsh',
+				'fish',
+				'js',
+				'ts',
+				'jsx',
+				'tsx',
+				'mjs',
+				'cjs',
+				'py',
+				'rb',
+				'rs',
+				'go',
+				'java',
+				'kt',
+				'c',
+				'cpp',
+				'h',
+				'hpp',
+				'cs',
+				'swift',
+				'r',
+				'lua',
+				'pl',
+				'php',
+				'sql',
+				'html',
+				'css',
+				'scss',
+				'less',
+				'svelte',
+				'vue',
+				'dockerfile',
+				'makefile',
+				'gitignore',
+				'editorconfig',
 			].includes(e)
 		)
 			return 'text';
@@ -52,9 +97,8 @@
 				throw new Error(`Failed to load file (HTTP ${res.status})`);
 			}
 			const text = await res.text();
-			textContent = text.length > 512_000
-				? text.slice(0, 512_000) + '\n\n... (truncated at 500KB)'
-				: text;
+			textContent =
+				text.length > 512_000 ? text.slice(0, 512_000) + '\n\n... (truncated at 500KB)' : text;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to load file';
 		} finally {
@@ -69,7 +113,12 @@
 	});
 </script>
 
-<Dialog.Root bind:open onOpenChange={(o) => { if (!o) onclose(); }}>
+<Dialog.Root
+	bind:open
+	onOpenChange={(o) => {
+		if (!o) onclose();
+	}}
+>
 	<Dialog.Content showCloseButton={false} class="sm:max-w-6xl h-[90vh] flex flex-col p-0 gap-0">
 		<!-- Header -->
 		<div class="flex shrink-0 items-center justify-between border-b px-4 py-3">
@@ -80,7 +129,8 @@
 						{filename}
 					</Dialog.Title>
 					<Dialog.Description class="text-xs text-muted-foreground">
-						{#if size != null}{formatBytes(size)} &middot; {/if}.{ext} file
+						{#if size != null}{formatBytes(size)} &middot;
+						{/if}.{ext} file
 					</Dialog.Description>
 				</div>
 			</div>
@@ -99,11 +149,7 @@
 		<!-- Content -->
 		{#if category === 'image'}
 			<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
-				<img
-					src={url}
-					alt={filename}
-					class="max-h-full max-w-full rounded object-contain"
-				/>
+				<img src={url} alt={filename} class="max-h-full max-w-full rounded object-contain" />
 			</div>
 		{:else if category === 'video'}
 			<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
@@ -118,9 +164,7 @@
 					<div class="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
 						<FileText class="h-10 w-10 text-primary" />
 					</div>
-					<audio controls src={url}>
-						Your browser does not support this audio.
-					</audio>
+					<audio controls src={url}> Your browser does not support this audio. </audio>
 				</div>
 			</div>
 		{:else if category === 'pdf'}
@@ -138,13 +182,12 @@
 					<div class="flex flex-1 flex-col items-center justify-center gap-3">
 						<AlertCircle class="h-8 w-8 text-destructive" />
 						<p class="text-sm text-destructive">{error}</p>
-						<Button variant="secondary" size="sm" onclick={() => fetchText(url)}>
-							Retry
-						</Button>
+						<Button variant="secondary" size="sm" onclick={() => fetchText(url)}>Retry</Button>
 					</div>
 				{:else if textContent != null}
 					<div class="flex-1 overflow-auto p-4">
-						<pre class="whitespace-pre-wrap break-words font-mono text-sm leading-relaxed text-foreground">{textContent}</pre>
+						<pre
+							class="whitespace-pre-wrap break-words font-mono text-sm leading-relaxed text-foreground">{textContent}</pre>
 					</div>
 				{:else}
 					<div class="flex flex-1 items-center justify-center text-muted-foreground">
@@ -154,16 +197,16 @@
 			</div>
 		{:else}
 			<!-- Unsupported -->
-			<div class="flex flex-1 flex-col items-center justify-center gap-3 bg-muted/50 p-8 text-center">
+			<div
+				class="flex flex-1 flex-col items-center justify-center gap-3 bg-muted/50 p-8 text-center"
+			>
 				<div class="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
 					<FileText class="h-8 w-8 text-muted-foreground" />
 				</div>
 				<p class="text-sm font-medium">
 					Preview not available for .{ext} files
 				</p>
-				<p class="text-xs text-muted-foreground">
-					Download the file to view it locally
-				</p>
+				<p class="text-xs text-muted-foreground">Download the file to view it locally</p>
 				<Button href={url} download class="mt-2">
 					<Download class="h-4 w-4" />
 					Download

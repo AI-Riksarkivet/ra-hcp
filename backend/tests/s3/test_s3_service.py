@@ -65,14 +65,23 @@ def test_delete_bucket(service: S3Service, mock_boto_client: MagicMock):
 def test_list_objects_basic(service: S3Service, mock_boto_client: MagicMock):
     mock_boto_client.list_objects_v2.return_value = {"Contents": []}
     service.list_objects("bucket")
-    mock_boto_client.list_objects_v2.assert_called_once_with(Bucket="bucket", MaxKeys=1000)
-
-
-def test_list_objects_with_prefix_and_token(service: S3Service, mock_boto_client: MagicMock):
-    mock_boto_client.list_objects_v2.return_value = {"Contents": []}
-    service.list_objects("bucket", prefix="logs/", max_keys=10, continuation_token="tok123")
     mock_boto_client.list_objects_v2.assert_called_once_with(
-        Bucket="bucket", MaxKeys=10, Prefix="logs/", ContinuationToken="tok123",
+        Bucket="bucket", MaxKeys=1000
+    )
+
+
+def test_list_objects_with_prefix_and_token(
+    service: S3Service, mock_boto_client: MagicMock
+):
+    mock_boto_client.list_objects_v2.return_value = {"Contents": []}
+    service.list_objects(
+        "bucket", prefix="logs/", max_keys=10, continuation_token="tok123"
+    )
+    mock_boto_client.list_objects_v2.assert_called_once_with(
+        Bucket="bucket",
+        MaxKeys=10,
+        Prefix="logs/",
+        ContinuationToken="tok123",
     )
 
 
@@ -101,7 +110,9 @@ def test_head_object(service: S3Service, mock_boto_client: MagicMock):
 
 def test_delete_object(service: S3Service, mock_boto_client: MagicMock):
     service.delete_object("bucket", "key.txt")
-    mock_boto_client.delete_object.assert_called_once_with(Bucket="bucket", Key="key.txt")
+    mock_boto_client.delete_object.assert_called_once_with(
+        Bucket="bucket", Key="key.txt"
+    )
 
 
 def test_copy_object(service: S3Service, mock_boto_client: MagicMock):
@@ -151,13 +162,14 @@ def test_put_bucket_acl(service: S3Service, mock_boto_client: MagicMock):
     acl = {"Owner": {"ID": "owner"}, "Grants": []}
     service.put_bucket_acl("bucket", acl)
     mock_boto_client.put_bucket_acl.assert_called_once_with(
-        Bucket="bucket", AccessControlPolicy=acl,
+        Bucket="bucket",
+        AccessControlPolicy=acl,
     )
 
 
 def test_get_object_acl(service: S3Service, mock_boto_client: MagicMock):
     mock_boto_client.get_object_acl.return_value = {"Owner": {}, "Grants": []}
-    result = service.get_object_acl("bucket", "key")
+    service.get_object_acl("bucket", "key")
     mock_boto_client.get_object_acl.assert_called_once_with(Bucket="bucket", Key="key")
 
 
@@ -165,5 +177,7 @@ def test_put_object_acl(service: S3Service, mock_boto_client: MagicMock):
     acl = {"Owner": {"ID": "owner"}, "Grants": []}
     service.put_object_acl("bucket", "key", acl)
     mock_boto_client.put_object_acl.assert_called_once_with(
-        Bucket="bucket", Key="key", AccessControlPolicy=acl,
+        Bucket="bucket",
+        Key="key",
+        AccessControlPolicy=acl,
     )

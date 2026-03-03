@@ -16,7 +16,7 @@
 			opacity: 0,
 			duration: 0.4,
 			stagger: 0.1,
-			ease: 'power2.out'
+			ease: 'power2.out',
 		});
 	});
 </script>
@@ -28,9 +28,7 @@
 <div class="space-y-6">
 	<div>
 		<h2 class="text-2xl font-bold">Dashboard</h2>
-		<p class="mt-1 text-sm text-muted-foreground">
-			Overview of your HCP infrastructure
-		</p>
+		<p class="mt-1 text-sm text-muted-foreground">Overview of your HCP infrastructure</p>
 	</div>
 
 	<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

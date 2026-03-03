@@ -73,6 +73,7 @@ class ServiceStatistics(BaseModel):
 
 class NamespaceStatistics(BaseModel):
     """Statistics for a namespace or tenant."""
+
     customMetadataCount: Optional[int] = None
     customMetadataSize: Optional[int] = None
     objectCount: Optional[int] = None

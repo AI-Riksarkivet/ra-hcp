@@ -16,12 +16,13 @@ from app.schemas.tenant import (
     SearchSecurity,
 )
 from app.schemas.namespace import NamespaceDefaults, CorsConfiguration
-from app.schemas.common import ListQueryParams, ChargebackParams
+from app.schemas.common import ChargebackParams
 
 router = APIRouter(prefix="/tenants", tags=["Tenant Settings"])
 
 
 # ── Tenant list (system-level) ─────────────────────────────────────────
+
 
 @router.get("", tags=["System Tenants"])
 async def list_tenants(
@@ -61,6 +62,7 @@ async def create_tenant(
 
 # ── Single tenant ──────────────────────────────────────────────────────
 
+
 @router.get("/{tenant_name}")
 async def get_tenant(
     tenant_name: str,
@@ -98,6 +100,7 @@ async def modify_tenant(
 
 # ── Console security ──────────────────────────────────────────────────
 
+
 @router.get("/{tenant_name}/consoleSecurity")
 async def get_console_security(
     tenant_name: str,
@@ -120,6 +123,7 @@ async def modify_console_security(
 
 
 # ── Contact info ───────────────────────────────────────────────────────
+
 
 @router.get("/{tenant_name}/contactInfo")
 async def get_contact_info(
@@ -144,6 +148,7 @@ async def modify_contact_info(
 
 # ── Email notification ─────────────────────────────────────────────────
 
+
 @router.get("/{tenant_name}/emailNotification")
 async def get_email_notification(
     tenant_name: str,
@@ -166,6 +171,7 @@ async def modify_email_notification(
 
 
 # ── Namespace defaults ─────────────────────────────────────────────────
+
 
 @router.get("/{tenant_name}/namespaceDefaults")
 async def get_namespace_defaults(
@@ -194,6 +200,7 @@ async def modify_namespace_defaults(
 
 # ── Search security ───────────────────────────────────────────────────
 
+
 @router.get("/{tenant_name}/searchSecurity")
 async def get_search_security(
     tenant_name: str,
@@ -216,6 +223,7 @@ async def modify_search_security(
 
 
 # ── Tenant permissions ─────────────────────────────────────────────────
+
 
 @router.get("/{tenant_name}/permissions")
 async def get_tenant_permissions(
@@ -240,6 +248,7 @@ async def modify_tenant_permissions(
 
 # ── Available service plans ────────────────────────────────────────────
 
+
 @router.get("/{tenant_name}/availableServicePlans")
 async def list_available_service_plans(
     tenant_name: str,
@@ -263,6 +272,7 @@ async def get_available_service_plan(
 
 # ── Chargeback report ─────────────────────────────────────────────────
 
+
 @router.get("/{tenant_name}/chargebackReport", tags=["Tenant Statistics"])
 async def get_tenant_chargeback(
     tenant_name: str,
@@ -284,6 +294,7 @@ async def get_tenant_chargeback(
 
 # ── Tenant statistics ─────────────────────────────────────────────────
 
+
 @router.get("/{tenant_name}/statistics", tags=["Tenant Statistics"])
 async def get_tenant_statistics(
     tenant_name: str,
@@ -295,6 +306,7 @@ async def get_tenant_statistics(
 
 
 # ── Tenant CORS ───────────────────────────────────────────────────────
+
 
 @router.get("/{tenant_name}/cors")
 async def get_tenant_cors(

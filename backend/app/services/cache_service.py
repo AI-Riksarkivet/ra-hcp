@@ -84,7 +84,8 @@ class CacheService:
         if not self._enabled:
             return None
         with tracer.start_as_current_span(
-            "cache.get", attributes={"cache.key": key},
+            "cache.get",
+            attributes={"cache.key": key},
         ) as span:
             try:
                 raw = await self._redis.get(self._key(key))  # type: ignore[union-attr]
@@ -103,12 +104,15 @@ class CacheService:
             return
         effective_ttl = ttl or self._settings.cache_default_ttl
         with tracer.start_as_current_span(
-            "cache.set", attributes={"cache.key": key, "cache.ttl": effective_ttl},
+            "cache.set",
+            attributes={"cache.key": key, "cache.ttl": effective_ttl},
         ) as span:
             try:
                 raw = json.dumps(value, default=str)
                 await self._redis.set(  # type: ignore[union-attr]
-                    self._key(key), raw, ex=effective_ttl,
+                    self._key(key),
+                    raw,
+                    ex=effective_ttl,
                 )
             except Exception:
                 span.set_attribute("cache.error", True)
@@ -118,7 +122,8 @@ class CacheService:
         if not self._enabled:
             return
         with tracer.start_as_current_span(
-            "cache.delete", attributes={"cache.key": key},
+            "cache.delete",
+            attributes={"cache.key": key},
         ) as span:
             try:
                 await self._redis.delete(self._key(key))  # type: ignore[union-attr]
@@ -131,7 +136,8 @@ class CacheService:
         if not self._enabled:
             return 0
         with tracer.start_as_current_span(
-            "cache.invalidate", attributes={"cache.pattern": pattern},
+            "cache.invalidate",
+            attributes={"cache.pattern": pattern},
         ) as span:
             deleted = 0
             try:
@@ -151,7 +157,8 @@ class CacheService:
         if not self._enabled or self._sync_redis is None:
             return None
         with tracer.start_as_current_span(
-            "cache.get", attributes={"cache.key": key},
+            "cache.get",
+            attributes={"cache.key": key},
         ) as span:
             try:
                 raw = self._sync_redis.get(self._key(key))
@@ -170,7 +177,8 @@ class CacheService:
             return
         effective_ttl = ttl or self._settings.cache_default_ttl
         with tracer.start_as_current_span(
-            "cache.set", attributes={"cache.key": key, "cache.ttl": effective_ttl},
+            "cache.set",
+            attributes={"cache.key": key, "cache.ttl": effective_ttl},
         ) as span:
             try:
                 raw = json.dumps(value, default=str)
@@ -183,7 +191,8 @@ class CacheService:
         if not self._enabled or self._sync_redis is None:
             return
         with tracer.start_as_current_span(
-            "cache.delete", attributes={"cache.key": key},
+            "cache.delete",
+            attributes={"cache.key": key},
         ) as span:
             try:
                 self._sync_redis.delete(self._key(key))
@@ -196,7 +205,8 @@ class CacheService:
         if not self._enabled or self._sync_redis is None:
             return 0
         with tracer.start_as_current_span(
-            "cache.invalidate", attributes={"cache.pattern": pattern},
+            "cache.invalidate",
+            attributes={"cache.pattern": pattern},
         ) as span:
             deleted = 0
             try:

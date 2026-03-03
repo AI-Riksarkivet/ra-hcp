@@ -17,7 +17,9 @@ TOPO = "topo-1"
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_list_ec_topologies(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_list_ec_topologies(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{MAPI_EC}/ecTopologies").mock(
         return_value=httpx.Response(200, json={"ecTopology": [{"name": TOPO}]})
     )
@@ -25,7 +27,9 @@ async def test_list_ec_topologies(client: AsyncClient, auth_headers: dict, hcp_m
     assert resp.status_code == 200
 
 
-async def test_create_ec_topology(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_create_ec_topology(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.put(f"{MAPI_EC}/ecTopologies").mock(
         return_value=httpx.Response(200)
     )
@@ -42,7 +46,9 @@ async def test_create_ec_topology(client: AsyncClient, auth_headers: dict, hcp_m
     assert route.called
 
 
-async def test_get_ec_topology(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_ec_topology(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{MAPI_EC}/ecTopologies/{TOPO}").mock(
         return_value=httpx.Response(200, json={"name": TOPO, "type": "FULLY_CONNECTED"})
     )
@@ -51,7 +57,9 @@ async def test_get_ec_topology(client: AsyncClient, auth_headers: dict, hcp_mock
     assert resp.json()["name"] == TOPO
 
 
-async def test_get_ec_topology_not_found(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_ec_topology_not_found(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{MAPI_EC}/ecTopologies/missing").mock(
         return_value=httpx.Response(404)
     )
@@ -59,7 +67,9 @@ async def test_get_ec_topology_not_found(client: AsyncClient, auth_headers: dict
     assert resp.status_code == 404
 
 
-async def test_check_ec_topology(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_check_ec_topology(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.head(f"{MAPI_EC}/ecTopologies/{TOPO}").mock(
         return_value=httpx.Response(200)
     )
@@ -67,18 +77,24 @@ async def test_check_ec_topology(client: AsyncClient, auth_headers: dict, hcp_mo
     assert resp.status_code == 200
 
 
-async def test_retire_ec_topology(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_retire_ec_topology(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.post(f"{MAPI_EC}/ecTopologies/{TOPO}").mock(
         return_value=httpx.Response(200)
     )
     resp = await client.post(
-        f"{EC}/ecTopologies/{TOPO}", headers=auth_headers, params={"retire": True},
+        f"{EC}/ecTopologies/{TOPO}",
+        headers=auth_headers,
+        params={"retire": True},
     )
     assert resp.status_code == 200
     assert route.called
 
 
-async def test_delete_ec_topology(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_delete_ec_topology(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.delete(f"{MAPI_EC}/ecTopologies/{TOPO}").mock(
         return_value=httpx.Response(200)
     )
@@ -87,12 +103,16 @@ async def test_delete_ec_topology(client: AsyncClient, auth_headers: dict, hcp_m
     assert route.called
 
 
-async def test_delete_ec_topology_force(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_delete_ec_topology_force(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.delete(f"{MAPI_EC}/ecTopologies/{TOPO}").mock(
         return_value=httpx.Response(200)
     )
     resp = await client.delete(
-        f"{EC}/ecTopologies/{TOPO}", headers=auth_headers, params={"force": True},
+        f"{EC}/ecTopologies/{TOPO}",
+        headers=auth_headers,
+        params={"force": True},
     )
     assert resp.status_code == 200
     assert route.called
@@ -103,7 +123,9 @@ async def test_delete_ec_topology_force(client: AsyncClient, auth_headers: dict,
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_list_ec_topology_tenants(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_list_ec_topology_tenants(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{MAPI_EC}/ecTopologies/{TOPO}/tenants").mock(
         return_value=httpx.Response(200, json={"tenant": ["t1"]})
     )
@@ -111,23 +133,29 @@ async def test_list_ec_topology_tenants(client: AsyncClient, auth_headers: dict,
     assert resp.status_code == 200
 
 
-async def test_add_tenant_to_ec_topology(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    route = hcp_mock.route(method="PUT", url=f"{MAPI_EC}/ecTopologies/{TOPO}/tenants/t1").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_add_tenant_to_ec_topology(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    route = hcp_mock.route(
+        method="PUT", url=f"{MAPI_EC}/ecTopologies/{TOPO}/tenants/t1"
+    ).mock(return_value=httpx.Response(200))
     resp = await client.put(
-        f"{EC}/ecTopologies/{TOPO}/tenants/t1", headers=auth_headers,
+        f"{EC}/ecTopologies/{TOPO}/tenants/t1",
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     assert route.called
 
 
-async def test_remove_tenant_from_ec_topology(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_remove_tenant_from_ec_topology(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.delete(f"{MAPI_EC}/ecTopologies/{TOPO}/tenants/t1").mock(
         return_value=httpx.Response(200)
     )
     resp = await client.delete(
-        f"{EC}/ecTopologies/{TOPO}/tenants/t1", headers=auth_headers,
+        f"{EC}/ecTopologies/{TOPO}/tenants/t1",
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     assert route.called
@@ -138,7 +166,9 @@ async def test_remove_tenant_from_ec_topology(client: AsyncClient, auth_headers:
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_get_ec_link_candidates(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_ec_link_candidates(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{MAPI_EC}/linkCandidates").mock(
         return_value=httpx.Response(200, json={"linkCandidate": []})
     )
@@ -151,9 +181,9 @@ async def test_get_ec_link_candidates(client: AsyncClient, auth_headers: dict, h
 # ═══════════════════════════════════════════════════════════════════════
 
 
-async def test_ec_hcp_error(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.get(f"{MAPI_EC}/ecTopologies").mock(
-        return_value=httpx.Response(403)
-    )
+async def test_ec_hcp_error(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.get(f"{MAPI_EC}/ecTopologies").mock(return_value=httpx.Response(403))
     resp = await client.get(f"{EC}/ecTopologies", headers=auth_headers)
     assert resp.status_code == 403

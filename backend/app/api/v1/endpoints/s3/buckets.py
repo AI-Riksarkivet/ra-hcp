@@ -29,9 +29,7 @@ async def list_buckets(s3: S3Service = Depends(get_s3_service)):
         raise_for_s3_error(exc, "buckets")
     except BotoCoreError as exc:
         raise_for_s3_transport_error(exc, "buckets")
-    buckets = [
-        BucketInfo.model_validate(b) for b in result.get("Buckets", [])
-    ]
+    buckets = [BucketInfo.model_validate(b) for b in result.get("Buckets", [])]
     return ListBucketsResponse(buckets=buckets)
 
 
@@ -73,9 +71,11 @@ async def delete_bucket(bucket: str, s3: S3Service = Depends(get_s3_service)):
 
 # ── Bucket versioning ────────────────────────────────────────────────
 
+
 @router.get("/{bucket}/versioning", response_model=BucketVersioningResponse)
 async def get_bucket_versioning(
-    bucket: str, s3: S3Service = Depends(get_s3_service),
+    bucket: str,
+    s3: S3Service = Depends(get_s3_service),
 ):
     try:
         result = await asyncio.to_thread(s3.get_bucket_versioning, bucket)
@@ -106,6 +106,7 @@ async def put_bucket_versioning(
 
 # ── Bucket ACL ────────────────────────────────────────────────────────
 
+
 @router.get("/{bucket}/acl")
 async def get_bucket_acl(bucket: str, s3: S3Service = Depends(get_s3_service)):
     try:
@@ -122,7 +123,9 @@ async def get_bucket_acl(bucket: str, s3: S3Service = Depends(get_s3_service)):
 
 @router.put("/{bucket}/acl")
 async def put_bucket_acl(
-    bucket: str, body: dict, s3: S3Service = Depends(get_s3_service),
+    bucket: str,
+    body: dict,
+    s3: S3Service = Depends(get_s3_service),
 ):
     try:
         await asyncio.to_thread(s3.put_bucket_acl, bucket, body)

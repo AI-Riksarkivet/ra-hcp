@@ -8,6 +8,7 @@ from .common import RoleList
 
 class UserAccountCreate(BaseModel):
     """Properties for creating a user account (PUT)."""
+
     username: str
     fullName: str
     localAuthentication: bool
@@ -20,6 +21,7 @@ class UserAccountCreate(BaseModel):
 
 class UserAccountUpdate(BaseModel):
     """Properties for modifying a user account (POST)."""
+
     fullName: Optional[str] = None
     description: Optional[str] = None
     enabled: Optional[bool] = None
@@ -30,6 +32,7 @@ class UserAccountUpdate(BaseModel):
 
 class UserAccountResponse(BaseModel):
     """Full user account response."""
+
     username: Optional[str] = None
     fullName: Optional[str] = None
     description: Optional[str] = None
@@ -44,10 +47,12 @@ class UserAccountResponse(BaseModel):
 
 class UserAccountList(BaseModel):
     """List of usernames."""
+
     username: Optional[List[str]] = None
 
 
 class UpdatePasswordRequest(BaseModel):
     """Request body for changing a password."""
+
     newPassword: str
     oldPassword: Optional[str] = None

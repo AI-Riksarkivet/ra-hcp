@@ -8,6 +8,7 @@ from .common import RoleList
 
 class GroupAccountCreate(BaseModel):
     """Properties for creating a group account (PUT)."""
+
     groupname: Optional[str] = None
     externalGroupID: Optional[str] = None
     roles: Optional[RoleList] = None
@@ -15,12 +16,14 @@ class GroupAccountCreate(BaseModel):
 
 class GroupAccountUpdate(BaseModel):
     """Properties for modifying a group account (POST)."""
+
     roles: Optional[RoleList] = None
     allowNamespaceManagement: Optional[bool] = None
 
 
 class GroupAccountResponse(BaseModel):
     """Full group account response."""
+
     groupname: Optional[str] = None
     externalGroupID: Optional[str] = None
     roles: Optional[RoleList] = None
@@ -29,4 +32,5 @@ class GroupAccountResponse(BaseModel):
 
 class GroupAccountList(BaseModel):
     """List of group names."""
+
     groupname: Optional[List[str]] = None

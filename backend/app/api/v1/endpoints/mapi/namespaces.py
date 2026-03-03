@@ -29,6 +29,7 @@ PREFIX = "/tenants/{tenant_name}/namespaces"
 
 # ── Namespace list & create ────────────────────────────────────────────
 
+
 @router.get(PREFIX)
 async def list_namespaces(
     tenant_name: str,
@@ -66,6 +67,7 @@ async def create_namespace(
 
 
 # ── Single namespace ───────────────────────────────────────────────────
+
 
 @router.get(PREFIX + "/{ns_name}")
 async def get_namespace(
@@ -126,11 +128,16 @@ async def delete_namespace(
 
 # ── Compliance settings ────────────────────────────────────────────────
 
+
 @router.get(PREFIX + "/{ns_name}/complianceSettings")
 async def get_compliance(
-    tenant_name: str, ns_name: str, hcp: MapiService = Depends(get_mapi_service),
+    tenant_name: str,
+    ns_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"/tenants/{tenant_name}/namespaces/{ns_name}/complianceSettings")
+    resp = await hcp.get(
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/complianceSettings"
+    )
     raise_for_hcp_status(resp)
     return parse_json_response(resp)
 
@@ -151,9 +158,12 @@ async def modify_compliance(
 
 # ── Custom metadata indexing settings ──────────────────────────────────
 
+
 @router.get(PREFIX + "/{ns_name}/customMetadataIndexingSettings")
 async def get_custom_metadata_indexing(
-    tenant_name: str, ns_name: str, hcp: MapiService = Depends(get_mapi_service),
+    tenant_name: str,
+    ns_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/customMetadataIndexingSettings"
@@ -179,9 +189,12 @@ async def modify_custom_metadata_indexing(
 
 # ── Namespace permissions ──────────────────────────────────────────────
 
+
 @router.get(PREFIX + "/{ns_name}/permissions")
 async def get_ns_permissions(
-    tenant_name: str, ns_name: str, hcp: MapiService = Depends(get_mapi_service),
+    tenant_name: str,
+    ns_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(f"/tenants/{tenant_name}/namespaces/{ns_name}/permissions")
     raise_for_hcp_status(resp)
@@ -190,11 +203,14 @@ async def get_ns_permissions(
 
 @router.post(PREFIX + "/{ns_name}/permissions")
 async def modify_ns_permissions(
-    tenant_name: str, ns_name: str, body: dict,
+    tenant_name: str,
+    ns_name: str,
+    body: dict,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/permissions", body=body,
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/permissions",
+        body=body,
     )
     raise_for_hcp_status(resp)
     return {"status": "updated"}
@@ -202,9 +218,11 @@ async def modify_ns_permissions(
 
 # ── Protocols ──────────────────────────────────────────────────────────
 
+
 @router.get(PREFIX + "/{ns_name}/protocols")
 async def get_default_protocols(
-    tenant_name: str, ns_name: str,
+    tenant_name: str,
+    ns_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     """Retrieve default namespace protocol settings (legacy, for default namespaces only)."""
@@ -215,12 +233,15 @@ async def get_default_protocols(
 
 @router.post(PREFIX + "/{ns_name}/protocols")
 async def modify_default_protocols(
-    tenant_name: str, ns_name: str, body: Protocols,
+    tenant_name: str,
+    ns_name: str,
+    body: Protocols,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     """Modify default namespace protocol settings (legacy, for default namespaces only)."""
     resp = await hcp.post(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols", body=body,
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols",
+        body=body,
     )
     raise_for_hcp_status(resp)
     return {"status": "updated"}
@@ -228,7 +249,9 @@ async def modify_default_protocols(
 
 @router.get(PREFIX + "/{ns_name}/protocols/{protocol_name}")
 async def get_protocol(
-    tenant_name: str, ns_name: str, protocol_name: str,
+    tenant_name: str,
+    ns_name: str,
+    protocol_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
@@ -240,11 +263,14 @@ async def get_protocol(
 
 @router.post(PREFIX + "/{ns_name}/protocols/http")
 async def modify_http_protocol(
-    tenant_name: str, ns_name: str, body: HttpProtocol,
+    tenant_name: str,
+    ns_name: str,
+    body: HttpProtocol,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/http", body=body,
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/http",
+        body=body,
     )
     raise_for_hcp_status(resp)
     return {"status": "updated"}
@@ -252,11 +278,14 @@ async def modify_http_protocol(
 
 @router.post(PREFIX + "/{ns_name}/protocols/cifs")
 async def modify_cifs_protocol(
-    tenant_name: str, ns_name: str, body: CifsProtocol,
+    tenant_name: str,
+    ns_name: str,
+    body: CifsProtocol,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/cifs", body=body,
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/cifs",
+        body=body,
     )
     raise_for_hcp_status(resp)
     return {"status": "updated"}
@@ -264,11 +293,14 @@ async def modify_cifs_protocol(
 
 @router.post(PREFIX + "/{ns_name}/protocols/nfs")
 async def modify_nfs_protocol(
-    tenant_name: str, ns_name: str, body: NfsProtocol,
+    tenant_name: str,
+    ns_name: str,
+    body: NfsProtocol,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/nfs", body=body,
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/nfs",
+        body=body,
     )
     raise_for_hcp_status(resp)
     return {"status": "updated"}
@@ -276,11 +308,14 @@ async def modify_nfs_protocol(
 
 @router.post(PREFIX + "/{ns_name}/protocols/smtp")
 async def modify_smtp_protocol(
-    tenant_name: str, ns_name: str, body: SmtpProtocol,
+    tenant_name: str,
+    ns_name: str,
+    body: SmtpProtocol,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/smtp", body=body,
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/smtp",
+        body=body,
     )
     raise_for_hcp_status(resp)
     return {"status": "updated"}
@@ -288,9 +323,12 @@ async def modify_smtp_protocol(
 
 # ── Replication collision settings ─────────────────────────────────────
 
+
 @router.get(PREFIX + "/{ns_name}/replicationCollisionSettings")
 async def get_replication_collision(
-    tenant_name: str, ns_name: str, hcp: MapiService = Depends(get_mapi_service),
+    tenant_name: str,
+    ns_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/replicationCollisionSettings"
@@ -301,7 +339,9 @@ async def get_replication_collision(
 
 @router.post(PREFIX + "/{ns_name}/replicationCollisionSettings")
 async def modify_replication_collision(
-    tenant_name: str, ns_name: str, body: ReplicationCollisionSettings,
+    tenant_name: str,
+    ns_name: str,
+    body: ReplicationCollisionSettings,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
@@ -314,9 +354,12 @@ async def modify_replication_collision(
 
 # ── Versioning settings ───────────────────────────────────────────────
 
+
 @router.get(PREFIX + "/{ns_name}/versioningSettings")
 async def get_versioning(
-    tenant_name: str, ns_name: str, hcp: MapiService = Depends(get_mapi_service),
+    tenant_name: str,
+    ns_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/versioningSettings"
@@ -327,7 +370,9 @@ async def get_versioning(
 
 @router.post(PREFIX + "/{ns_name}/versioningSettings")
 async def modify_versioning(
-    tenant_name: str, ns_name: str, body: VersioningSettings,
+    tenant_name: str,
+    ns_name: str,
+    body: VersioningSettings,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.post(
@@ -340,7 +385,9 @@ async def modify_versioning(
 
 @router.delete(PREFIX + "/{ns_name}/versioningSettings")
 async def delete_versioning(
-    tenant_name: str, ns_name: str, hcp: MapiService = Depends(get_mapi_service),
+    tenant_name: str,
+    ns_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.delete(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/versioningSettings"
@@ -351,9 +398,12 @@ async def delete_versioning(
 
 # ── Namespace statistics ──────────────────────────────────────────────
 
+
 @router.get(PREFIX + "/{ns_name}/statistics", tags=["Tenant Statistics"])
 async def get_ns_statistics(
-    tenant_name: str, ns_name: str, hcp: MapiService = Depends(get_mapi_service),
+    tenant_name: str,
+    ns_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(f"/tenants/{tenant_name}/namespaces/{ns_name}/statistics")
     raise_for_hcp_status(resp)
@@ -361,6 +411,7 @@ async def get_ns_statistics(
 
 
 # ── Namespace chargeback report ────────────────────────────────────────
+
 
 @router.get(PREFIX + "/{ns_name}/chargebackReport", tags=["Tenant Statistics"])
 async def get_ns_chargeback(
@@ -386,9 +437,12 @@ async def get_ns_chargeback(
 
 # ── Namespace CORS ────────────────────────────────────────────────────
 
+
 @router.get(PREFIX + "/{ns_name}/cors")
 async def get_ns_cors(
-    tenant_name: str, ns_name: str, hcp: MapiService = Depends(get_mapi_service),
+    tenant_name: str,
+    ns_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.get(f"/tenants/{tenant_name}/namespaces/{ns_name}/cors")
     raise_for_hcp_status(resp)
@@ -397,11 +451,14 @@ async def get_ns_cors(
 
 @router.put(PREFIX + "/{ns_name}/cors")
 async def set_ns_cors(
-    tenant_name: str, ns_name: str, body: CorsConfiguration,
+    tenant_name: str,
+    ns_name: str,
+    body: CorsConfiguration,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.put(
-        f"/tenants/{tenant_name}/namespaces/{ns_name}/cors", body=body,
+        f"/tenants/{tenant_name}/namespaces/{ns_name}/cors",
+        body=body,
     )
     raise_for_hcp_status(resp)
     return {"status": "created"}
@@ -409,7 +466,9 @@ async def set_ns_cors(
 
 @router.delete(PREFIX + "/{ns_name}/cors")
 async def delete_ns_cors(
-    tenant_name: str, ns_name: str, hcp: MapiService = Depends(get_mapi_service),
+    tenant_name: str,
+    ns_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.delete(f"/tenants/{tenant_name}/namespaces/{ns_name}/cors")
     raise_for_hcp_status(resp)

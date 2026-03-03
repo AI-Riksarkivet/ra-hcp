@@ -9,7 +9,10 @@ from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.api.errors import raise_for_hcp_status, parse_json_response
 from app.schemas.replication import (
-    LinkCreate, LinkUpdate, Schedule, ReplicationService,
+    LinkCreate,
+    LinkUpdate,
+    Schedule,
+    ReplicationService,
 )
 
 router = APIRouter(tags=["Replication"])
@@ -19,12 +22,15 @@ router = APIRouter(tags=["Replication"])
 #  Replication Service  /services/replication
 # ═══════════════════════════════════════════════════════════════════════
 
+
 @router.get("/services/replication")
 async def get_replication_service(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get("/services/replication", query={"verbose": str(verbose).lower()})
+    resp = await hcp.get(
+        "/services/replication", query={"verbose": str(verbose).lower()}
+    )
     raise_for_hcp_status(resp)
     return parse_json_response(resp)
 
@@ -49,6 +55,7 @@ async def modify_replication_service(
 # ═══════════════════════════════════════════════════════════════════════
 #  Certificates  /services/replication/certificates
 # ═══════════════════════════════════════════════════════════════════════
+
 
 @router.get("/services/replication/certificates")
 async def list_certificates(
@@ -136,7 +143,9 @@ async def get_link(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"{LINKS}/{link_name}", query={"verbose": str(verbose).lower()})
+    resp = await hcp.get(
+        f"{LINKS}/{link_name}", query={"verbose": str(verbose).lower()}
+    )
     raise_for_hcp_status(resp)
     return parse_json_response(resp)
 
@@ -166,9 +175,12 @@ async def modify_or_action_link(
 ):
     query = {}
     for action_name, action_val in [
-        ("suspend", suspend), ("resume", resume),
-        ("failOver", failOver), ("failBack", failBack),
-        ("beginRecover", beginRecover), ("completeRecovery", completeRecovery),
+        ("suspend", suspend),
+        ("resume", resume),
+        ("failOver", failOver),
+        ("failBack", failBack),
+        ("beginRecover", beginRecover),
+        ("completeRecovery", completeRecovery),
         ("restore", restore),
     ]:
         if action_val is not None:
@@ -190,6 +202,7 @@ async def delete_link(
 
 # ── Link Content ──────────────────────────────────────────────────────
 
+
 @router.get(LINKS + "/{link_name}/content")
 async def get_link_content(
     link_name: str,
@@ -201,6 +214,7 @@ async def get_link_content(
 
 
 # ── Link Content – Tenants ────────────────────────────────────────────
+
 
 @router.get(LINKS + "/{link_name}/content/tenants")
 async def list_link_tenants(
@@ -218,7 +232,9 @@ async def add_tenant_to_link(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.request("PUT", f"{LINKS}/{link_name}/content/tenants/{tenant_name}")
+    resp = await hcp.request(
+        "PUT", f"{LINKS}/{link_name}/content/tenants/{tenant_name}"
+    )
     raise_for_hcp_status(resp)
     return Response(status_code=resp.status_code)
 
@@ -268,6 +284,7 @@ async def remove_tenant_from_link(
 
 # ── Link Content – Default Namespace Directories ──────────────────────
 
+
 @router.get(LINKS + "/{link_name}/content/defaultNamespaceDirectories")
 async def list_link_default_ns_dirs(
     link_name: str,
@@ -305,6 +322,7 @@ async def remove_default_ns_dir_from_link(
 
 
 # ── Link Content – Chained Links ──────────────────────────────────────
+
 
 @router.get(LINKS + "/{link_name}/content/chainedLinks")
 async def list_chained_links(
@@ -344,6 +362,7 @@ async def remove_chained_link(
 
 # ── Link Candidates ───────────────────────────────────────────────────
 
+
 @router.get(LINKS + "/{link_name}/localCandidates")
 async def get_local_candidates(
     link_name: str,
@@ -369,7 +388,9 @@ async def get_local_candidate_dirs(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.get(f"{LINKS}/{link_name}/localCandidates/defaultNamespaceDirectories")
+    resp = await hcp.get(
+        f"{LINKS}/{link_name}/localCandidates/defaultNamespaceDirectories"
+    )
     raise_for_hcp_status(resp)
     return parse_json_response(resp)
 
@@ -427,6 +448,7 @@ async def get_remote_candidate_chained(
 
 
 # ── Link Schedule ─────────────────────────────────────────────────────
+
 
 @router.get(LINKS + "/{link_name}/schedule")
 async def get_link_schedule(

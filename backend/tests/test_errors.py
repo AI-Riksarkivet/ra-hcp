@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
 
 import httpx
 import pytest
@@ -15,7 +14,9 @@ from app.api.errors import parse_json_response, raise_for_hcp_status, raise_for_
 # ── raise_for_hcp_status ────────────────────────────────────────────
 
 
-def _mock_hcp_response(status_code: int, text: str = "", headers: dict | None = None) -> httpx.Response:
+def _mock_hcp_response(
+    status_code: int, text: str = "", headers: dict | None = None
+) -> httpx.Response:
     resp = httpx.Response(
         status_code=status_code,
         text=text,
@@ -34,19 +35,22 @@ def test_hcp_status_204_does_not_raise():
     raise_for_hcp_status(resp)
 
 
-@pytest.mark.parametrize("hcp_code,expected_status", [
-    (302, 404),
-    (400, 400),
-    (401, 502),
-    (403, 403),
-    (404, 404),
-    (405, 405),
-    (409, 409),
-    (414, 414),
-    (415, 415),
-    (500, 502),
-    (503, 503),
-])
+@pytest.mark.parametrize(
+    "hcp_code,expected_status",
+    [
+        (302, 404),
+        (400, 400),
+        (401, 502),
+        (403, 403),
+        (404, 404),
+        (405, 405),
+        (409, 409),
+        (414, 414),
+        (415, 415),
+        (500, 502),
+        (503, 503),
+    ],
+)
 def test_hcp_status_code_mapping(hcp_code: int, expected_status: int):
     resp = _mock_hcp_response(hcp_code, text="error details")
     with pytest.raises(HTTPException) as exc_info:
@@ -114,16 +118,19 @@ def _make_client_error(code: str, message: str, http_status: int = 400) -> Clien
     )
 
 
-@pytest.mark.parametrize("code,expected_status", [
-    ("NoSuchBucket", 404),
-    ("NoSuchKey", 404),
-    ("BucketNotEmpty", 409),
-    ("BucketAlreadyExists", 409),
-    ("BucketAlreadyOwnedByYou", 409),
-    ("AccessDenied", 403),
-    ("InvalidBucketName", 400),
-    ("InvalidArgument", 400),
-])
+@pytest.mark.parametrize(
+    "code,expected_status",
+    [
+        ("NoSuchBucket", 404),
+        ("NoSuchKey", 404),
+        ("BucketNotEmpty", 409),
+        ("BucketAlreadyExists", 409),
+        ("BucketAlreadyOwnedByYou", 409),
+        ("AccessDenied", 403),
+        ("InvalidBucketName", 400),
+        ("InvalidArgument", 400),
+    ],
+)
 def test_s3_error_code_mapping(code: str, expected_status: int):
     exc = _make_client_error(code, "test message")
     with pytest.raises(HTTPException) as exc_info:

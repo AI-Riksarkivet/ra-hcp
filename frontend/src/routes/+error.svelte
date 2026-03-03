@@ -22,9 +22,7 @@
 				{$page.error?.message ?? 'Something went wrong'}
 			</p>
 			<div class="mt-8">
-				<Button onclick={() => window.location.href = '/'}>
-					Go Home
-				</Button>
+				<Button onclick={() => (window.location.href = '/')}>Go Home</Button>
 			</div>
 		</div>
 	</div>

@@ -1,19 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import {
-		LayoutDashboard,
-		Database,
-		Building2,
-		Users,
-		Server
-	} from 'lucide-svelte';
+	import { LayoutDashboard, Database, Building2, Users, Server } from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
 	const navItems = [
 		{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 		{ href: '/buckets', label: 'Buckets', icon: Database },
 		{ href: '/tenants', label: 'Tenants', icon: Building2 },
-		{ href: '/users', label: 'Users', icon: Users }
+		{ href: '/users', label: 'Users', icon: Users },
 	] as const;
 </script>
 

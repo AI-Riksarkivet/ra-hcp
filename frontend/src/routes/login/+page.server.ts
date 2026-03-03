@@ -1,58 +1,63 @@
-import { fail } from '@sveltejs/kit';
-import { loginSchema } from '$lib/api/schemas.js';
-import type { Actions, PageServerLoad } from './$types.js';
+import { fail } from "@sveltejs/kit";
+import { loginSchema } from "$lib/api/schemas.js";
+import type { Actions, PageServerLoad } from "./$types.js";
+import process from "node:process";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000';
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
 
-export const load: PageServerLoad = async ({ locals }) => {
-	return { hasToken: !!locals.token };
+export const load: PageServerLoad = ({ locals }) => {
+  return { hasToken: !!locals.token };
 };
 
 export const actions = {
-	default: async ({ request, cookies }) => {
-		const formData = await request.formData();
-		const data = {
-			username: formData.get('username') as string,
-			password: formData.get('password') as string
-		};
+  default: async ({ request, cookies }) => {
+    const formData = await request.formData();
+    const data = {
+      username: formData.get("username") as string,
+      password: formData.get("password") as string,
+    };
 
-		const result = loginSchema.safeParse(data);
-		if (!result.success) {
-			const firstError = result.error.issues[0];
-			return fail(400, { error: firstError.message });
-		}
+    const result = loginSchema.safeParse(data);
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      return fail(400, { error: firstError.message });
+    }
 
-		try {
-			const body = new URLSearchParams({
-				grant_type: 'password',
-				username: result.data.username,
-				password: result.data.password
-			});
+    try {
+      const body = new URLSearchParams({
+        grant_type: "password",
+        username: result.data.username,
+        password: result.data.password,
+      });
 
-			const response = await fetch(`${BACKEND_URL}/api/v1/auth/token`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body
-			});
+      const response = await fetch(`${BACKEND_URL}/api/v1/auth/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
 
-			if (!response.ok) {
-				const error = await response.json().catch(() => ({ detail: 'Authentication failed' }));
-				return fail(401, { error: error.detail ?? 'Invalid username or password' });
-			}
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          detail: "Authentication failed",
+        }));
+        return fail(401, {
+          error: error.detail ?? "Invalid username or password",
+        });
+      }
 
-			const tokenData = await response.json();
+      const tokenData = await response.json();
 
-			cookies.set('hcp_token', tokenData.access_token, {
-				path: '/',
-				httpOnly: true,
-				sameSite: 'lax',
-				secure: false,
-				maxAge: 60 * 60 * 8 // 8 hours
-			});
-		} catch {
-			return fail(500, { error: 'Unable to connect to backend service' });
-		}
+      cookies.set("hcp_token", tokenData.access_token, {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: false,
+        maxAge: 60 * 60 * 8, // 8 hours
+      });
+    } catch {
+      return fail(500, { error: "Unable to connect to backend service" });
+    }
 
-		return { success: true };
-	}
+    return { success: true };
+  },
 } satisfies Actions;

@@ -15,7 +15,7 @@
 		{
 			accessorKey: 'enabled',
 			header: 'Status',
-			cell: (info) => info.getValue() === false ? 'Disabled' : 'Active'
+			cell: (info) => (info.getValue() === false ? 'Disabled' : 'Active'),
 		},
 		{
 			accessorKey: 'roles',
@@ -23,13 +23,13 @@
 			cell: (info) => {
 				const roles = info.getValue() as string[] | undefined;
 				return roles?.join(', ') ?? '';
-			}
-		}
+			},
+		},
 	];
 
 	const groupColumns: ColumnDef<Group, any>[] = [
 		{ accessorKey: 'name', header: 'Group Name' },
-		{ accessorKey: 'description', header: 'Description' }
+		{ accessorKey: 'description', header: 'Description' },
 	];
 </script>
 
@@ -40,9 +40,7 @@
 <div class="space-y-8">
 	<div>
 		<h2 class="text-2xl font-bold">Users & Groups</h2>
-		<p class="mt-1 text-sm text-muted-foreground">
-			Manage user accounts and groups
-		</p>
+		<p class="mt-1 text-sm text-muted-foreground">Manage user accounts and groups</p>
 	</div>
 
 	<div>
@@ -56,11 +54,7 @@
 				<h3 class="text-lg font-semibold">User Accounts</h3>
 				<Badge variant="secondary">{users.length}</Badge>
 			</div>
-			<DataTable
-				columns={userColumns}
-				data={users}
-				emptyMessage="No user accounts found"
-			/>
+			<DataTable columns={userColumns} data={users} emptyMessage="No user accounts found" />
 		{/await}
 	</div>
 
@@ -75,11 +69,7 @@
 				<h3 class="text-lg font-semibold">Groups</h3>
 				<Badge variant="secondary">{groups.length}</Badge>
 			</div>
-			<DataTable
-				columns={groupColumns}
-				data={groups}
-				emptyMessage="No groups found"
-			/>
+			<DataTable columns={groupColumns} data={groups} emptyMessage="No groups found" />
 		{/await}
 	</div>
 </div>

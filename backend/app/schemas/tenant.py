@@ -5,14 +5,18 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 
 from .common import (
-    AuthenticationType, IpSettings, RecipientImportance, RecipientSeverity,
+    IpSettings,
+    RecipientImportance,
+    RecipientSeverity,
 )
 
 
 # ── Tenant ─────────────────────────────────────────────────────────────
 
+
 class TenantCreate(BaseModel):
     """Properties for creating an HCP tenant (PUT)."""
+
     name: str
     systemVisibleDescription: Optional[str] = None
     tenantVisibleDescription: Optional[str] = None
@@ -34,6 +38,7 @@ class TenantCreate(BaseModel):
 
 class TenantUpdate(BaseModel):
     """Properties for modifying a tenant (POST)."""
+
     administrationAllowed: Optional[bool] = None
     maxNamespacesPerUser: Optional[int] = None
     snmpLoggingEnabled: Optional[bool] = None
@@ -44,6 +49,7 @@ class TenantUpdate(BaseModel):
 
 class TenantResponse(BaseModel):
     """Full tenant response."""
+
     name: Optional[str] = None
     systemVisibleDescription: Optional[str] = None
     tenantVisibleDescription: Optional[str] = None
@@ -67,13 +73,16 @@ class TenantResponse(BaseModel):
 
 class TenantList(BaseModel):
     """List of tenant names."""
+
     name: Optional[List[str]] = None
 
 
 # ── Console Security ──────────────────────────────────────────────────
 
+
 class ConsoleSecurity(BaseModel):
     """Tenant Management Console configuration."""
+
     automaticUserAccountUnlockSetting: Optional[bool] = None
     automaticUserAccoutUnlockDuration: Optional[int] = None
     blockCommonPassword: Optional[bool] = None
@@ -98,8 +107,10 @@ class ConsoleSecurity(BaseModel):
 
 # ── Contact Info ──────────────────────────────────────────────────────
 
+
 class ContactInfo(BaseModel):
     """Tenant contact information."""
+
     firstName: Optional[str] = None
     lastName: Optional[str] = None
     emailAddress: Optional[str] = None
@@ -115,8 +126,10 @@ class ContactInfo(BaseModel):
 
 # ── Email Notification ────────────────────────────────────────────────
 
+
 class EmailTemplate(BaseModel):
     """Email notification template."""
+
     model_config = {"populate_by_name": True}
 
     from_: Optional[str] = Field(None, alias="from")
@@ -126,6 +139,7 @@ class EmailTemplate(BaseModel):
 
 class Recipient(BaseModel):
     """Email notification recipient."""
+
     address: str
     importance: Optional[RecipientImportance] = RecipientImportance.MAJOR
     severity: Optional[RecipientSeverity] = RecipientSeverity.ERROR
@@ -134,6 +148,7 @@ class Recipient(BaseModel):
 
 class EmailNotification(BaseModel):
     """Email notification configuration for a tenant."""
+
     enabled: Optional[bool] = None
     emailTemplate: Optional[EmailTemplate] = None
     recipients: Optional[List[Recipient]] = None
@@ -141,23 +156,29 @@ class EmailNotification(BaseModel):
 
 # ── Search Security ──────────────────────────────────────────────────
 
+
 class SearchSecurity(BaseModel):
     """Search Console configuration for a tenant."""
+
     ipSettings: Optional[IpSettings] = None
 
 
 # ── Available Service Plans ──────────────────────────────────────────
 
+
 class AvailableServicePlan(BaseModel):
     """Service plan available for tenant namespace assignment."""
+
     name: Optional[str] = None
     description: Optional[str] = None
 
 
 # ── Chargeback ───────────────────────────────────────────────────────
 
+
 class ChargebackData(BaseModel):
     """Chargeback statistics for a namespace or tenant."""
+
     systemName: Optional[str] = None
     tenantName: Optional[str] = None
     namespaceName: Optional[str] = None
@@ -183,4 +204,5 @@ class ChargebackData(BaseModel):
 
 class ChargebackReport(BaseModel):
     """Chargeback report containing one or more data sets."""
+
     chargebackData: Optional[List[ChargebackData]] = None

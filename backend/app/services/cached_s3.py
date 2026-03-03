@@ -8,7 +8,7 @@ is safe to use from these threads.
 from __future__ import annotations
 
 import logging
-from typing import IO, Any, List, Optional
+from typing import IO, List, Optional
 
 from opentelemetry import trace
 
@@ -56,7 +56,8 @@ class CachedS3Service(S3Service):
 
     def head_bucket(self, name: str) -> dict:
         with tracer.start_as_current_span(
-            "cached_s3.head_bucket", attributes={"s3.bucket": name},
+            "cached_s3.head_bucket",
+            attributes={"s3.bucket": name},
         ) as span:
             key = self._key("head_bucket", name)
             cached = self._cache.get_sync(key)
@@ -109,7 +110,8 @@ class CachedS3Service(S3Service):
 
     def get_bucket_versioning(self, bucket: str) -> dict:
         with tracer.start_as_current_span(
-            "cached_s3.get_bucket_versioning", attributes={"s3.bucket": bucket},
+            "cached_s3.get_bucket_versioning",
+            attributes={"s3.bucket": bucket},
         ) as span:
             key = self._key("versioning", bucket)
             cached = self._cache.get_sync(key)
@@ -123,7 +125,8 @@ class CachedS3Service(S3Service):
 
     def get_bucket_acl(self, bucket: str) -> dict:
         with tracer.start_as_current_span(
-            "cached_s3.get_bucket_acl", attributes={"s3.bucket": bucket},
+            "cached_s3.get_bucket_acl",
+            attributes={"s3.bucket": bucket},
         ) as span:
             key = self._key("bucket_acl", bucket)
             cached = self._cache.get_sync(key)
@@ -187,7 +190,11 @@ class CachedS3Service(S3Service):
         return result
 
     def copy_object(
-        self, src_bucket: str, src_key: str, dst_bucket: str, dst_key: str,
+        self,
+        src_bucket: str,
+        src_key: str,
+        dst_bucket: str,
+        dst_key: str,
     ) -> dict:
         result = super().copy_object(src_bucket, src_key, dst_bucket, dst_key)
         self._cache.invalidate_pattern_sync(f"s3:list_objects:{dst_bucket}:*")

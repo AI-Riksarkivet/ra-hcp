@@ -14,17 +14,22 @@ API_BASE = "/api/v1/mapi/tenants/my-tenant/namespaces/my-ns"
 # ── GET protocol settings ───────────────────────────────────────────
 
 
-async def test_get_http_protocol(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_http_protocol(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{NS_PATH}/protocols/http").mock(
-        return_value=httpx.Response(200, json={
-            "httpsEnabled": True,
-            "httpEnabled": False,
-            "restEnabled": True,
-            "restRequiresAuthentication": True,
-            "hs3Enabled": True,
-            "hs3RequiresAuthentication": True,
-            "webdavEnabled": False,
-        })
+        return_value=httpx.Response(
+            200,
+            json={
+                "httpsEnabled": True,
+                "httpEnabled": False,
+                "restEnabled": True,
+                "restRequiresAuthentication": True,
+                "hs3Enabled": True,
+                "hs3RequiresAuthentication": True,
+                "webdavEnabled": False,
+            },
+        )
     )
     resp = await client.get(f"{API_BASE}/protocols/http", headers=auth_headers)
     assert resp.status_code == 200
@@ -35,13 +40,18 @@ async def test_get_http_protocol(client: AsyncClient, auth_headers: dict, hcp_mo
     assert body["webdavEnabled"] is False
 
 
-async def test_get_nfs_protocol(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_nfs_protocol(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{NS_PATH}/protocols/nfs").mock(
-        return_value=httpx.Response(200, json={
-            "enabled": False,
-            "uid": 65534,
-            "gid": 65534,
-        })
+        return_value=httpx.Response(
+            200,
+            json={
+                "enabled": False,
+                "uid": 65534,
+                "gid": 65534,
+            },
+        )
     )
     resp = await client.get(f"{API_BASE}/protocols/nfs", headers=auth_headers)
     assert resp.status_code == 200
@@ -51,14 +61,19 @@ async def test_get_nfs_protocol(client: AsyncClient, auth_headers: dict, hcp_moc
     assert body["gid"] == 65534
 
 
-async def test_get_cifs_protocol(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_cifs_protocol(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{NS_PATH}/protocols/cifs").mock(
-        return_value=httpx.Response(200, json={
-            "enabled": False,
-            "caseForcing": "DISABLED",
-            "caseSensitive": True,
-            "requiresAuthentication": True,
-        })
+        return_value=httpx.Response(
+            200,
+            json={
+                "enabled": False,
+                "caseForcing": "DISABLED",
+                "caseSensitive": True,
+                "requiresAuthentication": True,
+            },
+        )
     )
     resp = await client.get(f"{API_BASE}/protocols/cifs", headers=auth_headers)
     assert resp.status_code == 200
@@ -67,20 +82,25 @@ async def test_get_cifs_protocol(client: AsyncClient, auth_headers: dict, hcp_mo
     assert body["caseForcing"] == "DISABLED"
 
 
-async def test_get_protocol_namespace_not_found(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.get(f"{NS_PATH}/protocols/http").mock(
-        return_value=httpx.Response(404)
-    )
+async def test_get_protocol_namespace_not_found(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.get(f"{NS_PATH}/protocols/http").mock(return_value=httpx.Response(404))
     resp = await client.get(f"{API_BASE}/protocols/http", headers=auth_headers)
     assert resp.status_code == 404
 
 
-async def test_get_default_protocols_legacy(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_get_default_protocols_legacy(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     hcp_mock.get(f"{NS_PATH}/protocols").mock(
-        return_value=httpx.Response(200, json={
-            "httpEnabled": True,
-            "httpsEnabled": True,
-        })
+        return_value=httpx.Response(
+            200,
+            json={
+                "httpEnabled": True,
+                "httpsEnabled": True,
+            },
+        )
     )
     resp = await client.get(f"{API_BASE}/protocols", headers=auth_headers)
     assert resp.status_code == 200
@@ -91,7 +111,9 @@ async def test_get_default_protocols_legacy(client: AsyncClient, auth_headers: d
 # ── REST API setup (HttpProtocol) ───────────────────────────────────
 
 
-async def test_enable_rest_api(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_enable_rest_api(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.post(f"{NS_PATH}/protocols/http").mock(
         return_value=httpx.Response(200)
     )
@@ -110,10 +132,10 @@ async def test_enable_rest_api(client: AsyncClient, auth_headers: dict, hcp_mock
     assert route.called
 
 
-async def test_disable_rest_api(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_disable_rest_api(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/http",
         headers=auth_headers,
@@ -123,10 +145,10 @@ async def test_disable_rest_api(client: AsyncClient, auth_headers: dict, hcp_moc
     assert resp.json()["status"] == "updated"
 
 
-async def test_enable_s3_api(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_enable_s3_api(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/http",
         headers=auth_headers,
@@ -138,10 +160,10 @@ async def test_enable_s3_api(client: AsyncClient, auth_headers: dict, hcp_mock: 
     assert resp.status_code == 200
 
 
-async def test_enable_webdav_with_basic_auth(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_enable_webdav_with_basic_auth(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/http",
         headers=auth_headers,
@@ -155,10 +177,10 @@ async def test_enable_webdav_with_basic_auth(client: AsyncClient, auth_headers: 
     assert resp.status_code == 200
 
 
-async def test_configure_http_ip_restrictions(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_configure_http_ip_restrictions(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/http",
         headers=auth_headers,
@@ -173,10 +195,10 @@ async def test_configure_http_ip_restrictions(client: AsyncClient, auth_headers:
     assert resp.status_code == 200
 
 
-async def test_enable_ad_sso(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_enable_ad_sso(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/http",
         headers=auth_headers,
@@ -185,10 +207,10 @@ async def test_enable_ad_sso(client: AsyncClient, auth_headers: dict, hcp_mock: 
     assert resp.status_code == 200
 
 
-async def test_http_protocol_forbidden(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(
-        return_value=httpx.Response(403)
-    )
+async def test_http_protocol_forbidden(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/http").mock(return_value=httpx.Response(403))
     resp = await client.post(
         f"{API_BASE}/protocols/http",
         headers=auth_headers,
@@ -200,7 +222,9 @@ async def test_http_protocol_forbidden(client: AsyncClient, auth_headers: dict, 
 # ── NFS setup ───────────────────────────────────────────────────────
 
 
-async def test_enable_nfs(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_enable_nfs(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(
         return_value=httpx.Response(200)
     )
@@ -214,10 +238,10 @@ async def test_enable_nfs(client: AsyncClient, auth_headers: dict, hcp_mock: res
     assert route.called
 
 
-async def test_disable_nfs(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_disable_nfs(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/nfs",
         headers=auth_headers,
@@ -226,10 +250,10 @@ async def test_disable_nfs(client: AsyncClient, auth_headers: dict, hcp_mock: re
     assert resp.status_code == 200
 
 
-async def test_configure_nfs_uid_gid(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_configure_nfs_uid_gid(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/nfs",
         headers=auth_headers,
@@ -242,10 +266,10 @@ async def test_configure_nfs_uid_gid(client: AsyncClient, auth_headers: dict, hc
     assert resp.status_code == 200
 
 
-async def test_configure_nfs_ip_allow_list(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_configure_nfs_ip_allow_list(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/nfs",
         headers=auth_headers,
@@ -259,11 +283,11 @@ async def test_configure_nfs_ip_allow_list(client: AsyncClient, auth_headers: di
     assert resp.status_code == 200
 
 
-async def test_nfs_full_configuration(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_nfs_full_configuration(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     """Test enabling NFS with all settings at once."""
-    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(
-        return_value=httpx.Response(200)
-    )
+    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/nfs",
         headers=auth_headers,
@@ -280,10 +304,10 @@ async def test_nfs_full_configuration(client: AsyncClient, auth_headers: dict, h
     assert resp.json()["status"] == "updated"
 
 
-async def test_nfs_protocol_namespace_not_found(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(
-        return_value=httpx.Response(404)
-    )
+async def test_nfs_protocol_namespace_not_found(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(return_value=httpx.Response(404))
     resp = await client.post(
         f"{API_BASE}/protocols/nfs",
         headers=auth_headers,
@@ -292,10 +316,10 @@ async def test_nfs_protocol_namespace_not_found(client: AsyncClient, auth_header
     assert resp.status_code == 404
 
 
-async def test_nfs_protocol_forbidden(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(
-        return_value=httpx.Response(403)
-    )
+async def test_nfs_protocol_forbidden(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/nfs").mock(return_value=httpx.Response(403))
     resp = await client.post(
         f"{API_BASE}/protocols/nfs",
         headers=auth_headers,
@@ -307,7 +331,9 @@ async def test_nfs_protocol_forbidden(client: AsyncClient, auth_headers: dict, h
 # ── CIFS setup ──────────────────────────────────────────────────────
 
 
-async def test_enable_cifs(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_enable_cifs(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.post(f"{NS_PATH}/protocols/cifs").mock(
         return_value=httpx.Response(200)
     )
@@ -326,10 +352,10 @@ async def test_enable_cifs(client: AsyncClient, auth_headers: dict, hcp_mock: re
     assert route.called
 
 
-async def test_configure_cifs_ip_restrictions(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols/cifs").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_configure_cifs_ip_restrictions(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols/cifs").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols/cifs",
         headers=auth_headers,
@@ -347,7 +373,9 @@ async def test_configure_cifs_ip_restrictions(client: AsyncClient, auth_headers:
 # ── SMTP setup ──────────────────────────────────────────────────────
 
 
-async def test_enable_smtp(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
+async def test_enable_smtp(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
     route = hcp_mock.post(f"{NS_PATH}/protocols/smtp").mock(
         return_value=httpx.Response(200)
     )
@@ -369,10 +397,10 @@ async def test_enable_smtp(client: AsyncClient, auth_headers: dict, hcp_mock: re
 # ── Modify default protocols (legacy) ──────────────────────────────
 
 
-async def test_modify_default_protocols(client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router):
-    hcp_mock.post(f"{NS_PATH}/protocols").mock(
-        return_value=httpx.Response(200)
-    )
+async def test_modify_default_protocols(
+    client: AsyncClient, auth_headers: dict, hcp_mock: respx.Router
+):
+    hcp_mock.post(f"{NS_PATH}/protocols").mock(return_value=httpx.Response(200))
     resp = await client.post(
         f"{API_BASE}/protocols",
         headers=auth_headers,

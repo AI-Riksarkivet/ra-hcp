@@ -19,12 +19,13 @@ if [ -n "$PY_FILES" ]; then
   fi
 fi
 
-# Check Svelte files with prettier
+# Check Svelte files with prettier (strip frontend/ prefix for prettier cwd)
 SVELTE_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.svelte' || true)
 if [ -n "$SVELTE_FILES" ]; then
+  SVELTE_REL=$(echo "$SVELTE_FILES" | sed "s|^$FRONTEND_DIR/||")
   echo "Checking Svelte formatting..."
-  if ! (cd "$FRONTEND_DIR" && npx prettier --plugin prettier-plugin-svelte --check $SVELTE_FILES); then
-    echo "Run 'deno task fmt:svelte' in frontend/ to fix."
+  if ! (cd "$FRONTEND_DIR" && npx prettier --plugin prettier-plugin-svelte --check $SVELTE_REL); then
+    echo "Run 'make fmt' to fix."
     HAS_ERROR=1
   fi
 fi

@@ -32,7 +32,8 @@ Or via the root Makefile (also sets `BACKEND_URL`):
 make frontend-dev
 ```
 
-The dev server starts at `http://localhost:5173` and proxies API calls to the backend at `http://localhost:8000`.
+The dev server starts at `http://localhost:5173` and proxies API calls to the
+backend at `http://localhost:8000`.
 
 ### Build for production
 
@@ -48,15 +49,15 @@ deno task preview
 
 ## Available Tasks
 
-| Task              | Command               | Description                       |
-|-------------------|-----------------------|-----------------------------------|
-| `dev`             | `deno task dev`       | Start Vite dev server             |
-| `build`           | `deno task build`     | Build for production              |
-| `preview`         | `deno task preview`   | Preview production build          |
-| `sync`            | `deno task sync`      | SvelteKit sync (codegen)          |
-| `check`           | `deno task check`     | TypeScript type checking          |
-| `fmt`             | `deno task fmt`       | Format code (Deno fmt)            |
-| `lint`            | `deno task lint`      | Lint code (Deno lint)             |
+| Task      | Command             | Description              |
+| --------- | ------------------- | ------------------------ |
+| `dev`     | `deno task dev`     | Start Vite dev server    |
+| `build`   | `deno task build`   | Build for production     |
+| `preview` | `deno task preview` | Preview production build |
+| `sync`    | `deno task sync`    | SvelteKit sync (codegen) |
+| `check`   | `deno task check`   | TypeScript type checking |
+| `fmt`     | `deno task fmt`     | Format code (Deno fmt)   |
+| `lint`    | `deno task lint`    | Lint code (Deno lint)    |
 
 ## Project Structure
 
