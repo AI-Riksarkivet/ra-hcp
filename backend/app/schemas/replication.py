@@ -90,6 +90,8 @@ class LinkUpdate(BaseModel):
 class LinkResponse(BaseModel):
     """Full replication link response."""
 
+    model_config = {"extra": "allow"}
+
     name: Optional[str] = None
     type: Optional[str] = None
     connection: Optional[Connection] = None
@@ -108,6 +110,8 @@ class LinkResponse(BaseModel):
 class LinkList(BaseModel):
     """List of link names."""
 
+    model_config = {"extra": "allow"}
+
     name: Optional[List[str]] = None
 
 
@@ -116,6 +120,8 @@ class LinkList(BaseModel):
 
 class LinkContent(BaseModel):
     """Content included in a replication link."""
+
+    model_config = {"extra": "allow"}
 
     tenants: Optional[List[str]] = None
     defaultNamespaceDirectories: Optional[List[str]] = None
@@ -154,6 +160,8 @@ class ScheduleSide(BaseModel):
 class Schedule(BaseModel):
     """Replication link schedule."""
 
+    model_config = {"extra": "allow"}
+
     local: Optional[ScheduleSide] = None
     remote: Optional[ScheduleSide] = None
 
@@ -173,6 +181,8 @@ class Certificate(BaseModel):
 class CertificateList(BaseModel):
     """List of replication certificates."""
 
+    model_config = {"extra": "allow"}
+
     certificate: Optional[List[Certificate]] = None
 
 
@@ -181,6 +191,8 @@ class CertificateList(BaseModel):
 
 class ReplicationService(BaseModel):
     """Replication service settings."""
+
+    model_config = {"extra": "allow"}
 
     allowTenantsToMonitorNamespaces: Optional[bool] = None
     enableDNSFailover: Optional[bool] = None

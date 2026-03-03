@@ -25,6 +25,8 @@ class RetentionClassUpdate(BaseModel):
 class RetentionClassResponse(BaseModel):
     """Full retention class response."""
 
+    model_config = {"extra": "allow"}
+
     name: Optional[str] = None
     value: Optional[str] = None
     description: Optional[str] = None
@@ -33,5 +35,7 @@ class RetentionClassResponse(BaseModel):
 
 class RetentionClassList(BaseModel):
     """List of retention class names."""
+
+    model_config = {"extra": "allow"}
 
     name: Optional[List[str]] = None

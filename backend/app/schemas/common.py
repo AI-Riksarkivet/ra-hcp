@@ -203,11 +203,15 @@ class NamespacePermission(BaseModel):
 class DataAccessPermissions(BaseModel):
     """Data access permissions across namespaces."""
 
+    model_config = {"extra": "allow"}
+
     namespacePermission: Optional[List[NamespacePermission]] = None
 
 
 class VersioningSettings(BaseModel):
     """Versioning configuration for a namespace."""
+
+    model_config = {"extra": "allow"}
 
     enabled: Optional[bool] = None
     prune: Optional[bool] = None

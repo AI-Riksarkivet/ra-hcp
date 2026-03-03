@@ -11,7 +11,7 @@
 <Sidebar.Provider>
 	<AppSidebar />
 	<Sidebar.Inset>
-		<AppHeader username={data.username} />
+		<AppHeader username={data.username} tenant={data.tenant} />
 		<div class="flex-1 overflow-y-auto p-6">
 			{@render children()}
 		</div>

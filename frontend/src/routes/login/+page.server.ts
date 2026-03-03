@@ -11,6 +11,7 @@ export const actions = {
   default: async ({ request, cookies }) => {
     const formData = await request.formData();
     const data = {
+      tenant: (formData.get("tenant") as string) || undefined,
       username: formData.get("username") as string,
       password: formData.get("password") as string,
     };
@@ -27,6 +28,9 @@ export const actions = {
         username: result.data.username,
         password: result.data.password,
       });
+      if (result.data.tenant) {
+        body.set("tenant", result.data.tenant);
+      }
 
       const response = await fetch(`${BACKEND_URL}/api/v1/auth/token`, {
         method: "POST",

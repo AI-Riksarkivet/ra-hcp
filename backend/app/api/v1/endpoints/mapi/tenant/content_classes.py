@@ -6,14 +6,19 @@ from fastapi import APIRouter, Depends, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.schemas.content_class import ContentClassCreate, ContentClassUpdate
+from app.schemas.content_class import (
+    ContentClassCreate,
+    ContentClassUpdate,
+    ContentClassList,
+    ContentClassResponse,
+)
 
 router = APIRouter(tags=["Tenant Admin: Content Classes"])
 
 PREFIX = "/tenants/{tenant_name}/contentClasses"
 
 
-@router.get(PREFIX)
+@router.get(PREFIX, response_model=ContentClassList)
 async def list_content_classes(
     tenant_name: str,
     verbose: bool = False,
@@ -39,7 +44,7 @@ async def create_content_class(
     return Response(status_code=resp.status_code)
 
 
-@router.get(PREFIX + "/{content_class_name}")
+@router.get(PREFIX + "/{content_class_name}", response_model=ContentClassResponse)
 async def get_content_class(
     tenant_name: str,
     content_class_name: str,

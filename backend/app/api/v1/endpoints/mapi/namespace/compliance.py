@@ -7,7 +7,12 @@ from fastapi import APIRouter, Depends, Response
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.namespace import ComplianceSettings
-from app.schemas.retention_class import RetentionClassCreate, RetentionClassUpdate
+from app.schemas.retention_class import (
+    RetentionClassCreate,
+    RetentionClassList,
+    RetentionClassResponse,
+    RetentionClassUpdate,
+)
 
 router = APIRouter(tags=["Namespace: Compliance"])
 
@@ -18,7 +23,7 @@ RC_PREFIX = "/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses
 # ── Compliance settings ──────────────────────────────────────────────
 
 
-@router.get(PREFIX + "/{ns_name}/complianceSettings")
+@router.get(PREFIX + "/{ns_name}/complianceSettings", response_model=ComplianceSettings)
 async def get_compliance(
     tenant_name: str,
     ns_name: str,
@@ -47,7 +52,7 @@ async def modify_compliance(
 # ── Retention classes ────────────────────────────────────────────────
 
 
-@router.get(RC_PREFIX)
+@router.get(RC_PREFIX, response_model=RetentionClassList)
 async def list_retention_classes(
     tenant_name: str,
     namespace_name: str,
@@ -75,7 +80,9 @@ async def create_retention_class(
     return Response(status_code=resp.status_code)
 
 
-@router.get(RC_PREFIX + "/{retention_class_name}")
+@router.get(
+    RC_PREFIX + "/{retention_class_name}", response_model=RetentionClassResponse
+)
 async def get_retention_class(
     tenant_name: str,
     namespace_name: str,

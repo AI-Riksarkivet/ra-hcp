@@ -18,5 +18,6 @@ export const load: LayoutServerLoad = ({ locals }) => {
   }
   const claims = parseJwtPayload(locals.token);
   const username = (claims.sub as string) ?? "User";
-  return { authenticated: true, username };
+  const tenant = claims.tenant as string | undefined;
+  return { authenticated: true, username, tenant };
 };

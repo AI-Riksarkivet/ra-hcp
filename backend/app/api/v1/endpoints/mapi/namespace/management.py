@@ -127,7 +127,7 @@ async def delete_namespace(
 # ── Versioning settings ─────────────────────────────────────────────
 
 
-@router.get(PREFIX + "/{ns_name}/versioningSettings")
+@router.get(PREFIX + "/{ns_name}/versioningSettings", response_model=VersioningSettings)
 async def get_versioning(
     tenant_name: str,
     ns_name: str,

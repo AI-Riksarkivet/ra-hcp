@@ -7,4 +7,6 @@ from .common import DownstreamDNSMode
 
 
 class NetworkSettings(BaseModel):
+    model_config = {"extra": "allow"}
+
     downstreamDNSMode: Optional[DownstreamDNSMode] = None

@@ -37,6 +37,25 @@ class CachedS3Service(S3Service):
         self._cache = cache
         self._cs = cache_settings
 
+    @classmethod
+    def with_credentials(
+        cls,
+        settings: S3Settings,
+        access_key: str,
+        secret_key: str,
+        endpoint_url: str | None = None,
+        *,
+        cache: CacheService,
+        cache_settings: CacheSettings,
+    ) -> "CachedS3Service":
+        """Create a CachedS3Service with explicit credentials + cache."""
+        instance: CachedS3Service = super().with_credentials(  # type: ignore[assignment]
+            settings, access_key, secret_key, endpoint_url=endpoint_url
+        )
+        instance._cache = cache
+        instance._cs = cache_settings
+        return instance
+
     def _key(self, *parts: str) -> str:
         return "s3:" + ":".join(parts)
 

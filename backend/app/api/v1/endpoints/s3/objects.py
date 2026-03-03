@@ -24,7 +24,7 @@ from app.services.s3_service import S3Service
 router = APIRouter(prefix="/buckets/{bucket}/objects", tags=["S3 Objects"])
 
 
-@router.get("")
+@router.get("", response_model=ListObjectsResponse)
 async def list_objects(
     bucket: str,
     prefix: Optional[str] = Query(None),

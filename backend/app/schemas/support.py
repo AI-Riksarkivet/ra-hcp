@@ -6,6 +6,8 @@ from typing import Optional
 
 
 class SupportAccessCredentials(BaseModel):
+    model_config = {"extra": "allow"}
+
     applyTimeStamp: Optional[int] = None
     createTimeStamp: Optional[int] = None
     type: Optional[str] = None

@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.schemas.group_account import GroupAccountCreate, GroupAccountUpdate
+from app.schemas.group_account import (
+    GroupAccountCreate,
+    GroupAccountUpdate,
+    GroupAccountList,
+    GroupAccountResponse,
+)
 from app.schemas.common import DataAccessPermissions
 
 router = APIRouter(tags=["Tenant Admin: Identity"])
@@ -14,7 +19,7 @@ router = APIRouter(tags=["Tenant Admin: Identity"])
 T_PREFIX = "/tenants/{tenant_name}/groupAccounts"
 
 
-@router.get(T_PREFIX)
+@router.get(T_PREFIX, response_model=GroupAccountList)
 async def list_group_accounts(
     tenant_name: str,
     verbose: bool = False,
@@ -41,7 +46,7 @@ async def create_group_account(
     return {"status": "created"}
 
 
-@router.get(T_PREFIX + "/{group_name}")
+@router.get(T_PREFIX + "/{group_name}", response_model=GroupAccountResponse)
 async def get_group_account(
     tenant_name: str,
     group_name: str,
@@ -93,7 +98,10 @@ async def delete_group_account(
 # ── Data access permissions ──────────────────────────────────────────
 
 
-@router.get(T_PREFIX + "/{group_name}/dataAccessPermissions")
+@router.get(
+    T_PREFIX + "/{group_name}/dataAccessPermissions",
+    response_model=DataAccessPermissions,
+)
 async def get_group_data_perms(
     tenant_name: str,
     group_name: str,

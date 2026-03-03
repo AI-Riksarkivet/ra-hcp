@@ -10,6 +10,8 @@ from app.schemas.user_account import (
     UserAccountCreate,
     UserAccountUpdate,
     UpdatePasswordRequest,
+    UserAccountList,
+    UserAccountResponse,
 )
 from app.schemas.common import ListQueryParams, DataAccessPermissions
 
@@ -18,7 +20,7 @@ router = APIRouter(tags=["Tenant Admin: Identity"])
 T_PREFIX = "/tenants/{tenant_name}/userAccounts"
 
 
-@router.get(T_PREFIX)
+@router.get(T_PREFIX, response_model=UserAccountList)
 async def list_user_accounts(
     tenant_name: str,
     qp: ListQueryParams = Depends(),
@@ -73,7 +75,7 @@ async def reset_passwords(
     return {"status": "passwords_reset"}
 
 
-@router.get(T_PREFIX + "/{username}")
+@router.get(T_PREFIX + "/{username}", response_model=UserAccountResponse)
 async def get_user_account(
     tenant_name: str,
     username: str,
@@ -157,7 +159,9 @@ async def change_password(
 # ── Data access permissions ──────────────────────────────────────────
 
 
-@router.get(T_PREFIX + "/{username}/dataAccessPermissions")
+@router.get(
+    T_PREFIX + "/{username}/dataAccessPermissions", response_model=DataAccessPermissions
+)
 async def get_user_data_perms(
     tenant_name: str,
     username: str,

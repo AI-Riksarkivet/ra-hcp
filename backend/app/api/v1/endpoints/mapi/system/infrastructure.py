@@ -6,7 +6,9 @@ from fastapi import APIRouter, Depends, Response, UploadFile, File
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
+from app.schemas.license import License, LicenseList
 from app.schemas.network import NetworkSettings
+from app.schemas.statistics import NodeStatistics, ServiceStatistics
 
 router = APIRouter(tags=["System Admin: Infrastructure"])
 
@@ -14,7 +16,7 @@ router = APIRouter(tags=["System Admin: Infrastructure"])
 # ── Network ──────────────────────────────────────────────────────────
 
 
-@router.get("/network")
+@router.get("/network", response_model=NetworkSettings)
 async def get_network_settings(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
@@ -34,7 +36,7 @@ async def modify_network_settings(
 # ── Licenses ─────────────────────────────────────────────────────────
 
 
-@router.get("/storage/licenses")
+@router.get("/storage/licenses", response_model=LicenseList)
 async def list_licenses(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
@@ -54,7 +56,7 @@ async def upload_license(
     return Response(status_code=resp.status_code)
 
 
-@router.get("/storage/licenses/{serial_number}")
+@router.get("/storage/licenses/{serial_number}", response_model=License)
 async def get_license(
     serial_number: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -65,7 +67,7 @@ async def get_license(
 # ── Statistics ───────────────────────────────────────────────────────
 
 
-@router.get("/nodes/statistics")
+@router.get("/nodes/statistics", response_model=NodeStatistics)
 async def get_node_statistics(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
@@ -75,7 +77,7 @@ async def get_node_statistics(
     )
 
 
-@router.get("/services/statistics")
+@router.get("/services/statistics", response_model=ServiceStatistics)
 async def get_service_statistics(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),

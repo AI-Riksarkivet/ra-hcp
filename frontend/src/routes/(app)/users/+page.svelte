@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import DataTable from '$lib/components/ui/DataTable.svelte';
 	import type { ColumnDef, CellContext } from '@tanstack/table-core';
@@ -7,6 +8,8 @@
 
 	type User = { username: string; fullName?: string; enabled?: boolean; roles?: string[] };
 	type Group = { name: string; description?: string };
+
+	let tenant = $derived(page.data.tenant as string | undefined);
 
 	const userColumns: ColumnDef<User, any>[] = [
 		{ accessorKey: 'username', header: 'Username' },
@@ -43,33 +46,39 @@
 		<p class="mt-1 text-sm text-muted-foreground">Manage user accounts and groups</p>
 	</div>
 
-	<div>
-		{#await get_users()}
-			<div class="mb-4 flex items-center gap-3">
-				<h3 class="text-lg font-semibold">User Accounts</h3>
-			</div>
-			<TableSkeleton rows={5} columns={4} />
-		{:then users}
-			<div class="mb-4 flex items-center gap-3">
-				<h3 class="text-lg font-semibold">User Accounts</h3>
-				<Badge variant="secondary">{users.length}</Badge>
-			</div>
-			<DataTable columns={userColumns} data={users} emptyMessage="No user accounts found" />
-		{/await}
-	</div>
+	{#if tenant}
+		<div>
+			{#await get_users({ tenant })}
+				<div class="mb-4 flex items-center gap-3">
+					<h3 class="text-lg font-semibold">User Accounts</h3>
+				</div>
+				<TableSkeleton rows={5} columns={4} />
+			{:then users}
+				<div class="mb-4 flex items-center gap-3">
+					<h3 class="text-lg font-semibold">User Accounts</h3>
+					<Badge variant="secondary">{users.length}</Badge>
+				</div>
+				<DataTable columns={userColumns} data={users} emptyMessage="No user accounts found" />
+			{/await}
+		</div>
 
-	<div>
-		{#await get_groups()}
-			<div class="mb-4 flex items-center gap-3">
-				<h3 class="text-lg font-semibold">Groups</h3>
-			</div>
-			<TableSkeleton rows={3} columns={2} />
-		{:then groups}
-			<div class="mb-4 flex items-center gap-3">
-				<h3 class="text-lg font-semibold">Groups</h3>
-				<Badge variant="secondary">{groups.length}</Badge>
-			</div>
-			<DataTable columns={groupColumns} data={groups} emptyMessage="No groups found" />
-		{/await}
-	</div>
+		<div>
+			{#await get_groups({ tenant })}
+				<div class="mb-4 flex items-center gap-3">
+					<h3 class="text-lg font-semibold">Groups</h3>
+				</div>
+				<TableSkeleton rows={3} columns={2} />
+			{:then groups}
+				<div class="mb-4 flex items-center gap-3">
+					<h3 class="text-lg font-semibold">Groups</h3>
+					<Badge variant="secondary">{groups.length}</Badge>
+				</div>
+				<DataTable columns={groupColumns} data={groups} emptyMessage="No groups found" />
+			{/await}
+		</div>
+	{:else}
+		<div class="rounded-lg border border-dashed p-8 text-center">
+			<p class="text-muted-foreground">Log in with a tenant to manage users and groups.</p>
+		</div>
+	{/if}
 </div>

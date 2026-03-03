@@ -8,8 +8,13 @@ from fastapi import APIRouter, Depends, Query, Response, UploadFile, File
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.schemas.health_check import HealthCheckPrepare, HealthCheckDownload
-from app.schemas.logs import LogPrepare, LogDownload
+from app.schemas.health_check import (
+    HealthCheckDownloadStatus,
+    HealthCheckPrepare,
+    HealthCheckDownload,
+)
+from app.schemas.logs import LogDownloadStatus, LogPrepare, LogDownload
+from app.schemas.support import SupportAccessCredentials
 
 router = APIRouter(tags=["System Admin: Operations"])
 
@@ -17,7 +22,7 @@ router = APIRouter(tags=["System Admin: Operations"])
 # ── Health Check ─────────────────────────────────────────────────────
 
 
-@router.get("/healthCheckReport")
+@router.get("/healthCheckReport", response_model=HealthCheckDownloadStatus)
 async def get_health_check_status(
     hcp: MapiService = Depends(get_mapi_service),
 ):
@@ -57,7 +62,7 @@ async def cancel_health_check(
 # ── Logs ─────────────────────────────────────────────────────────────
 
 
-@router.get("/logs")
+@router.get("/logs", response_model=LogDownloadStatus)
 async def get_log_status(
     hcp: MapiService = Depends(get_mapi_service),
 ):
@@ -106,7 +111,7 @@ async def download_logs(
 # ── Support ──────────────────────────────────────────────────────────
 
 
-@router.get("/supportaccesscredentials")
+@router.get("/supportaccesscredentials", response_model=SupportAccessCredentials)
 async def get_support_credentials(
     hcp: MapiService = Depends(get_mapi_service),
 ):

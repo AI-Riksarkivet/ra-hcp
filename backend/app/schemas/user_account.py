@@ -33,6 +33,8 @@ class UserAccountUpdate(BaseModel):
 class UserAccountResponse(BaseModel):
     """Full user account response."""
 
+    model_config = {"extra": "allow"}
+
     username: Optional[str] = None
     fullName: Optional[str] = None
     description: Optional[str] = None
@@ -47,6 +49,8 @@ class UserAccountResponse(BaseModel):
 
 class UserAccountList(BaseModel):
     """List of usernames."""
+
+    model_config = {"extra": "allow"}
 
     username: Optional[List[str]] = None
 

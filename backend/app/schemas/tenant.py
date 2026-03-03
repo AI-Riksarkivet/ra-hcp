@@ -53,6 +53,8 @@ class TenantUpdate(BaseModel):
 class ConsoleSecurity(BaseModel):
     """Tenant Management Console configuration."""
 
+    model_config = {"extra": "allow"}
+
     automaticUserAccountUnlockSetting: Optional[bool] = None
     automaticUserAccoutUnlockDuration: Optional[int] = None
     blockCommonPassword: Optional[bool] = None
@@ -80,6 +82,8 @@ class ConsoleSecurity(BaseModel):
 
 class ContactInfo(BaseModel):
     """Tenant contact information."""
+
+    model_config = {"extra": "allow"}
 
     firstName: Optional[str] = None
     lastName: Optional[str] = None
@@ -119,6 +123,8 @@ class Recipient(BaseModel):
 class EmailNotification(BaseModel):
     """Email notification configuration for a tenant."""
 
+    model_config = {"extra": "allow"}
+
     enabled: Optional[bool] = None
     emailTemplate: Optional[EmailTemplate] = None
     recipients: Optional[List[Recipient]] = None
@@ -130,6 +136,8 @@ class EmailNotification(BaseModel):
 class SearchSecurity(BaseModel):
     """Search Console configuration for a tenant."""
 
+    model_config = {"extra": "allow"}
+
     ipSettings: Optional[IpSettings] = None
 
 
@@ -138,6 +146,8 @@ class SearchSecurity(BaseModel):
 
 class AvailableServicePlan(BaseModel):
     """Service plan available for tenant namespace assignment."""
+
+    model_config = {"extra": "allow"}
 
     name: Optional[str] = None
     description: Optional[str] = None
@@ -174,5 +184,7 @@ class ChargebackData(BaseModel):
 
 class ChargebackReport(BaseModel):
     """Chargeback report containing one or more data sets."""
+
+    model_config = {"extra": "allow"}
 
     chargebackData: Optional[List[ChargebackData]] = None

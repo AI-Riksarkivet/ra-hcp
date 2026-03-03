@@ -1,16 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { LayoutDashboard, Database, Building2, Users, Server } from 'lucide-svelte';
+	import { LayoutDashboard, Database, Users, Server } from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
 	const overviewItems = [
 		{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 	] as const;
 
-	const systemItems = [
-		{ href: '/tenants', label: 'Tenants', icon: Building2 },
-		{ href: '/users', label: 'Users & Groups', icon: Users },
-	] as const;
+	const managementItems = [{ href: '/users', label: 'Users & Groups', icon: Users }] as const;
 
 	const storageItems = [{ href: '/buckets', label: 'Buckets', icon: Database }] as const;
 </script>
@@ -52,10 +49,10 @@
 		</Sidebar.Group>
 
 		<Sidebar.Group>
-			<Sidebar.GroupLabel>System</Sidebar.GroupLabel>
+			<Sidebar.GroupLabel>Management</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
-					{#each systemItems as item}
+					{#each managementItems as item}
 						{@const active = $page.url.pathname.startsWith(item.href)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>

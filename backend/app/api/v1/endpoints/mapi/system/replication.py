@@ -8,7 +8,12 @@ from fastapi import APIRouter, Depends, Query, Response, UploadFile, File
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.replication import (
+    Certificate,
+    CertificateList,
+    LinkContent,
     LinkCreate,
+    LinkList,
+    LinkResponse,
     LinkUpdate,
     Schedule,
     ReplicationService,
@@ -20,7 +25,7 @@ router = APIRouter(tags=["System Admin: Replication"])
 # ── Replication Service ──────────────────────────────────────────────
 
 
-@router.get("/services/replication")
+@router.get("/services/replication", response_model=ReplicationService)
 async def get_replication_service(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
@@ -51,7 +56,7 @@ async def modify_replication_service(
 # ── Certificates ─────────────────────────────────────────────────────
 
 
-@router.get("/services/replication/certificates")
+@router.get("/services/replication/certificates", response_model=CertificateList)
 async def list_certificates(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
@@ -72,7 +77,9 @@ async def upload_certificate(
     return Response(status_code=resp.status_code)
 
 
-@router.get("/services/replication/certificates/{certificate_id}")
+@router.get(
+    "/services/replication/certificates/{certificate_id}", response_model=Certificate
+)
 async def get_certificate(
     certificate_id: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -104,7 +111,7 @@ async def download_server_certificate(
 LINKS = "/services/replication/links"
 
 
-@router.get(LINKS)
+@router.get(LINKS, response_model=LinkList)
 async def list_links(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
@@ -121,7 +128,7 @@ async def create_link(
     return Response(status_code=resp.status_code)
 
 
-@router.get(LINKS + "/{link_name}")
+@router.get(LINKS + "/{link_name}", response_model=LinkResponse)
 async def get_link(
     link_name: str,
     verbose: bool = False,
@@ -184,7 +191,7 @@ async def delete_link(
 # ── Link Content ─────────────────────────────────────────────────────
 
 
-@router.get(LINKS + "/{link_name}/content")
+@router.get(LINKS + "/{link_name}/content", response_model=LinkContent)
 async def get_link_content(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -403,7 +410,7 @@ async def get_remote_candidate_chained(
 # ── Link Schedule ────────────────────────────────────────────────────
 
 
-@router.get(LINKS + "/{link_name}/schedule")
+@router.get(LINKS + "/{link_name}/schedule", response_model=Schedule)
 async def get_link_schedule(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),

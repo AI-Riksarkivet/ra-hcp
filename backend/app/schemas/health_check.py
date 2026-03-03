@@ -18,6 +18,8 @@ class HealthCheckDownload(BaseModel):
 
 
 class HealthCheckDownloadStatus(BaseModel):
+    model_config = {"extra": "allow"}
+
     readyForStreaming: Optional[bool] = None
     streamingInProgress: Optional[bool] = None
     error: Optional[bool] = None

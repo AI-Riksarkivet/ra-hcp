@@ -7,13 +7,15 @@ from fastapi import APIRouter, Depends
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.common import ChargebackParams
+from app.schemas.statistics import NamespaceStatistics
+from app.schemas.tenant import ChargebackReport
 
 router = APIRouter(tags=["Namespace: Statistics"])
 
 PREFIX = "/tenants/{tenant_name}/namespaces"
 
 
-@router.get(PREFIX + "/{ns_name}/statistics")
+@router.get(PREFIX + "/{ns_name}/statistics", response_model=NamespaceStatistics)
 async def get_ns_statistics(
     tenant_name: str,
     ns_name: str,
@@ -24,7 +26,7 @@ async def get_ns_statistics(
     )
 
 
-@router.get(PREFIX + "/{ns_name}/chargebackReport")
+@router.get(PREFIX + "/{ns_name}/chargebackReport", response_model=ChargebackReport)
 async def get_ns_chargeback(
     tenant_name: str,
     ns_name: str,

@@ -18,6 +18,8 @@ class LogDownload(BaseModel):
 
 
 class LogDownloadStatus(BaseModel):
+    model_config = {"extra": "allow"}
+
     readyForStreaming: Optional[bool] = None
     streamingInProgress: Optional[bool] = None
     started: Optional[bool] = None

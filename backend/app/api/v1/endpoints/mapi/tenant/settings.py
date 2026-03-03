@@ -12,6 +12,7 @@ from app.schemas.tenant import (
     ContactInfo,
     EmailNotification,
     SearchSecurity,
+    AvailableServicePlan,
 )
 from app.schemas.namespace import NamespaceDefaults, CorsConfiguration
 
@@ -63,7 +64,7 @@ async def modify_tenant(
 # ── Console security ─────────────────────────────────────────────────
 
 
-@router.get("/{tenant_name}/consoleSecurity")
+@router.get("/{tenant_name}/consoleSecurity", response_model=ConsoleSecurity)
 async def get_console_security(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -84,7 +85,7 @@ async def modify_console_security(
 # ── Contact info ─────────────────────────────────────────────────────
 
 
-@router.get("/{tenant_name}/contactInfo")
+@router.get("/{tenant_name}/contactInfo", response_model=ContactInfo)
 async def get_contact_info(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -105,7 +106,7 @@ async def modify_contact_info(
 # ── Email notification ───────────────────────────────────────────────
 
 
-@router.get("/{tenant_name}/emailNotification")
+@router.get("/{tenant_name}/emailNotification", response_model=EmailNotification)
 async def get_email_notification(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -126,7 +127,7 @@ async def modify_email_notification(
 # ── Namespace defaults ───────────────────────────────────────────────
 
 
-@router.get("/{tenant_name}/namespaceDefaults")
+@router.get("/{tenant_name}/namespaceDefaults", response_model=NamespaceDefaults)
 async def get_namespace_defaults(
     tenant_name: str,
     verbose: bool = False,
@@ -151,7 +152,7 @@ async def modify_namespace_defaults(
 # ── Search security ──────────────────────────────────────────────────
 
 
-@router.get("/{tenant_name}/searchSecurity")
+@router.get("/{tenant_name}/searchSecurity", response_model=SearchSecurity)
 async def get_search_security(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -201,7 +202,10 @@ async def list_available_service_plans(
     return await hcp.fetch_json(f"/tenants/{tenant_name}/availableServicePlans")
 
 
-@router.get("/{tenant_name}/availableServicePlans/{plan_name}")
+@router.get(
+    "/{tenant_name}/availableServicePlans/{plan_name}",
+    response_model=AvailableServicePlan,
+)
 async def get_available_service_plan(
     tenant_name: str,
     plan_name: str,
@@ -215,7 +219,7 @@ async def get_available_service_plan(
 # ── Tenant CORS ──────────────────────────────────────────────────────
 
 
-@router.get("/{tenant_name}/cors")
+@router.get("/{tenant_name}/cors", response_model=CorsConfiguration)
 async def get_tenant_cors(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),

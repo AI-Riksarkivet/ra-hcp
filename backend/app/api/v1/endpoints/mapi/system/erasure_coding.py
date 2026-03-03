@@ -7,7 +7,12 @@ from fastapi import APIRouter, Depends, Query, Response
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
-from app.schemas.erasure_coding import ECTopologyCreate
+from app.schemas.erasure_coding import (
+    ECTopologyCreate,
+    ECTopologyList,
+    ECTopologyResponse,
+    TenantCandidateList,
+)
 
 router = APIRouter(tags=["System Admin: Erasure Coding"])
 
@@ -18,7 +23,7 @@ TOPOS = f"{EC}/ecTopologies"
 # ── EC Topologies ────────────────────────────────────────────────────
 
 
-@router.get(TOPOS)
+@router.get(TOPOS, response_model=ECTopologyList)
 async def list_ec_topologies(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
@@ -35,7 +40,7 @@ async def create_ec_topology(
     return Response(status_code=resp.status_code)
 
 
-@router.get(TOPOS + "/{topology_name}")
+@router.get(TOPOS + "/{topology_name}", response_model=ECTopologyResponse)
 async def get_ec_topology(
     topology_name: str,
     verbose: bool = False,
@@ -84,7 +89,9 @@ async def delete_ec_topology(
 # ── EC Topology – Tenant Candidates ─────────────────────────────────
 
 
-@router.get(TOPOS + "/{topology_name}/tenantCandidates")
+@router.get(
+    TOPOS + "/{topology_name}/tenantCandidates", response_model=TenantCandidateList
+)
 async def get_ec_tenant_candidates(
     topology_name: str,
     verbose: bool = False,

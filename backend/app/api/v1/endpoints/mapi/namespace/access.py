@@ -156,7 +156,10 @@ async def modify_smtp_protocol(
 # ── Replication collision settings ───────────────────────────────────
 
 
-@router.get(PREFIX + "/{ns_name}/replicationCollisionSettings")
+@router.get(
+    PREFIX + "/{ns_name}/replicationCollisionSettings",
+    response_model=ReplicationCollisionSettings,
+)
 async def get_replication_collision(
     tenant_name: str,
     ns_name: str,
@@ -185,7 +188,7 @@ async def modify_replication_collision(
 # ── Namespace CORS ───────────────────────────────────────────────────
 
 
-@router.get(PREFIX + "/{ns_name}/cors")
+@router.get(PREFIX + "/{ns_name}/cors", response_model=CorsConfiguration)
 async def get_ns_cors(
     tenant_name: str,
     ns_name: str,

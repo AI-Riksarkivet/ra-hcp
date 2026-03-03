@@ -41,7 +41,7 @@
 				<Server class="h-7 w-7 text-primary" />
 			</div>
 			<h1 class="text-2xl font-bold">HCP Admin Console</h1>
-			<p class="mt-1 text-sm text-muted-foreground">Sign in to manage your HCP infrastructure</p>
+			<p class="mt-1 text-sm text-muted-foreground">Sign in to your HCP tenant</p>
 		</div>
 
 		{#if form?.error}
@@ -64,6 +64,10 @@
 			class="rounded-xl border bg-card p-6 shadow-sm"
 		>
 			<div class="space-y-4">
+				<div class="space-y-2">
+					<Label for="tenant">Tenant</Label>
+					<Input id="tenant" name="tenant" placeholder="Tenant name (optional)" />
+				</div>
 				<div class="space-y-2">
 					<Label for="username">Username</Label>
 					<Input id="username" name="username" placeholder="Enter your HCP username" required />

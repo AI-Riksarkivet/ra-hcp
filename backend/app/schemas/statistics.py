@@ -45,6 +45,8 @@ class NodeStats(BaseModel):
 
 
 class NodeStatistics(BaseModel):
+    model_config = {"extra": "allow"}
+
     requestTime: Optional[int] = None
     nodes: Optional[List[NodeStats]] = None
 
@@ -66,6 +68,8 @@ class ServiceInfo(BaseModel):
 
 
 class ServiceStatistics(BaseModel):
+    model_config = {"extra": "allow"}
+
     requestTime: Optional[int] = None
     services: Optional[List[ServiceInfo]] = None
     nodes: Optional[List[dict]] = None
@@ -73,6 +77,8 @@ class ServiceStatistics(BaseModel):
 
 class NamespaceStatistics(BaseModel):
     """Statistics for a namespace or tenant."""
+
+    model_config = {"extra": "allow"}
 
     customMetadataCount: Optional[int] = None
     customMetadataSize: Optional[int] = None

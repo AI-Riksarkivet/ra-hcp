@@ -7,11 +7,13 @@ from fastapi import APIRouter, Depends
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.common import ChargebackParams
+from app.schemas.statistics import NamespaceStatistics
+from app.schemas.tenant import ChargebackReport
 
 router = APIRouter(prefix="/tenants", tags=["Tenant Admin: Statistics"])
 
 
-@router.get("/{tenant_name}/chargebackReport")
+@router.get("/{tenant_name}/chargebackReport", response_model=ChargebackReport)
 async def get_tenant_chargeback(
     tenant_name: str,
     params: ChargebackParams = Depends(),
@@ -30,7 +32,7 @@ async def get_tenant_chargeback(
     )
 
 
-@router.get("/{tenant_name}/statistics")
+@router.get("/{tenant_name}/statistics", response_model=NamespaceStatistics)
 async def get_tenant_statistics(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),

@@ -33,6 +33,8 @@ class ContentClassUpdate(BaseModel):
 class ContentClassResponse(BaseModel):
     """Full content class response."""
 
+    model_config = {"extra": "allow"}
+
     name: Optional[str] = None
     contentProperties: Optional[List[ContentProperty]] = None
     namespaces: Optional[List[str]] = None
@@ -40,5 +42,7 @@ class ContentClassResponse(BaseModel):
 
 class ContentClassList(BaseModel):
     """List of content class names."""
+
+    model_config = {"extra": "allow"}
 
     name: Optional[List[str]] = None

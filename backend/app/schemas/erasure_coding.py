@@ -32,6 +32,8 @@ class ECTopologyCreate(BaseModel):
 class ECTopologyResponse(BaseModel):
     """Full erasure coding topology response."""
 
+    model_config = {"extra": "allow"}
+
     name: Optional[str] = None
     type: Optional[str] = None
     description: Optional[str] = None
@@ -52,6 +54,8 @@ class ECTopologyResponse(BaseModel):
 class ECTopologyList(BaseModel):
     """List of EC topology names."""
 
+    model_config = {"extra": "allow"}
+
     name: Optional[List[str]] = None
 
 
@@ -65,5 +69,7 @@ class TenantCandidate(BaseModel):
 
 class TenantCandidateList(BaseModel):
     """List of tenant candidates."""
+
+    model_config = {"extra": "allow"}
 
     tenantCandidate: Optional[List[TenantCandidate]] = None

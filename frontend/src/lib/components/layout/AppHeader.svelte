@@ -9,9 +9,10 @@
 
 	interface Props {
 		username: string;
+		tenant?: string;
 	}
 
-	let { username }: Props = $props();
+	let { username, tenant }: Props = $props();
 
 	let initials = $derived(
 		username
@@ -29,7 +30,13 @@
 	<div class="flex flex-1 items-center gap-2">
 		<Sidebar.Trigger />
 		<Separator orientation="vertical" class="mx-2 data-[orientation=vertical]:h-4" />
-		<h1 class="text-lg font-semibold">HCP Admin Console</h1>
+		<h1 class="text-lg font-semibold">
+			{#if tenant}
+				Tenant: {tenant}
+			{:else}
+				HCP Admin Console
+			{/if}
+		</h1>
 	</div>
 
 	<div class="flex items-center gap-2">

@@ -13,7 +13,10 @@ router = APIRouter(tags=["Namespace: Indexing"])
 PREFIX = "/tenants/{tenant_name}/namespaces"
 
 
-@router.get(PREFIX + "/{ns_name}/customMetadataIndexingSettings")
+@router.get(
+    PREFIX + "/{ns_name}/customMetadataIndexingSettings",
+    response_model=CustomMetadataIndexingSettings,
+)
 async def get_custom_metadata_indexing(
     tenant_name: str,
     ns_name: str,

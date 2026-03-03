@@ -100,6 +100,8 @@ class NamespaceUpdate(BaseModel):
 class ComplianceSettings(BaseModel):
     """Namespace compliance settings."""
 
+    model_config = {"extra": "allow"}
+
     retentionDefault: Optional[str] = None
     minimumRetentionAfterInitialUnspecified: Optional[str] = None
     shreddingDefault: Optional[bool] = None
@@ -113,6 +115,8 @@ class ComplianceSettings(BaseModel):
 class CustomMetadataIndexingSettings(BaseModel):
     """Namespace custom metadata indexing settings."""
 
+    model_config = {"extra": "allow"}
+
     contentClasses: Optional[List[str]] = None
     fullIndexingEnabled: Optional[bool] = None
     excludedAnnotations: Optional[str] = None
@@ -124,6 +128,8 @@ class CustomMetadataIndexingSettings(BaseModel):
 class ReplicationCollisionSettings(BaseModel):
     """Namespace replication collision handling settings."""
 
+    model_config = {"extra": "allow"}
+
     action: Optional[ReplicationCollisionAction] = None
     deleteDays: Optional[int] = None
     deleteEnabled: Optional[bool] = None
@@ -134,6 +140,8 @@ class ReplicationCollisionSettings(BaseModel):
 
 class HttpProtocol(BaseModel):
     """HTTP/REST/S3/WebDAV protocol settings for a namespace."""
+
+    model_config = {"extra": "allow"}
 
     httpsEnabled: Optional[bool] = None
     httpEnabled: Optional[bool] = None
@@ -153,6 +161,8 @@ class HttpProtocol(BaseModel):
 class CifsProtocol(BaseModel):
     """CIFS protocol settings for a namespace."""
 
+    model_config = {"extra": "allow"}
+
     enabled: Optional[bool] = None
     caseForcing: Optional[CaseForcing] = None
     caseSensitive: Optional[bool] = None
@@ -163,6 +173,8 @@ class CifsProtocol(BaseModel):
 class NfsProtocol(BaseModel):
     """NFS protocol settings for a namespace."""
 
+    model_config = {"extra": "allow"}
+
     enabled: Optional[bool] = None
     uid: Optional[int] = None
     gid: Optional[int] = None
@@ -171,6 +183,8 @@ class NfsProtocol(BaseModel):
 
 class SmtpProtocol(BaseModel):
     """SMTP protocol settings for a namespace."""
+
+    model_config = {"extra": "allow"}
 
     enabled: Optional[bool] = None
     emailFormat: Optional[EmailFormat] = None
@@ -193,6 +207,8 @@ class Protocols(BaseModel):
 class CorsConfiguration(BaseModel):
     """CORS rules configuration (raw XML string in CDATA)."""
 
+    model_config = {"extra": "allow"}
+
     cors: Optional[str] = None
 
 
@@ -201,6 +217,8 @@ class CorsConfiguration(BaseModel):
 
 class NamespaceDefaults(BaseModel):
     """Default settings for namespace creation for a tenant."""
+
+    model_config = {"extra": "allow"}
 
     description: Optional[str] = None
     hashScheme: Optional[HashScheme] = None

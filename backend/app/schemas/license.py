@@ -15,4 +15,6 @@ class License(BaseModel):
 
 
 class LicenseList(BaseModel):
+    model_config = {"extra": "allow"}
+
     license: Optional[List[License]] = None
