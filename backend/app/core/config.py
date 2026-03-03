@@ -88,3 +88,4 @@ class AuthSettings(BaseSettings):
 
     api_secret_key: str = "change-me-in-production"
     api_token_expire_minutes: int = 480  # 8 hours
+    cors_origins: str = ""  # Comma-separated origins, empty = allow all

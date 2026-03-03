@@ -4,16 +4,31 @@ from __future__ import annotations
 
 import logging
 import os
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.v1.router import api_router
+from app.core.config import AuthSettings
 from app.core.telemetry import setup_telemetry
 
 logger = logging.getLogger(__name__)
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Attach a unique request ID to every request/response."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
 
 
 @asynccontextmanager
@@ -56,102 +71,86 @@ OPENAPI_TAGS = [
         "name": "S3 Objects",
         "description": "Upload, download, copy, and delete objects within buckets.",
     },
-    # ── Tenant-level MAPI (your access) ──
+    # ── System Admin (requires HCP system admin) ──
     {
-        "name": "Tenant Settings",
+        "name": "System Admin: Tenants",
+        "description": "List and create tenants. "
+        "**Requires: system-level user account.**",
+    },
+    {
+        "name": "System Admin: Identity",
+        "description": "Manage system-level user and group accounts. "
+        "**Requires: system-level user account.**",
+    },
+    {
+        "name": "System Admin: Infrastructure",
+        "description": "View and manage network settings, licenses, and system statistics. "
+        "**Requires: system-level user account.**",
+    },
+    {
+        "name": "System Admin: Operations",
+        "description": "Run health checks, prepare and download logs, and manage support access. "
+        "**Requires: system-level user account.**",
+    },
+    {
+        "name": "System Admin: Replication",
+        "description": "Manage replication links, certificates, and schedules. "
+        "**Requires: system-level user account.**",
+    },
+    {
+        "name": "System Admin: Erasure Coding",
+        "description": "Manage erasure-coding topologies. "
+        "**Requires: system-level user account.**",
+    },
+    # ── Tenant Admin (requires tenant admin role) ──
+    {
+        "name": "Tenant Admin: Settings",
         "description": "View and modify tenant configuration: console security, contact info, "
         "email notifications, namespace defaults, search security, permissions, "
         "service plans, CORS. **Requires: tenant-level admin role.**",
     },
     {
-        "name": "Namespaces",
-        "description": "Create, list, and manage namespaces within your tenant. "
-        "Includes protocol configuration (HTTP/REST, NFS, CIFS, SMTP), "
-        "versioning, compliance, custom metadata indexing, permissions, CORS. "
-        "**Requires: tenant-level admin role.**",
+        "name": "Tenant Admin: Statistics",
+        "description": "View tenant statistics and chargeback reports. "
+        "**Requires: tenant-level monitor role.**",
     },
     {
-        "name": "User Accounts",
-        "description": "Manage tenant-level user accounts: create, modify, delete users, "
+        "name": "Tenant Admin: Identity",
+        "description": "Manage tenant-level user and group accounts: create, modify, delete, "
         "reset passwords, and assign per-bucket data access permissions. "
         "**Requires: tenant-level security role.**",
     },
     {
-        "name": "Group Accounts",
-        "description": "Manage tenant-level group accounts: create, modify, delete groups, "
-        "and assign per-bucket data access permissions. "
-        "**Requires: tenant-level security role.**",
-    },
-    {
-        "name": "Content Classes",
+        "name": "Tenant Admin: Content Classes",
         "description": "Manage content classes for your tenant. "
         "**Requires: tenant-level admin role.**",
     },
+    # ── Namespace (requires admin/compliance role within tenant) ──
     {
-        "name": "Retention Classes",
-        "description": "Manage retention classes per namespace. "
+        "name": "Namespace: Management",
+        "description": "Create, list, and manage namespaces and versioning settings. "
+        "**Requires: tenant-level admin role.**",
+    },
+    {
+        "name": "Namespace: Compliance",
+        "description": "Manage compliance settings and retention classes per namespace. "
         "**Requires: tenant-level compliance role.**",
     },
     {
-        "name": "Tenant Statistics",
-        "description": "View tenant and namespace statistics and chargeback reports. "
+        "name": "Namespace: Access",
+        "description": "Manage namespace permissions, protocol configuration (HTTP/REST, NFS, "
+        "CIFS, SMTP), CORS, and replication collision settings. "
+        "**Requires: tenant-level admin role.**",
+    },
+    {
+        "name": "Namespace: Indexing",
+        "description": "Manage custom metadata indexing settings. "
+        "**Requires: tenant-level admin role.**",
+    },
+    {
+        "name": "Namespace: Statistics",
+        "description": "View namespace statistics and chargeback reports. "
         "**Requires: tenant-level monitor role.**",
-    },
-    # ── System-level MAPI (requires system admin) ──
-    {
-        "name": "System Tenants",
-        "description": "List and create tenants. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "System User Accounts",
-        "description": "Manage system-level user accounts. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "System Group Accounts",
-        "description": "Manage system-level group accounts. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "Replication",
-        "description": "Manage replication links, certificates, and schedules. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "Erasure Coding",
-        "description": "Manage erasure-coding topologies. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "System Statistics",
-        "description": "View node and service statistics. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "Health Check",
-        "description": "Run and download system health check reports. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "Licenses",
-        "description": "View and upload storage licenses. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "Network",
-        "description": "View and modify network settings. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "Support",
-        "description": "Manage support access credentials. "
-        "**Requires: system-level user account.**",
-    },
-    {
-        "name": "Logs",
-        "description": "Prepare and download system logs. "
-        "**Requires: system-level user account.**",
     },
 ]
 
@@ -161,12 +160,10 @@ app = FastAPI(
         "S3 data-plane + MAPI admin for Hitachi Content Platform.\n\n"
         "## Access levels\n\n"
         "- **S3 Buckets / S3 Objects** — S3 data operations\n"
-        "- **Tenant \u2026** / **Namespaces** / **User Accounts** / **Group Accounts** / "
-        "**Content Classes** / **Retention Classes** — "
-        "tenant-level MAPI (usable with a tenant admin account)\n"
-        "- **System \u2026** / **Replication** / **Erasure Coding** / **Health Check** / "
-        "**Licenses** / **Network** / **Support** / **Logs** — "
-        "system-level MAPI only (requires HCP system admin)\n"
+        "- **System Admin: \u2026** — system-level MAPI (requires HCP system admin)\n"
+        "- **Tenant Admin: \u2026** — tenant-level MAPI (requires tenant admin role)\n"
+        "- **Namespace: \u2026** — namespace-level MAPI "
+        "(requires admin/compliance role within tenant)\n"
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -177,11 +174,21 @@ app = FastAPI(
 # ── Telemetry ─────────────────────────────────────────────────────────
 setup_telemetry(app)
 
-# ── CORS ───────────────────────────────────────────────────────────────
+# ── Middleware (outermost first) ──────────────────────────────────────
+
+# Request ID — outermost so every response gets an ID
+app.add_middleware(RequestIDMiddleware)  # type: ignore[arg-type]
+
+# GZip — compress responses > 500 bytes
+app.add_middleware(GZipMiddleware, minimum_size=500)  # type: ignore[arg-type]
+
+# CORS — use CORS_ORIGINS env var; empty = allow all (dev mode)
+_auth_settings = AuthSettings()
+_cors_origins = [o.strip() for o in _auth_settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,  # type: ignore[arg-type]
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins or ["*"],
+    allow_credentials=bool(_cors_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -190,10 +197,16 @@ app.add_middleware(
 # ── Global exception handler ──────────────────────────────────────────
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.exception(
+        "Unhandled exception on %s %s [request_id=%s]",
+        request.method,
+        request.url.path,
+        request_id,
+    )
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"},
+        content={"detail": "Internal server error", "request_id": request_id},
     )
 
 
@@ -204,4 +217,10 @@ app.include_router(api_router, prefix="/api/v1")
 # ── Health endpoint ───────────────────────────────────────────────────
 @app.get("/health", tags=["Health"])
 async def health():
-    return {"status": "ok"}
+    from app.api.dependencies import get_cache_service
+
+    cache = get_cache_service()
+    return {
+        "status": "ok",
+        "cache": "connected" if cache and cache.enabled else "disabled",
+    }
