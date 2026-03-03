@@ -1,47 +1,22 @@
 #!/usr/bin/env bash
-# Pre-commit: check formatting for staged files
+# Pre-commit: format and lint staged files via Makefile
 set -euo pipefail
 
-FRONTEND_DIR="frontend"
-HAS_ERROR=0
+export PATH="$HOME/.deno/bin:$PATH"
 
-# Check Python files with ruff
-PY_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.py' || true)
-if [ -n "$PY_FILES" ]; then
-  echo "Checking Python formatting..."
-  if ! uvx ruff format --check $PY_FILES; then
-    echo "Run 'uvx ruff format' to fix."
-    HAS_ERROR=1
-  fi
-  if ! uvx ruff check $PY_FILES; then
-    echo "Run 'uvx ruff check --fix' to fix."
-    HAS_ERROR=1
-  fi
-fi
+# Format all code (same as make fmt)
+make -C "$(git rev-parse --show-toplevel)" fmt 2>&1 | tail -3
 
-# Check Svelte files with prettier (strip frontend/ prefix for prettier cwd)
-SVELTE_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.svelte' || true)
-if [ -n "$SVELTE_FILES" ]; then
-  SVELTE_REL=$(echo "$SVELTE_FILES" | sed "s|^$FRONTEND_DIR/||")
-  echo "Checking Svelte formatting..."
-  if ! (cd "$FRONTEND_DIR" && npx prettier --plugin prettier-plugin-svelte --check $SVELTE_REL); then
-    echo "Run 'make fmt' to fix."
-    HAS_ERROR=1
-  fi
-fi
-
-# Check TS/JS files with deno fmt
-TSJS_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.js' || true)
-if [ -n "$TSJS_FILES" ]; then
-  echo "Checking TS/JS formatting..."
-  if ! ~/.deno/bin/deno fmt --check $TSJS_FILES; then
-    echo "Run 'deno fmt' to fix."
-    HAS_ERROR=1
-  fi
-fi
-
-if [ "$HAS_ERROR" -ne 0 ]; then
+# Lint all code (same as make lint)
+if ! make -C "$(git rev-parse --show-toplevel)" lint 2>&1; then
   echo ""
-  echo "Commit blocked: formatting issues found. Fix and re-stage."
+  echo "Commit blocked: lint errors found. Run 'make quality' to investigate."
   exit 1
+fi
+
+# Re-stage any files that were reformatted
+CHANGED=$(git diff --name-only -- '*.py' '*.ts' '*.js' '*.svelte')
+if [ -n "$CHANGED" ]; then
+  echo "$CHANGED" | xargs git add
+  echo "Auto-formatted and re-staged: $(echo "$CHANGED" | wc -l) file(s)"
 fi

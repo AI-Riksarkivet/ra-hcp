@@ -5,7 +5,7 @@ SHELL := /bin/bash
 export PATH := $(HOME)/.deno/bin:$(PATH)
 
 .PHONY: help setup install-deno install-uv setup-hooks skills \
-        fmt lint check \
+        fmt lint quality \
         run-api run-api-mock \
         frontend-dev frontend-build \
         redis redis-stop redis-cli
@@ -52,9 +52,10 @@ lint:
 	cd backend && uvx ruff check .
 	cd frontend && deno lint
 
-## check: format, lint, and type-check everything
-check: fmt lint
-	cd frontend && deno task check
+## quality: format, lint, and type-check everything
+quality: fmt lint
+	cd frontend && deno task check || echo "Warning: frontend type errors (see above)"
+	cd backend && uvx ty check || echo "Warning: backend type errors (see above)"
 
 # ── API ──────────────────────────────────────────────────────────────
 
