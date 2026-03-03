@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+
 import pytest
 import fakeredis
 import respx
@@ -36,7 +38,7 @@ def _cache_settings() -> CacheSettings:
 
 
 @pytest.fixture
-async def cache() -> CacheService:
+async def cache() -> AsyncGenerator[CacheService, None]:
     settings = _cache_settings()
     svc = CacheService(settings)
     svc._redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
@@ -47,7 +49,7 @@ async def cache() -> CacheService:
 
 
 @pytest.fixture
-async def mapi(cache: CacheService) -> CachedMapiService:
+async def mapi(cache: CacheService) -> AsyncGenerator[CachedMapiService, None]:
     svc = CachedMapiService(_mapi_settings(), cache, _cache_settings())
     yield svc
     await svc.close()

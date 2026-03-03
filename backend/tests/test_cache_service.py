@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+
 import pytest
 import fakeredis
 
@@ -14,7 +16,7 @@ def _settings(url: str = "redis://localhost") -> CacheSettings:
 
 
 @pytest.fixture
-async def cache() -> CacheService:
+async def cache() -> AsyncGenerator[CacheService, None]:
     """CacheService backed by fakeredis."""
     settings = _settings()
     svc = CacheService(settings)
@@ -52,6 +54,7 @@ async def test_set_with_datetime(cache: CacheService):
     data = {"ts": datetime(2024, 1, 1, 12, 0)}
     await cache.set("dt", data)
     result = await cache.get("dt")
+    assert result is not None
     assert result["ts"] == "2024-01-01 12:00:00"
 
 
@@ -110,6 +113,7 @@ async def test_disabled_when_no_url():
 async def test_ops_dont_raise_when_redis_broken(cache: CacheService):
     """If the Redis connection breaks mid-operation, ops return gracefully."""
     # Force-close the underlying connection
+    assert cache._redis is not None
     await cache._redis.aclose()
 
     # Async ops should not raise

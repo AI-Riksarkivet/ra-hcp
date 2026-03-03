@@ -47,7 +47,7 @@ class CacheService:
                 self._settings.redis_url,
                 decode_responses=True,
             )
-            await self._redis.ping()
+            await self._redis.ping()  # type: ignore[misc]
             self._sync_redis = sync_redis.from_url(
                 self._settings.redis_url,
                 decode_responses=True,
@@ -161,10 +161,9 @@ class CacheService:
             attributes={"cache.key": key},
         ) as span:
             try:
-                raw = self._sync_redis.get(self._key(key))
-                hit = raw is not None
-                span.set_attribute("cache.hit", hit)
-                if not hit:
+                raw: str | None = self._sync_redis.get(self._key(key))  # type: ignore[assignment]
+                span.set_attribute("cache.hit", raw is not None)
+                if raw is None:
                     return None
                 return json.loads(raw)
             except Exception:

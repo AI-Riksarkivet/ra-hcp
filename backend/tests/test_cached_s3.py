@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
@@ -33,7 +34,7 @@ def _cache_settings() -> CacheSettings:
 
 
 @pytest.fixture
-async def cache() -> CacheService:
+async def cache() -> AsyncGenerator[CacheService, None]:
     settings = _cache_settings()
     svc = CacheService(settings)
     svc._redis = fakeredis.aioredis.FakeRedis(decode_responses=True)

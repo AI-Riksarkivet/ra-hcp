@@ -8,6 +8,7 @@ end-to-end:
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from unittest.mock import MagicMock, patch
 
 import fakeredis
@@ -78,7 +79,9 @@ def auth_headers(auth_settings: AuthSettings) -> dict[str, str]:
 
 
 @pytest.fixture
-async def cache_service(cache_settings: CacheSettings) -> CacheService:
+async def cache_service(
+    cache_settings: CacheSettings,
+) -> AsyncGenerator[CacheService, None]:
     """CacheService backed by fakeredis — no real Redis needed."""
     svc = CacheService(cache_settings)
     svc._redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
@@ -123,7 +126,7 @@ async def cached_client(
     mock_s3_service: MagicMock,
     auth_settings: AuthSettings,
     hcp_mock,
-) -> AsyncClient:
+) -> AsyncGenerator[AsyncClient, None]:
     """Test client with CachedMapiService wired through DI.
 
     Unlike the default ``client`` fixture (which injects plain MapiService),

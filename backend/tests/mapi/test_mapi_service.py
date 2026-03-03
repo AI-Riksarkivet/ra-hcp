@@ -177,6 +177,7 @@ async def test_close_noop_when_already_closed(service: MapiService):
     # Trigger client creation
     respx.get(f"{HCP_BASE}/tenants").mock(return_value=httpx.Response(200))
     await service.get("/tenants")
+    assert service._client is not None
     await service._client.aclose()
     assert service._client.is_closed
 

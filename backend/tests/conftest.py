@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -134,7 +135,7 @@ async def client(
     mapi_settings: MapiSettings,
     auth_settings: AuthSettings,
     hcp_mock,
-) -> AsyncClient:
+) -> AsyncGenerator[AsyncClient, None]:
     """Async test client with mocked S3 and respx-backed MapiService.
 
     The hcp_mock fixture activates respx.mock so that:
