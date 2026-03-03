@@ -188,6 +188,69 @@ flowchart LR
 
 Redis required for sync operations (returns 503 if not configured).
 
+## How Cross-Tenant Routing Works
+
+The `.env` does **not** hardcode a specific tenant. It only sets the shared base domain:
+
+```
+HCP_DOMAIN=hcp.ra-dev.int
+```
+
+S3 endpoints are built **dynamically at runtime** from `tenant + HCP_DOMAIN`:
+
+```
+dev-ai tenant     → https://dev-ai.hcp.ra-dev.int
+other-team tenant → https://other-team.hcp.ra-dev.int
+```
+
+This happens in `app/core/tenant_routing.py`:
+```python
+def s3_endpoint_for_tenant(tenant, domain):
+    return f"https://{tenant}.{domain}"
+```
+
+### Login flow — tenant comes from the user, not the env
+
+```
+POST /auth/token  username=alice  password=secret  tenant=dev-ai
+                                                    ^^^^^^^^^^^^^^
+                                                    stored in JWT
+```
+
+The JWT contains `(username, password, tenant)`. On every S3 request, `get_s3_service()` in `app/api/dependencies.py` extracts these and builds a tenant-specific S3 client:
+
+```python
+creds = verify_token_with_credentials(token)       # → (alice, secret, dev-ai)
+endpoint = s3_endpoint_for_tenant(creds.tenant, domain)  # → https://dev-ai.hcp.ra-dev.int
+access_key = base64("alice")
+secret_key = md5("secret")
+→ S3Service pointing at dev-ai
+```
+
+### Cross-tenant: two logins, two JWTs, two S3 clients
+
+```
+Step 1:  POST /auth/token  tenant=dev-ai      → JWT-A
+Step 2:  POST /auth/token  tenant=other-team   → JWT-B
+
+Step 3:  POST /sync/cross-tenant
+         Authorization: Bearer <JWT-A>            ← source tenant
+         Body: {
+           "source_bucket": "raw-data",
+           "destination_bucket": "archive",
+           "destination_token": "<JWT-B>"          ← destination tenant
+         }
+```
+
+The endpoint builds two separate boto3 S3 clients from the same `HCP_DOMAIN`:
+
+```
+source_s3  → https://dev-ai.hcp.ra-dev.int      (from Authorization header JWT)
+dest_s3    → https://other-team.hcp.ra-dev.int   (from body.destination_token JWT)
+```
+
+Both clients are cached in `app.state.s3_cache` keyed by `HcpCredentials(username, password, tenant)`.
+
 ## Design Decisions
 
 - **Cross-tenant auth**: Second JWT token provided in request body (user logs in to both tenants)
