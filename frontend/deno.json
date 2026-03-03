@@ -1,13 +1,13 @@
 {
   "nodeModulesDir": "auto",
   "tasks": {
-    "dev": "deno run -A npm:vite dev",
-    "build": "deno run -A npm:vite build",
-    "preview": "deno run -A npm:vite preview",
-    "sync": "deno run -A npm:@sveltejs/kit sync",
-    "check": "deno task sync && deno run -A npm:svelte-check --tsconfig ./tsconfig.json",
-    "fmt": "deno fmt && deno run -A npm:prettier --plugin prettier-plugin-svelte --write 'src/**/*.svelte'",
-    "fmt:svelte": "deno run -A npm:prettier --plugin prettier-plugin-svelte --write 'src/**/*.svelte'",
+    "dev": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run --allow-sys --allow-ffi npm:vite dev",
+    "build": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run --allow-sys --allow-ffi npm:vite build",
+    "preview": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run --allow-sys --allow-ffi npm:vite preview",
+    "sync": "deno run --allow-read --allow-write --allow-env --allow-run --allow-ffi npm:@sveltejs/kit sync",
+    "check": "deno task sync && deno run --allow-read --allow-write --allow-net --allow-env --allow-run --allow-sys --allow-ffi npm:svelte-check --tsconfig ./tsconfig.json",
+    "fmt": "deno fmt && deno run --allow-read --allow-write --allow-env --allow-sys npm:prettier --plugin prettier-plugin-svelte --write 'src/**/*.svelte'",
+    "fmt:svelte": "deno run --allow-read --allow-write --allow-env --allow-sys npm:prettier --plugin prettier-plugin-svelte --write 'src/**/*.svelte'",
     "lint": "deno lint"
   },
   "fmt": {

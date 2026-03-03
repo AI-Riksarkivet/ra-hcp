@@ -10,7 +10,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { get_tenant, get_namespaces } from '$lib/tenants.remote.js';
 
-	let name = $derived(page.params.tenant);
+	let name = $derived(page.params.tenant ?? '');
 	let tenant = $derived(get_tenant({ name }));
 	let namespaces = $derived(get_namespaces({ tenant: name }));
 

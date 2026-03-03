@@ -29,7 +29,7 @@
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import { get_objects, delete_object, bulk_delete_objects } from '$lib/buckets.remote.js';
 
-	let bucket = $derived(page.params.bucket);
+	let bucket = $derived(page.params.bucket ?? '');
 	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
 	let objectData = $derived(get_objects({ bucket, prefix }));
 
@@ -59,15 +59,8 @@
 	let uploading = $state(false);
 	let dragover = $state(false);
 
-	let objects = $state<any[]>([]);
-	let keyCount = $state(0);
-
-	$effect(() => {
-		objectData.then((od) => {
-			objects = od.objects;
-			keyCount = od.keyCount;
-		});
-	});
+	let objects = $derived((objectData.current?.objects ?? []) as any[]);
+	let keyCount = $derived(objectData.current?.keyCount ?? 0);
 
 	function navigatePrefix(p: string) {
 		goto(`/buckets/${bucket}?prefix=${encodeURIComponent(p)}`);
@@ -172,7 +165,7 @@
 		if (doneCount > 0)
 			toast.success(`Uploaded ${doneCount} file${doneCount !== 1 ? 's' : ''} successfully`);
 		if (errCount > 0) toast.error(`${errCount} file${errCount !== 1 ? 's' : ''} failed to upload`);
-		objectData = get_objects.refresh({ bucket, prefix });
+		await objectData.refresh();
 	}
 
 	function closeUpload() {
@@ -240,9 +233,8 @@
 		if (!deleteTarget) return;
 		deleting = true;
 		try {
-			await delete_object({ bucket, key: deleteTarget });
+			await delete_object({ bucket, key: deleteTarget }).updates(objectData);
 			toast.success(`Deleted ${getDisplayName(deleteTarget)}`);
-			objectData = get_objects.refresh({ bucket, prefix });
 		} catch {
 			toast.error('Failed to delete object');
 		} finally {
@@ -255,7 +247,7 @@
 		deleting = true;
 		const keys = [...selected];
 		try {
-			await bulk_delete_objects({ bucket, keys });
+			await bulk_delete_objects({ bucket, keys }).updates(objectData);
 			toast.success(`Deleted ${keys.length} object${keys.length !== 1 ? 's' : ''}`);
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to delete objects');
@@ -263,7 +255,6 @@
 		selected = new Set();
 		deleting = false;
 		bulkDeleteOpen = false;
-		objectData = get_objects.refresh({ bucket, prefix });
 	}
 </script>
 
@@ -488,7 +479,7 @@
 							></tr
 						>
 					{:else}
-						{#each filteredObjects as obj}
+						{#each filteredObjects as obj (obj.key)}
 							{@const folder = isObjFolder(obj)}
 							<tr
 								class="cursor-pointer bg-card transition-colors hover:bg-accent/50"

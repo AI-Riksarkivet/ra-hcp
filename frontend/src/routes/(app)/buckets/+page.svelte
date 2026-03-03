@@ -15,13 +15,9 @@
 	let bucketData = get_buckets();
 
 	let search = $state('');
-	let buckets = $state<{ name: string; creation_date: string }[]>([]);
-
-	$effect(() => {
-		bucketData.then((bd) => {
-			buckets = bd.buckets;
-		});
-	});
+	let buckets = $derived(
+		(bucketData.current?.buckets ?? []) as { name: string; creation_date: string }[]
+	);
 
 	let filteredBuckets = $derived(
 		buckets.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()))
@@ -58,9 +54,8 @@
 		if (!deleteTarget) return;
 		deleting = true;
 		try {
-			await delete_bucket({ bucket: deleteTarget });
+			await delete_bucket({ bucket: deleteTarget }).updates(bucketData);
 			toast.success(`Deleted bucket "${deleteTarget}"`);
-			bucketData = get_buckets.refresh();
 		} catch {
 			toast.error('Failed to delete bucket');
 		} finally {
@@ -74,9 +69,14 @@
 		const names = [...selected];
 		let successCount = 0,
 			failCount = 0;
-		for (const name of names) {
+		for (let i = 0; i < names.length; i++) {
 			try {
-				await delete_bucket({ bucket: name });
+				const call = delete_bucket({ bucket: names[i] });
+				if (i === names.length - 1) {
+					await call.updates(bucketData);
+				} else {
+					await call;
+				}
 				successCount++;
 			} catch {
 				failCount++;
@@ -89,7 +89,6 @@
 		selected = new Set();
 		deleting = false;
 		bulkDeleteOpen = false;
-		bucketData = get_buckets.refresh();
 	}
 
 	let createOpen = $state(false);
@@ -105,11 +104,10 @@
 		creating = true;
 		createError = '';
 		try {
-			await create_bucket({ bucket: name });
+			await create_bucket({ bucket: name }).updates(bucketData);
 			toast.success('Bucket created successfully');
 			createOpen = false;
 			form.reset();
-			bucketData = get_buckets.refresh();
 		} catch (err) {
 			createError = err instanceof Error ? err.message : 'Failed to create bucket';
 		} finally {
@@ -209,7 +207,7 @@
 							></tr
 						>
 					{:else}
-						{#each filteredBuckets as bucket}
+						{#each filteredBuckets as bucket (bucket.name)}
 							<tr
 								class="cursor-pointer bg-card transition-colors hover:bg-accent/50"
 								onclick={() => goto(`/buckets/${bucket.name}`)}
