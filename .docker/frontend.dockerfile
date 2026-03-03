@@ -18,10 +18,11 @@ RUN groupadd --system app 2>/dev/null; useradd --system --gid app app 2>/dev/nul
 
 WORKDIR /app
 COPY --from=builder /app/.deno-deploy /app/.deno-deploy
+COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/deno.json /app/deno.lock /app/package.json /app/
 
 USER app
 
-EXPOSE 3000
+EXPOSE 8000
 
 CMD ["deno", "run", "-A", ".deno-deploy/server.ts"]

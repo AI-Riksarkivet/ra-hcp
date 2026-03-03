@@ -17,26 +17,17 @@ func (m *HcpApp) Serve(source *dagger.Directory) *dagger.Service {
 		AsService()
 }
 
-// ServeAll starts the full stack (Redis, backend, frontend) using docker-compose.
-func (m *HcpApp) ServeAll(
-	ctx context.Context,
-	// +defaultPath="/"
-	source *dagger.Directory,
-) ([]*dagger.Service, error) {
-	project := dag.DockerCompose().Project(dagger.DockerComposeProjectOpts{
-		Source: source,
-	})
+// ServeAll starts the full stack: Redis, backend (:8000), and frontend (:8000).
+// The frontend Deno server defaults to port 8000; use `up --ports 3000:8000`
+// to expose it on host port 3000.
+func (m *HcpApp) ServeAll(source *dagger.Directory) *dagger.Service {
+	backendSvc := m.Serve(source)
 
-	composeServices, err := project.Services(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var services []*dagger.Service
-	for _, svc := range composeServices {
-		services = append(services, svc.Up())
-	}
-	return services, nil
+	return m.BuildFrontend(source).
+		WithServiceBinding("backend", backendSvc).
+		WithEnvVariable("BACKEND_URL", "http://backend:8000").
+		WithExposedPort(8000).
+		AsService()
 }
 
 // TestServer starts the backend and verifies it responds to a health check.

@@ -94,7 +94,7 @@ test-integration:
 
 ## full-serve: start full stack (backend + frontend + Redis) in Dagger
 full-serve:
-	dagger call serve-all --source=.
+	dagger call serve-all --source=. up --ports 8000:8000
 
 ## build: build backend and frontend containers in Dagger
 build:
