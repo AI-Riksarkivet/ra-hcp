@@ -8,7 +8,7 @@ export PATH := $(HOME)/.deno/bin:$(PATH)
         fmt lint quality \
         run-api run-api-mock \
         frontend-dev frontend-build \
-        redis redis-stop redis-cli
+        checks test test-integration full-serve build
 
 ## help: list available targets
 help:
@@ -78,16 +78,25 @@ frontend-dev:
 frontend-build:
 	cd frontend && deno task build
 
-# ── Redis ────────────────────────────────────────────────────────────
+# ── Dagger ───────────────────────────────────────────────────────────
 
-## redis: start Redis via Docker Compose (required for caching)
-redis:
-	docker compose -f .docker/docker-compose.yml up -d redis
+## checks: run all lint & type-checks in Dagger
+checks:
+	dagger call checks --source=.
 
-## redis-stop: stop Redis
-redis-stop:
-	docker compose -f .docker/docker-compose.yml down
+## test: run unit tests with coverage in Dagger
+test:
+	dagger call test-coverage --source=.
 
-## redis-cli: open a Redis CLI session
-redis-cli:
-	docker compose -f .docker/docker-compose.yml exec redis redis-cli
+## test-integration: run integration tests (real Redis) in Dagger
+test-integration:
+	dagger call test-integration --source=.
+
+## full-serve: start full stack (backend + frontend + Redis) in Dagger
+full-serve:
+	dagger call serve-all --source=.
+
+## build: build backend and frontend containers in Dagger
+build:
+	dagger call build-backend --source=.
+	dagger call build-frontend --source=.

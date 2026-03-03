@@ -22,7 +22,7 @@ jobs:
           args: checks --source=.
 
   test:
-    name: Tests
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -32,3 +32,15 @@ jobs:
         with:
           verb: call
           args: test-coverage --source=.
+
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run integration tests
+        uses: dagger/dagger-for-github@v8
+        with:
+          verb: call
+          args: test-integration --source=.

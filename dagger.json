@@ -4,5 +4,12 @@
   "sdk": {
     "source": "go"
   },
+  "dependencies": [
+    {
+      "name": "docker-compose",
+      "source": "github.com/shykes/daggerverse/docker-compose@f82c283510bac0399451dff7ffbec0274bfc3bd4",
+      "pin": "f82c283510bac0399451dff7ffbec0274bfc3bd4"
+    }
+  ],
   "source": ".dagger"
 }

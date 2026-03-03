@@ -10,26 +10,41 @@ import (
 )
 
 const (
-	pythonImage = "python:3.14-slim"
-	denoImage   = "denoland/deno:latest"
-	backendDir  = "backend"
-	frontendDir = "frontend"
+	uvPythonImage = "ghcr.io/astral-sh/uv:0.10.7-python3.14-alpine"
+	denoImage     = "denoland/deno:latest"
+	redisImage    = "redis:8-alpine"
+	backendDir    = "backend"
+	frontendDir   = "frontend"
 )
 
 type HcpApp struct{}
-
-// withUv returns a Python container with uv pre-installed.
-func (m *HcpApp) withUv(base *dagger.Container) *dagger.Container {
-	return base.
-		WithExec([]string{"pip", "install", "--quiet", "uv"})
-}
 
 // buildBackendDev returns a container with all backend deps (including dev) installed.
 func (m *HcpApp) buildBackendDev(source *dagger.Directory) *dagger.Container {
 	backend := source.Directory(backendDir)
 
-	return m.withUv(dag.Container().From(pythonImage)).
+	return dag.Container().From(uvPythonImage).
+		WithMountedCache("/root/.cache/uv", dag.CacheVolume("uv-cache")).
 		WithMountedDirectory("/app", backend).
 		WithWorkdir("/app").
 		WithExec([]string{"uv", "sync", "--frozen"})
+}
+
+// buildFrontendDev returns a Deno container with frontend deps installed.
+func (m *HcpApp) buildFrontendDev(source *dagger.Directory) *dagger.Container {
+	frontend := source.Directory(frontendDir)
+
+	return dag.Container().From(denoImage).
+		WithEnvVariable("DENO_DIR", "/deno-dir").
+		WithMountedCache("/deno-dir", dag.CacheVolume("deno-cache")).
+		WithMountedDirectory("/app", frontend).
+		WithWorkdir("/app").
+		WithExec([]string{"deno", "install"})
+}
+
+// redis returns a Redis service for integration tests.
+func (m *HcpApp) redis() *dagger.Service {
+	return dag.Container().From(redisImage).
+		WithExposedPort(6379).
+		AsService()
 }

@@ -26,11 +26,17 @@ dev = [
     "fakeredis>=2.20",
     "pytest>=8.0",
     "pytest-asyncio>=0.25",
+    "pytest-cov>=6.0",
     "httpx>=0.28.1",
     "respx>=0.21",
+    "ruff>=0.11",
+    "ty>=0.0.1a7",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "redis: tests requiring a real Redis connection",
+]

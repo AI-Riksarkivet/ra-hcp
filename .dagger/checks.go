@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"dagger/hcp-app/internal/dagger"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // RuffCheck runs ruff linting on the backend.
@@ -20,46 +23,58 @@ func (m *HcpApp) RuffFormat(ctx context.Context, source *dagger.Directory) (stri
 		Stdout(ctx)
 }
 
-// TypeCheck runs mypy on the backend.
+// TypeCheck runs ty on the backend.
 func (m *HcpApp) TypeCheck(ctx context.Context, source *dagger.Directory) (string, error) {
 	return m.buildBackendDev(source).
-		WithExec([]string{"uv", "run", "mypy", "."}).
+		WithExec([]string{"uv", "run", "ty", "check"}).
 		Stdout(ctx)
 }
 
 // FrontendCheck runs type-checking on the frontend.
 func (m *HcpApp) FrontendCheck(ctx context.Context, source *dagger.Directory) (string, error) {
-	frontend := source.Directory(frontendDir)
-
-	return dag.Container().From(denoImage).
-		WithMountedDirectory("/app", frontend).
-		WithWorkdir("/app").
-		WithExec([]string{"deno", "install"}).
+	return m.buildFrontendDev(source).
 		WithExec([]string{"deno", "task", "check"}).
 		Stdout(ctx)
 }
 
-// Checks runs all code quality checks (ruff, mypy, frontend) in parallel.
+// FrontendLint runs deno lint on the frontend.
+func (m *HcpApp) FrontendLint(ctx context.Context, source *dagger.Directory) (string, error) {
+	return m.buildFrontendDev(source).
+		WithExec([]string{"deno", "lint"}).
+		Stdout(ctx)
+}
+
+// Checks runs all code quality checks in parallel.
 func (m *HcpApp) Checks(ctx context.Context, source *dagger.Directory) (string, error) {
-	// Run all checks — each call is independently cached by Dagger
-	_, err := m.RuffCheck(ctx, source)
-	if err != nil {
-		return "", err
-	}
+	g, ctx := errgroup.WithContext(ctx)
 
-	_, err = m.RuffFormat(ctx, source)
-	if err != nil {
-		return "", err
-	}
+	g.Go(func() error {
+		_, err := m.RuffCheck(ctx, source)
+		return err
+	})
 
-	_, err = m.TypeCheck(ctx, source)
-	if err != nil {
-		return "", err
-	}
+	g.Go(func() error {
+		_, err := m.RuffFormat(ctx, source)
+		return err
+	})
 
-	_, err = m.FrontendCheck(ctx, source)
-	if err != nil {
-		return "", err
+	g.Go(func() error {
+		_, err := m.TypeCheck(ctx, source)
+		return err
+	})
+
+	g.Go(func() error {
+		_, err := m.FrontendCheck(ctx, source)
+		return err
+	})
+
+	g.Go(func() error {
+		_, err := m.FrontendLint(ctx, source)
+		return err
+	})
+
+	if err := g.Wait(); err != nil {
+		return "", fmt.Errorf("checks failed: %w", err)
 	}
 
 	return "All checks passed", nil

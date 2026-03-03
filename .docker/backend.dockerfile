@@ -1,7 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.14-slim AS builder
-
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+FROM ghcr.io/astral-sh/uv:0.10.7-python3.14-alpine AS builder
 
 WORKDIR /app
 
@@ -14,15 +12,16 @@ COPY backend/ .
 RUN uv sync --frozen
 
 # ── Production stage ─────────────────────────────────────────────────
-FROM python:3.14-slim
+FROM python:3.14-alpine
 
-RUN groupadd --system app && useradd --system --gid app app
+RUN addgroup -S app && adduser -S -G app app
 
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/app /app/app
 
 ENV PATH="/app/.venv/bin:$PATH"
+ENV REDIS_URL=""
 
 USER app
 
