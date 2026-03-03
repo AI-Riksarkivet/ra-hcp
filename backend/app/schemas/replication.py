@@ -128,18 +128,6 @@ class LinkContent(BaseModel):
     chainedLinks: Optional[List[str]] = None
 
 
-class LinkContentTenant(BaseModel):
-    """Tenant status within a replication link."""
-
-    status: Optional[str] = None
-    upToDateAsOfString: Optional[str] = None
-    upToDateAsOfMillis: Optional[int] = None
-    objectsPending: Optional[int] = None
-    bytesPending: Optional[int] = None
-    objectsPendingRemote: Optional[int] = None
-    bytesPendingRemote: Optional[int] = None
-
-
 # ── Schedule ───────────────────────────────────────────────────────────
 
 

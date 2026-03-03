@@ -12,13 +12,18 @@ from fastapi.responses import StreamingResponse
 from app.api.dependencies import get_s3_service
 from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error
 from app.schemas.s3 import (
+    AclPolicy,
+    AclResponse,
     CopyObjectRequest,
     DeleteObjectsRequest,
+    DeleteObjectsResponse,
     HeadObjectResponse,
     ListObjectsResponse,
     ObjectInfo,
+    ObjectMutationResponse,
     UploadObjectResponse,
 )
+from app.schemas.common import StatusResponse
 from app.services.s3_service import S3Service
 
 router = APIRouter(prefix="/buckets/{bucket}/objects", tags=["S3 Objects"])
@@ -56,7 +61,7 @@ async def list_objects(
 # ── Bulk delete (must be before {key:path} catch-all) ────────────────
 
 
-@router.post("/delete")
+@router.post("/delete", response_model=DeleteObjectsResponse)
 async def delete_objects(
     bucket: str,
     body: DeleteObjectsRequest,
@@ -78,7 +83,7 @@ async def delete_objects(
 # ── Routes with /acl suffix (must be before {key:path} catch-all) ───
 
 
-@router.get("/{key:path}/acl")
+@router.get("/{key:path}/acl", response_model=AclResponse)
 async def get_object_acl(
     bucket: str,
     key: str,
@@ -96,15 +101,17 @@ async def get_object_acl(
     }
 
 
-@router.put("/{key:path}/acl")
+@router.put("/{key:path}/acl", response_model=StatusResponse)
 async def put_object_acl(
     bucket: str,
     key: str,
-    body: dict,
+    body: AclPolicy,
     s3: S3Service = Depends(get_s3_service),
 ):
     try:
-        await asyncio.to_thread(s3.put_object_acl, bucket, key, body)
+        await asyncio.to_thread(
+            s3.put_object_acl, bucket, key, body.model_dump(exclude_none=True)
+        )
     except ClientError as exc:
         raise_for_s3_error(exc, f"object '{key}'")
     except BotoCoreError as exc:
@@ -115,7 +122,7 @@ async def put_object_acl(
 # ── Copy route (must be before {key:path} catch-all) ─────────────────
 
 
-@router.post("/{key:path}/copy")
+@router.post("/{key:path}/copy", response_model=ObjectMutationResponse)
 async def copy_object(
     bucket: str,
     key: str,
@@ -134,13 +141,13 @@ async def copy_object(
         raise_for_s3_error(exc, f"object '{key}'")
     except BotoCoreError as exc:
         raise_for_s3_transport_error(exc, f"object '{key}'")
-    return {"status": "copied", "bucket": bucket, "key": key}
+    return ObjectMutationResponse(status="copied", bucket=bucket, key=key)
 
 
 # ── Single-object CRUD ({key:path} catch-all routes last) ────────────
 
 
-@router.post("/{key:path}", response_model=UploadObjectResponse)
+@router.post("/{key:path}", response_model=UploadObjectResponse, status_code=201)
 async def upload_object(
     bucket: str,
     key: str,
@@ -199,7 +206,7 @@ async def head_object(
     )
 
 
-@router.delete("/{key:path}")
+@router.delete("/{key:path}", response_model=ObjectMutationResponse)
 async def delete_object(
     bucket: str,
     key: str,
@@ -211,4 +218,4 @@ async def delete_object(
         raise_for_s3_error(exc, f"object '{key}'")
     except BotoCoreError as exc:
         raise_for_s3_transport_error(exc, f"object '{key}'")
-    return {"status": "deleted", "bucket": bucket, "key": key}
+    return ObjectMutationResponse(status="deleted", bucket=bucket, key=key)

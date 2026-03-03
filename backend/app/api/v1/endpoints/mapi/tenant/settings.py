@@ -17,7 +17,7 @@ from app.schemas.tenant import (
     AvailableServicePlanList,
 )
 from app.schemas.namespace import NamespaceDefaults, CorsConfiguration
-from app.schemas.common import StatusResponse
+from app.schemas.common import StatusResponse, PermissionsResponse
 
 router = APIRouter(prefix="/tenants", tags=["Tenant Admin: Settings"])
 
@@ -176,7 +176,7 @@ async def modify_search_security(
 # ── Tenant permissions ───────────────────────────────────────────────
 
 
-@router.get("/{tenant_name}/permissions")  # dynamic structure from MAPI
+@router.get("/{tenant_name}/permissions", response_model=PermissionsResponse)
 async def get_tenant_permissions(
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -187,7 +187,7 @@ async def get_tenant_permissions(
 @router.post("/{tenant_name}/permissions", response_model=StatusResponse)
 async def modify_tenant_permissions(
     tenant_name: str,
-    body: dict,
+    body: PermissionsResponse,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send("POST", f"/tenants/{tenant_name}/permissions", body=body)

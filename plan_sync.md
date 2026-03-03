@@ -316,7 +316,7 @@ With `batch_size: 50`, a bucket with 1,000,000 files results in ~20,000 webhook 
 # Enums
 SyncMode: overwrite_all | skip_existing | if_newer
 ObjectSyncStatus: copied | skipped | failed
-SyncJobStatus: pending | running | completed | completed_with_errors | failed
+SyncJobStatus: pending | running | staged | committing | completed | completed_with_errors | commit_failed | failed
 
 # Transform definitions
 TransformType: add_key_prefix | strip_key_prefix | replace_key_segment
@@ -337,6 +337,7 @@ IntraTenantSyncRequest:
     prefix: str | None = None
     sync_mode: SyncMode = overwrite_all
     dry_run: bool = False
+    atomic: bool = False  # when true: stage-then-rename (ACID). when false: direct copy (fast)
     transforms: list[TransformStep] = []  # optional pipeline
 
 CrossTenantSyncRequest:
@@ -473,17 +474,22 @@ Core sync service — **publishes to Redis Streams** and **consumes messages**.
 
 **Consumer method** (runs as background task in thread pool):
 - `consume_and_sync(cache, job_id, s3, dst_s3, sync_mode, dry_run, transforms)`:
-  1. Create consumer group on stream
-  2. XREADGROUP in batches
-  3. For each message:
-     - Check `_should_copy()` logic (head_object on destination for skip_existing/if_newer)
-     - If intra-tenant with no data transforms: `s3.copy_object()` (server-side, fast)
-     - If cross-tenant or data transforms present: stream `get_object()` → apply transforms → `put_object()`
-     - XACK the message
-     - Update job counters in Redis (`sync:job:{job_id}`)
-  4. Set final job status
+  1. **Staging phase** (status: `running`):
+     - Create consumer group on stream
+     - XREADGROUP in batches
+     - For each message:
+       - Check `_should_copy()` logic (head_object on destination for skip_existing/if_newer)
+       - Copy/stream to **staging prefix**: `.sync-staging/{job_id}/{key}`
+       - XACK the message + update job counters
+     - If all staged → status: `staged`
+     - If any failed → status: `failed`, clean up staging prefix, stop
+  2. **Commit phase** (status: `committing`):
+     - For each staged object: `CopyObject(.sync-staging/{job_id}/{key} → {key})` (server-side)
+     - If all committed → bulk delete staging prefix → status: `completed`
+     - If any commit fails → attempt rollback → status: `commit_failed`
+  3. **Dry run**: skips both phases, just reports what would be synced
 
-**Key design**: Intra-tenant with no data transforms uses server-side CopyObject (fast, no data flows through API). If webhook or other body-modifying transforms are requested on intra-tenant, it falls back to stream-through mode (like cross-tenant).
+**Key design**: Intra-tenant with no data transforms uses server-side CopyObject (fast, no data flows through API). If webhook or other body-modifying transforms are requested on intra-tenant, it falls back to stream-through mode (like cross-tenant). The staging prefix is invisible to normal bucket users (`.sync-staging/` is a hidden prefix convention).
 
 **Helper methods:**
 - `_list_all_objects(s3, bucket, prefix)` — paginate with continuation tokens (1000 per page)
@@ -574,12 +580,50 @@ api_router.include_router(sync.router, dependencies=_auth)
 
 **`if_newer` comparison**: Source `LastModified` from `list_objects_v2`, destination from `head_object`. Both UTC-aware datetimes from boto3. Direct `>` comparison. Copy if timestamps unavailable.
 
-**Atomicity guarantees**:
-- Both buckets validated before job starts (fast-fail on POST)
-- Per-object: message in stream → process → ACK. If consumer crashes, unACKed messages can be reclaimed via XPENDING/XCLAIM
-- State persisted in Redis after each object — survives connection drops
-- Re-running with `skip_existing` is safe (idempotent — skips already-copied objects)
-- Final status: `completed` (all ok) vs `completed_with_errors` (some failed)
+**ACID Properties (opt-in via `atomic: true`)**:
+
+S3 has no native transactions. When `atomic: false` (default), objects are copied directly — fast and simple, but partial failures leave partial results. When `atomic: true`, we emulate ACID using a staging prefix:
+
+```
+Destination sees:  nothing → nothing → nothing → ALL objects appear at once
+                   \___________ staging phase ___________/ \_ commit phase _/
+```
+
+**Atomicity** — All or nothing:
+- Objects are first copied to a staging prefix: `.sync-staging/{job_id}/{key}`
+- Only after ALL objects are staged successfully, a "commit phase" bulk-renames
+  them to their final keys (server-side CopyObject from staging → final, then delete staging)
+- On failure: staging prefix is cleaned up (bulk delete), destination unchanged
+- The destination never sees partial results
+
+**Consistency** — Valid state before and after:
+- Pre-validation: `head_bucket()` on both source and destination before job starts
+- Source listing is captured once at job start (snapshot of what to sync)
+- Destination transitions from "no new objects" directly to "all new objects"
+
+**Isolation** — Concurrent syncs don't interfere:
+- Each job uses a unique staging prefix: `.sync-staging/{job_id}/`
+- Multiple sync jobs can run concurrently without conflicts
+- Readers of the destination bucket see only committed (final-key) objects
+
+**Durability** — Committed data survives failures:
+- Per-object progress tracked in Redis Stream (XADD/XACK)
+- Once the commit phase completes, objects are in their final location in HCP
+- HCP's own replication/persistence guarantees apply from that point
+
+**Failure scenarios**:
+- Worker crashes during staging → unACKed messages reclaimed via XPENDING/XCLAIM, job resumes staging
+- Worker crashes during commit → job marked as `commit_failed`, cleanup or retry possible
+- All staging done, commit succeeds → `completed`, staging prefix cleaned up
+- Some objects fail to stage → `failed`, staging prefix cleaned up (rollback)
+
+**Commit phase detail** (after all objects staged):
+1. For each staged object: `CopyObject(.sync-staging/{job_id}/{key} → {key})` — server-side, fast
+2. After all copies: `DeleteObjects(.sync-staging/{job_id}/*)` — bulk cleanup
+3. If any copy in step 1 fails: abort, delete all final keys that were copied, delete staging
+4. Update job status: `completed` or `commit_failed`
+
+**New job statuses**: `pending → running → staged → committing → completed | commit_failed | failed`
 
 **Background task lifecycle**: `asyncio.create_task()` wrapping `asyncio.to_thread()`. Task ref stored in `app.state.sync_tasks[job_id]`. If server restarts, in-flight tasks are lost but Redis state shows last checkpoint — user re-submits.
 

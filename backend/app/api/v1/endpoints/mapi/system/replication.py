@@ -202,7 +202,7 @@ async def get_link_content(
 # ── Link Content – Tenants ───────────────────────────────────────────
 
 
-@router.get(LINKS + "/{link_name}/content/tenants")
+@router.get(LINKS + "/{link_name}/content/tenants", response_model=LinkContent)
 async def list_link_tenants(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -220,7 +220,9 @@ async def add_tenant_to_link(
     return Response(status_code=resp.status_code)
 
 
-@router.get(LINKS + "/{link_name}/content/tenants/{tenant_name}")
+@router.get(
+    LINKS + "/{link_name}/content/tenants/{tenant_name}", response_model=LinkContent
+)
 async def get_link_tenant(
     link_name: str,
     tenant_name: str,
@@ -265,7 +267,10 @@ async def remove_tenant_from_link(
 # ── Link Content – Default Namespace Directories ─────────────────────
 
 
-@router.get(LINKS + "/{link_name}/content/defaultNamespaceDirectories")
+@router.get(
+    LINKS + "/{link_name}/content/defaultNamespaceDirectories",
+    response_model=LinkContent,
+)
 async def list_link_default_ns_dirs(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -304,7 +309,7 @@ async def remove_default_ns_dir_from_link(
 # ── Link Content – Chained Links ─────────────────────────────────────
 
 
-@router.get(LINKS + "/{link_name}/content/chainedLinks")
+@router.get(LINKS + "/{link_name}/content/chainedLinks", response_model=LinkContent)
 async def list_chained_links(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -339,7 +344,7 @@ async def remove_chained_link(
 # ── Link Candidates ──────────────────────────────────────────────────
 
 
-@router.get(LINKS + "/{link_name}/localCandidates")
+@router.get(LINKS + "/{link_name}/localCandidates", response_model=LinkContent)
 async def get_local_candidates(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -347,7 +352,7 @@ async def get_local_candidates(
     return await hcp.fetch_json(f"{LINKS}/{link_name}/localCandidates")
 
 
-@router.get(LINKS + "/{link_name}/localCandidates/tenants")
+@router.get(LINKS + "/{link_name}/localCandidates/tenants", response_model=LinkContent)
 async def get_local_candidate_tenants(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -355,7 +360,10 @@ async def get_local_candidate_tenants(
     return await hcp.fetch_json(f"{LINKS}/{link_name}/localCandidates/tenants")
 
 
-@router.get(LINKS + "/{link_name}/localCandidates/defaultNamespaceDirectories")
+@router.get(
+    LINKS + "/{link_name}/localCandidates/defaultNamespaceDirectories",
+    response_model=LinkContent,
+)
 async def get_local_candidate_dirs(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -365,7 +373,9 @@ async def get_local_candidate_dirs(
     )
 
 
-@router.get(LINKS + "/{link_name}/localCandidates/chainedLinks")
+@router.get(
+    LINKS + "/{link_name}/localCandidates/chainedLinks", response_model=LinkContent
+)
 async def get_local_candidate_chained(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -373,7 +383,7 @@ async def get_local_candidate_chained(
     return await hcp.fetch_json(f"{LINKS}/{link_name}/localCandidates/chainedLinks")
 
 
-@router.get(LINKS + "/{link_name}/remoteCandidates")
+@router.get(LINKS + "/{link_name}/remoteCandidates", response_model=LinkContent)
 async def get_remote_candidates(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -381,7 +391,7 @@ async def get_remote_candidates(
     return await hcp.fetch_json(f"{LINKS}/{link_name}/remoteCandidates")
 
 
-@router.get(LINKS + "/{link_name}/remoteCandidates/tenants")
+@router.get(LINKS + "/{link_name}/remoteCandidates/tenants", response_model=LinkContent)
 async def get_remote_candidate_tenants(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -389,7 +399,10 @@ async def get_remote_candidate_tenants(
     return await hcp.fetch_json(f"{LINKS}/{link_name}/remoteCandidates/tenants")
 
 
-@router.get(LINKS + "/{link_name}/remoteCandidates/defaultNamespaceDirectories")
+@router.get(
+    LINKS + "/{link_name}/remoteCandidates/defaultNamespaceDirectories",
+    response_model=LinkContent,
+)
 async def get_remote_candidate_dirs(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
@@ -399,7 +412,9 @@ async def get_remote_candidate_dirs(
     )
 
 
-@router.get(LINKS + "/{link_name}/remoteCandidates/chainedLinks")
+@router.get(
+    LINKS + "/{link_name}/remoteCandidates/chainedLinks", response_model=LinkContent
+)
 async def get_remote_candidate_chained(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),

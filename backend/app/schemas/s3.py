@@ -67,3 +67,69 @@ class BucketVersioningResponse(BaseModel):
 
 class PutBucketVersioningRequest(BaseModel):
     status: str = Field(..., description="Enabled or Suspended")
+
+
+# ── ACL Models ────────────────────────────────────────────────────────
+
+
+class AclOwner(BaseModel):
+    model_config = {"extra": "allow"}
+
+    ID: Optional[str] = None
+    DisplayName: Optional[str] = None
+
+
+class AclGrant(BaseModel):
+    model_config = {"extra": "allow"}
+
+    Grantee: Optional[dict] = None
+    Permission: Optional[str] = None
+
+
+class AclPolicy(BaseModel):
+    """S3 ACL policy for buckets and objects."""
+
+    model_config = {"extra": "allow"}
+
+    Owner: Optional[AclOwner] = None
+    Grants: Optional[List[AclGrant]] = None
+
+
+class AclResponse(BaseModel):
+    """Response for GET bucket/object ACL."""
+
+    owner: Optional[dict] = None
+    grants: Optional[List[dict]] = None
+
+
+# ── Mutation Response Models ─────────────────────────────────────────
+
+
+class BucketMutationResponse(BaseModel):
+    """Response for bucket create/delete."""
+
+    status: str
+    bucket: Optional[str] = None
+
+
+class VersioningMutationResponse(BaseModel):
+    """Response for PUT bucket versioning."""
+
+    status: str
+    versioning: Optional[str] = None
+
+
+class ObjectMutationResponse(BaseModel):
+    """Response for object copy/delete."""
+
+    status: str
+    bucket: Optional[str] = None
+    key: Optional[str] = None
+
+
+class DeleteObjectsResponse(BaseModel):
+    """Response for bulk delete."""
+
+    status: str
+    deleted: int
+    errors: Optional[List[dict]] = None

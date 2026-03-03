@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.security import create_access_token
+from app.schemas.common import TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 _TENANT_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$")
 
 
-@router.post("/token")
+@router.post("/token", response_model=TokenResponse)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     tenant: str | None = Form(None),

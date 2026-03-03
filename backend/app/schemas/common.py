@@ -227,27 +227,6 @@ class VersioningSettings(BaseModel):
 # ── Query Parameter Models ─────────────────────────────────────────────
 
 
-class PagingParams(BaseModel):
-    """Query parameters for paging through resource lists."""
-
-    offset: Optional[int] = None
-    count: Optional[int] = None
-
-
-class SortParams(BaseModel):
-    """Query parameters for sorting resource lists."""
-
-    sortType: Optional[str] = None
-    sortOrder: Optional[str] = None
-
-
-class FilterParams(BaseModel):
-    """Query parameters for filtering resource lists."""
-
-    filterType: Optional[str] = None
-    filterString: Optional[str] = None
-
-
 class ListQueryParams(BaseModel):
     """Combined query parameters for list operations."""
 
@@ -276,3 +255,16 @@ class StatusResponse(BaseModel):
     """Standard response for mutation operations."""
 
     status: str
+
+
+class TokenResponse(BaseModel):
+    """OAuth2 token response."""
+
+    access_token: str
+    token_type: str
+
+
+class PermissionsResponse(BaseModel):
+    """Namespace or tenant permissions from MAPI."""
+
+    model_config = {"extra": "allow"}

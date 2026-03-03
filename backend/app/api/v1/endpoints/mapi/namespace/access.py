@@ -15,7 +15,7 @@ from app.schemas.namespace import (
     Protocols,
     CorsConfiguration,
 )
-from app.schemas.common import StatusResponse
+from app.schemas.common import StatusResponse, PermissionsResponse
 
 router = APIRouter(tags=["Namespace: Access"])
 
@@ -25,7 +25,7 @@ PREFIX = "/tenants/{tenant_name}/namespaces"
 # ── Namespace permissions ────────────────────────────────────────────
 
 
-@router.get(PREFIX + "/{ns_name}/permissions")
+@router.get(PREFIX + "/{ns_name}/permissions", response_model=PermissionsResponse)
 async def get_ns_permissions(
     tenant_name: str,
     ns_name: str,
@@ -40,7 +40,7 @@ async def get_ns_permissions(
 async def modify_ns_permissions(
     tenant_name: str,
     ns_name: str,
-    body: dict,
+    body: PermissionsResponse,
     hcp: MapiService = Depends(get_mapi_service),
 ):
     await hcp.send(

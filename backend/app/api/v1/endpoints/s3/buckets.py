@@ -10,11 +10,15 @@ from fastapi import APIRouter, Depends, Response
 from app.api.dependencies import get_s3_service
 from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error
 from app.schemas.s3 import (
+    AclPolicy,
+    AclResponse,
     BucketInfo,
+    BucketMutationResponse,
     BucketVersioningResponse,
     CreateBucketRequest,
     ListBucketsResponse,
     PutBucketVersioningRequest,
+    VersioningMutationResponse,
 )
 from app.services.s3_service import S3Service
 
@@ -33,7 +37,7 @@ async def list_buckets(s3: S3Service = Depends(get_s3_service)):
     return ListBucketsResponse(buckets=buckets)
 
 
-@router.post("")
+@router.post("", response_model=BucketMutationResponse, status_code=201)
 async def create_bucket(
     body: CreateBucketRequest,
     s3: S3Service = Depends(get_s3_service),
@@ -58,7 +62,7 @@ async def head_bucket(bucket: str, s3: S3Service = Depends(get_s3_service)):
     return Response(status_code=200)
 
 
-@router.delete("/{bucket}")
+@router.delete("/{bucket}", response_model=BucketMutationResponse)
 async def delete_bucket(bucket: str, s3: S3Service = Depends(get_s3_service)):
     try:
         await asyncio.to_thread(s3.delete_bucket, bucket)
@@ -89,7 +93,7 @@ async def get_bucket_versioning(
     )
 
 
-@router.put("/{bucket}/versioning")
+@router.put("/{bucket}/versioning", response_model=VersioningMutationResponse)
 async def put_bucket_versioning(
     bucket: str,
     body: PutBucketVersioningRequest,
@@ -107,7 +111,7 @@ async def put_bucket_versioning(
 # ── Bucket ACL ────────────────────────────────────────────────────────
 
 
-@router.get("/{bucket}/acl")
+@router.get("/{bucket}/acl", response_model=AclResponse)
 async def get_bucket_acl(bucket: str, s3: S3Service = Depends(get_s3_service)):
     try:
         result = await asyncio.to_thread(s3.get_bucket_acl, bucket)
@@ -121,14 +125,16 @@ async def get_bucket_acl(bucket: str, s3: S3Service = Depends(get_s3_service)):
     }
 
 
-@router.put("/{bucket}/acl")
+@router.put("/{bucket}/acl", response_model=BucketMutationResponse)
 async def put_bucket_acl(
     bucket: str,
-    body: dict,
+    body: AclPolicy,
     s3: S3Service = Depends(get_s3_service),
 ):
     try:
-        await asyncio.to_thread(s3.put_bucket_acl, bucket, body)
+        await asyncio.to_thread(
+            s3.put_bucket_acl, bucket, body.model_dump(exclude_none=True)
+        )
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
     except BotoCoreError as exc:
