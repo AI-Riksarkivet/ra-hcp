@@ -18,6 +18,7 @@ class MapiSettings(BaseSettings):
     model_config = {"env_file": _ENV_FILE, "extra": "ignore"}
 
     hcp_host: str = "admin.hcp.example.com"
+    hcp_domain: str = ""
     hcp_port: int = 9090
     hcp_username: str = ""
     hcp_password: str = ""
@@ -39,6 +40,9 @@ class S3Settings(BaseSettings):
     hcp_username: str = ""
     hcp_password: str = ""
     hcp_verify_ssl: bool = False
+
+    # Shared with MAPI
+    hcp_domain: str = ""
 
     # S3-specific (S3_ prefix in env)
     s3_endpoint_url: str = "https://s3.hcp.example.com"

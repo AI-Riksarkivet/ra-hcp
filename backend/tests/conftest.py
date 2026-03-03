@@ -117,7 +117,7 @@ def hcp_mock():
 @pytest.fixture
 def auth_token(auth_settings: AuthSettings) -> str:
     """A valid JWT token for test requests."""
-    return create_access_token("testuser", settings=auth_settings)
+    return create_access_token("testuser", "testpass", settings=auth_settings)
 
 
 @pytest.fixture

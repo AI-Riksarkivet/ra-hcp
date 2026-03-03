@@ -16,21 +16,15 @@ async def test_login_with_valid_credentials(client: AsyncClient):
     assert body["token_type"] == "bearer"
 
 
-async def test_login_with_wrong_password(client: AsyncClient):
+async def test_login_accepts_any_credentials(client: AsyncClient):
     resp = await client.post(
         "/api/v1/auth/token",
-        data={"username": "testuser", "password": "wrongpass"},
+        data={"username": "anyuser", "password": "anypass"},
     )
-    assert resp.status_code == 401
-    assert "Invalid username or password" in resp.json()["detail"]
-
-
-async def test_login_with_wrong_username(client: AsyncClient):
-    resp = await client.post(
-        "/api/v1/auth/token",
-        data={"username": "wronguser", "password": "testpass"},
-    )
-    assert resp.status_code == 401
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "access_token" in body
+    assert body["token_type"] == "bearer"
 
 
 async def test_login_token_can_access_protected_route(client: AsyncClient):
@@ -60,3 +54,22 @@ async def test_protected_route_with_invalid_token(client: AsyncClient):
         headers={"Authorization": "Bearer invalid.token.here"},
     )
     assert resp.status_code == 401
+
+
+async def test_login_with_tenant(client: AsyncClient):
+    resp = await client.post(
+        "/api/v1/auth/token",
+        data={"username": "admin", "password": "pass", "tenant": "dev-ai"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "access_token" in body
+    assert body["token_type"] == "bearer"
+
+
+async def test_login_with_invalid_tenant_name(client: AsyncClient):
+    resp = await client.post(
+        "/api/v1/auth/token",
+        data={"username": "admin", "password": "pass", "tenant": "-bad-name-"},
+    )
+    assert resp.status_code == 422

@@ -3,52 +3,61 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, NamedTuple
 
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from app.core.config import AuthSettings, MapiSettings
-
-_ENV_FILE = "../.env"
+from app.core.config import AuthSettings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/token")
+
+
+class HcpCredentials(NamedTuple):
+    """Username/password pair extracted from a JWT."""
+
+    username: str
+    password: str
+    tenant: str | None = None
 
 
 def _get_auth_settings() -> AuthSettings:
     return AuthSettings()
 
 
-def _get_mapi_settings() -> MapiSettings:
-    return MapiSettings()
-
-
-def create_access_token(username: str, settings: AuthSettings | None = None) -> str:
-    """Create a JWT access token for the given username."""
+def create_access_token(
+    username: str,
+    password: str,
+    *,
+    tenant: str | None = None,
+    settings: AuthSettings | None = None,
+) -> str:
+    """Create a JWT access token containing the user's credentials."""
     if settings is None:
         settings = _get_auth_settings()
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.api_token_expire_minutes
     )
-    payload = {"sub": username, "exp": expire}
+    payload: dict = {"sub": username, "pwd": password, "exp": expire}
+    if tenant:
+        payload["tenant"] = tenant
     return jwt.encode(payload, settings.api_secret_key, algorithm="HS256")
 
 
-def verify_token(token: str, settings: AuthSettings | None = None) -> str:
-    """Verify a JWT token and return the username."""
+def _decode_token(token: str, settings: AuthSettings | None = None) -> dict:
+    """Decode and validate a JWT, returning the full payload."""
     if settings is None:
         settings = _get_auth_settings()
     try:
         payload = jwt.decode(token, settings.api_secret_key, algorithms=["HS256"])
-        username: str | None = payload.get("sub")
-        if username is None:
+        if payload.get("sub") is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token: no subject",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return username
+        return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,6 +70,23 @@ def verify_token(token: str, settings: AuthSettings | None = None) -> str:
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def verify_token(token: str, settings: AuthSettings | None = None) -> str:
+    """Verify a JWT token and return the username (backward compat)."""
+    return _decode_token(token, settings)["sub"]
+
+
+def verify_token_with_credentials(
+    token: str, settings: AuthSettings | None = None
+) -> HcpCredentials:
+    """Verify a JWT token and return the full credential pair."""
+    payload = _decode_token(token, settings)
+    return HcpCredentials(
+        username=payload["sub"],
+        password=payload.get("pwd", ""),
+        tenant=payload.get("tenant"),
+    )
 
 
 async def get_current_user(

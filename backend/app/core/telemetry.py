@@ -55,8 +55,18 @@ def setup_telemetry(app: FastAPI) -> None:
     metrics.set_meter_provider(meter_provider)
 
     # ── Auto-instrumentation ──────────────────────────────────────────
-    FastAPIInstrumentor.instrument_app(app)
-    HTTPXClientInstrumentor().instrument()
+    def _server_request_hook(span, scope):
+        """Redact Authorization header from inbound request spans."""
+        if span.is_recording():
+            span.set_attribute("http.request.header.authorization", "[REDACTED]")
+
+    def _client_request_hook(span, request):
+        """Redact Authorization header from outbound HTTPX request spans."""
+        if span.is_recording():
+            span.set_attribute("http.request.header.authorization", "[REDACTED]")
+
+    FastAPIInstrumentor.instrument_app(app, server_request_hook=_server_request_hook)
+    HTTPXClientInstrumentor().instrument(request_hook=_client_request_hook)
 
     # ── Structured logging ────────────────────────────────────────────
     logging.basicConfig(

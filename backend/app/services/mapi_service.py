@@ -160,3 +160,38 @@ class MapiService:
 
     async def options(self, path: str, **kwargs) -> httpx.Response:
         return await self.request("OPTIONS", path, **kwargs)
+
+
+class AuthenticatedMapiService(MapiService):
+    """Wrapper that injects per-request credentials from the JWT."""
+
+    def __init__(
+        self,
+        base: MapiService,
+        username: str,
+        password: str,
+        host: Optional[str] = None,
+    ):
+        self.settings = base.settings
+        self._base = base
+        self._username = username
+        self._password = password
+        self._host = host
+
+    async def _get_client(self):
+        return await self._base._get_client()
+
+    async def request(
+        self, method, path, *, username=None, password=None, host=None, **kwargs
+    ):
+        return await self._base.request(
+            method,
+            path,
+            username=username or self._username,
+            password=password or self._password,
+            host=host or self._host,
+            **kwargs,
+        )
+
+    async def close(self):
+        pass  # base owns the client

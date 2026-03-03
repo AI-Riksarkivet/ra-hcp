@@ -50,8 +50,14 @@ class CachedMapiService(MapiService):
         self._cache = cache
         self._cache_settings = cache_settings
 
-    def _cache_key(self, path: str, query: Optional[Dict[str, Any]]) -> str:
-        key = f"mapi:{path}"
+    def _cache_key(
+        self,
+        path: str,
+        query: Optional[Dict[str, Any]],
+        host: Optional[str] = None,
+    ) -> str:
+        prefix = f"mapi:{host}:" if host else "mapi:"
+        key = f"{prefix}{path}"
         if query:
             filtered = {k: v for k, v in sorted(query.items()) if v is not None}
             if filtered:
@@ -90,7 +96,7 @@ class CachedMapiService(MapiService):
         ) as span:
             # GET: try cache first
             if is_get and self._cache.enabled and self._should_cache(path):
-                cache_key = self._cache_key(path, query)
+                cache_key = self._cache_key(path, query, host=host)
                 cached = await self._cache.get(cache_key)
                 if cached is not None:
                     span.set_attribute("cache.hit", True)
@@ -121,7 +127,7 @@ class CachedMapiService(MapiService):
 
             if is_get and self._should_cache(path) and 200 <= resp.status_code < 300:
                 # Cache the successful GET response
-                cache_key = self._cache_key(path, query)
+                cache_key = self._cache_key(path, query, host=host)
                 try:
                     data = resp.json()
                     ttl = self._select_ttl(path)
@@ -132,11 +138,13 @@ class CachedMapiService(MapiService):
                     pass  # Non-JSON responses are not cached
             elif not is_get:
                 # Write operation: invalidate affected entries
-                await self._invalidate_for_write(path)
+                await self._invalidate_for_write(path, host=host)
 
             return resp
 
-    async def _invalidate_for_write(self, path: str) -> None:
+    async def _invalidate_for_write(
+        self, path: str, host: Optional[str] = None
+    ) -> None:
         """Invalidate cache entries affected by a write to *path*.
 
         Strategy:
@@ -144,11 +152,12 @@ class CachedMapiService(MapiService):
         - Invalidate the parent collection (e.g. writing to
           ``/tenants/t1/namespaces/ns1`` invalidates ``mapi:/tenants/t1/namespaces*``)
         """
+        prefix = f"mapi:{host}:" if host else "mapi:"
         # Invalidate resource and sub-resources
-        await self._cache.invalidate_pattern(f"mapi:{path}*")
+        await self._cache.invalidate_pattern(f"{prefix}{path}*")
 
         # Invalidate parent collection
         parts = path.rstrip("/").rsplit("/", 1)
         if len(parts) == 2:
             parent = parts[0]
-            await self._cache.invalidate_pattern(f"mapi:{parent}*")
+            await self._cache.invalidate_pattern(f"{prefix}{parent}*")

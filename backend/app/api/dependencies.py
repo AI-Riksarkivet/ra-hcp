@@ -2,13 +2,23 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import logging
 from functools import lru_cache
-from typing import AsyncGenerator, Optional
+from typing import Annotated, AsyncGenerator, Optional
+
+from fastapi import Depends
 
 from app.core.config import AuthSettings, CacheSettings, MapiSettings, S3Settings
+from app.core.security import (
+    HcpCredentials,
+    oauth2_scheme,
+    verify_token_with_credentials,
+)
+from app.core.tenant_routing import mapi_host_for_tenant, s3_endpoint_for_tenant
 from app.services.cache_service import CacheService
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.s3_service import S3Service
 
 logger = logging.getLogger(__name__)
@@ -53,11 +63,8 @@ def get_cache_service() -> Optional[CacheService]:
 _mapi_instance: MapiService | None = None
 
 
-async def get_mapi_service() -> AsyncGenerator[MapiService, None]:
-    """Yield a shared MapiService (singleton per process).
-
-    If Redis is configured and connected, returns a CachedMapiService.
-    """
+async def _get_base_mapi_service() -> AsyncGenerator[MapiService, None]:
+    """Yield the shared MapiService singleton (no per-user credentials)."""
     global _mapi_instance
     if _mapi_instance is None:
         settings = get_mapi_settings()
@@ -73,34 +80,50 @@ async def get_mapi_service() -> AsyncGenerator[MapiService, None]:
     yield _mapi_instance
 
 
-_s3_instance: S3Service | None = None
+async def get_mapi_service(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    base: Annotated[MapiService, Depends(_get_base_mapi_service)],
+) -> AsyncGenerator[AuthenticatedMapiService, None]:
+    """Yield an AuthenticatedMapiService wrapping the singleton with JWT creds."""
+    creds = verify_token_with_credentials(token)
+    settings = get_mapi_settings()
+    host = mapi_host_for_tenant(creds.tenant, settings.hcp_domain)
+    yield AuthenticatedMapiService(base, creds.username, creds.password, host=host)
 
 
-async def get_s3_service() -> AsyncGenerator[S3Service, None]:
-    """Yield a shared S3Service (singleton per process).
+# ── S3 per-credential cache ──────────────────────────────────────────
 
-    If Redis is configured and connected, returns a CachedS3Service.
-    """
-    global _s3_instance
-    if _s3_instance is None:
+_s3_cache: dict[HcpCredentials, S3Service] = {}
+
+
+def _derive_s3_keys(creds: HcpCredentials) -> tuple[str, str]:
+    """Derive HCP S3 access_key / secret_key from plain credentials."""
+    access_key = base64.b64encode(creds.username.encode()).decode()
+    secret_key = hashlib.md5(creds.password.encode()).hexdigest()
+    return access_key, secret_key
+
+
+async def get_s3_service(
+    token: Annotated[str, Depends(oauth2_scheme)],
+) -> AsyncGenerator[S3Service, None]:
+    """Yield an S3Service keyed by the caller's credentials."""
+    creds = verify_token_with_credentials(token)
+    if creds not in _s3_cache:
         settings = get_s3_settings()
-        cache = _cache_instance
-        if cache is not None and cache.enabled:
-            from app.services.cached_s3 import CachedS3Service
-
-            logger.info("Creating CachedS3Service singleton")
-            _s3_instance = CachedS3Service(settings, cache, get_cache_settings())
-        else:
-            logger.info("Creating S3Service singleton")
-            _s3_instance = S3Service(settings)
-    yield _s3_instance
+        access_key, secret_key = _derive_s3_keys(creds)
+        endpoint_url = s3_endpoint_for_tenant(creds.tenant, settings.hcp_domain)
+        logger.info("Creating S3Service for user %s", creds.username)
+        _s3_cache[creds] = S3Service.with_credentials(
+            settings, access_key, secret_key, endpoint_url=endpoint_url
+        )
+    yield _s3_cache[creds]
 
 
 def reset_instances() -> None:
     """Reset cached singletons. Used by tests."""
-    global _mapi_instance, _s3_instance, _cache_instance
+    global _mapi_instance, _cache_instance
     _mapi_instance = None
-    _s3_instance = None
+    _s3_cache.clear()
     _cache_instance = None
     get_mapi_settings.cache_clear()
     get_s3_settings.cache_clear()

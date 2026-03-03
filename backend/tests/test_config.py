@@ -54,3 +54,13 @@ def test_auth_settings_custom_values():
     settings = AuthSettings(api_secret_key="my-key", api_token_expire_minutes=30)
     assert settings.api_secret_key == "my-key"
     assert settings.api_token_expire_minutes == 30
+
+
+def test_mapi_hcp_domain_defaults_to_empty():
+    settings = MapiSettings(hcp_host="h", hcp_username="u", hcp_password="p")
+    assert settings.hcp_domain == ""
+
+
+def test_s3_hcp_domain_defaults_to_empty():
+    settings = S3Settings(hcp_username="u", hcp_password="p")
+    assert settings.hcp_domain == ""

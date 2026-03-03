@@ -74,7 +74,7 @@ def auth_settings() -> AuthSettings:
 
 @pytest.fixture
 def auth_headers(auth_settings: AuthSettings) -> dict[str, str]:
-    token = create_access_token("testuser", settings=auth_settings)
+    token = create_access_token("testuser", "testpass", settings=auth_settings)
     return {"Authorization": f"Bearer {token}"}
 
 

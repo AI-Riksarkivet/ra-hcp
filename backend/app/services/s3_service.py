@@ -17,6 +17,16 @@ tracer = trace.get_tracer(__name__)
 class S3Service:
     """Synchronous boto3 wrapper — call methods via asyncio.to_thread()."""
 
+    _BOTO_CONFIG = BotoConfig(
+        signature_version="s3v4",
+        s3={"addressing_style": "path"},
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required",
+        retries={"max_attempts": 3, "mode": "adaptive"},
+        connect_timeout=10,
+        read_timeout=60,
+    )
+
     def __init__(self, settings: S3Settings):
         self.settings = settings
         self._client = boto3.client(
@@ -26,20 +36,38 @@ class S3Service:
             aws_secret_access_key=settings.secret_key,
             region_name=settings.region,
             verify=settings.verify_ssl,
-            config=BotoConfig(
-                signature_version="s3v4",
-                s3={"addressing_style": "path"},
-                request_checksum_calculation="when_required",
-                response_checksum_validation="when_required",
-                retries={"max_attempts": 3, "mode": "adaptive"},
-                connect_timeout=10,
-                read_timeout=60,
-            ),
+            config=self._BOTO_CONFIG,
         )
         self._transfer_config = TransferConfig(
             multipart_threshold=8 * 1024 * 1024,
             multipart_chunksize=8 * 1024 * 1024,
         )
+
+    @classmethod
+    def with_credentials(
+        cls,
+        settings: S3Settings,
+        access_key: str,
+        secret_key: str,
+        endpoint_url: str | None = None,
+    ) -> S3Service:
+        """Create an S3Service with explicit credentials (no env-var fallback)."""
+        instance = cls.__new__(cls)
+        instance.settings = settings
+        instance._client = boto3.client(
+            "s3",
+            endpoint_url=endpoint_url or settings.endpoint_url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name=settings.region,
+            verify=settings.verify_ssl,
+            config=cls._BOTO_CONFIG,
+        )
+        instance._transfer_config = TransferConfig(
+            multipart_threshold=8 * 1024 * 1024,
+            multipart_chunksize=8 * 1024 * 1024,
+        )
+        return instance
 
     # ── Bucket operations ──────────────────────────────────────────────
 
