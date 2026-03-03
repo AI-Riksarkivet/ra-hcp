@@ -2,13 +2,13 @@
 - better grouping of routes, tentant admin, hcp admin.. etc? what are the skärningspunkter 
 - ~~Remove unused favicon.svg, index.ts, is-mobile hook; remove mobile sidebar support~~ done
 - ~~utils.ts and cn.ts are used by 80+ UI components — keep~~ verified
-- static/ is the correct SvelteKit convention (not public/)
+- ~~static/ is the correct SvelteKit convention (not public/)~~ verified
 - use remote functions for data loading. update skills to utilize it svelte-skills-kit
 - add pr skills and force pr and block to main if not force
-- vsx https://open-vsx.org/extension/FastAPILabs/fastapi-vscode
+- ~~vsx https://open-vsx.org/extension/FastAPILabs/fastapi-vscode~~ done (added to .vscode/extensions.json)
 - playwright for testing and also storybook
 - use std@expect for testing (jest) from JSR
-- env.ts files?
+- ~~refactor: use SvelteKit $env/dynamic/private + centralized $lib/server/env.ts instead of process.env~~ done
 - deno otel https://docs.deno.com/runtime/fundamentals/open_telemetry/, https://deno.com/blog/zero-config-debugging-deno-opentelemetry
 - look over svelte code and be very svlete 5 and sveltekit2 idomatic, e g use snippets, remote funcions, reavtivity, stores , context api. also chevk if we are using routing and pages [id] in svletkit 2
 - backend with namespaces
@@ -43,6 +43,12 @@
 - check usage of snippets and make ui composable
 - skills: figma, the other libs ib frontend and backend we are using
 - Playwright and vitest and storybook for testing
-- dotenx for .env
+- ~~dotenx for .env~~ not needed (Deno 2 loads .env natively, SvelteKit has $env modules)
 - ~~Clean up makefile~~ done
 - ~~Remove old S3 shell tests (tests/s3, .aws)~~ done
+- ~~Add prettier + prettier-plugin-svelte for .svelte formatting~~ done
+- ~~Add Claude Code and git pre-commit hooks for auto-formatting~~ done
+- ~~Add make fmt/lint/check targets~~ done
+- ~~Format entire codebase (ruff, deno fmt, prettier)~~ done
+- ~~Fix all deno lint and ruff lint issues~~ done
+- ~~Add all VS Code extension recommendations~~ done

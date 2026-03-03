@@ -1,7 +1,5 @@
 import type { RequestHandler } from "./$types.js";
-import process from "node:process";
-
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+import { BACKEND_URL } from "$lib/server/env.js";
 
 const handler: RequestHandler = async ({ params, request, locals }) => {
   const url = new URL(request.url);

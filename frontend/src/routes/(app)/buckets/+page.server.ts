@@ -1,9 +1,7 @@
 import { fail } from "@sveltejs/kit";
 import { createBucketSchema } from "$lib/api/schemas.js";
 import type { Actions, PageServerLoad } from "./$types.js";
-import process from "node:process";
-
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+import { BACKEND_URL } from "$lib/server/env.js";
 
 async function fetchBuckets(token: string) {
   const response = await fetch(`${BACKEND_URL}/api/v1/buckets`, {

@@ -1,9 +1,7 @@
 import { fail } from "@sveltejs/kit";
 import { loginSchema } from "$lib/api/schemas.js";
 import type { Actions, PageServerLoad } from "./$types.js";
-import process from "node:process";
-
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+import { BACKEND_URL } from "$lib/server/env.js";
 
 export const load: PageServerLoad = ({ locals }) => {
   return { hasToken: !!locals.token };

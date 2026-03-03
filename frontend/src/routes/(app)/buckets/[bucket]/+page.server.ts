@@ -1,8 +1,6 @@
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types.js";
-import process from "node:process";
-
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+import { BACKEND_URL } from "$lib/server/env.js";
 
 async function fetchObjects(bucket: string, prefix: string, token: string) {
   const queryParams = new URLSearchParams({ max_keys: "100" });
