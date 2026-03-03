@@ -5,21 +5,28 @@ from fastapi import APIRouter, Depends
 from app.core.security import get_current_user
 from app.api.v1.endpoints import auth
 from app.api.v1.endpoints.s3 import buckets, objects
-from app.api.v1.endpoints.mapi import (
-    tenants,
-    namespaces,
-    user_accounts,
-    group_accounts,
-    content_classes,
-    retention_classes,
+from app.api.v1.endpoints.mapi.system import (
+    tenants as sys_tenants,
+    user_accounts as sys_user_accounts,
+    group_accounts as sys_group_accounts,
+    infrastructure,
+    operations,
     replication,
     erasure_coding,
-    statistics,
-    logs,
-    health_check,
-    licenses,
-    network,
-    support,
+)
+from app.api.v1.endpoints.mapi.tenant import (
+    settings as tenant_settings,
+    statistics as tenant_statistics,
+    user_accounts as tenant_user_accounts,
+    group_accounts as tenant_group_accounts,
+    content_classes,
+)
+from app.api.v1.endpoints.mapi.namespace import (
+    management as ns_management,
+    compliance as ns_compliance,
+    access as ns_access,
+    indexing as ns_indexing,
+    statistics as ns_statistics,
 )
 
 api_router = APIRouter()
@@ -34,26 +41,29 @@ _auth = [Depends(get_current_user)]
 api_router.include_router(buckets.router, dependencies=_auth)
 api_router.include_router(objects.router, dependencies=_auth)
 
-# ── Tenant-level MAPI (usable with a tenant admin account) ──────────
-api_router.include_router(tenants.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(namespaces.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(user_accounts.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(group_accounts.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(content_classes.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(retention_classes.router, prefix="/mapi", dependencies=_auth)
-
 # ── System-level MAPI (requires HCP system admin) ───────────────────
-api_router.include_router(
-    user_accounts.system_router, prefix="/mapi", dependencies=_auth
-)
-api_router.include_router(
-    group_accounts.system_router, prefix="/mapi", dependencies=_auth
-)
+api_router.include_router(sys_tenants.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(sys_user_accounts.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(sys_group_accounts.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(infrastructure.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(operations.router, prefix="/mapi", dependencies=_auth)
 api_router.include_router(replication.router, prefix="/mapi", dependencies=_auth)
 api_router.include_router(erasure_coding.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(statistics.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(logs.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(health_check.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(licenses.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(network.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(support.router, prefix="/mapi", dependencies=_auth)
+
+# ── Tenant-level MAPI (requires tenant admin) ───────────────────────
+api_router.include_router(tenant_settings.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(tenant_statistics.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(
+    tenant_user_accounts.router, prefix="/mapi", dependencies=_auth
+)
+api_router.include_router(
+    tenant_group_accounts.router, prefix="/mapi", dependencies=_auth
+)
+api_router.include_router(content_classes.router, prefix="/mapi", dependencies=_auth)
+
+# ── Namespace-level MAPI (requires admin/compliance role) ────────────
+api_router.include_router(ns_management.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(ns_compliance.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(ns_access.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(ns_indexing.router, prefix="/mapi", dependencies=_auth)
+api_router.include_router(ns_statistics.router, prefix="/mapi", dependencies=_auth)

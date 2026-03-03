@@ -3,12 +3,16 @@
 	import { LayoutDashboard, Database, Building2, Users, Server } from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
-	const navItems = [
+	const overviewItems = [
 		{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-		{ href: '/buckets', label: 'Buckets', icon: Database },
-		{ href: '/tenants', label: 'Tenants', icon: Building2 },
-		{ href: '/users', label: 'Users', icon: Users },
 	] as const;
+
+	const systemItems = [
+		{ href: '/tenants', label: 'Tenants', icon: Building2 },
+		{ href: '/users', label: 'Users & Groups', icon: Users },
+	] as const;
+
+	const storageItems = [{ href: '/buckets', label: 'Buckets', icon: Database }] as const;
 </script>
 
 <Sidebar.Root collapsible="icon">
@@ -27,9 +31,52 @@
 
 	<Sidebar.Content>
 		<Sidebar.Group>
+			<Sidebar.GroupLabel>Overview</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
-					{#each navItems as item}
+					{#each overviewItems as item}
+						{@const active = $page.url.pathname.startsWith(item.href)}
+						<Sidebar.MenuItem>
+							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
+								{#snippet child({ props })}
+									<a href={item.href} {...props}>
+										<item.icon class="h-5 w-5 shrink-0" />
+										<span>{item.label}</span>
+									</a>
+								{/snippet}
+							</Sidebar.MenuButton>
+						</Sidebar.MenuItem>
+					{/each}
+				</Sidebar.Menu>
+			</Sidebar.GroupContent>
+		</Sidebar.Group>
+
+		<Sidebar.Group>
+			<Sidebar.GroupLabel>System</Sidebar.GroupLabel>
+			<Sidebar.GroupContent>
+				<Sidebar.Menu>
+					{#each systemItems as item}
+						{@const active = $page.url.pathname.startsWith(item.href)}
+						<Sidebar.MenuItem>
+							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
+								{#snippet child({ props })}
+									<a href={item.href} {...props}>
+										<item.icon class="h-5 w-5 shrink-0" />
+										<span>{item.label}</span>
+									</a>
+								{/snippet}
+							</Sidebar.MenuButton>
+						</Sidebar.MenuItem>
+					{/each}
+				</Sidebar.Menu>
+			</Sidebar.GroupContent>
+		</Sidebar.Group>
+
+		<Sidebar.Group>
+			<Sidebar.GroupLabel>Storage</Sidebar.GroupLabel>
+			<Sidebar.GroupContent>
+				<Sidebar.Menu>
+					{#each storageItems as item}
 						{@const active = $page.url.pathname.startsWith(item.href)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
