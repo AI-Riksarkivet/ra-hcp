@@ -1,4 +1,5 @@
 - fix docs (zenaical)
+- better grouping of routes, tentant admin, hcp admin.. etc? what are the skärningspunkter 
 - removee? https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/assets/favicon.svg
 - remove [https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/assets/favicon.svg](https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/hooks/is-mobile.svelte.ts)
 - remove? https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/utils.ts, https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/index.ts , https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/src/lib/utils/cn.ts ?
