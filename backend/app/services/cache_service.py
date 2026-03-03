@@ -75,6 +75,15 @@ class CacheService:
             self._sync_redis = None
         self._enabled = False
 
+    async def ping(self) -> bool:
+        """Return True if Redis is reachable, False otherwise."""
+        if not self._enabled or self._redis is None:
+            return False
+        try:
+            return await self._redis.ping()  # type: ignore[return-value]
+        except Exception:
+            return False
+
     def _key(self, key: str) -> str:
         return f"{self._settings.cache_key_prefix}:{key}"
 

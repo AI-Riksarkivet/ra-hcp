@@ -141,6 +141,23 @@ class MapiService:
             raise HTTPException(status_code=502, detail="HCP connection error")
         return resp
 
+    # ── Connectivity check ─────────────────────────────────────────────
+
+    async def ping(self) -> bool:
+        """Return True if HCP is reachable, False otherwise.
+
+        Sends an unauthenticated HEAD — any response (including 401/403)
+        proves the network path is up.  Only transport errors mean
+        "unreachable".
+        """
+        try:
+            client = await self._get_client()
+            url = self._build_url("/tenants")
+            await client.head(url, timeout=5.0)
+            return True
+        except Exception:
+            return False
+
     # ── Convenience methods ────────────────────────────────────────────
 
     async def get(self, path: str, **kwargs) -> httpx.Response:

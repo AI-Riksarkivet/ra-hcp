@@ -228,9 +228,49 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(api_router, prefix="/api/v1")
 
 
-# ── Health endpoint ───────────────────────────────────────────────────
+# ── Health & readiness probes ─────────────────────────────────────────
+
+
+@app.get("/healthz", tags=["Health"])
+async def healthz():
+    """Liveness probe — returns 200 if the process is running."""
+    return {"status": "ok"}
+
+
+@app.get("/readyz", tags=["Health"])
+async def readyz(request: Request):
+    """Readiness probe — checks HCP and Redis (if configured) are reachable."""
+    checks: dict[str, str] = {}
+    ready = True
+
+    # HCP (required)
+    mapi = getattr(request.app.state, "mapi", None)
+    if mapi is not None and await mapi.ping():
+        checks["hcp"] = "reachable"
+    else:
+        checks["hcp"] = "unreachable"
+        ready = False
+
+    # Cache (required only when configured)
+    cache: CacheService | None = getattr(request.app.state, "cache", None)
+    if cache is not None and cache._settings.redis_url:
+        if await cache.ping():
+            checks["cache"] = "connected"
+        else:
+            checks["cache"] = "disconnected"
+            ready = False
+    else:
+        checks["cache"] = "disabled"
+
+    return JSONResponse(
+        status_code=200 if ready else 503,
+        content={"status": "ready" if ready else "not ready", "checks": checks},
+    )
+
+
 @app.get("/health", tags=["Health"])
 async def health(cache: CacheService | None = Depends(get_cache_service)):
+    """Legacy health endpoint (backwards compatible)."""
     return {
         "status": "ok",
         "cache": "connected" if cache and cache.enabled else "disabled",
