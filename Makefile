@@ -2,10 +2,12 @@
 #  HCP App — Development commands
 # ──────────────────────────────────────────────────────────────────────
 SHELL := /bin/bash
+export PATH := $(HOME)/.deno/bin:$(PATH)
 
-.PHONY: help setup install-deno install-uv skills \
+.PHONY: help setup install-deno install-uv setup-hooks skills \
+        fmt lint check \
         run-api run-api-mock \
-        frontend-install frontend-dev frontend-build frontend-check \
+        frontend-dev frontend-build \
         redis redis-stop redis-cli
 
 ## help: list available targets
@@ -14,8 +16,8 @@ help:
 
 # ── Setup ────────────────────────────────────────────────────────────
 
-## setup: install all tooling (Deno + uv) and dependencies
-setup: install-deno install-uv
+## setup: install all tooling, dependencies, and git hooks
+setup: install-deno install-uv setup-hooks
 	cd backend && uv sync
 	cd frontend && deno install
 	@echo ""
@@ -29,15 +31,34 @@ install-deno:
 install-uv:
 	@command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh
 
+## setup-hooks: install git pre-commit hook
+setup-hooks:
+	ln -sf ../../.claude/hooks/pre-commit .git/hooks/pre-commit
+	@echo "Git pre-commit hook installed."
+
 ## skills: show Claude Code skill install guide
 skills:
 	@cat .claude/README.md
 
+# ── Quality ──────────────────────────────────────────────────────────
+
+## fmt: format all code (backend + frontend)
+fmt:
+	cd backend && uvx ruff format .
+	cd frontend && deno task fmt
+
+## lint: lint all code (backend + frontend)
+lint:
+	cd backend && uvx ruff check .
+	cd frontend && deno lint
+
+## check: format, lint, and type-check everything
+check: fmt lint
+	cd frontend && deno task check
+
 # ── API ──────────────────────────────────────────────────────────────
 
 ## run-api: start the HCP API server
-# Pass ROOT_PATH for reverse-proxy setups:
-#   make run-api ROOT_PATH=/@user/workspace.main/apps/code-server/proxy/8000
 ROOT_PATH ?=
 run-api:
 	cd backend && ROOT_PATH=$(ROOT_PATH) uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 $(if $(ROOT_PATH),--root-path $(ROOT_PATH))
@@ -48,10 +69,6 @@ run-api-mock:
 
 # ── Frontend ─────────────────────────────────────────────────────────
 
-## frontend-install: install frontend dependencies
-frontend-install:
-	cd frontend && deno install
-
 ## frontend-dev: start the frontend dev server
 frontend-dev:
 	cd frontend && BACKEND_URL=http://localhost:8000 deno task dev
@@ -59,10 +76,6 @@ frontend-dev:
 ## frontend-build: build the frontend for production
 frontend-build:
 	cd frontend && deno task build
-
-## frontend-check: run type checking on the frontend
-frontend-check:
-	cd frontend && deno task check
 
 # ── Redis ────────────────────────────────────────────────────────────
 

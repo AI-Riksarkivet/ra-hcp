@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Pre-commit: check formatting for staged files
+set -euo pipefail
+
+FRONTEND_DIR="frontend"
+HAS_ERROR=0
+
+# Check Python files with ruff
+PY_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.py' || true)
+if [ -n "$PY_FILES" ]; then
+  echo "Checking Python formatting..."
+  if ! uvx ruff format --check $PY_FILES; then
+    echo "Run 'uvx ruff format' to fix."
+    HAS_ERROR=1
+  fi
+  if ! uvx ruff check $PY_FILES; then
+    echo "Run 'uvx ruff check --fix' to fix."
+    HAS_ERROR=1
+  fi
+fi
+
+# Check Svelte files with prettier
+SVELTE_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.svelte' || true)
+if [ -n "$SVELTE_FILES" ]; then
+  echo "Checking Svelte formatting..."
+  if ! (cd "$FRONTEND_DIR" && npx prettier --plugin prettier-plugin-svelte --check $SVELTE_FILES); then
+    echo "Run 'deno task fmt:svelte' in frontend/ to fix."
+    HAS_ERROR=1
+  fi
+fi
+
+# Check TS/JS files with deno fmt
+TSJS_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.ts' '*.js' || true)
+if [ -n "$TSJS_FILES" ]; then
+  echo "Checking TS/JS formatting..."
+  if ! ~/.deno/bin/deno fmt --check $TSJS_FILES; then
+    echo "Run 'deno fmt' to fix."
+    HAS_ERROR=1
+  fi
+fi
+
+if [ "$HAS_ERROR" -ne 0 ]; then
+  echo ""
+  echo "Commit blocked: formatting issues found. Fix and re-stage."
+  exit 1
+fi

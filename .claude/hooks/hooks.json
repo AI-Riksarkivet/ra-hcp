@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uvx ruff format $CLAUDE_FILE_PATHS && uvx ruff check --fix $CLAUDE_FILE_PATHS && uvx ty check"
+            "command": "bash /home/coder/hcp/.claude/hooks/format.sh $CLAUDE_FILE_PATHS"
           }
         ]
       }
