@@ -8,7 +8,6 @@
     "@tailwindcss/vite": "^4.2.1",
     "bits-ui": "^2.16.2",
     "clsx": "^2.1.1",
-    "gsap": "^3.14.2",
     "lucide-svelte": "^0.575.0",
     "mode-watcher": "^1.1.0",
     "svelte-sonner": "^1.0.7",

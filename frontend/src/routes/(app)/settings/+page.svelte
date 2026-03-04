@@ -49,7 +49,7 @@
 			</div>
 		{:then [info, settings]}
 			<div class="grid gap-6 lg:grid-cols-2">
-				<Card.Root>
+				<Card.Root class="animate-in fade-in slide-in-from-bottom-2 duration-300">
 					<Card.Header>
 						<Card.Title>General</Card.Title>
 						<Card.Description>Core tenant configuration</Card.Description>
@@ -91,7 +91,7 @@
 					</Card.Content>
 				</Card.Root>
 
-				<Card.Root>
+				<Card.Root class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-75">
 					<Card.Header>
 						<Card.Title>Namespace Defaults</Card.Title>
 						<Card.Description>Default settings for new namespaces</Card.Description>
@@ -111,7 +111,7 @@
 					</Card.Content>
 				</Card.Root>
 
-				<Card.Root>
+				<Card.Root class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-150">
 					<Card.Header>
 						<Card.Title>Permissions</Card.Title>
 						<Card.Description>Tenant-level permission settings</Card.Description>
@@ -139,7 +139,7 @@
 					</Card.Content>
 				</Card.Root>
 
-				<Card.Root>
+				<Card.Root class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-200">
 					<Card.Header>
 						<Card.Title>Contact Info</Card.Title>
 						<Card.Description>Tenant administrator contact details</Card.Description>

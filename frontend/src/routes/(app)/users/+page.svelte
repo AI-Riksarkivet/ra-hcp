@@ -10,6 +10,8 @@
 	type Group = { name: string; description?: string };
 
 	let tenant = $derived(page.data.tenant as string | undefined);
+	let usersData = $derived(tenant ? get_users({ tenant }) : undefined);
+	let groupsData = $derived(tenant ? get_groups({ tenant }) : undefined);
 
 	const userColumns: ColumnDef<User, any>[] = [
 		{ accessorKey: 'username', header: 'Username' },
@@ -48,7 +50,7 @@
 
 	{#if tenant}
 		<div>
-			{#await get_users({ tenant })}
+			{#await usersData}
 				<div class="mb-4 flex items-center gap-3">
 					<h3 class="text-lg font-semibold">User Accounts</h3>
 				</div>
@@ -63,7 +65,7 @@
 		</div>
 
 		<div>
-			{#await get_groups({ tenant })}
+			{#await groupsData}
 				<div class="mb-4 flex items-center gap-3">
 					<h3 class="text-lg font-semibold">Groups</h3>
 				</div>

@@ -75,6 +75,38 @@ NAMESPACES: dict[str, dict[str, dict]] = {
             "searchEnabled": True,
         },
     },
+    "mock": {
+        "documents": {
+            "name": "documents",
+            "nameIDNA": "documents",
+            "hardQuota": "100 GB",
+            "softQuota": "90%",
+            "description": "General documents",
+            "versioningSettings": {"enabled": False},
+            "hashScheme": "SHA-256",
+            "searchEnabled": True,
+        },
+        "archives": {
+            "name": "archives",
+            "nameIDNA": "archives",
+            "hardQuota": "50 GB",
+            "softQuota": "90%",
+            "description": "Archived data",
+            "versioningSettings": {"enabled": False},
+            "hashScheme": "SHA-256",
+            "searchEnabled": False,
+        },
+        "logs": {
+            "name": "logs",
+            "nameIDNA": "logs",
+            "hardQuota": "25 GB",
+            "softQuota": "85%",
+            "description": "Application logs",
+            "versioningSettings": {"enabled": False},
+            "hashScheme": "SHA-256",
+            "searchEnabled": True,
+        },
+    },
 }
 
 # ── User accounts (tenant -> username -> data) ───────────────────────
@@ -106,6 +138,16 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "localAuthentication": True,
             "enabled": True,
             "roles": {"role": ["ADMIN", "MONITOR"]},
+        },
+    },
+    "mock": {
+        "admin": {
+            "username": "admin",
+            "fullName": "Mock Admin",
+            "description": "Mock tenant administrator",
+            "localAuthentication": True,
+            "enabled": True,
+            "roles": {"role": ["ADMIN", "SECURITY", "MONITOR", "COMPLIANCE"]},
         },
     },
 }

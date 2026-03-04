@@ -36,7 +36,7 @@
 				<CardSkeleton />
 				<CardSkeleton />
 			{:then info}
-				<div>
+				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300">
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -52,7 +52,7 @@
 					</Card.Root>
 				</div>
 
-				<div>
+				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-75">
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -68,7 +68,7 @@
 					</Card.Root>
 				</div>
 
-				<div>
+				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-150">
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -90,7 +90,7 @@
 				<CardSkeleton />
 				<CardSkeleton />
 			{:then stats}
-				<div>
+				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300">
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -106,7 +106,7 @@
 					</Card.Root>
 				</div>
 
-				<div>
+				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-75">
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -124,7 +124,7 @@
 					</Card.Root>
 				</div>
 
-				<div>
+				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-150">
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
