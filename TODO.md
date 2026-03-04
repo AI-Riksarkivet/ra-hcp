@@ -8,6 +8,8 @@
 
 4. **Multi-tenant login** — Add feature to manage multiple tenants, swap between them in the frontend, and view buckets across tenants. Good scaffold for the sync feature (task 1).
 
+5. adding icon tags for certain serice (lakefs) or NFS. in bucket and namesapce view
+
 ---
 
 ## Done

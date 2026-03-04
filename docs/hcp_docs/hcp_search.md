@@ -1,19 +1,3 @@
-![Company](https://docs.hitachivantara.com/portal-asset/banner-texture-bleed)
-
-# Content Platform System Management Help
-
-## 9.6.x
-
-### Content Platform
-
-MK-95HCPH001-19
-
-Last updated: 2023-07-11
-
-Generated from docs.hitachivantara.com
-
-![Company](https://docs.hitachivantara.com/portal-asset/HV-Logo)
-
 # HCP Metadata Query API Reference
 
 ## Introduction to the HCP metadata query API
