@@ -50,6 +50,7 @@ class S3Service:
         access_key: str,
         secret_key: str,
         endpoint_url: str | None = None,
+        **kwargs: Any,
     ) -> S3Service:
         """Create an S3Service with explicit credentials (no env-var fallback)."""
         instance = cls.__new__(cls)

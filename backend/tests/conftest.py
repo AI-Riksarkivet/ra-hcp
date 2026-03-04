@@ -12,12 +12,14 @@ from httpx import ASGITransport, AsyncClient
 from app.api.dependencies import (
     get_mapi_service,
     get_mapi_settings,
+    get_query_service,
     get_s3_service,
 )
 from app.core.config import AuthSettings, MapiSettings, S3Settings
 from app.core.security import create_access_token
 from app.main import app
 from app.services.mapi_service import MapiService
+from app.services.query_service import QueryService
 from app.services.s3_service import S3Service
 
 # Base URL for MAPI mock routes (must match mapi_settings fixture)
@@ -146,6 +148,7 @@ async def client(
       - Test client ASGITransport requests pass through (assert_all_mocked=False)
     """
     mapi_svc = MapiService(mapi_settings)
+    query_svc = QueryService(mapi_settings)
 
     async def _override_s3():
         yield mock_s3_service
@@ -153,16 +156,21 @@ async def client(
     async def _override_mapi():
         yield mapi_svc
 
+    async def _override_query():
+        yield query_svc
+
     def _override_mapi_settings():
         return mapi_settings
 
     app.dependency_overrides[get_s3_service] = _override_s3
     app.dependency_overrides[get_mapi_service] = _override_mapi
+    app.dependency_overrides[get_query_service] = _override_query
     app.dependency_overrides[get_mapi_settings] = _override_mapi_settings
 
     # Provide app.state so non-overridden code (e.g. health) works
     app.state.cache = None
     app.state.mapi = mapi_svc
+    app.state.query = query_svc
     app.state.s3_cache = {}
 
     with patch("app.core.security._get_auth_settings", return_value=auth_settings):
@@ -170,5 +178,6 @@ async def client(
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
 
+    await query_svc.close()
     await mapi_svc.close()
     app.dependency_overrides.clear()

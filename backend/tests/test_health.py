@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import httpx
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
 from tests.conftest import HCP_BASE
 
@@ -40,12 +40,15 @@ async def test_readyz_ready_when_hcp_reachable(client: AsyncClient, hcp_mock):
 
 async def test_readyz_not_ready_when_hcp_unreachable(client: AsyncClient):
     # Mock ping to return False (HCP unreachable)
+    transport = client._transport
+    assert isinstance(transport, ASGITransport)
+    app = transport.app
     with patch.object(
-        client._transport.app.state.mapi,
+        app.state.mapi,  # type: ignore[union-attr]
         "ping",
         new_callable=AsyncMock,
         return_value=False,
-    ):  # type: ignore[union-attr]
+    ):
         resp = await client.get("/readyz")
     assert resp.status_code == 503
     data = resp.json()

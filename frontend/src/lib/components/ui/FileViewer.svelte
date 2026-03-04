@@ -153,8 +153,8 @@
 			</div>
 		{:else if category === 'video'}
 			<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
-				<!-- svelte-ignore a11y_media_has_caption -->
 				<video controls class="max-h-full max-w-full rounded" src={url}>
+					<track kind="captions" />
 					Your browser does not support this video.
 				</video>
 			</div>

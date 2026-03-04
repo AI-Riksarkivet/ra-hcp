@@ -2,8 +2,8 @@
 	import type { Snippet } from 'svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 
-	// deno-lint-ignore no-explicit-any
-	type AnyComponent = new (...args: any[]) => any;
+	// deno-lint-ignore no-explicit-any -- lucide-svelte uses Svelte 4 class constructor API
+	type IconComponent = new (...args: any[]) => any;
 
 	let {
 		label,
@@ -14,7 +14,7 @@
 	}: {
 		label: string;
 		value: string;
-		icon: AnyComponent;
+		icon: IconComponent;
 		delay?: string;
 		children?: Snippet;
 	} = $props();

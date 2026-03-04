@@ -7,16 +7,16 @@ export const get_buckets = query(async () => {
     const res = await apiFetch("/api/v1/buckets");
     if (res.ok) {
       const data = await res.json();
-      const buckets = (data.buckets ?? []).map(
-        (b: Record<string, unknown>) => ({
-          name: b.name ?? b.Name ?? "",
-          creation_date: b.creation_date ?? b.CreationDate ?? "",
-        }),
-      );
+      const buckets = (data.buckets ?? []).map((
+        b: Record<string, unknown>,
+      ) => ({
+        name: b.name ?? b.Name ?? "",
+        creation_date: b.creation_date ?? b.CreationDate ?? "",
+      }));
       return { buckets, owner: data.owner ?? "" };
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    console.error("[buckets.remote]", err);
   }
   return {
     buckets: [] as { name: string; creation_date: string }[],
@@ -35,15 +35,15 @@ export const get_objects = query(
       );
       if (res.ok) {
         const data = await res.json();
-        const objects = (data.objects ?? []).map(
-          (o: Record<string, unknown>) => ({
-            key: o.key ?? o.Key ?? "",
-            size: o.size ?? o.Size ?? 0,
-            last_modified: o.last_modified ?? o.LastModified ?? "",
-            etag: o.etag ?? o.ETag ?? "",
-            storage_class: o.storage_class ?? o.StorageClass ?? "",
-          }),
-        );
+        const objects = (data.objects ?? []).map((
+          o: Record<string, unknown>,
+        ) => ({
+          key: o.key ?? o.Key ?? "",
+          size: o.size ?? o.Size ?? 0,
+          last_modified: o.last_modified ?? o.LastModified ?? "",
+          etag: o.etag ?? o.ETag ?? "",
+          storage_class: o.storage_class ?? o.StorageClass ?? "",
+        }));
         return {
           objects,
           isTruncated: data.is_truncated ?? false,
@@ -123,16 +123,19 @@ export const delete_object = command(
 export const bulk_delete_objects = command(
   z.object({ bucket: z.string(), keys: z.array(z.string()) }),
   async ({ bucket, keys }) => {
-    let failCount = 0;
-    for (const key of keys) {
-      const res = await apiFetch(
-        `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${
-          encodeURIComponent(key)
-        }`,
-        { method: "DELETE" },
-      );
-      if (!res.ok) failCount++;
-    }
+    const results = await Promise.allSettled(
+      keys.map((key) =>
+        apiFetch(
+          `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${
+            encodeURIComponent(key)
+          }`,
+          { method: "DELETE" },
+        ).then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        })
+      ),
+    );
+    const failCount = results.filter((r) => r.status === "rejected").length;
     if (failCount > 0) {
       throw new Error(
         `Failed to delete ${failCount} of ${keys.length} objects`,
@@ -153,8 +156,8 @@ export const get_s3_credentials = query(async () => {
         endpoint_url: (data.endpoint_url ?? "") as string,
       };
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    console.error("[buckets.remote]", err);
   }
   return {
     access_key_id: "",

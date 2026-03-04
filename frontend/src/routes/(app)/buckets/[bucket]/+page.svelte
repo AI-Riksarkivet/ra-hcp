@@ -69,7 +69,15 @@
 	let uploading = $state(false);
 	let dragover = $state(false);
 
-	let objects = $derived((objectData.current?.objects ?? []) as any[]);
+	interface S3Object {
+		key: string;
+		size: number;
+		last_modified: string;
+		etag: string;
+		storage_class: string;
+	}
+
+	let objects = $derived((objectData.current?.objects ?? []) as S3Object[]);
 	let keyCount = $derived(objectData.current?.keyCount ?? 0);
 
 	function navigatePrefix(p: string) {
@@ -81,7 +89,7 @@
 	function getDisplayName(key: string): string {
 		return key.split('/').filter(Boolean).pop() ?? key;
 	}
-	function isObjFolder(obj: { size: number; key: string }): boolean {
+	function isObjFolder(obj: S3Object): boolean {
 		return obj.size === 0 && obj.key.endsWith('/');
 	}
 
@@ -202,7 +210,7 @@
 
 	let search = $state('');
 	let filteredObjects = $derived(
-		objects.filter((obj: { key: string }) => {
+		objects.filter((obj) => {
 			if (!search) return true;
 			const q = search.toLowerCase();
 			return getDisplayName(obj.key).toLowerCase().includes(q) || obj.key.toLowerCase().includes(q);
@@ -210,19 +218,16 @@
 	);
 
 	let selected = $state<Set<string>>(new Set());
-	let selectableObjects = $derived(
-		filteredObjects.filter((obj: { size: number; key: string }) => !isObjFolder(obj))
-	);
+	let selectableObjects = $derived(filteredObjects.filter((obj) => !isObjFolder(obj)));
 	let allSelected = $derived(
-		selectableObjects.length > 0 &&
-			selectableObjects.every((obj: { key: string }) => selected.has(obj.key))
+		selectableObjects.length > 0 && selectableObjects.every((obj) => selected.has(obj.key))
 	);
 
 	function toggleAll() {
 		if (allSelected) {
 			selected = new Set();
 		} else {
-			selected = new Set(selectableObjects.map((obj: { key: string }) => obj.key));
+			selected = new Set(selectableObjects.map((obj) => obj.key));
 		}
 	}
 	function toggleOne(key: string) {
@@ -364,8 +369,9 @@
 					Prefix: <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{prefix}</code>
 				</p>{/if}
 
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
+				role="region"
+				aria-label="File drop zone"
 				class="rounded-lg border-2 border-dashed p-8 text-center transition-colors {dragover
 					? 'border-primary bg-primary/5'
 					: 'border-border'}"
