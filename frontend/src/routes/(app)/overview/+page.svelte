@@ -4,6 +4,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import StatCard from '$lib/components/ui/stat-card.svelte';
 	import { formatBytes } from '$lib/utils/format.js';
 	import {
 		get_tenant,
@@ -86,112 +87,63 @@
 				<CardSkeleton />
 				<CardSkeleton />
 			{:then stats}
-				<!-- Objects -->
-				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300">
-					<Card.Root class="h-full">
-						<Card.Content class="pt-6">
-							<div class="flex items-center justify-between">
-								<div>
-									<p class="text-sm font-medium text-muted-foreground">Objects</p>
-									<p class="mt-1 text-2xl font-bold">
-										{(stats?.objectCount ?? 0).toLocaleString()}
-									</p>
-									<p class="mt-1 text-xs text-muted-foreground">
-										{stats?.customMetadataObjectCount ?? 0} with custom metadata
-									</p>
-								</div>
-								<div class="rounded-lg bg-primary/10 p-3">
-									<FileBox class="h-6 w-6 text-primary" />
-								</div>
-							</div>
-						</Card.Content>
-					</Card.Root>
-				</div>
+				<StatCard label="Objects" value={(stats?.objectCount ?? 0).toLocaleString()} icon={FileBox}>
+					<p class="mt-1 text-xs text-muted-foreground">
+						{stats?.customMetadataObjectCount ?? 0} with custom metadata
+					</p>
+				</StatCard>
 
-				<!-- Storage -->
-				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-75">
-					<Card.Root class="h-full">
-						<Card.Content class="pt-6">
-							<div class="flex items-center justify-between">
-								<div class="min-w-0 flex-1">
-									<p class="text-sm font-medium text-muted-foreground">Storage</p>
-									<p class="mt-1 text-2xl font-bold">
-										{formatBytes(Number(stats?.bytesUsed ?? 0))}
-									</p>
-									{#await tenantInfo then info}
-										{#if quotaPercent !== null}
-											<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-												<div
-													class="h-full rounded-full transition-all duration-500 {quotaPercent > 90
-														? 'bg-destructive'
-														: quotaPercent > 70
-															? 'bg-yellow-500'
-															: 'bg-primary'}"
-													style="width: {quotaPercent}%"
-												></div>
-											</div>
-											<p class="mt-1 text-xs text-muted-foreground">
-												{formatBytes(Number(stats?.bytesUsed ?? 0))} / {info?.hardQuota}
-											</p>
-										{:else}
-											<p class="mt-1 text-xs text-muted-foreground">No quota limit</p>
-										{/if}
-									{/await}
-								</div>
-								<div class="ml-4 rounded-lg bg-primary/10 p-3">
-									<HardDrive class="h-6 w-6 text-primary" />
-								</div>
+				<StatCard
+					label="Storage"
+					value={formatBytes(Number(stats?.bytesUsed ?? 0))}
+					icon={HardDrive}
+					delay="delay-75"
+				>
+					{#await tenantInfo then info}
+						{#if quotaPercent !== null}
+							<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+								<div
+									class="h-full rounded-full transition-all duration-500 {quotaPercent > 90
+										? 'bg-destructive'
+										: quotaPercent > 70
+											? 'bg-yellow-500'
+											: 'bg-primary'}"
+									style="width: {quotaPercent}%"
+								></div>
 							</div>
-						</Card.Content>
-					</Card.Root>
-				</div>
+							<p class="mt-1 text-xs text-muted-foreground">
+								{formatBytes(Number(stats?.bytesUsed ?? 0))} / {info?.hardQuota}
+							</p>
+						{:else}
+							<p class="mt-1 text-xs text-muted-foreground">No quota limit</p>
+						{/if}
+					{/await}
+				</StatCard>
 
-				<!-- Namespaces -->
-				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-150">
-					<Card.Root class="h-full">
-						<Card.Content class="pt-6">
-							<div class="flex items-center justify-between">
-								<div>
-									<p class="text-sm font-medium text-muted-foreground">Namespaces</p>
-									<p class="mt-1 text-2xl font-bold">
-										{stats?.namespacesUsed ?? 0}
-									</p>
-									<p class="mt-1 text-xs">
-										<a href="/namespaces" class="text-primary underline-offset-4 hover:underline">
-											View all &rarr;
-										</a>
-									</p>
-								</div>
-								<div class="rounded-lg bg-primary/10 p-3">
-									<Boxes class="h-6 w-6 text-primary" />
-								</div>
-							</div>
-						</Card.Content>
-					</Card.Root>
-				</div>
-				<!-- Users -->
+				<StatCard
+					label="Namespaces"
+					value={String(stats?.namespacesUsed ?? 0)}
+					icon={Boxes}
+					delay="delay-150"
+				>
+					<p class="mt-1 text-xs">
+						<a href="/namespaces" class="text-primary underline-offset-4 hover:underline">
+							View all &rarr;
+						</a>
+					</p>
+				</StatCard>
+
 				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-200">
 					{#await usersData}
 						<CardSkeleton />
 					{:then _}
-						<Card.Root class="h-full">
-							<Card.Content class="pt-6">
-								<div class="flex items-center justify-between">
-									<div>
-										<p class="text-sm font-medium text-muted-foreground">Users</p>
-										<p class="mt-1 text-2xl font-bold">{users.length}</p>
-										<p class="mt-1 text-xs">
-											<a href="/users" class="text-primary underline-offset-4 hover:underline">
-												Manage &rarr;
-											</a>
-										</p>
-									</div>
-									<div class="rounded-lg bg-primary/10 p-3">
-										<Users class="h-6 w-6 text-primary" />
-									</div>
-								</div>
-							</Card.Content>
-						</Card.Root>
+						<StatCard label="Users" value={String(users.length)} icon={Users}>
+							<p class="mt-1 text-xs">
+								<a href="/users" class="text-primary underline-offset-4 hover:underline">
+									Manage &rarr;
+								</a>
+							</p>
+						</StatCard>
 					{/await}
 				</div>
 			{/await}

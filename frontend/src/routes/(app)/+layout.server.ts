@@ -1,4 +1,4 @@
-import { error } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import type { LayoutServerLoad } from "./$types.js";
 import { Buffer } from "node:buffer";
 
@@ -14,7 +14,7 @@ function parseJwtPayload(token: string): Record<string, unknown> {
 
 export const load: LayoutServerLoad = ({ locals }) => {
   if (!locals.token) {
-    error(401, "Not authenticated");
+    redirect(302, "/login");
   }
   const claims = parseJwtPayload(locals.token);
   const username = (claims.sub as string) ?? "User";

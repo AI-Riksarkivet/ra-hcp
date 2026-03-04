@@ -56,8 +56,11 @@ export const actions = {
         secure: false,
         maxAge: 60 * 60 * 8, // 8 hours
       });
-    } catch {
-      return fail(500, { error: "Unable to connect to backend service" });
+    } catch (err) {
+      console.error("Login fetch failed:", err);
+      return fail(500, {
+        error: `Unable to connect to backend service (${BACKEND_URL})`,
+      });
     }
 
     return { success: true };

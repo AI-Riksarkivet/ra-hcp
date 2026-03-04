@@ -2,21 +2,23 @@
 
 1. **Implement bucket sync** — Build intra-tenant and cross-tenant sync endpoints backed by Redis Streams, as described in `plan_sync.md`. Includes transform pipeline, webhook support, atomic mode, and job status polling.
 
-2. **Improve overview page** — Show more useful/accurate data on the tenant overview. Surface real statistics from the HCP backend (object counts, storage used per namespace, quota usage). Make the overview a proper dashboard.
+2. **Heavy refactor (phase 2)** — Remaining DRY work: save/dirty tracking composable (used 15+ times across settings, user detail, namespace detail), table abstraction component, create dialog pattern extraction. Phase 1 done (StatCard, DeleteConfirmDialog, BulkDeleteDialog, SearchToolbar).
 
-3. **Add logs and better statistics** — Pull HCP system logs and richer statistics into the overview page. Show namespace-level breakdowns, ingress/egress data, chargeback info, and recent activity.
+3. **Build HCP Metadata Query API** — Backend has indexing config but no query endpoints. Need: `POST .../query` (object-based), `POST .../operationQuery` (operation/audit), Pydantic schemas, mock handlers, mock fixtures. Could power activity logs on overview page. See `docs/hcp_docs/hcp_search.md`.
 
-4. **Fix layouting + add tooltips in users/groups** — Improve spacing and layout in the users & groups list page and user detail page. Add tooltips or a description panel in `/users/<user>` to explain what each role checkbox means (ADMINISTRATOR, SECURITY, MONITOR, COMPLIANCE).
+4. **Multi-tenant login** — Add feature to manage multiple tenants, swap between them in the frontend, and view buckets across tenants. Good scaffold for the sync feature (task 1).
 
-5. **Add tooltips and explanations for namespace settings** — In namespace detail, explain what each field/setting means (S3 optimized vs NFS, CIFS, SMTP protocols, hash schemes, compliance modes, etc.). Add inline help or a side panel with descriptions.
+---
 
-6. **Understand search and versioning settings** — Investigate what "search enabled" and "versioning enabled" actually do in HCP. Determine whether these are useful to expose in the frontend or if they should be hidden. Document findings.
+## Done
 
-7. **Investigate tenant admin capabilities** — The Settings page in the navbar currently shows read-only tenant settings. Understand from the backend what a tenant admin can actually change (permissions, namespace defaults, contact info, email notification, security settings). Either make the settings page editable or clarify what's possible.
-
-8. **heavy refactor** —  on the frontend. see if some of the code is weird or not used. e.g logout and login and what the /api route is. Also look if we can refacctor into some reusable ts libs in the diiffeerent routes or breakout into smallr componentss in the (app)/ routes.. looks like we can make a bit more abstracions and reuse stuff..
-
-9. **login in multiple** -- tenats add feature so we can add tenants and swap betwen them in the frontend esarier. and even see multipe of does tentant and their buckets togheter in /buckets.. perhaps and which tentant they are from? is that a good feature? perhaps a good scaffold for the plan_sync.md we are planning (1. in todo).
+- ~~**Improve overview page**~~ — Compact stat cards (objects, storage+quota, namespaces, users), chargeback activity table with I/O totals, quota progress bar.
+- ~~**Add logs and better statistics**~~ — Chargeback/I/O data surfaced on overview. HCP has no queryable log API (only bulk download). Operation-based queries via Metadata Query API could fill the gap (see task 3).
+- ~~**Fix layouting + add tooltips in users/groups**~~ — Role tooltips on user detail page (ADMINISTRATOR, SECURITY, MONITOR, COMPLIANCE).
+- ~~**Add tooltips and explanations for namespace settings**~~ — Tooltips for protocols, hash scheme, compliance, versioning, search on namespace detail page.
+- ~~**Understand search and versioning settings**~~ — Researched HCP Metadata Query API (object-based + operation-based queries). Versioning controls object version retention. Backend can configure indexing but query endpoints not yet built.
+- ~~**Investigate tenant admin capabilities**~~ — Settings page fully editable: contact info, namespace defaults, tenant permissions with save/dirty tracking.
+- ~~**Heavy refactor (phase 1)**~~ — Extracted reusable Svelte 5 components: `StatCard`, `DeleteConfirmDialog`, `BulkDeleteDialog`, `SearchToolbar`. Refactored namespaces, buckets, overview, and user detail pages.
 
 ---
 
@@ -34,7 +36,7 @@
 - use std@expect for testing (jest) from JSR
 - ~~refactor: use SvelteKit $env/dynamic/private + centralized $lib/server/env.ts instead of process.env~~ done
 - deno otel https://docs.deno.com/runtime/fundamentals/open_telemetry/, https://deno.com/blog/zero-config-debugging-deno-opentelemetry
-- look over svelte code and be very svelte 5 and sveltekit 2 idiomatic — use snippets, remote functions, reactivity, stores, context API. Check if we are using routing and pages [id] in sveltekit 2
+- ~~look over svelte code and be very svelte 5 and sveltekit 2 idiomatic~~ done (snippets, remote functions, $props, $derived, $bindable used throughout)
 - backend with namespaces
 - buckets are under tenants, see minio UI for example
 - ~~fix user and groups~~ done
@@ -47,7 +49,7 @@
 - fix what different users can see and do
 - fix so we use superforms
 - fix forms and add more padding to modals
-- fix dashboard
+- ~~fix dashboard~~ done (overview page redesigned)
 - add more metadata of the uploaded file — a meta tab that opens from right sidebar, about the file, who uploaded, etc.
 - search should be done on key, please verify
 - add support for sync between 1:1 buckets between tenants (must auth for the other tenant) — can we use redis as layer between?
@@ -63,7 +65,7 @@
 - research best practices for test suite with deno and sveltekit
 - utilize more page and layout utils of sveltekit! and utilize sveltekit more in general
 - use figma for designing UI
-- check usage of snippets and make UI composable
+- ~~check usage of snippets and make UI composable~~ done (StatCard uses snippets, all new components use $props/$bindable)
 - skills: figma, the other libs in frontend and backend we are using
 - Playwright and vitest and storybook for testing
 - ~~dotenx for .env~~ not needed (Deno 2 loads .env natively, SvelteKit has $env modules)

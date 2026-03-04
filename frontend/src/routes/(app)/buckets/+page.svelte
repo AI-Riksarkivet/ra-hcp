@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { Plus, Trash2, Search } from 'lucide-svelte';
+	import { Plus, Trash2 } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -10,6 +9,9 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import SearchToolbar from '$lib/components/ui/search-toolbar.svelte';
+	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
+	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import { get_buckets, create_bucket, delete_bucket } from '$lib/buckets.remote.js';
 
 	let bucketData = get_buckets();
@@ -46,7 +48,8 @@
 		selected = next;
 	}
 
-	let deleteTarget = $state<string | null>(null);
+	let deleteTarget = $state('');
+	let deleteDialogOpen = $state(false);
 	let bulkDeleteOpen = $state(false);
 	let deleting = $state(false);
 
@@ -60,7 +63,8 @@
 			toast.error('Failed to delete bucket');
 		} finally {
 			deleting = false;
-			deleteTarget = null;
+			deleteDialogOpen = false;
+			deleteTarget = '';
 		}
 	}
 
@@ -158,22 +162,13 @@
 	{#await bucketData}
 		<TableSkeleton rows={5} columns={4} />
 	{:then _}
-		<div class="relative">
-			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-			<Input type="text" bind:value={search} placeholder="Search buckets..." class="pl-10" />
-		</div>
-
-		{#if selected.size > 0}
-			<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-				<span class="text-sm font-medium">{selected.size} selected</span>
-				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}>
-					<Trash2 class="h-3.5 w-3.5" />Delete Selected
-				</Button>
-				<Button variant="ghost" size="sm" onclick={() => (selected = new Set())}
-					>Deselect All</Button
-				>
-			</div>
-		{/if}
+		<SearchToolbar
+			bind:search
+			placeholder="Search buckets..."
+			selectedCount={selected.size}
+			ondeleteselected={() => (bulkDeleteOpen = true)}
+			ondeselectall={() => (selected = new Set())}
+		/>
 
 		<div class="overflow-x-auto rounded-lg border">
 			<table class="w-full text-left text-sm">
@@ -233,7 +228,10 @@
 											{#snippet child({ props })}
 												<button
 													type="button"
-													onclick={() => (deleteTarget = bucket.name)}
+													onclick={() => {
+														deleteTarget = bucket.name;
+														deleteDialogOpen = true;
+													}}
 													class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 													{...props}
 												>
@@ -253,47 +251,18 @@
 	{/await}
 </div>
 
-<AlertDialog.Root
-	open={deleteTarget !== null}
-	onOpenChange={(open) => {
-		if (!open) deleteTarget = null;
-	}}
->
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>Delete Bucket</AlertDialog.Title>
-			<AlertDialog.Description
-				>Are you sure you want to delete bucket "<strong>{deleteTarget}</strong>"? This action
-				cannot be undone.</AlertDialog.Description
-			>
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel disabled={deleting}>Cancel</AlertDialog.Cancel>
-			<Button variant="destructive" onclick={confirmDelete} disabled={deleting}
-				>{deleting ? 'Deleting...' : 'Delete'}</Button
-			>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<DeleteConfirmDialog
+	bind:open={deleteDialogOpen}
+	name={deleteTarget}
+	itemType="bucket"
+	loading={deleting}
+	onconfirm={confirmDelete}
+/>
 
-<AlertDialog.Root bind:open={bulkDeleteOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title
-				>Delete {selected.size} Bucket{selected.size !== 1 ? 's' : ''}</AlertDialog.Title
-			>
-			<AlertDialog.Description
-				>Are you sure you want to delete {selected.size} bucket{selected.size !== 1 ? 's' : ''}?
-				This action cannot be undone.</AlertDialog.Description
-			>
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel disabled={deleting}>Cancel</AlertDialog.Cancel>
-			<Button variant="destructive" onclick={confirmBulkDelete} disabled={deleting}
-				>{deleting
-					? 'Deleting...'
-					: `Delete ${selected.size} Bucket${selected.size !== 1 ? 's' : ''}`}</Button
-			>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<BulkDeleteDialog
+	bind:open={bulkDeleteOpen}
+	count={selected.size}
+	itemType="bucket"
+	loading={deleting}
+	onconfirm={confirmBulkDelete}
+/>

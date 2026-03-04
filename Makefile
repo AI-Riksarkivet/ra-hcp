@@ -72,7 +72,7 @@ run-api-mock:
 
 ## frontend-dev: start the frontend dev server
 frontend-dev:
-	cd frontend && BACKEND_URL=http://localhost:8000 deno task dev
+	cd frontend && BACKEND_URL=http://127.0.0.1:8000 deno task dev
 
 ## frontend-build: build the frontend for production
 frontend-build:

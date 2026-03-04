@@ -2,8 +2,8 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -458,26 +458,10 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<!-- Delete User Confirmation -->
-<AlertDialog.Root bind:open={deleteOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>Delete User</AlertDialog.Title>
-			<AlertDialog.Description>
-				Are you sure you want to delete the user "{username}"? This action cannot be undone. All
-				associated data will be permanently removed.
-			</AlertDialog.Description>
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
-			<AlertDialog.Action onclick={handleDelete}>
-				{#if deleting}
-					<Loader2 class="h-4 w-4 animate-spin" />
-					Deleting...
-				{:else}
-					Delete
-				{/if}
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<DeleteConfirmDialog
+	bind:open={deleteOpen}
+	name={username}
+	itemType="user"
+	loading={deleting}
+	onconfirm={handleDelete}
+/>
