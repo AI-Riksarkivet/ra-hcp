@@ -37,6 +37,7 @@ logger = logging.getLogger("mock_server")
 MOCK_MAPI_SETTINGS = MapiSettings(
     hcp_host="mock.hcp.example.com",
     hcp_port=9090,
+    hcp_domain="hcp.example.com",
     hcp_username="admin",
     hcp_password="password",
     hcp_auth_type="hcp",

@@ -5,7 +5,8 @@
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import StatCard from '$lib/components/ui/stat-card.svelte';
-	import { formatBytes } from '$lib/utils/format.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import {
 		get_tenant,
 		get_tenant_statistics,
@@ -13,6 +14,7 @@
 		type ChargebackEntry,
 	} from '$lib/tenant-info.remote.js';
 	import { get_users } from '$lib/users.remote.js';
+	import { get_recent_operations, type QueryResultObject } from '$lib/search.remote.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 
@@ -66,6 +68,37 @@
 		}
 		return { bytesIn, bytesOut, reads, writes, deletes };
 	});
+
+	// Recent activity
+	let recentOpsData = $derived(tenant ? get_recent_operations({ tenant, count: 10 }) : undefined);
+
+	type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';
+	function operationVariant(op: string): BadgeVariant {
+		switch (op.toUpperCase()) {
+			case 'CREATED':
+				return 'success';
+			case 'DELETED':
+				return 'destructive';
+			case 'PURGED':
+				return 'warning';
+			default:
+				return 'secondary';
+		}
+	}
+
+	function displayPath(item: QueryResultObject): string {
+		if (item.utf8Name) return item.utf8Name;
+		try {
+			return decodeURIComponent(item.urlName);
+		} catch {
+			return item.urlName;
+		}
+	}
+
+	function formatMillis(ms: string | undefined): string {
+		if (!ms) return '—';
+		return formatDate(new Date(Number(ms)));
+	}
 </script>
 
 <svelte:head>
@@ -227,6 +260,63 @@
 									</tr>
 								</tbody>
 							</table>
+						</div>
+					{/if}
+				{/await}
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Row 3: Recent Activity -->
+		<Card.Root>
+			<Card.Header>
+				<div class="flex items-center gap-2">
+					<Activity class="h-5 w-5 text-muted-foreground" />
+					<Card.Title>Recent Activity</Card.Title>
+				</div>
+				<Card.Description>Latest object operations across all namespaces</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				{#await recentOpsData}
+					<TableSkeleton rows={5} columns={4} />
+				{:then ops}
+					{#if ops && ops.resultSet.length > 0}
+						<div class="overflow-x-auto rounded-lg border">
+							<table class="w-full text-left text-sm">
+								<thead
+									class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
+								>
+									<tr>
+										<th class="px-4 py-3 font-medium">Path</th>
+										<th class="px-4 py-3 font-medium">Operation</th>
+										<th class="px-4 py-3 font-medium">Namespace</th>
+										<th class="px-4 py-3 font-medium">Time</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y">
+									{#each [...ops.resultSet].sort((a, b) => Number(b.changeTimeMilliseconds ?? 0) - Number(a.changeTimeMilliseconds ?? 0)) as item (item.urlName + item.changeTimeMilliseconds)}
+										<tr class="bg-card transition-colors hover:bg-accent/50">
+											<td class="max-w-xs truncate px-4 py-3 font-medium" title={displayPath(item)}>
+												{displayPath(item)}
+											</td>
+											<td class="px-4 py-3">
+												<Badge variant={operationVariant(item.operation)}>
+													{item.operation}
+												</Badge>
+											</td>
+											<td class="px-4 py-3 text-muted-foreground">
+												{item.namespace ?? '—'}
+											</td>
+											<td class="whitespace-nowrap px-4 py-3 text-muted-foreground">
+												{formatMillis(item.changeTimeMilliseconds)}
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{:else}
+						<div class="rounded-lg border border-dashed p-8 text-center">
+							<p class="text-muted-foreground">No recent operations.</p>
 						</div>
 					{/if}
 				{/await}

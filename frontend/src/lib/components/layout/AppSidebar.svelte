@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { LayoutDashboard, Database, Users, Server, Boxes, Settings } from 'lucide-svelte';
+	import { LayoutDashboard, Database, Users, Server, Boxes, Settings, Search } from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
 	const managementItems = [
@@ -12,6 +12,7 @@
 
 	const tenantItems = [
 		{ href: '/overview', label: 'Overview', icon: LayoutDashboard },
+		{ href: '/search', label: 'Search', icon: Search },
 		{ href: '/settings', label: 'Settings', icon: Settings },
 	] as const;
 </script>

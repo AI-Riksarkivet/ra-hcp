@@ -54,7 +54,7 @@
 	let textContent = $state<string | null>(null);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
-	let showMeta = $state(false);
+	let showMeta = $state(true);
 
 	const ext = $derived(filename.split('.').pop()?.toLowerCase() ?? '');
 	const category = $derived(getCategory(ext));
@@ -203,10 +203,10 @@
 						<Tooltip.Trigger>
 							{#snippet child({ props })}
 								<Button
+									{...props}
 									variant="ghost"
 									size="icon"
 									onclick={() => (showMeta = !showMeta)}
-									{...props}
 								>
 									<Info class="h-4 w-4" />
 									<span class="sr-only">Toggle metadata</span>
@@ -227,154 +227,150 @@
 			</div>
 		</div>
 
-		<!-- Metadata Panel -->
-		{#if showMeta && objectKey}
-			<div class="shrink-0 border-b bg-muted/30 px-4 py-3">
-				<div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-					<div class="col-span-2">
-						<span class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-							>Key</span
-						>
-						<Tooltip.Root>
-							<Tooltip.Trigger>
-								{#snippet child({ props })}
-									<p class="mt-0.5 truncate font-mono text-xs" {...props}>
-										{objectKey}
-									</p>
-								{/snippet}
-							</Tooltip.Trigger>
-							<Tooltip.Content class="max-w-lg break-all font-mono text-xs"
-								>{objectKey}</Tooltip.Content
-							>
-						</Tooltip.Root>
+		<!-- Body: content + optional right sidebar -->
+		<div class="flex min-h-0 flex-1">
+			<!-- Content with navigation arrows -->
+			<div class="relative flex min-w-0 flex-1">
+				<!-- Left arrow -->
+				{#if hasPrev && onprev}
+					<button
+						onclick={onprev}
+						class="absolute left-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 shadow-md backdrop-blur-sm transition-opacity hover:bg-background"
+					>
+						<ChevronLeft class="h-5 w-5" />
+						<span class="sr-only">Previous file</span>
+					</button>
+				{/if}
+
+				<!-- Right arrow -->
+				{#if hasNext && onnext}
+					<button
+						onclick={onnext}
+						class="absolute right-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 shadow-md backdrop-blur-sm transition-opacity hover:bg-background"
+					>
+						<ChevronRight class="h-5 w-5" />
+						<span class="sr-only">Next file</span>
+					</button>
+				{/if}
+
+				{#if category === 'image'}
+					<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
+						<img src={url} alt={filename} class="max-h-full max-w-full rounded object-contain" />
 					</div>
-					{#if size != null}
-						<div>
-							<span class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-								>Size</span
-							>
-							<p class="mt-0.5 text-xs">{formatBytes(size)}</p>
+				{:else if category === 'video'}
+					<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
+						<video controls class="max-h-full max-w-full rounded" src={url}>
+							<track kind="captions" />
+							Your browser does not support this video.
+						</video>
+					</div>
+				{:else if category === 'audio'}
+					<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
+						<div class="flex flex-col items-center gap-4">
+							<div class="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
+								<FileText class="h-10 w-10 text-primary" />
+							</div>
+							<audio controls src={url}> Your browser does not support this audio. </audio>
 						</div>
-					{/if}
-					{#if lastModified}
-						<div>
-							<span class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-								>Last Modified</span
-							>
-							<p class="mt-0.5 text-xs">{formatDate(lastModified)}</p>
+					</div>
+				{:else if category === 'pdf'}
+					<div class="flex-1 overflow-hidden bg-muted/50">
+						<iframe src={url} class="h-full w-full border-0" title={filename}></iframe>
+					</div>
+				{:else if category === 'text'}
+					<div class="flex flex-1 flex-col overflow-hidden">
+						{#if loading}
+							<div class="flex flex-1 items-center justify-center gap-2 text-muted-foreground">
+								<Loader2 class="h-5 w-5 animate-spin" />
+								<span>Loading file content...</span>
+							</div>
+						{:else if error}
+							<div class="flex flex-1 flex-col items-center justify-center gap-3">
+								<AlertCircle class="h-8 w-8 text-destructive" />
+								<p class="text-sm text-destructive">{error}</p>
+								<Button variant="secondary" size="sm" onclick={() => fetchText(url)}>Retry</Button>
+							</div>
+						{:else if textContent != null}
+							<div class="flex-1 overflow-auto p-4">
+								<pre
+									class="whitespace-pre-wrap break-words font-mono text-sm leading-relaxed text-foreground">{textContent}</pre>
+							</div>
+						{:else}
+							<div class="flex flex-1 items-center justify-center text-muted-foreground">
+								<span>No content to display</span>
+							</div>
+						{/if}
+					</div>
+				{:else}
+					<!-- Unsupported -->
+					<div
+						class="flex flex-1 flex-col items-center justify-center gap-3 bg-muted/50 p-8 text-center"
+					>
+						<div class="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+							<FileText class="h-8 w-8 text-muted-foreground" />
 						</div>
-					{/if}
-					{#if etag}
-						<div>
-							<span class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-								>ETag</span
-							>
-							<p class="mt-0.5 truncate font-mono text-xs">{etag}</p>
-						</div>
-					{/if}
-					{#if storageClass}
-						<div>
-							<span class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-								>Storage Class</span
-							>
-							<p class="mt-0.5"><Badge variant="secondary">{storageClass}</Badge></p>
-						</div>
-					{/if}
-				</div>
+						<p class="text-sm font-medium">
+							Preview not available for .{ext} files
+						</p>
+						<p class="text-xs text-muted-foreground">Download the file to view it locally</p>
+						<Button href={url} download class="mt-2">
+							<Download class="h-4 w-4" />
+							Download
+						</Button>
+						<p class="mt-4 text-xs text-muted-foreground">
+							Parquet, DuckDB, and LanceDB viewers coming soon
+						</p>
+					</div>
+				{/if}
 			</div>
-		{/if}
 
-		<!-- Content with navigation arrows -->
-		<div class="relative flex min-h-0 flex-1">
-			<!-- Left arrow -->
-			{#if hasPrev && onprev}
-				<button
-					onclick={onprev}
-					class="absolute left-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 shadow-md backdrop-blur-sm transition-opacity hover:bg-background"
-				>
-					<ChevronLeft class="h-5 w-5" />
-					<span class="sr-only">Previous file</span>
-				</button>
-			{/if}
-
-			<!-- Right arrow -->
-			{#if hasNext && onnext}
-				<button
-					onclick={onnext}
-					class="absolute right-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 shadow-md backdrop-blur-sm transition-opacity hover:bg-background"
-				>
-					<ChevronRight class="h-5 w-5" />
-					<span class="sr-only">Next file</span>
-				</button>
-			{/if}
-
-			{#if category === 'image'}
-				<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
-					<img src={url} alt={filename} class="max-h-full max-w-full rounded object-contain" />
-				</div>
-			{:else if category === 'video'}
-				<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
-					<video controls class="max-h-full max-w-full rounded" src={url}>
-						<track kind="captions" />
-						Your browser does not support this video.
-					</video>
-				</div>
-			{:else if category === 'audio'}
-				<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
-					<div class="flex flex-col items-center gap-4">
-						<div class="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
-							<FileText class="h-10 w-10 text-primary" />
+			<!-- Metadata Side Panel (right) -->
+			{#if showMeta && objectKey}
+				<div class="w-64 shrink-0 overflow-y-auto border-l bg-muted/30 p-4">
+					<h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+						Details
+					</h3>
+					<div class="space-y-3">
+						<div>
+							<span class="text-xs font-medium text-muted-foreground">Key</span>
+							<Tooltip.Root>
+								<Tooltip.Trigger>
+									{#snippet child({ props })}
+										<p class="mt-0.5 truncate font-mono text-xs" {...props}>
+											{objectKey}
+										</p>
+									{/snippet}
+								</Tooltip.Trigger>
+								<Tooltip.Content class="max-w-lg break-all font-mono text-xs"
+									>{objectKey}</Tooltip.Content
+								>
+							</Tooltip.Root>
 						</div>
-						<audio controls src={url}> Your browser does not support this audio. </audio>
+						{#if size != null}
+							<div>
+								<span class="text-xs font-medium text-muted-foreground">Size</span>
+								<p class="mt-0.5 text-xs">{formatBytes(size)}</p>
+							</div>
+						{/if}
+						{#if lastModified}
+							<div>
+								<span class="text-xs font-medium text-muted-foreground">Last Modified</span>
+								<p class="mt-0.5 text-xs">{formatDate(lastModified)}</p>
+							</div>
+						{/if}
+						{#if etag}
+							<div>
+								<span class="text-xs font-medium text-muted-foreground">ETag</span>
+								<p class="mt-0.5 truncate font-mono text-xs">{etag}</p>
+							</div>
+						{/if}
+						{#if storageClass}
+							<div>
+								<span class="text-xs font-medium text-muted-foreground">Storage Class</span>
+								<p class="mt-0.5"><Badge variant="secondary">{storageClass}</Badge></p>
+							</div>
+						{/if}
 					</div>
-				</div>
-			{:else if category === 'pdf'}
-				<div class="flex-1 overflow-hidden bg-muted/50">
-					<iframe src={url} class="h-full w-full border-0" title={filename}></iframe>
-				</div>
-			{:else if category === 'text'}
-				<div class="flex flex-1 flex-col overflow-hidden">
-					{#if loading}
-						<div class="flex flex-1 items-center justify-center gap-2 text-muted-foreground">
-							<Loader2 class="h-5 w-5 animate-spin" />
-							<span>Loading file content...</span>
-						</div>
-					{:else if error}
-						<div class="flex flex-1 flex-col items-center justify-center gap-3">
-							<AlertCircle class="h-8 w-8 text-destructive" />
-							<p class="text-sm text-destructive">{error}</p>
-							<Button variant="secondary" size="sm" onclick={() => fetchText(url)}>Retry</Button>
-						</div>
-					{:else if textContent != null}
-						<div class="flex-1 overflow-auto p-4">
-							<pre
-								class="whitespace-pre-wrap break-words font-mono text-sm leading-relaxed text-foreground">{textContent}</pre>
-						</div>
-					{:else}
-						<div class="flex flex-1 items-center justify-center text-muted-foreground">
-							<span>No content to display</span>
-						</div>
-					{/if}
-				</div>
-			{:else}
-				<!-- Unsupported -->
-				<div
-					class="flex flex-1 flex-col items-center justify-center gap-3 bg-muted/50 p-8 text-center"
-				>
-					<div class="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-						<FileText class="h-8 w-8 text-muted-foreground" />
-					</div>
-					<p class="text-sm font-medium">
-						Preview not available for .{ext} files
-					</p>
-					<p class="text-xs text-muted-foreground">Download the file to view it locally</p>
-					<Button href={url} download class="mt-2">
-						<Download class="h-4 w-4" />
-						Download
-					</Button>
-					<p class="mt-4 text-xs text-muted-foreground">
-						Parquet, DuckDB, and LanceDB viewers coming soon
-					</p>
 				</div>
 			{/if}
 		</div>

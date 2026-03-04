@@ -290,6 +290,26 @@ class MockS3Service:
         self._object_acls[(bucket, key)] = acl
         return {}
 
+    def generate_presigned_url(
+        self,
+        bucket: str,
+        key: str,
+        expires_in: int = 3600,
+        method: str = "get_object",
+    ) -> str:
+        self._logger.info(
+            "generate_presigned_url bucket=%s key=%s method=%s expires_in=%d",
+            bucket,
+            key,
+            method,
+            expires_in,
+        )
+        self._require_object(bucket, key)
+        from urllib.parse import quote
+
+        encoded_key = quote(key, safe="")
+        return f"http://localhost:8000/api/v1/buckets/{quote(bucket, safe='')}/objects/{encoded_key}?presigned=1&method={method}&expires_in={expires_in}"
+
 
 # ── Seed data ────────────────────────────────────────────────────────
 

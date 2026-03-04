@@ -627,9 +627,10 @@
 												<Tooltip.Trigger
 													>{#snippet child({ props })}<button
 															type="button"
+															{...props}
 															onclick={() => openShare(obj.key)}
 															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-															{...props}><Link class="h-4 w-4" /></button
+															><Link class="h-4 w-4" /></button
 														>{/snippet}</Tooltip.Trigger
 												>
 												<Tooltip.Content>Share</Tooltip.Content>
@@ -638,9 +639,10 @@
 												<Tooltip.Trigger
 													>{#snippet child({ props })}<button
 															type="button"
+															{...props}
 															onclick={() => (deleteTarget = obj.key)}
 															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-															{...props}><Trash2 class="h-4 w-4" /></button
+															><Trash2 class="h-4 w-4" /></button
 														>{/snippet}</Tooltip.Trigger
 												>
 												<Tooltip.Content>Delete</Tooltip.Content>
@@ -776,7 +778,7 @@
 						<Tooltip.Root>
 							<Tooltip.Trigger>
 								{#snippet child({ props })}
-									<Button variant="ghost" size="icon" onclick={copyShareUrl} {...props}>
+									<Button {...props} variant="ghost" size="icon" onclick={copyShareUrl}>
 										{#if shareCopied}
 											<Check class="h-4 w-4 text-emerald-500" />
 										{:else}
