@@ -237,7 +237,9 @@
 									<td class="px-4 py-3 font-medium">{ns.name}</td>
 									<td class="px-4 py-3 text-muted-foreground">{ns.description ?? '—'}</td>
 									<td class="px-4 py-3 text-muted-foreground">{ns.hardQuota ?? '—'}</td>
-									<td class="px-4 py-3 text-muted-foreground">{ns.softQuota ?? '—'}</td>
+									<td class="px-4 py-3 text-muted-foreground"
+										>{ns.softQuota != null ? `${ns.softQuota}%` : '—'}</td
+									>
 									<td class="px-4 py-3">
 										{#if ns.hashScheme}
 											<Badge variant="secondary">{ns.hashScheme}</Badge>

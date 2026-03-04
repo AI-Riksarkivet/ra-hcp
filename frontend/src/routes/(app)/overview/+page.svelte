@@ -74,7 +74,9 @@
 							<div class="flex items-center justify-between">
 								<div>
 									<p class="text-sm font-medium text-muted-foreground">Soft Quota</p>
-									<p class="mt-2 text-2xl font-bold">{info.softQuota ?? 'N/A'}</p>
+									<p class="mt-2 text-2xl font-bold">
+										{info.softQuota != null ? `${info.softQuota}%` : 'N/A'}
+									</p>
 								</div>
 								<div class="rounded-lg bg-primary/10 p-3">
 									<ArrowDownRight class="h-6 w-6 text-primary" />

@@ -70,7 +70,9 @@
 							</div>
 							<div class="flex justify-between">
 								<dt class="text-sm text-muted-foreground">Soft Quota</dt>
-								<dd class="text-sm font-medium">{info.softQuota ?? '—'}</dd>
+								<dd class="text-sm font-medium">
+									{info.softQuota != null ? `${info.softQuota}%` : '—'}
+								</dd>
 							</div>
 							<div class="flex justify-between">
 								<dt class="text-sm text-muted-foreground">Authentication</dt>

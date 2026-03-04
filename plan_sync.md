@@ -291,7 +291,7 @@ flowchart LR
 
         FE --> BE
         BE --> RD
-        BG -.->|XREADGROUP / XACK| RD
+        BG -.->|XREADGROUP / XACK\npipeline batch| RD
         BE -.->|asyncio.create_task\nasyncio.to_thread| BG
     end
 
@@ -301,6 +301,69 @@ flowchart LR
 
     BG -->|POST object data\nonly with webhook transforms| WH
     BG -->|CopyObject / PUT| HCP[HCP S3]
+```
+
+### Failure handling
+
+```mermaid
+flowchart TB
+    subgraph Consumer thread
+        START[Start consumer] --> TRY[try: process objects]
+        TRY --> |success| DONE[status: completed]
+        TRY --> |exception| FAIL[status: failed + error msg]
+        TRY --> |Redis lost| PAUSE[Pause + retry connectivity]
+    end
+
+    subgraph Endpoint POST
+        REQ[New sync request] --> SEM{Semaphore\navailable?}
+        SEM --> |yes| LAUNCH[Launch consumer thread]
+        SEM --> |no| REJECT[429 Too Many\nConcurrent Syncs]
+    end
+
+    subgraph Endpoint GET
+        POLL[GET /jobs/id] --> CHECK{updated_at\n> 10 min ago?}
+        CHECK --> |no| RETURN[Return job state]
+        CHECK --> |yes, still running| STALE[Mark as failed:\nworker lost]
+    end
+```
+
+**Consumer exception handling**: The consumer wraps all work in a top-level try/except. Any unhandled exception sets the job to `status: failed` with the error message in Redis. Without this, a crashed consumer leaves the job stuck at `running` forever (Python silently logs "Task exception was never retrieved" and nobody reads it).
+
+```python
+def consume_and_sync(...):
+    try:
+        # ... actual copy loop
+    except Exception as exc:
+        cache.set_sync(f"sync:job:{job_id}", {
+            ..., "status": "failed", "error": str(exc)
+        })
+```
+
+**Thread pool isolation**: `asyncio.to_thread()` uses Python's default `ThreadPoolExecutor` (8-36 threads). Sync jobs share this pool with normal S3 operations (`head_bucket`, `list_objects`). A flood of sync jobs can starve the entire API. Fix: dedicated executor + semaphore.
+
+```python
+# Lifespan startup:
+app.state.sync_executor = ThreadPoolExecutor(max_workers=5, thread_name_prefix="sync")
+app.state.sync_semaphore = asyncio.Semaphore(5)
+
+# Endpoint:
+if not sync_semaphore._value:
+    raise HTTPException(429, "Too many concurrent sync jobs")
+loop.run_in_executor(app.state.sync_executor, consumer_fn, ...)
+```
+
+**Staleness detection**: If the backend process restarts, in-flight jobs are orphaned — `status: running` but no thread is doing work. The GET endpoint detects this: if `updated_at` is older than 10 minutes and status is still `running`, it marks the job as `failed` with `"error": "Worker lost (process restart or crash)"`.
+
+**Redis connectivity during job**: The consumer checks Redis connectivity at the start of each batch. If Redis is unreachable, the consumer pauses and retries (up to N times) rather than copying objects it can't checkpoint. If Redis stays down, the job is marked `failed`.
+
+**Pipeline for batch XACK** (from Redis best practices — reduces round trips 5-10x):
+
+```python
+# Batch acknowledge after processing a group of objects
+pipe = sync_redis.pipeline()
+for msg_id in processed_ids:
+    pipe.xack(stream_key, group_name, msg_id)
+pipe.execute()
 ```
 
 ## Design Decisions
@@ -693,6 +756,299 @@ Destination sees:  nothing → nothing → nothing → ALL objects appear at onc
 | `app/api/dependencies.py` | Modify | Add `build_s3_service_from_token()` helper |
 | `app/api/v1/router.py` | Modify | Wire sync router with auth |
 | `app/main.py` | Modify | Add `sync_tasks` state + OpenAPI tag |
+
+## Reference: Hello World Example
+
+A self-contained example showing all sync patterns working together. This mirrors our actual architecture (FastAPI + background thread + sync Redis client + Redis Streams) with fake S3 copies.
+
+**Run it:**
+```bash
+# Start Redis
+docker compose -f .docker/docker-compose.yml up redis -d
+
+# Run the example
+cd backend && uv run uvicorn examples.sync_hello_world:app --reload --port 9999
+
+# Submit a sync job
+curl -s -X POST http://localhost:9999/sync \
+  -H 'Content-Type: application/json' \
+  -d '{"source_bucket": "src", "destination_bucket": "dst", "object_count": 10}' | python -m json.tool
+
+# Poll status
+curl -s http://localhost:9999/sync/jobs/{job_id} | python -m json.tool
+```
+
+### `backend/examples/sync_hello_world.py`
+
+```python
+"""All sync patterns in one file — producer, consumer, failure handling, batching."""
+
+from __future__ import annotations
+import asyncio, json, logging, time, uuid
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+
+import redis
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+logger = logging.getLogger("sync-hello-world")
+
+REDIS_URL = "redis://localhost:6379"
+MAX_CONCURRENT_SYNCS = 5
+CONSUMER_BATCH_SIZE = 10
+JOB_TTL = 3600          # 1 hour
+STALE_THRESHOLD = 600   # 10 minutes
+
+# ── Redis key helpers ──
+
+def job_key(job_id: str) -> str:
+    return f"sync:job:{job_id}"
+
+def stream_key(job_id: str) -> str:
+    return f"sync:stream:{job_id}"
+
+_r: redis.Redis | None = None
+
+def get_redis() -> redis.Redis:
+    global _r
+    if _r is None:
+        _r = redis.from_url(REDIS_URL, decode_responses=True)
+    return _r
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+# ── Producer: pipeline XADD ──
+
+def publish_objects(job_id: str, objects: list[dict]) -> int:
+    """Pipeline XADD — one round trip for all objects."""
+    r = get_redis()
+    sk = stream_key(job_id)
+    pipe = r.pipeline()
+    for obj in objects:
+        pipe.xadd(sk, {"key": obj["key"], "size": obj["size"]})
+    pipe.execute()
+    r.expire(sk, JOB_TTL)
+    return len(objects)
+
+
+# ── Consumer: XREADGROUP loop in a background thread ──
+
+GROUP = "sync-workers"
+CONSUMER = "worker-1"
+
+def consume_and_sync(job_id: str, src: str, dst: str) -> None:
+    """
+    Runs in ThreadPoolExecutor. Demonstrates:
+    - XGROUP CREATE with BUSYGROUP handling
+    - XREADGROUP COUNT N (batch reads)
+    - Pipeline XACK (batch acknowledge)
+    - HINCRBY for atomic counter updates
+    - Top-level try/except → status: failed on crash
+    - Redis connectivity check per batch
+    """
+    r = get_redis()
+    sk, jk = stream_key(job_id), job_key(job_id)
+
+    try:
+        r.hset(jk, mapping={"status": "running", "updated_at": _now()})
+
+        # Consumer group — idempotent (catch BUSYGROUP)
+        try:
+            r.xgroup_create(sk, GROUP, id="0", mkstream=False)
+        except redis.ResponseError as e:
+            if "BUSYGROUP" not in str(e):
+                raise
+
+        while True:
+            # Connectivity check
+            try:
+                r.ping()
+            except redis.ConnectionError:
+                r.hset(jk, mapping={"status": "failed", "error": "Redis lost", "updated_at": _now()})
+                return
+
+            # Read batch
+            messages = r.xreadgroup(
+                groupname=GROUP, consumername=CONSUMER,
+                streams={sk: ">"}, count=CONSUMER_BATCH_SIZE, block=2000,
+            )
+            if not messages:
+                break  # stream drained
+
+            # Process batch
+            ack_ids, copied, failed = [], 0, 0
+            for _stream, entries in messages:
+                for msg_id, fields in entries:
+                    try:
+                        # ═══ Real version: s3.copy_object(src, dst, key) ═══
+                        time.sleep(0.05)  # fake 50ms copy
+                        copied += 1
+                    except Exception as exc:
+                        logger.warning(f"[{job_id}] Copy failed: {fields.get('key')}: {exc}")
+                        failed += 1
+                    ack_ids.append(msg_id)
+
+            # Pipeline XACK — one round trip
+            if ack_ids:
+                pipe = r.pipeline()
+                for mid in ack_ids:
+                    pipe.xack(sk, GROUP, mid)
+                pipe.execute()
+
+            # Atomic counter updates
+            if copied:
+                r.hincrby(jk, "copied", copied)
+            if failed:
+                r.hincrby(jk, "failed", failed)
+            r.hset(jk, "updated_at", _now())
+
+        # Final status
+        total_failed = int(r.hget(jk, "failed") or 0)
+        status = "completed_with_errors" if total_failed > 0 else "completed"
+        r.hset(jk, mapping={"status": status, "updated_at": _now()})
+
+    except Exception as exc:
+        # ═══ Top-level catch — job never gets stuck at "running" ═══
+        logger.exception(f"[{job_id}] Consumer crashed")
+        try:
+            r.hset(jk, mapping={"status": "failed", "error": str(exc)[:500], "updated_at": _now()})
+        except Exception:
+            pass
+    finally:
+        try:
+            r.delete(sk)  # clean up stream
+        except Exception:
+            pass
+
+
+# ── FastAPI app ──
+
+class SyncRequest(BaseModel):
+    source_bucket: str
+    destination_bucket: str
+    object_count: int = 10
+
+class SyncJobResponse(BaseModel):
+    job_id: str
+    status: str
+    source_bucket: str
+    destination_bucket: str
+    total_objects: int
+    copied: int
+    skipped: int
+    failed: int
+    created_at: str
+    updated_at: str
+    error: str | None = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ── Startup: dedicated thread pool + semaphore ──
+    app.state.sync_executor = ThreadPoolExecutor(max_workers=MAX_CONCURRENT_SYNCS, thread_name_prefix="sync")
+    app.state.sync_semaphore = asyncio.Semaphore(MAX_CONCURRENT_SYNCS)
+    app.state.sync_tasks: dict[str, asyncio.Task] = {}
+    yield
+    # ── Shutdown: cancel running tasks ──
+    for t in app.state.sync_tasks.values():
+        t.cancel()
+    app.state.sync_executor.shutdown(wait=False)
+
+app = FastAPI(title="Sync Hello World", lifespan=lifespan)
+
+
+@app.post("/sync", response_model=SyncJobResponse, status_code=202)
+async def create_sync(body: SyncRequest):
+    """Submit a sync job. Returns 429 if at capacity."""
+
+    if app.state.sync_semaphore._value == 0:
+        raise HTTPException(429, "Too many concurrent sync jobs")
+
+    job_id = str(uuid.uuid4())[:8]
+    r = get_redis()
+    jk = job_key(job_id)
+
+    # Fake objects (real version: s3.list_objects())
+    objects = [{"key": f"data/file-{i:04d}.bin", "size": 1024 * (i + 1)} for i in range(body.object_count)]
+
+    # Create job hash
+    r.hset(jk, mapping={
+        "status": "pending", "source_bucket": body.source_bucket,
+        "destination_bucket": body.destination_bucket,
+        "total_objects": len(objects), "copied": 0, "skipped": 0, "failed": 0,
+        "created_at": _now(), "updated_at": _now(),
+    })
+    r.expire(jk, JOB_TTL)
+
+    # Pipeline XADD
+    publish_objects(job_id, objects)
+
+    # Launch consumer on dedicated pool
+    async def _run():
+        async with app.state.sync_semaphore:
+            await asyncio.get_event_loop().run_in_executor(
+                app.state.sync_executor, consume_and_sync, job_id, body.source_bucket, body.destination_bucket,
+            )
+
+    task = asyncio.create_task(_run())
+    app.state.sync_tasks[job_id] = task
+    task.add_done_callback(lambda _: app.state.sync_tasks.pop(job_id, None))
+
+    return _response(r.hgetall(jk), job_id)
+
+
+@app.get("/sync/jobs/{job_id}", response_model=SyncJobResponse)
+async def get_job(job_id: str):
+    """Poll job status. Detects stale/orphaned jobs."""
+    r = get_redis()
+    job = r.hgetall(job_key(job_id))
+    if not job:
+        raise HTTPException(404, f"Job {job_id} not found")
+
+    # ═══ Staleness detection ═══
+    if job.get("status") == "running":
+        try:
+            age = (datetime.now(timezone.utc) - datetime.fromisoformat(job["updated_at"])).total_seconds()
+            if age > STALE_THRESHOLD:
+                r.hset(job_key(job_id), mapping={
+                    "status": "failed", "error": "Worker lost (process restart or crash)", "updated_at": _now(),
+                })
+                job = r.hgetall(job_key(job_id))
+        except (KeyError, ValueError):
+            pass
+
+    return _response(job, job_id)
+
+
+def _response(job: dict, job_id: str) -> SyncJobResponse:
+    return SyncJobResponse(
+        job_id=job_id, status=job.get("status", "unknown"),
+        source_bucket=job.get("source_bucket", ""), destination_bucket=job.get("destination_bucket", ""),
+        total_objects=int(job.get("total_objects", 0)), copied=int(job.get("copied", 0)),
+        skipped=int(job.get("skipped", 0)), failed=int(job.get("failed", 0)),
+        created_at=job.get("created_at", ""), updated_at=job.get("updated_at", ""),
+        error=job.get("error"),
+    )
+```
+
+### What this demonstrates
+
+| Pattern | Where in the example |
+|---------|---------------------|
+| Pipeline XADD (producer) | `publish_objects()` — one round trip for all objects |
+| XGROUP CREATE + BUSYGROUP | `consume_and_sync()` — idempotent group creation |
+| XREADGROUP COUNT N | Consumer loop — `count=CONSUMER_BATCH_SIZE` |
+| Pipeline XACK | After each batch — pipelines all ack calls |
+| HINCRBY counters | `copied` and `failed` updated atomically per batch |
+| Dedicated thread pool | `lifespan()` — `ThreadPoolExecutor(max_workers=5)` |
+| Semaphore (429 on flood) | `create_sync()` — checks `sync_semaphore._value` |
+| Top-level try/except | `consume_and_sync()` — crash always sets `status: failed` |
+| Staleness detection | `get_job()` — marks orphaned jobs after 10 min |
+| Redis connectivity check | Consumer pings Redis before each batch |
+| Stream cleanup | `finally` block deletes stream after job completes |
 
 ## Verification
 

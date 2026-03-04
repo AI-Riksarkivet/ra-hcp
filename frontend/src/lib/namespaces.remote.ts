@@ -46,14 +46,32 @@ export const get_namespaces = query(
 );
 
 export const create_namespace = command(
-  z.object({ tenant: z.string(), name: z.string() }),
-  async ({ tenant, name }) => {
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    description: z.string().optional(),
+    hardQuota: z.string().optional(),
+    softQuota: z.number().optional(),
+    hashScheme: z.string().optional(),
+    searchEnabled: z.boolean().optional(),
+    versioningEnabled: z.boolean().optional(),
+  }),
+  async ({ tenant, ...body }) => {
+    const payload: Record<string, unknown> = { name: body.name };
+    if (body.description) payload.description = body.description;
+    if (body.hardQuota) payload.hardQuota = body.hardQuota;
+    if (body.softQuota != null) payload.softQuota = body.softQuota;
+    if (body.hashScheme) payload.hashScheme = body.hashScheme;
+    if (body.searchEnabled != null) payload.searchEnabled = body.searchEnabled;
+    if (body.versioningEnabled != null) {
+      payload.versioningSettings = { enabled: body.versioningEnabled };
+    }
     const res = await apiFetch(
       `/api/v1/mapi/tenants/${tenant}/namespaces`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(payload),
       },
     );
     if (!res.ok) {
