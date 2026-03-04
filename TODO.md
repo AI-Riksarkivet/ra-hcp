@@ -12,7 +12,8 @@
 
 6. missing instrucions to connect nfs and if we are using auth for nfs
 7. how sign objects and generate auth tokens from api? s3?
-8. are we missing compileroptions async true? https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/svelte.config.js
+8. missing better logging in backend who sent and aaked for what and what was reurned
+9. are we missing compileroptions async true? https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/svelte.config.js
 ---
 
 ## Done
