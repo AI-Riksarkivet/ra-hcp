@@ -66,7 +66,7 @@ run-api:
 
 ## run-api-mock: start mock dev server (login: admin/password)
 run-api-mock:
-	cd backend && uv run python mock_server.py
+	cd backend && uv run uvicorn mock_server:app --reload --host 0.0.0.0 --port 8000
 
 # ── Frontend ─────────────────────────────────────────────────────────
 
