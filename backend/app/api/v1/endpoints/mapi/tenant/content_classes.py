@@ -12,6 +12,7 @@ from app.schemas.content_class import (
     ContentClassList,
     ContentClassResponse,
 )
+from app.schemas.common import StatusResponse
 
 router = APIRouter(tags=["Tenant Admin: Content Classes"])
 
@@ -30,18 +31,18 @@ async def list_content_classes(
     )
 
 
-@router.put(PREFIX)
+@router.put(PREFIX, response_model=StatusResponse, status_code=201)
 async def create_content_class(
     tenant_name: str,
     body: ContentClassCreate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "PUT",
         f"/tenants/{tenant_name}/contentClasses",
         body=body,
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "created", "name": body.name}
 
 
 @router.get(PREFIX + "/{content_class_name}", response_model=ContentClassResponse)
@@ -70,29 +71,29 @@ async def check_content_class(
     return Response(status_code=resp.status_code)
 
 
-@router.post(PREFIX + "/{content_class_name}")
+@router.post(PREFIX + "/{content_class_name}", response_model=StatusResponse)
 async def update_content_class(
     tenant_name: str,
     content_class_name: str,
     body: ContentClassUpdate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "POST",
         f"/tenants/{tenant_name}/contentClasses/{content_class_name}",
         body=body,
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "updated"}
 
 
-@router.delete(PREFIX + "/{content_class_name}")
+@router.delete(PREFIX + "/{content_class_name}", response_model=StatusResponse)
 async def delete_content_class(
     tenant_name: str,
     content_class_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "DELETE",
         f"/tenants/{tenant_name}/contentClasses/{content_class_name}",
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "deleted"}

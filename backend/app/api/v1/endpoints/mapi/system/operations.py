@@ -15,6 +15,7 @@ from app.schemas.health_check import (
 )
 from app.schemas.logs import LogDownloadStatus, LogPrepare, LogDownload
 from app.schemas.support import SupportAccessCredentials
+from app.schemas.common import StatusResponse
 
 router = APIRouter(tags=["System Admin: Operations"])
 
@@ -29,13 +30,13 @@ async def get_health_check_status(
     return await hcp.fetch_json("/healthCheckReport")
 
 
-@router.post("/healthCheckReport/prepare")
+@router.post("/healthCheckReport/prepare", response_model=StatusResponse)
 async def prepare_health_check(
     body: HealthCheckPrepare,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("POST", "/healthCheckReport/prepare", body=body)
-    return Response(status_code=resp.status_code)
+    await hcp.send("POST", "/healthCheckReport/prepare", body=body)
+    return {"status": "ok"}
 
 
 @router.post("/healthCheckReport/download")
@@ -51,12 +52,12 @@ async def download_health_check(
     )
 
 
-@router.post("/healthCheckReport/cancel")
+@router.post("/healthCheckReport/cancel", response_model=StatusResponse)
 async def cancel_health_check(
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("POST", "/healthCheckReport", query={"cancel": ""})
-    return Response(status_code=resp.status_code)
+    await hcp.send("POST", "/healthCheckReport", query={"cancel": ""})
+    return {"status": "cancelled"}
 
 
 # ── Logs ─────────────────────────────────────────────────────────────
@@ -70,7 +71,7 @@ async def get_log_status(
     return await hcp.fetch_json("/logs")
 
 
-@router.post("/logs")
+@router.post("/logs", response_model=StatusResponse)
 async def log_action(
     mark: Optional[str] = Query(None),
     cancel: Optional[bool] = Query(None),
@@ -82,17 +83,17 @@ async def log_action(
         q["mark"] = mark
     if cancel is not None:
         q["cancel"] = ""
-    resp = await hcp.send("POST", "/logs", query=q or None)
-    return Response(status_code=resp.status_code)
+    await hcp.send("POST", "/logs", query=q or None)
+    return {"status": "ok"}
 
 
-@router.post("/logs/prepare")
+@router.post("/logs/prepare", response_model=StatusResponse)
 async def prepare_logs(
     body: LogPrepare,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("POST", "/logs/prepare", body=body)
-    return Response(status_code=resp.status_code)
+    await hcp.send("POST", "/logs/prepare", body=body)
+    return {"status": "ok"}
 
 
 @router.post("/logs/download")
@@ -118,11 +119,11 @@ async def get_support_credentials(
     return await hcp.fetch_json("/supportaccesscredentials")
 
 
-@router.put("/supportaccesscredentials")
+@router.put("/supportaccesscredentials", response_model=StatusResponse, status_code=201)
 async def upload_support_credentials(
     file: UploadFile = File(...),
     hcp: MapiService = Depends(get_mapi_service),
 ):
     content = await file.read()
-    resp = await hcp.send("PUT", "/supportaccesscredentials", body=content)
-    return Response(status_code=resp.status_code)
+    await hcp.send("PUT", "/supportaccesscredentials", body=content)
+    return {"status": "created"}

@@ -70,7 +70,9 @@ async def test_create_retention_class(
         headers=auth_headers,
         json={"name": RC, "value": "30d"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "created"
+    assert resp.json()["name"] == RC
     assert route.called
 
 
@@ -111,6 +113,7 @@ async def test_update_retention_class(
         json={"value": "60d"},
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "updated"
     assert route.called
 
 
@@ -120,4 +123,5 @@ async def test_delete_retention_class(
     route = hcp_mock.delete(f"{RC_MAPI}/{RC}").mock(return_value=httpx.Response(200))
     resp = await client.delete(f"{RC_PREFIX}/{RC}", headers=auth_headers)
     assert resp.status_code == 200
+    assert resp.json()["status"] == "deleted"
     assert route.called

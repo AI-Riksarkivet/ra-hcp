@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File
 
 from app.services.mapi_service import MapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.license import License, LicenseList
 from app.schemas.network import NetworkSettings
 from app.schemas.statistics import NodeStatistics, ServiceStatistics
+from app.schemas.common import StatusResponse
 
 router = APIRouter(tags=["System Admin: Infrastructure"])
 
@@ -24,13 +25,13 @@ async def get_network_settings(
     return await hcp.fetch_json("/network", query={"verbose": str(verbose).lower()})
 
 
-@router.post("/network")
+@router.post("/network", response_model=StatusResponse)
 async def modify_network_settings(
     body: NetworkSettings,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("POST", "/network", body=body)
-    return Response(status_code=resp.status_code)
+    await hcp.send("POST", "/network", body=body)
+    return {"status": "updated"}
 
 
 # ── Licenses ─────────────────────────────────────────────────────────
@@ -46,14 +47,14 @@ async def list_licenses(
     )
 
 
-@router.put("/storage/licenses")
+@router.put("/storage/licenses", response_model=StatusResponse, status_code=201)
 async def upload_license(
     file: UploadFile = File(...),
     hcp: MapiService = Depends(get_mapi_service),
 ):
     content = await file.read()
-    resp = await hcp.send("PUT", "/storage/licenses", body=content)
-    return Response(status_code=resp.status_code)
+    await hcp.send("PUT", "/storage/licenses", body=content)
+    return {"status": "created"}
 
 
 @router.get("/storage/licenses/{serial_number}", response_model=License)

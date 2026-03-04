@@ -18,6 +18,7 @@ from app.schemas.replication import (
     Schedule,
     ReplicationService,
 )
+from app.schemas.common import StatusResponse
 
 router = APIRouter(tags=["System Admin: Replication"])
 
@@ -35,7 +36,7 @@ async def get_replication_service(
     )
 
 
-@router.post("/services/replication")
+@router.post("/services/replication", response_model=StatusResponse)
 async def modify_replication_service(
     body: Optional[ReplicationService] = None,
     shutDownAllLinks: Optional[str] = Query(None),
@@ -47,10 +48,8 @@ async def modify_replication_service(
         query["shutDownAllLinks"] = shutDownAllLinks
     if reestablishAllLinks is not None:
         query["reestablishAllLinks"] = ""
-    resp = await hcp.send(
-        "POST", "/services/replication", body=body, query=query or None
-    )
-    return Response(status_code=resp.status_code)
+    await hcp.send("POST", "/services/replication", body=body, query=query or None)
+    return {"status": "updated"}
 
 
 # ── Certificates ─────────────────────────────────────────────────────
@@ -67,14 +66,16 @@ async def list_certificates(
     )
 
 
-@router.put("/services/replication/certificates")
+@router.put(
+    "/services/replication/certificates", response_model=StatusResponse, status_code=201
+)
 async def upload_certificate(
     file: UploadFile = File(...),
     hcp: MapiService = Depends(get_mapi_service),
 ):
     content = await file.read()
-    resp = await hcp.send("PUT", "/services/replication/certificates", body=content)
-    return Response(status_code=resp.status_code)
+    await hcp.send("PUT", "/services/replication/certificates", body=content)
+    return {"status": "created"}
 
 
 @router.get(
@@ -87,15 +88,15 @@ async def get_certificate(
     return await hcp.fetch_json(f"/services/replication/certificates/{certificate_id}")
 
 
-@router.delete("/services/replication/certificates/{certificate_id}")
+@router.delete(
+    "/services/replication/certificates/{certificate_id}", response_model=StatusResponse
+)
 async def delete_certificate(
     certificate_id: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
-        "DELETE", f"/services/replication/certificates/{certificate_id}"
-    )
-    return Response(status_code=resp.status_code)
+    await hcp.send("DELETE", f"/services/replication/certificates/{certificate_id}")
+    return {"status": "deleted", "certificateId": certificate_id}
 
 
 @router.get("/services/replication/certificates/server")
@@ -119,13 +120,13 @@ async def list_links(
     return await hcp.fetch_json(LINKS, query={"verbose": str(verbose).lower()})
 
 
-@router.put(LINKS)
+@router.put(LINKS, response_model=StatusResponse, status_code=201)
 async def create_link(
     body: LinkCreate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("PUT", LINKS, body=body)
-    return Response(status_code=resp.status_code)
+    await hcp.send("PUT", LINKS, body=body)
+    return {"status": "created", "name": body.name}
 
 
 @router.get(LINKS + "/{link_name}", response_model=LinkResponse)
@@ -148,7 +149,7 @@ async def check_link(
     return Response(status_code=resp.status_code)
 
 
-@router.post(LINKS + "/{link_name}")
+@router.post(LINKS + "/{link_name}", response_model=StatusResponse)
 async def modify_or_action_link(
     link_name: str,
     body: Optional[LinkUpdate] = None,
@@ -173,19 +174,17 @@ async def modify_or_action_link(
     ]:
         if action_val is not None:
             query[action_name] = ""
-    resp = await hcp.send(
-        "POST", f"{LINKS}/{link_name}", body=body, query=query or None
-    )
-    return Response(status_code=resp.status_code)
+    await hcp.send("POST", f"{LINKS}/{link_name}", body=body, query=query or None)
+    return {"status": "updated"}
 
 
-@router.delete(LINKS + "/{link_name}")
+@router.delete(LINKS + "/{link_name}", response_model=StatusResponse)
 async def delete_link(
     link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("DELETE", f"{LINKS}/{link_name}")
-    return Response(status_code=resp.status_code)
+    await hcp.send("DELETE", f"{LINKS}/{link_name}")
+    return {"status": "deleted", "name": link_name}
 
 
 # ── Link Content ─────────────────────────────────────────────────────
@@ -210,14 +209,18 @@ async def list_link_tenants(
     return await hcp.fetch_json(f"{LINKS}/{link_name}/content/tenants")
 
 
-@router.put(LINKS + "/{link_name}/content/tenants/{tenant_name}")
+@router.put(
+    LINKS + "/{link_name}/content/tenants/{tenant_name}",
+    response_model=StatusResponse,
+    status_code=201,
+)
 async def add_tenant_to_link(
     link_name: str,
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("PUT", f"{LINKS}/{link_name}/content/tenants/{tenant_name}")
-    return Response(status_code=resp.status_code)
+    await hcp.send("PUT", f"{LINKS}/{link_name}/content/tenants/{tenant_name}")
+    return {"status": "created", "tenant": tenant_name}
 
 
 @router.get(
@@ -231,7 +234,9 @@ async def get_link_tenant(
     return await hcp.fetch_json(f"{LINKS}/{link_name}/content/tenants/{tenant_name}")
 
 
-@router.post(LINKS + "/{link_name}/content/tenants/{tenant_name}")
+@router.post(
+    LINKS + "/{link_name}/content/tenants/{tenant_name}", response_model=StatusResponse
+)
 async def action_link_tenant(
     link_name: str,
     tenant_name: str,
@@ -244,24 +249,24 @@ async def action_link_tenant(
         query["pause"] = ""
     if resume is not None:
         query["resume"] = ""
-    resp = await hcp.send(
+    await hcp.send(
         "POST",
         f"{LINKS}/{link_name}/content/tenants/{tenant_name}",
         query=query or None,
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "updated"}
 
 
-@router.delete(LINKS + "/{link_name}/content/tenants/{tenant_name}")
+@router.delete(
+    LINKS + "/{link_name}/content/tenants/{tenant_name}", response_model=StatusResponse
+)
 async def remove_tenant_from_link(
     link_name: str,
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
-        "DELETE", f"{LINKS}/{link_name}/content/tenants/{tenant_name}"
-    )
-    return Response(status_code=resp.status_code)
+    await hcp.send("DELETE", f"{LINKS}/{link_name}/content/tenants/{tenant_name}")
+    return {"status": "deleted", "tenant": tenant_name}
 
 
 # ── Link Content – Default Namespace Directories ─────────────────────
@@ -280,30 +285,37 @@ async def list_link_default_ns_dirs(
     )
 
 
-@router.put(LINKS + "/{link_name}/content/defaultNamespaceDirectories/{dir_name}")
+@router.put(
+    LINKS + "/{link_name}/content/defaultNamespaceDirectories/{dir_name}",
+    response_model=StatusResponse,
+    status_code=201,
+)
 async def add_default_ns_dir_to_link(
     link_name: str,
     dir_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "PUT",
         f"{LINKS}/{link_name}/content/defaultNamespaceDirectories/{dir_name}",
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "created", "directory": dir_name}
 
 
-@router.delete(LINKS + "/{link_name}/content/defaultNamespaceDirectories/{dir_name}")
+@router.delete(
+    LINKS + "/{link_name}/content/defaultNamespaceDirectories/{dir_name}",
+    response_model=StatusResponse,
+)
 async def remove_default_ns_dir_from_link(
     link_name: str,
     dir_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "DELETE",
         f"{LINKS}/{link_name}/content/defaultNamespaceDirectories/{dir_name}",
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "deleted", "directory": dir_name}
 
 
 # ── Link Content – Chained Links ─────────────────────────────────────
@@ -317,28 +329,35 @@ async def list_chained_links(
     return await hcp.fetch_json(f"{LINKS}/{link_name}/content/chainedLinks")
 
 
-@router.put(LINKS + "/{link_name}/content/chainedLinks/{chained_link_name}")
+@router.put(
+    LINKS + "/{link_name}/content/chainedLinks/{chained_link_name}",
+    response_model=StatusResponse,
+    status_code=201,
+)
 async def add_chained_link(
     link_name: str,
     chained_link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "PUT", f"{LINKS}/{link_name}/content/chainedLinks/{chained_link_name}"
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "created", "name": chained_link_name}
 
 
-@router.delete(LINKS + "/{link_name}/content/chainedLinks/{chained_link_name}")
+@router.delete(
+    LINKS + "/{link_name}/content/chainedLinks/{chained_link_name}",
+    response_model=StatusResponse,
+)
 async def remove_chained_link(
     link_name: str,
     chained_link_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "DELETE", f"{LINKS}/{link_name}/content/chainedLinks/{chained_link_name}"
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "deleted", "name": chained_link_name}
 
 
 # ── Link Candidates ──────────────────────────────────────────────────
@@ -433,11 +452,11 @@ async def get_link_schedule(
     return await hcp.fetch_json(f"{LINKS}/{link_name}/schedule")
 
 
-@router.post(LINKS + "/{link_name}/schedule")
+@router.post(LINKS + "/{link_name}/schedule", response_model=StatusResponse)
 async def set_link_schedule(
     link_name: str,
     body: Schedule,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("POST", f"{LINKS}/{link_name}/schedule", body=body)
-    return Response(status_code=resp.status_code)
+    await hcp.send("POST", f"{LINKS}/{link_name}/schedule", body=body)
+    return {"status": "updated"}

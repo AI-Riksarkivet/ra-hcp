@@ -36,6 +36,7 @@ async def test_prepare_health_check(
         json={"collectCurrent": True},
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
     assert route.called
 
 
@@ -62,6 +63,7 @@ async def test_cancel_health_check(
     )
     resp = await client.post(f"{HC_PREFIX}/cancel", headers=auth_headers)
     assert resp.status_code == 200
+    assert resp.json()["status"] == "cancelled"
     assert route.called
 
 
@@ -98,6 +100,7 @@ async def test_log_mark(
         LOG_PREFIX, headers=auth_headers, params={"mark": "deploy-v2"}
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
     assert route.called
 
 
@@ -107,6 +110,7 @@ async def test_log_cancel(
     route = hcp_mock.post(f"{LOG_MAPI}").mock(return_value=httpx.Response(200))
     resp = await client.post(LOG_PREFIX, headers=auth_headers, params={"cancel": True})
     assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
     assert route.called
 
 
@@ -120,6 +124,7 @@ async def test_prepare_logs(
         json={"startDate": "2024-01-01"},
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
     assert route.called
 
 

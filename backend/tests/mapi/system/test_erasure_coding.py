@@ -40,7 +40,9 @@ async def test_create_ec_topology(
             "replicationLinks": [{"name": "link1"}],
         },
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "created"
+    assert resp.json()["name"] == TOPO
     assert route.called
 
 
@@ -87,6 +89,7 @@ async def test_retire_ec_topology(
         params={"retire": True},
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "updated"
     assert route.called
 
 
@@ -98,6 +101,7 @@ async def test_delete_ec_topology(
     )
     resp = await client.delete(f"{EC}/ecTopologies/{TOPO}", headers=auth_headers)
     assert resp.status_code == 200
+    assert resp.json()["status"] == "deleted"
     assert route.called
 
 
@@ -113,6 +117,7 @@ async def test_delete_ec_topology_force(
         params={"force": True},
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "deleted"
     assert route.called
 
 
@@ -139,7 +144,9 @@ async def test_add_tenant_to_ec_topology(
         f"{EC}/ecTopologies/{TOPO}/tenants/t1",
         headers=auth_headers,
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "created"
+    assert resp.json()["tenant"] == "t1"
     assert route.called
 
 
@@ -154,6 +161,8 @@ async def test_remove_tenant_from_ec_topology(
         headers=auth_headers,
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "deleted"
+    assert resp.json()["tenant"] == "t1"
     assert route.called
 
 

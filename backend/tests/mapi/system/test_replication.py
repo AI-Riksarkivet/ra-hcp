@@ -36,6 +36,7 @@ async def test_modify_replication_service(
         params={"shutDownAllLinks": "true"},
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "updated"
     assert route.called
 
 
@@ -71,6 +72,8 @@ async def test_delete_certificate(
     )
     resp = await client.delete(f"{SVC}/certificates/cert-1", headers=auth_headers)
     assert resp.status_code == 200
+    assert resp.json()["status"] == "deleted"
+    assert resp.json()["certificateId"] == "cert-1"
     assert route.called
 
 
@@ -112,7 +115,9 @@ async def test_create_link(
             "connection": {"remoteHost": "10.0.0.1"},
         },
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "created"
+    assert resp.json()["name"] == LINK
     assert route.called
 
 
@@ -155,6 +160,7 @@ async def test_modify_link_suspend(
         params={"suspend": True},
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "updated"
     assert route.called
 
 
@@ -166,6 +172,8 @@ async def test_delete_link(
     )
     resp = await client.delete(f"{SVC}/links/{LINK}", headers=auth_headers)
     assert resp.status_code == 200
+    assert resp.json()["status"] == "deleted"
+    assert resp.json()["name"] == LINK
     assert route.called
 
 
@@ -201,7 +209,9 @@ async def test_add_tenant_to_link(
     resp = await client.put(
         f"{SVC}/links/{LINK}/content/tenants/t1", headers=auth_headers
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "created"
+    assert resp.json()["tenant"] == "t1"
     assert route.called
 
 
@@ -215,6 +225,8 @@ async def test_remove_tenant_from_link(
         f"{SVC}/links/{LINK}/content/tenants/t1", headers=auth_headers
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "deleted"
+    assert resp.json()["tenant"] == "t1"
     assert route.called
 
 
@@ -243,6 +255,7 @@ async def test_set_link_schedule(
         json={"local": {}, "remote": {}},
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "updated"
     assert route.called
 
 

@@ -66,19 +66,19 @@ async def list_retention_classes(
     )
 
 
-@router.put(RC_PREFIX)
+@router.put(RC_PREFIX, response_model=StatusResponse, status_code=201)
 async def create_retention_class(
     tenant_name: str,
     namespace_name: str,
     body: RetentionClassCreate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "PUT",
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses",
         body=body,
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "created", "name": body.name}
 
 
 @router.get(
@@ -111,7 +111,7 @@ async def check_retention_class(
     return Response(status_code=resp.status_code)
 
 
-@router.post(RC_PREFIX + "/{retention_class_name}")
+@router.post(RC_PREFIX + "/{retention_class_name}", response_model=StatusResponse)
 async def update_retention_class(
     tenant_name: str,
     namespace_name: str,
@@ -119,23 +119,23 @@ async def update_retention_class(
     body: RetentionClassUpdate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "POST",
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses/{retention_class_name}",
         body=body,
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "updated"}
 
 
-@router.delete(RC_PREFIX + "/{retention_class_name}")
+@router.delete(RC_PREFIX + "/{retention_class_name}", response_model=StatusResponse)
 async def delete_retention_class(
     tenant_name: str,
     namespace_name: str,
     retention_class_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send(
+    await hcp.send(
         "DELETE",
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses/{retention_class_name}",
     )
-    return Response(status_code=resp.status_code)
+    return {"status": "deleted"}

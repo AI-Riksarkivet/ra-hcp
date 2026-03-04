@@ -14,6 +14,7 @@ from app.schemas.erasure_coding import (
     ECTopologyResponse,
     TenantCandidateList,
 )
+from app.schemas.common import StatusResponse
 
 router = APIRouter(tags=["System Admin: Erasure Coding"])
 
@@ -32,13 +33,13 @@ async def list_ec_topologies(
     return await hcp.fetch_json(TOPOS, query={"verbose": str(verbose).lower()})
 
 
-@router.put(TOPOS)
+@router.put(TOPOS, response_model=StatusResponse, status_code=201)
 async def create_ec_topology(
     body: ECTopologyCreate,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("PUT", TOPOS, body=body)
-    return Response(status_code=resp.status_code)
+    await hcp.send("PUT", TOPOS, body=body)
+    return {"status": "created", "name": body.name}
 
 
 @router.get(TOPOS + "/{topology_name}", response_model=ECTopologyResponse)
@@ -61,7 +62,7 @@ async def check_ec_topology(
     return Response(status_code=resp.status_code)
 
 
-@router.post(TOPOS + "/{topology_name}")
+@router.post(TOPOS + "/{topology_name}", response_model=StatusResponse)
 async def modify_or_retire_ec_topology(
     topology_name: str,
     retire: Optional[bool] = Query(None),
@@ -70,11 +71,11 @@ async def modify_or_retire_ec_topology(
     query = {}
     if retire is not None:
         query["retire"] = ""
-    resp = await hcp.send("POST", f"{TOPOS}/{topology_name}", query=query or None)
-    return Response(status_code=resp.status_code)
+    await hcp.send("POST", f"{TOPOS}/{topology_name}", query=query or None)
+    return {"status": "updated"}
 
 
-@router.delete(TOPOS + "/{topology_name}")
+@router.delete(TOPOS + "/{topology_name}", response_model=StatusResponse)
 async def delete_ec_topology(
     topology_name: str,
     force: Optional[bool] = Query(None),
@@ -83,8 +84,8 @@ async def delete_ec_topology(
     query = {}
     if force:
         query["force"] = "true"
-    resp = await hcp.send("DELETE", f"{TOPOS}/{topology_name}", query=query or None)
-    return Response(status_code=resp.status_code)
+    await hcp.send("DELETE", f"{TOPOS}/{topology_name}", query=query or None)
+    return {"status": "deleted"}
 
 
 # ── EC Topology – Tenant Candidates ─────────────────────────────────
@@ -130,24 +131,30 @@ async def list_ec_topology_tenants(
     return await hcp.fetch_json(f"{TOPOS}/{topology_name}/tenants")
 
 
-@router.put(TOPOS + "/{topology_name}/tenants/{tenant_name}")
+@router.put(
+    TOPOS + "/{topology_name}/tenants/{tenant_name}",
+    response_model=StatusResponse,
+    status_code=201,
+)
 async def add_tenant_to_ec_topology(
     topology_name: str,
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("PUT", f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
-    return Response(status_code=resp.status_code)
+    await hcp.send("PUT", f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
+    return {"status": "created", "tenant": tenant_name}
 
 
-@router.delete(TOPOS + "/{topology_name}/tenants/{tenant_name}")
+@router.delete(
+    TOPOS + "/{topology_name}/tenants/{tenant_name}", response_model=StatusResponse
+)
 async def remove_tenant_from_ec_topology(
     topology_name: str,
     tenant_name: str,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    resp = await hcp.send("DELETE", f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
-    return Response(status_code=resp.status_code)
+    await hcp.send("DELETE", f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
+    return {"status": "deleted", "tenant": tenant_name}
 
 
 # ── EC Link Candidates ──────────────────────────────────────────────

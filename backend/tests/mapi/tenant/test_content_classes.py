@@ -29,7 +29,9 @@ async def test_create_content_class(
 ):
     route = hcp_mock.put(f"{MAPI_PREFIX}").mock(return_value=httpx.Response(200))
     resp = await client.put(PREFIX, headers=auth_headers, json={"name": CC})
-    assert resp.status_code == 200
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "created"
+    assert resp.json()["name"] == CC
     assert route.called
 
 
@@ -70,6 +72,7 @@ async def test_update_content_class(
         json={"contentProperties": []},
     )
     assert resp.status_code == 200
+    assert resp.json()["status"] == "updated"
     assert route.called
 
 
@@ -81,4 +84,5 @@ async def test_delete_content_class(
     )
     resp = await client.delete(f"{PREFIX}/{CC}", headers=auth_headers)
     assert resp.status_code == 200
+    assert resp.json()["status"] == "deleted"
     assert route.called
