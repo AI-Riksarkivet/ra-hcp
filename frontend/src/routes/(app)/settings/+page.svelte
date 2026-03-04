@@ -5,7 +5,8 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { Save, Loader2 } from 'lucide-svelte';
+	import { Save, Loader2, HelpCircle } from 'lucide-svelte';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { toast } from 'svelte-sonner';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import {
@@ -137,6 +138,18 @@
 		'complianceAllowed',
 		'taggingAllowed',
 	] as const;
+
+	const PERMISSION_DESCRIPTIONS: Record<string, string> = {
+		namespaceCreateAllowed: 'Allow tenant users to create new namespaces',
+		namespaceDeleteAllowed: 'Allow tenant users to delete namespaces',
+		namespaceManageAllowed: 'Allow tenant users to modify namespace settings',
+		namespaceUndeleteAllowed: 'Allow recovery of deleted namespaces',
+		erasureCodingAllowed: 'Enable erasure coding for storage efficiency',
+		searchAllowed: 'Allow use of HCP metadata search engine',
+		replicationAllowed: 'Allow namespace data replication',
+		complianceAllowed: 'Allow configuration of compliance and retention policies',
+		taggingAllowed: 'Allow tagging of namespaces and objects',
+	};
 
 	let permSyncVersion = $state(0);
 	let localPermissions = $state<Record<string, boolean>>({});
@@ -423,7 +436,21 @@
 									<div class="space-y-3">
 										{#each PERMISSION_KEYS as key (key)}
 											<div class="flex items-center justify-between">
-												<span class="text-sm text-muted-foreground">{formatKey(key)}</span>
+												<span class="flex items-center gap-1.5 text-sm text-muted-foreground">
+													{formatKey(key)}
+													<Tooltip.Root>
+														<Tooltip.Trigger>
+															{#snippet child({ props })}
+																<span {...props} class="inline-flex">
+																	<HelpCircle class="h-3.5 w-3.5" />
+																</span>
+															{/snippet}
+														</Tooltip.Trigger>
+														<Tooltip.Content side="left"
+															>{PERMISSION_DESCRIPTIONS[key]}</Tooltip.Content
+														>
+													</Tooltip.Root>
+												</span>
 												<label class="relative inline-flex cursor-pointer items-center">
 													<input
 														type="checkbox"
