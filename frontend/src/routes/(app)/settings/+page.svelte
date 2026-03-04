@@ -3,23 +3,13 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
-	import { onMount } from 'svelte';
 	import { get_tenant, get_tenant_settings } from '$lib/tenant-info.remote.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 
-	let cards: HTMLElement[] = $state([]);
-
-	onMount(async () => {
-		const { gsap } = await import('gsap');
-		gsap.from(cards.filter(Boolean), {
-			y: 20,
-			opacity: 0,
-			duration: 0.4,
-			stagger: 0.1,
-			ease: 'power2.out',
-		});
-	});
+	let settingsQuery = $derived(
+		tenant ? Promise.all([get_tenant({ tenant }), get_tenant_settings({ tenant })]) : null
+	);
 
 	function entries(obj: Record<string, unknown>): [string, unknown][] {
 		return Object.entries(obj).filter(([, v]) => v !== null && v !== undefined);
@@ -49,8 +39,8 @@
 		<p class="mt-1 text-sm text-muted-foreground">View tenant configuration and permissions</p>
 	</div>
 
-	{#if tenant}
-		{#await Promise.all([get_tenant({ tenant }), get_tenant_settings({ tenant })])}
+	{#if settingsQuery}
+		{#await settingsQuery}
 			<div class="grid gap-6 lg:grid-cols-2">
 				<CardSkeleton />
 				<CardSkeleton />
@@ -59,123 +49,115 @@
 			</div>
 		{:then [info, settings]}
 			<div class="grid gap-6 lg:grid-cols-2">
-				<div bind:this={cards[0]}>
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>General</Card.Title>
-							<Card.Description>Core tenant configuration</Card.Description>
-						</Card.Header>
-						<Card.Content>
-							<dl class="space-y-3">
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>General</Card.Title>
+						<Card.Description>Core tenant configuration</Card.Description>
+					</Card.Header>
+					<Card.Content>
+						<dl class="space-y-3">
+							<div class="flex justify-between">
+								<dt class="text-sm text-muted-foreground">Tenant Name</dt>
+								<dd class="text-sm font-medium">{info.name}</dd>
+							</div>
+							<div class="flex justify-between">
+								<dt class="text-sm text-muted-foreground">Namespace Quota</dt>
+								<dd class="text-sm font-medium">{info.namespaceQuota ?? '—'}</dd>
+							</div>
+							<div class="flex justify-between">
+								<dt class="text-sm text-muted-foreground">Hard Quota</dt>
+								<dd class="text-sm font-medium">{info.hardQuota ?? '—'}</dd>
+							</div>
+							<div class="flex justify-between">
+								<dt class="text-sm text-muted-foreground">Soft Quota</dt>
+								<dd class="text-sm font-medium">{info.softQuota ?? '—'}</dd>
+							</div>
+							<div class="flex justify-between">
+								<dt class="text-sm text-muted-foreground">Authentication</dt>
+								<dd class="flex gap-1">
+									{#each info.authenticationTypes?.authenticationType ?? [] as type (type)}
+										<Badge variant="secondary">{type}</Badge>
+									{/each}
+									{#if !info.authenticationTypes?.authenticationType?.length}
+										<span class="text-sm text-muted-foreground">—</span>
+									{/if}
+								</dd>
+							</div>
+							<div class="flex justify-between">
+								<dt class="text-sm text-muted-foreground">Service Plan</dt>
+								<dd class="text-sm font-medium">{info.servicePlan ?? '—'}</dd>
+							</div>
+						</dl>
+					</Card.Content>
+				</Card.Root>
+
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Namespace Defaults</Card.Title>
+						<Card.Description>Default settings for new namespaces</Card.Description>
+					</Card.Header>
+					<Card.Content>
+						<dl class="space-y-3">
+							{#each entries(settings.namespaceDefaults) as [key, value] (key)}
 								<div class="flex justify-between">
-									<dt class="text-sm text-muted-foreground">Tenant Name</dt>
-									<dd class="text-sm font-medium">{info.name}</dd>
+									<dt class="text-sm text-muted-foreground">{formatKey(key)}</dt>
+									<dd class="text-sm font-medium">{formatValue(value)}</dd>
 								</div>
+							{/each}
+							{#if entries(settings.namespaceDefaults).length === 0}
+								<p class="text-sm text-muted-foreground">No namespace defaults configured</p>
+							{/if}
+						</dl>
+					</Card.Content>
+				</Card.Root>
+
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Permissions</Card.Title>
+						<Card.Description>Tenant-level permission settings</Card.Description>
+					</Card.Header>
+					<Card.Content>
+						<dl class="space-y-3">
+							{#each entries(settings.permissions) as [key, value] (key)}
 								<div class="flex justify-between">
-									<dt class="text-sm text-muted-foreground">Namespace Quota</dt>
-									<dd class="text-sm font-medium">{info.namespaceQuota ?? '—'}</dd>
-								</div>
-								<div class="flex justify-between">
-									<dt class="text-sm text-muted-foreground">Hard Quota</dt>
-									<dd class="text-sm font-medium">{info.hardQuota ?? '—'}</dd>
-								</div>
-								<div class="flex justify-between">
-									<dt class="text-sm text-muted-foreground">Soft Quota</dt>
-									<dd class="text-sm font-medium">{info.softQuota ?? '—'}</dd>
-								</div>
-								<div class="flex justify-between">
-									<dt class="text-sm text-muted-foreground">Authentication</dt>
-									<dd class="flex gap-1">
-										{#each info.authenticationTypes?.authenticationType ?? [] as type (type)}
-											<Badge variant="secondary">{type}</Badge>
-										{/each}
-										{#if !info.authenticationTypes?.authenticationType?.length}
-											<span class="text-sm text-muted-foreground">—</span>
+									<dt class="text-sm text-muted-foreground">{formatKey(key)}</dt>
+									<dd>
+										{#if typeof value === 'boolean'}
+											<Badge variant={value ? 'success' : 'secondary'}
+												>{value ? 'Allowed' : 'Denied'}</Badge
+											>
+										{:else}
+											<span class="text-sm font-medium">{formatValue(value)}</span>
 										{/if}
 									</dd>
 								</div>
+							{/each}
+							{#if entries(settings.permissions).length === 0}
+								<p class="text-sm text-muted-foreground">No permissions configured</p>
+							{/if}
+						</dl>
+					</Card.Content>
+				</Card.Root>
+
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Contact Info</Card.Title>
+						<Card.Description>Tenant administrator contact details</Card.Description>
+					</Card.Header>
+					<Card.Content>
+						<dl class="space-y-3">
+							{#each entries(settings.contactInfo) as [key, value] (key)}
 								<div class="flex justify-between">
-									<dt class="text-sm text-muted-foreground">Service Plan</dt>
-									<dd class="text-sm font-medium">{info.servicePlan ?? '—'}</dd>
+									<dt class="text-sm text-muted-foreground">{formatKey(key)}</dt>
+									<dd class="text-sm font-medium">{formatValue(value)}</dd>
 								</div>
-							</dl>
-						</Card.Content>
-					</Card.Root>
-				</div>
-
-				<div bind:this={cards[1]}>
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>Namespace Defaults</Card.Title>
-							<Card.Description>Default settings for new namespaces</Card.Description>
-						</Card.Header>
-						<Card.Content>
-							<dl class="space-y-3">
-								{#each entries(settings.namespaceDefaults) as [key, value] (key)}
-									<div class="flex justify-between">
-										<dt class="text-sm text-muted-foreground">{formatKey(key)}</dt>
-										<dd class="text-sm font-medium">{formatValue(value)}</dd>
-									</div>
-								{/each}
-								{#if entries(settings.namespaceDefaults).length === 0}
-									<p class="text-sm text-muted-foreground">No namespace defaults configured</p>
-								{/if}
-							</dl>
-						</Card.Content>
-					</Card.Root>
-				</div>
-
-				<div bind:this={cards[2]}>
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>Permissions</Card.Title>
-							<Card.Description>Tenant-level permission settings</Card.Description>
-						</Card.Header>
-						<Card.Content>
-							<dl class="space-y-3">
-								{#each entries(settings.permissions) as [key, value] (key)}
-									<div class="flex justify-between">
-										<dt class="text-sm text-muted-foreground">{formatKey(key)}</dt>
-										<dd>
-											{#if typeof value === 'boolean'}
-												<Badge variant={value ? 'success' : 'secondary'}
-													>{value ? 'Allowed' : 'Denied'}</Badge
-												>
-											{:else}
-												<span class="text-sm font-medium">{formatValue(value)}</span>
-											{/if}
-										</dd>
-									</div>
-								{/each}
-								{#if entries(settings.permissions).length === 0}
-									<p class="text-sm text-muted-foreground">No permissions configured</p>
-								{/if}
-							</dl>
-						</Card.Content>
-					</Card.Root>
-				</div>
-
-				<div bind:this={cards[3]}>
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>Contact Info</Card.Title>
-							<Card.Description>Tenant administrator contact details</Card.Description>
-						</Card.Header>
-						<Card.Content>
-							<dl class="space-y-3">
-								{#each entries(settings.contactInfo) as [key, value] (key)}
-									<div class="flex justify-between">
-										<dt class="text-sm text-muted-foreground">{formatKey(key)}</dt>
-										<dd class="text-sm font-medium">{formatValue(value)}</dd>
-									</div>
-								{/each}
-								{#if entries(settings.contactInfo).length === 0}
-									<p class="text-sm text-muted-foreground">No contact info configured</p>
-								{/if}
-							</dl>
-						</Card.Content>
-					</Card.Root>
-				</div>
+							{/each}
+							{#if entries(settings.contactInfo).length === 0}
+								<p class="text-sm text-muted-foreground">No contact info configured</p>
+							{/if}
+						</dl>
+					</Card.Content>
+				</Card.Root>
 			</div>
 		{/await}
 	{:else}

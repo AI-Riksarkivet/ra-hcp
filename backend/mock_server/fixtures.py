@@ -26,6 +26,16 @@ TENANTS: dict[str, dict] = {
         "authenticationTypes": {"authenticationType": ["LOCAL"]},
         "tags": {"tag": []},
     },
+    "mock": {
+        "name": "mock",
+        "systemVisibleDescription": "Mock development tenant",
+        "hardQuota": "250 GB",
+        "softQuota": "90%",
+        "namespaceQuota": 15,
+        "authenticationTypes": {"authenticationType": ["LOCAL"]},
+        "servicePlan": "Default",
+        "tags": {"tag": []},
+    },
 }
 
 # ── Namespaces (tenant -> ns_name -> data) ───────────────────────────

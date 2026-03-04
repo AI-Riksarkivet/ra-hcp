@@ -10,24 +10,13 @@
 	} from 'lucide-svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
-	import { onMount } from 'svelte';
 	import { formatBytes } from '$lib/utils/format.js';
 	import { get_tenant, get_tenant_statistics } from '$lib/tenant-info.remote.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 
-	let cards: HTMLElement[] = $state([]);
-
-	onMount(async () => {
-		const { gsap } = await import('gsap');
-		gsap.from(cards.filter(Boolean), {
-			y: 20,
-			opacity: 0,
-			duration: 0.4,
-			stagger: 0.1,
-			ease: 'power2.out',
-		});
-	});
+	let tenantInfo = $derived(tenant ? get_tenant({ tenant }) : undefined);
+	let tenantStats = $derived(tenant ? get_tenant_statistics({ tenant }) : undefined);
 </script>
 
 <svelte:head>
@@ -42,12 +31,12 @@
 
 	{#if tenant}
 		<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-			{#await get_tenant({ tenant })}
+			{#await tenantInfo}
 				<CardSkeleton />
 				<CardSkeleton />
 				<CardSkeleton />
 			{:then info}
-				<div bind:this={cards[0]}>
+				<div>
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -63,7 +52,7 @@
 					</Card.Root>
 				</div>
 
-				<div bind:this={cards[1]}>
+				<div>
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -79,7 +68,7 @@
 					</Card.Root>
 				</div>
 
-				<div bind:this={cards[2]}>
+				<div>
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -96,12 +85,12 @@
 				</div>
 			{/await}
 
-			{#await get_tenant_statistics({ tenant })}
+			{#await tenantStats}
 				<CardSkeleton />
 				<CardSkeleton />
 				<CardSkeleton />
 			{:then stats}
-				<div bind:this={cards[3]}>
+				<div>
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -117,7 +106,7 @@
 					</Card.Root>
 				</div>
 
-				<div bind:this={cards[4]}>
+				<div>
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">
@@ -135,7 +124,7 @@
 					</Card.Root>
 				</div>
 
-				<div bind:this={cards[5]}>
+				<div>
 					<Card.Root>
 						<Card.Content class="pt-6">
 							<div class="flex items-center justify-between">

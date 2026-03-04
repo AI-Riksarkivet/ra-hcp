@@ -3,10 +3,6 @@
 	import { LayoutDashboard, Database, Users, Server, Boxes, Settings } from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
-	const overviewItems = [
-		{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-	] as const;
-
 	const managementItems = [
 		{ href: '/namespaces', label: 'Namespaces', icon: Boxes },
 		{ href: '/users', label: 'Users & Groups', icon: Users },
@@ -36,10 +32,10 @@
 
 	<Sidebar.Content>
 		<Sidebar.Group>
-			<Sidebar.GroupLabel>Overview</Sidebar.GroupLabel>
+			<Sidebar.GroupLabel>Tenant</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
-					{#each overviewItems as item}
+					{#each tenantItems as item}
 						{@const active = $page.url.pathname.startsWith(item.href)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
@@ -82,27 +78,6 @@
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each storageItems as item}
-						{@const active = $page.url.pathname.startsWith(item.href)}
-						<Sidebar.MenuItem>
-							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
-								{#snippet child({ props })}
-									<a href={item.href} {...props}>
-										<item.icon class="h-5 w-5 shrink-0" />
-										<span>{item.label}</span>
-									</a>
-								{/snippet}
-							</Sidebar.MenuButton>
-						</Sidebar.MenuItem>
-					{/each}
-				</Sidebar.Menu>
-			</Sidebar.GroupContent>
-		</Sidebar.Group>
-
-		<Sidebar.Group>
-			<Sidebar.GroupLabel>Tenant</Sidebar.GroupLabel>
-			<Sidebar.GroupContent>
-				<Sidebar.Menu>
-					{#each tenantItems as item}
 						{@const active = $page.url.pathname.startsWith(item.href)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>

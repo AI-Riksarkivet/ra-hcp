@@ -27,7 +27,7 @@ flowchart TB
         J[(Job State<br/>sync:job:job_id)]
     end
 
-    subgraph Consumer Worker – background thread
+    subgraph Consumer Worker - background thread
         C[XREADGROUP<br/>batch of objects]
         D{Needs data<br/>transform?}
         E[Server-side<br/>CopyObject ⚡]
@@ -251,6 +251,58 @@ dest_s3    → https://other-team.hcp.ra-dev.int   (from body.destination_token 
 
 Both clients are cached in `app.state.s3_cache` keyed by `HcpCredentials(username, password, tenant)`.
 
+## Infrastructure Requirements
+
+### No new services needed
+
+The existing stack (backend + frontend + Redis) is sufficient. No additional containers, queues, or workers required.
+
+### The "Worker" is in-process
+
+There is no separate worker service. The sync consumer runs as a **background thread inside the FastAPI process** via `asyncio.create_task(asyncio.to_thread(...))`.
+
+Why `create_task + to_thread` instead of FastAPI's `BackgroundTasks`:
+- `BackgroundTasks` ties the ASGI worker to the task lifetime — a sync job copying thousands of objects would block a worker thread for its entire duration (minutes/hours). Many concurrent syncs would exhaust the worker pool.
+- `asyncio.create_task(asyncio.to_thread(...))` frees the ASGI worker immediately after returning the response. The consumer runs on the thread pool independently of any request lifecycle.
+- We get a task reference (`app.state.sync_tasks[job_id]`) that can be used for future cancellation support.
+
+**Tradeoff**: If the backend process restarts, in-flight sync jobs are lost. Redis state shows the last checkpoint — the user can re-submit. Acceptable for v1.
+
+### The "Webhook" is external
+
+The webhook in transform configs (e.g., `http://converter:8080/tiff-to-jpg`) is a **user-provided external service** — not part of our infrastructure. The sync endpoint just POSTs object data to whatever URL the caller specifies and uses the response as the transformed data.
+
+Possible webhook backends:
+- A simple HTTP microservice (Flask/FastAPI container doing TIFF-to-JPG)
+- **Argo Events** — a Kubernetes-native option: an Argo EventSource webhook sensor receives the POST, triggers an Argo Workflow for the transformation, and returns the result. Powerful for complex multi-step transformations (e.g., OCR pipeline, ML inference) where you need orchestration, retries, and scaling built in.
+- Any serverless function (AWS Lambda, Cloud Run, etc.)
+
+The webhook contract is simple: receive bytes in, return transformed bytes out. What runs behind that URL is the caller's choice.
+
+### Service topology (unchanged)
+
+```mermaid
+flowchart LR
+    subgraph Existing["Existing infrastructure (no changes)"]
+        FE[Frontend\n:3000]
+        BE[Backend - FastAPI\n:8000]
+        RD[(Redis\n:6379)]
+        BG[Sync consumer\nbackground thread\nin-process]
+
+        FE --> BE
+        BE --> RD
+        BG -.->|XREADGROUP / XACK| RD
+        BE -.->|asyncio.create_task\nasyncio.to_thread| BG
+    end
+
+    subgraph External["External (user-provided, optional)"]
+        WH[Webhook service\ne.g. HTTP microservice\nArgo Events sensor\nServerless function]
+    end
+
+    BG -->|POST object data\nonly with webhook transforms| WH
+    BG -->|CopyObject / PUT| HCP[HCP S3]
+```
+
 ## Design Decisions
 
 - **Cross-tenant auth**: Second JWT token provided in request body (user logs in to both tenants)
@@ -260,6 +312,8 @@ Both clients are cached in `app.state.s3_cache` keyed by `HcpCredentials(usernam
 - **Transforms**: Optional pluggable pipeline with key, metadata, and webhook (data) transforms
 - **Durability**: Redis Streams with per-object checkpoints (XADD/XACK)
 - **Async jobs**: POST returns job_id, poll GET for status/progress
+- **Background execution**: `asyncio.create_task + to_thread` (not `BackgroundTasks`) — frees ASGI workers for long-running jobs
+- **Webhook agnostic**: Any HTTP service can serve as a webhook backend (microservice, Argo Events, serverless)
 
 ## Usage Modes
 

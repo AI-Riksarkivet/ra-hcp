@@ -199,6 +199,17 @@ class MockMapiState:
         self.ns_settings: dict[tuple, dict[str, dict]] = {}
         self.data_access_perms: dict[tuple, dict] = {}
 
+    # ── Lazy initialisation ────────────────────────────────────
+
+    def ensure_tenant(self, name: str) -> None:
+        """Ensure all sub-stores exist for *name* (no-op if already present)."""
+        self.tenants.setdefault(name, {"name": name})
+        self.namespaces.setdefault(name, {})
+        self.user_accounts.setdefault(name, {})
+        self.group_accounts.setdefault(name, {})
+        self.content_classes.setdefault(name, {})
+        self.tenant_settings.setdefault(name, default_tenant_settings())
+
     # ── Tenant lifecycle ─────────────────────────────────────────
 
     def create_tenant(self, name: str, body: dict) -> HttpxResponse:
@@ -401,6 +412,7 @@ def _make_mapi_dispatcher(state: MockMapiState):
             return _not_allowed()
 
         tenant = segments[1]
+        state.ensure_tenant(tenant)
 
         # /tenants/{T}
         if n == 2:
@@ -443,7 +455,10 @@ def _make_mapi_dispatcher(state: MockMapiState):
                 return _cors(state.tenant_settings.setdefault(tenant, {}), method, body)
             if resource in TENANT_SETTING_KEYS:
                 return _setting(
-                    state.tenant_settings.setdefault(tenant, {}), resource, method, body
+                    state.tenant_settings.setdefault(tenant, default_tenant_settings()),
+                    resource,
+                    method,
+                    body,
                 )
 
         # ── availableServicePlans (depth 3–4) ──
