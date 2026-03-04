@@ -148,6 +148,10 @@ OPENAPI_TAGS = [
         "name": "S3 Objects",
         "description": "Upload, download, copy, and delete objects within buckets.",
     },
+    {
+        "name": "S3 Credentials",
+        "description": "Generate presigned URLs and retrieve S3 access credentials.",
+    },
     # ── System Admin (requires HCP system admin) ──
     {
         "name": "System Admin: Tenants",
