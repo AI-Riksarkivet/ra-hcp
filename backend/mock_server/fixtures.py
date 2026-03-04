@@ -259,19 +259,58 @@ NS_STATISTICS: dict = {
 }
 
 TENANT_CHARGEBACK: dict = {
-    "start": "2024-01-01T00:00:00Z",
-    "end": "2024-12-31T23:59:59Z",
-    "granularity": "total",
-    "namespaceChargebackData": [],
+    "chargebackData": [
+        {
+            "namespaceName": "finance-records",
+            "objectCount": 750,
+            "ingestedVolume": 32212254720,
+            "storageCapacityUsed": 34359738368,
+            "bytesIn": 8589934592,
+            "bytesOut": 4294967296,
+            "reads": 15230,
+            "writes": 3420,
+            "deletes": 85,
+            "valid": True,
+        },
+        {
+            "namespaceName": "compliance-archive",
+            "objectCount": 320,
+            "ingestedVolume": 16106127360,
+            "storageCapacityUsed": 17179869184,
+            "bytesIn": 2147483648,
+            "bytesOut": 1073741824,
+            "reads": 4870,
+            "writes": 980,
+            "deletes": 12,
+            "valid": True,
+        },
+        {
+            "namespaceName": "dev-sandbox",
+            "objectCount": 164,
+            "ingestedVolume": 2147483648,
+            "storageCapacityUsed": 2147483648,
+            "bytesIn": 1073741824,
+            "bytesOut": 536870912,
+            "reads": 2340,
+            "writes": 1560,
+            "deletes": 230,
+            "valid": True,
+        },
+    ],
 }
 
 NS_CHARGEBACK: dict = {
-    "start": "2024-01-01T00:00:00Z",
-    "end": "2024-12-31T23:59:59Z",
-    "granularity": "total",
-    "objectCount": 500,
-    "bytesIn": "10737418240",
-    "bytesOut": "5368709120",
+    "chargebackData": [
+        {
+            "objectCount": 500,
+            "bytesIn": 10737418240,
+            "bytesOut": 5368709120,
+            "reads": 8200,
+            "writes": 2100,
+            "deletes": 45,
+            "valid": True,
+        },
+    ],
 }
 
 AVAILABLE_SERVICE_PLANS: dict[str, dict] = {

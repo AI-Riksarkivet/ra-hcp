@@ -32,6 +32,23 @@ export interface TenantSettings {
   namespaceDefaults: Record<string, unknown>;
 }
 
+export interface ChargebackEntry {
+  namespaceName?: string;
+  objectCount?: number;
+  ingestedVolume?: number;
+  storageCapacityUsed?: number;
+  bytesIn?: number;
+  bytesOut?: number;
+  reads?: number;
+  writes?: number;
+  deletes?: number;
+  valid?: boolean;
+}
+
+export interface ChargebackReport {
+  chargebackData?: ChargebackEntry[];
+}
+
 export const get_tenant = query(
   z.object({ tenant: z.string() }),
   async ({ tenant }) => {
@@ -58,6 +75,21 @@ export const get_tenant_statistics = query(
       objectCount: 0,
       bytesUsed: "0",
     } as TenantStatistics;
+  },
+);
+
+export const get_tenant_chargeback = query(
+  z.object({ tenant: z.string() }),
+  async ({ tenant }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/chargebackReport`,
+      );
+      if (res.ok) return (await res.json()) as ChargebackReport;
+    } catch {
+      // ignore
+    }
+    return { chargebackData: [] } as ChargebackReport;
   },
 );
 
