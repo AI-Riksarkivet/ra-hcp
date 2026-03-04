@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app.core.security import get_current_user
 from app.api.v1.endpoints import auth
-from app.api.v1.endpoints.s3 import buckets, objects
+from app.api.v1.endpoints.s3 import buckets, credentials, objects
 from app.api.v1.endpoints.mapi.system import (
     tenants as sys_tenants,
     user_accounts as sys_user_accounts,
@@ -40,6 +40,7 @@ _auth = [Depends(get_current_user)]
 # ── S3 data-plane ────────────────────────────────────────────────────
 api_router.include_router(buckets.router, dependencies=_auth)
 api_router.include_router(objects.router, dependencies=_auth)
+api_router.include_router(credentials.router, dependencies=_auth)
 
 # ── System-level MAPI (requires HCP system admin) ───────────────────
 api_router.include_router(sys_tenants.router, prefix="/mapi", dependencies=_auth)

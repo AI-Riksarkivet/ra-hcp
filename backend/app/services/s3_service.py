@@ -234,3 +234,22 @@ class S3Service:
                 Key=key,
                 AccessControlPolicy=acl,
             )
+
+    # ── Presigned URLs ───────────────────────────────────────────────
+
+    def generate_presigned_url(
+        self,
+        bucket: str,
+        key: str,
+        expires_in: int = 3600,
+        method: str = "get_object",
+    ) -> str:
+        with tracer.start_as_current_span(
+            "s3.generate_presigned_url",
+            attributes={"s3.bucket": bucket, "s3.key": key, "s3.method": method},
+        ):
+            return self._client.generate_presigned_url(
+                method,
+                Params={"Bucket": bucket, "Key": key},
+                ExpiresIn=expires_in,
+            )

@@ -97,6 +97,10 @@ def mock_s3_service() -> MagicMock:
     mock.put_bucket_acl.return_value = {}
     mock.get_object_acl.return_value = {"Owner": {}, "Grants": []}
     mock.put_object_acl.return_value = {}
+    mock.generate_presigned_url.return_value = (
+        "https://s3.test.example.com/my-bucket/test.txt"
+        "?AWSAccessKeyId=dGVzdHVzZXI%3D&Expires=9999999999&Signature=abc123"
+    )
     return mock
 
 

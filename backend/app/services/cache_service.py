@@ -12,12 +12,29 @@ from typing import Any, Optional
 
 import redis as sync_redis
 import redis.asyncio as aioredis
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 
 from app.core.config import CacheSettings
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+
+_cache_hits = meter.create_counter(
+    "cache.hits",
+    description="Number of cache hits",
+    unit="1",
+)
+_cache_misses = meter.create_counter(
+    "cache.misses",
+    description="Number of cache misses",
+    unit="1",
+)
+_cache_errors = meter.create_counter(
+    "cache.errors",
+    description="Number of cache operation errors",
+    unit="1",
+)
 
 
 class CacheService:
@@ -100,11 +117,17 @@ class CacheService:
                 raw = await self._redis.get(self._key(key))  # type: ignore[union-attr]
                 hit = raw is not None
                 span.set_attribute("cache.hit", hit)
+                attrs = {"cache.key_prefix": key.split(":")[0]}
+                if hit:
+                    _cache_hits.add(1, attrs)
+                else:
+                    _cache_misses.add(1, attrs)
                 if not hit:
                     return None
                 return json.loads(raw)
             except Exception:
                 span.set_attribute("cache.error", True)
+                _cache_errors.add(1, {"operation": "get"})
                 logger.warning("Cache GET failed for %s", key, exc_info=True)
                 return None
 
@@ -171,12 +194,19 @@ class CacheService:
         ) as span:
             try:
                 raw: str | None = self._sync_redis.get(self._key(key))  # type: ignore[assignment]
-                span.set_attribute("cache.hit", raw is not None)
+                hit = raw is not None
+                span.set_attribute("cache.hit", hit)
+                attrs = {"cache.key_prefix": key.split(":")[0]}
+                if hit:
+                    _cache_hits.add(1, attrs)
+                else:
+                    _cache_misses.add(1, attrs)
                 if raw is None:
                     return None
                 return json.loads(raw)
             except Exception:
                 span.set_attribute("cache.error", True)
+                _cache_errors.add(1, {"operation": "get"})
                 logger.warning("Sync cache GET failed for %s", key, exc_info=True)
                 return None
 

@@ -40,26 +40,17 @@
 		return user.roles.role ?? [];
 	}
 
-	// --- Namespace access per user ---
-	let userNsAccess = $state<Record<string, string[]>>({});
-	let nsAccessLoading = $state(true);
-
-	$effect(() => {
-		const currentUsers = users;
-		const currentTenant = tenant;
-		if (!currentTenant || currentUsers.length === 0) {
-			nsAccessLoading = false;
-			return;
-		}
-
-		nsAccessLoading = true;
-		let cancelled = false;
-
-		Promise.all(
-			currentUsers.map(async (user) => {
+	// --- Namespace access per user (async derived — auto-cancels on dependency change) ---
+	async function loadUserNsAccess(
+		t: string | undefined,
+		u: User[]
+	): Promise<Record<string, string[]>> {
+		if (!t || u.length === 0) return {};
+		const results = await Promise.all(
+			u.map(async (user) => {
 				try {
 					const perms = (await get_user_permissions({
-						tenant: currentTenant,
+						tenant: t,
 						username: user.username,
 					})) as DataAccessPermissions;
 					const namespaces = (perms.namespacePermission ?? [])
@@ -72,20 +63,13 @@
 					return { username: user.username, namespaces: [] as string[] };
 				}
 			})
-		).then((results) => {
-			if (cancelled) return;
-			const map: Record<string, string[]> = {};
-			for (const r of results) {
-				map[r.username] = r.namespaces;
-			}
-			userNsAccess = map;
-			nsAccessLoading = false;
-		});
+		);
+		const map: Record<string, string[]> = {};
+		for (const r of results) map[r.username] = r.namespaces;
+		return map;
+	}
 
-		return () => {
-			cancelled = true;
-		};
-	});
+	let userNsAccess = $derived(await loadUserNsAccess(tenant, users));
 
 	// --- Create User dialog ---
 	let createUserOpen = $state(false);
@@ -225,9 +209,9 @@
 											{/if}
 										</td>
 										<td class="px-4 py-3">
-											{#if nsAccessLoading}
+											{#if userNsAccess[user.username] === undefined}
 												<div class="h-5 w-20 animate-pulse rounded bg-muted"></div>
-											{:else if userNsAccess[user.username]?.length}
+											{:else if userNsAccess[user.username].length > 0}
 												<div class="flex flex-wrap gap-1">
 													{#each userNsAccess[user.username] as ns (ns)}
 														<a href="/namespaces/{ns}">

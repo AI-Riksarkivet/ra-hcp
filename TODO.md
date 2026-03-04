@@ -11,11 +11,11 @@
 5. adding icon tags for certain serice (lakefs) or NFS. in bucket and namesapce view
 
 
-5. improve auth with better-auth? , also use reditect to auth login 302 user
-6. missing instrucions to connect nfs and if we are using auth for nfs
-7. how sign objects and generate auth tokens from api? s3?
-8. missing better logging in backend who sent and aaked for what and what was reurned , fastspi skills
-9. are we missing compileroptions async true? https://github.com/AI-Riksarkivet/hcp/blob/main/frontend/svelte.config.js , check svelt5 skills
+~~6. improve auth with better-auth?~~ not needed (credential proxy pattern, no user DB) — redirect 302 to /login already implemented
+~~7. missing instructions to connect nfs and if we are using auth for nfs~~ done (NFS connection section in namespace detail page with mount command, auth explanation, usage examples)
+8. how sign objects and generate auth tokens from api? s3?
+9. missing better logging in backend who sent and aaked for what and what was reurned , fastspi skills
+~~10. are we missing compileroptions async true?~~ done (enabled `compilerOptions.experimental.async: true`, refactored async patterns to use `$derived(await)` and reactive query pattern)
 ---
 
 ## Done

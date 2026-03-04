@@ -6,7 +6,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { ArrowLeft, Save, Loader2, Plus, HelpCircle } from 'lucide-svelte';
+	import { ArrowLeft, Save, Loader2, Plus, HelpCircle, Terminal, Copy, Info } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import {
@@ -41,7 +41,22 @@
 	};
 
 	let tenant = $derived(page.data.tenant as string | undefined);
+	let hcpDomain = $derived((page.data.hcpDomain as string) || '');
 	let namespaceName = $derived(page.params.namespace ?? '');
+
+	// --- NFS connection info ---
+	let nfsDomain = $derived(hcpDomain ? `nfs.${hcpDomain}` : 'nfs.<hcp-domain>');
+	let nfsMountPath = $derived(`/fs/${tenant ?? '<tenant>'}/${namespaceName || '<namespace>'}/data`);
+	let nfsMountCommand = $derived(
+		`mount -o tcp,vers=3,timeo=600,hard,intr -t nfs ${nfsDomain}:${nfsMountPath} /mnt/${namespaceName || 'hcp-data'}`
+	);
+
+	let nfsCopied = $state(false);
+	async function copyNfsCommand() {
+		await navigator.clipboard.writeText(nfsMountCommand);
+		nfsCopied = true;
+		setTimeout(() => (nfsCopied = false), 2000);
+	}
 
 	// --- Namespace general info ---
 	let nsData = $derived(
@@ -608,6 +623,94 @@
 				</div>
 			{/await}
 		</section>
+
+		<!-- NFS Connection Instructions (shown when NFS is enabled) -->
+		{#if localNfsEnabled}
+			<section class="space-y-4">
+				<h3 class="text-lg font-semibold">NFS Connection</h3>
+				<div class="rounded-lg border p-6 space-y-4">
+					<div
+						class="flex items-start gap-3 rounded-md bg-blue-500/10 p-3 text-sm text-blue-700 dark:text-blue-300"
+					>
+						<Info class="mt-0.5 h-4 w-4 shrink-0" />
+						<p>
+							NFS uses <strong>IP-based access control</strong> — no username or password is needed to
+							mount. Access is restricted by the IP settings configured in the NFS protocol section. Make
+							sure your client's IP is allowed before attempting to mount.
+						</p>
+					</div>
+
+					<div>
+						<p class="mb-2 text-sm font-medium">Mount command</p>
+						<div class="group relative">
+							<pre class="overflow-x-auto rounded-md bg-muted p-3 text-sm"><code
+									>{nfsMountCommand}</code
+								></pre>
+							<button
+								type="button"
+								onclick={copyNfsCommand}
+								class="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+								title="Copy to clipboard"
+							>
+								{#if nfsCopied}
+									<span class="text-xs text-green-600">Copied!</span>
+								{:else}
+									<Copy class="h-4 w-4" />
+								{/if}
+							</button>
+						</div>
+					</div>
+
+					<div class="grid gap-4 sm:grid-cols-2">
+						<div>
+							<p class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+								Mount data directory
+							</p>
+							<code class="text-sm">{nfsDomain}:{nfsMountPath}</code>
+						</div>
+						<div>
+							<p class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+								Mount metadata directory
+							</p>
+							<code class="text-sm">{nfsDomain}:/fs/{tenant}/{namespaceName}/metadata</code>
+						</div>
+					</div>
+
+					<details class="text-sm">
+						<summary class="cursor-pointer font-medium text-muted-foreground hover:text-foreground">
+							<Terminal class="mr-1 inline h-4 w-4" /> Usage examples & tips
+						</summary>
+						<div class="mt-3 space-y-3 pl-1">
+							<div>
+								<p class="font-medium">Store an object</p>
+								<pre class="mt-1 overflow-x-auto rounded-md bg-muted p-2"><code
+										>cp myfile.txt /mnt/{namespaceName}/myfile.txt</code
+									></pre>
+							</div>
+							<div>
+								<p class="font-medium">Retrieve an object</p>
+								<pre class="mt-1 overflow-x-auto rounded-md bg-muted p-2"><code
+										>cp /mnt/{namespaceName}/myfile.txt ./local-copy.txt</code
+									></pre>
+							</div>
+							<div>
+								<p class="font-medium">Tips</p>
+								<ul class="ml-4 mt-1 list-disc space-y-1 text-muted-foreground">
+									<li>
+										Do not specify <code>rsize</code> or <code>wsize</code> — HCP uses optimal values
+										automatically
+									</li>
+									<li>Use <code>lookupcache=none</code> if you see stale file handle errors</li>
+									<li>NFS uses lazy close — files are finalized after a short idle period</li>
+									<li>Objects are immutable once closed (WORM) — you cannot overwrite or rename</li>
+									<li>Multiple threads can read the same object on the same or different nodes</li>
+								</ul>
+							</div>
+						</div>
+					</details>
+				</div>
+			</section>
+		{/if}
 
 		<!-- Section 3: User Access -->
 		<section class="space-y-4">

@@ -133,3 +133,42 @@ class DeleteObjectsResponse(BaseModel):
     status: str
     deleted: int
     errors: Optional[List[dict]] = None
+
+
+# ── Presigned URL Models ─────────────────────────────────────────
+
+
+class PresignedUrlRequest(BaseModel):
+    """Request body for generating a presigned URL."""
+
+    bucket: str
+    key: str
+    expires_in: int = Field(
+        3600, ge=1, le=604800, description="Expiry in seconds (max 7 days)"
+    )
+    method: str = Field(
+        "get_object", description="get_object for download, put_object for upload"
+    )
+
+
+class PresignedUrlResponse(BaseModel):
+    """Response containing the generated presigned URL."""
+
+    url: str
+    bucket: str
+    key: str
+    expires_in: int
+    method: str
+
+
+# ── S3 Credentials Model ────────────────────────────────────────
+
+
+class S3CredentialsResponse(BaseModel):
+    """HCP-derived S3 credentials for the authenticated user."""
+
+    access_key_id: str
+    secret_access_key: str
+    username: str
+    tenant: Optional[str] = None
+    endpoint_url: Optional[str] = None

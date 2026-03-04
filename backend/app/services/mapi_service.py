@@ -172,9 +172,6 @@ class MapiService:
     async def delete(self, path: str, **kwargs) -> httpx.Response:
         return await self.request("DELETE", path, **kwargs)
 
-    async def head(self, path: str, **kwargs) -> httpx.Response:
-        return await self.request("HEAD", path, **kwargs)
-
     # ── High-level helpers (raise on error) ───────────────────────────
 
     async def fetch_json(

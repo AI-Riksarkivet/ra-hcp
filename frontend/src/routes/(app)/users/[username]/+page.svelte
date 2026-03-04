@@ -138,42 +138,14 @@
 	}
 
 	// --- Namespace Access ---
-	let nsPermissions = $state<NonNullable<DataAccessPermissions['namespacePermission']>>([]);
-	let nsAccessLoading = $state(true);
-
-	$effect(() => {
-		const currentTenant = tenant;
-		const currentUsername = username;
-		if (!currentTenant || !currentUsername) {
-			nsAccessLoading = false;
-			return;
-		}
-
-		nsAccessLoading = true;
-		let cancelled = false;
-
-		(async () => {
-			try {
-				const perms = (await get_user_permissions({
-					tenant: currentTenant,
-					username: currentUsername,
-				})) as DataAccessPermissions;
-				if (cancelled) return;
-				nsPermissions = (perms.namespacePermission ?? []).filter(
-					(entry) => entry.permissions?.permission && entry.permissions.permission.length > 0
-				);
-			} catch {
-				if (cancelled) return;
-				nsPermissions = [];
-			} finally {
-				if (!cancelled) nsAccessLoading = false;
-			}
-		})();
-
-		return () => {
-			cancelled = true;
-		};
-	});
+	let permsData = $derived(
+		tenant && username ? get_user_permissions({ tenant, username }) : undefined
+	);
+	let nsPermissions = $derived(
+		((permsData?.current as DataAccessPermissions)?.namespacePermission ?? []).filter(
+			(entry) => entry.permissions?.permission && entry.permissions.permission.length > 0
+		)
+	);
 
 	// --- Delete User ---
 	let deleteOpen = $state(false);
@@ -343,7 +315,7 @@
 			<!-- Section 3: Namespace Access -->
 			<section class="space-y-4">
 				<h3 class="text-lg font-semibold">Namespace Access</h3>
-				{#if nsAccessLoading}
+				{#await permsData}
 					<div class="rounded-lg border p-6">
 						<div class="space-y-3">
 							{#each Array(3) as _, i (i)}
@@ -351,56 +323,58 @@
 							{/each}
 						</div>
 					</div>
-				{:else if nsPermissions.length === 0}
-					<div class="rounded-lg border border-dashed p-8 text-center">
-						<p class="text-muted-foreground">This user has no namespace access.</p>
-					</div>
-				{:else}
-					<div class="overflow-x-auto rounded-lg border">
-						<table class="w-full text-left text-sm">
-							<thead
-								class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
-							>
-								<tr>
-									<th class="px-4 py-3 font-medium">Namespace</th>
-									<th class="px-4 py-3 font-medium">Permissions</th>
-								</tr>
-							</thead>
-							<tbody class="divide-y">
-								{#each nsPermissions as entry (entry.namespaceName)}
-									<tr class="bg-card transition-colors hover:bg-accent/50">
-										<td class="px-4 py-3 font-medium">
-											<a
-												href="/namespaces/{entry.namespaceName}"
-												class="text-primary underline-offset-4 hover:underline"
-											>
-												{entry.namespaceName}
-											</a>
-										</td>
-										<td class="px-4 py-3">
-											<div class="flex flex-wrap gap-1">
-												{#each entry.permissions?.permission ?? [] as perm (perm)}
-													<Tooltip.Root>
-														<Tooltip.Trigger>
-															{#snippet child({ props })}
-																<span {...props}>
-																	<Badge variant="secondary">{perm}</Badge>
-																</span>
-															{/snippet}
-														</Tooltip.Trigger>
-														<Tooltip.Content
-															>{PERMISSION_DESCRIPTIONS[perm] ?? perm}</Tooltip.Content
-														>
-													</Tooltip.Root>
-												{/each}
-											</div>
-										</td>
+				{:then _}
+					{#if nsPermissions.length === 0}
+						<div class="rounded-lg border border-dashed p-8 text-center">
+							<p class="text-muted-foreground">This user has no namespace access.</p>
+						</div>
+					{:else}
+						<div class="overflow-x-auto rounded-lg border">
+							<table class="w-full text-left text-sm">
+								<thead
+									class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
+								>
+									<tr>
+										<th class="px-4 py-3 font-medium">Namespace</th>
+										<th class="px-4 py-3 font-medium">Permissions</th>
 									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				{/if}
+								</thead>
+								<tbody class="divide-y">
+									{#each nsPermissions as entry (entry.namespaceName)}
+										<tr class="bg-card transition-colors hover:bg-accent/50">
+											<td class="px-4 py-3 font-medium">
+												<a
+													href="/namespaces/{entry.namespaceName}"
+													class="text-primary underline-offset-4 hover:underline"
+												>
+													{entry.namespaceName}
+												</a>
+											</td>
+											<td class="px-4 py-3">
+												<div class="flex flex-wrap gap-1">
+													{#each entry.permissions?.permission ?? [] as perm (perm)}
+														<Tooltip.Root>
+															<Tooltip.Trigger>
+																{#snippet child({ props })}
+																	<span {...props}>
+																		<Badge variant="secondary">{perm}</Badge>
+																	</span>
+																{/snippet}
+															</Tooltip.Trigger>
+															<Tooltip.Content
+																>{PERMISSION_DESCRIPTIONS[perm] ?? perm}</Tooltip.Content
+															>
+														</Tooltip.Root>
+													{/each}
+												</div>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				{/await}
 			</section>
 		{/if}
 	{/if}

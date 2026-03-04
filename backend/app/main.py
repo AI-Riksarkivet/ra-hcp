@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 import uuid
 from contextlib import asynccontextmanager
 
@@ -11,6 +12,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from opentelemetry import metrics, trace
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.dependencies import get_cache_service
@@ -20,16 +22,77 @@ from app.core.telemetry import setup_telemetry
 from app.services.cache_service import CacheService
 
 logger = logging.getLogger(__name__)
+access_logger = logging.getLogger("access")
+
+# Paths that are called constantly by probes — skip access logging
+_HEALTH_PATHS = frozenset({"/healthz", "/readyz", "/health"})
+
+_meter = metrics.get_meter(__name__)
+_http_request_duration = _meter.create_histogram(
+    "http.server.request.duration",
+    description="HTTP request duration in milliseconds",
+    unit="ms",
+)
+_http_request_count = _meter.create_counter(
+    "http.server.request.count",
+    description="Total HTTP requests",
+    unit="1",
+)
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Attach a unique request ID to every request/response."""
+    """Request ID, OTel trace correlation, and per-request access logging."""
 
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
         request.state.request_id = request_id
+
+        # Correlate request_id with OTel trace
+        span = trace.get_current_span()
+        if span.is_recording():
+            span.set_attribute("request.id", request_id)
+
+        start = time.perf_counter()
         response = await call_next(request)
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+
         response.headers["X-Request-ID"] = request_id
+
+        # Record HTTP metrics
+        metric_attrs = {
+            "http.method": request.method,
+            "http.status_code": response.status_code,
+            "http.route": request.url.path,
+        }
+        _http_request_duration.record(duration_ms, metric_attrs)
+        _http_request_count.add(1, metric_attrs)
+
+        # Log all non-health requests
+        if request.url.path not in _HEALTH_PATHS:
+            # Extract trace/span IDs for log correlation
+            ctx = span.get_span_context()
+            trace_id = format(ctx.trace_id, "032x") if ctx.trace_id else None
+            span_id = format(ctx.span_id, "016x") if ctx.span_id else None
+
+            access_logger.info(
+                "%s %s %s %sms",
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration_ms,
+                extra={
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "query": str(request.query_params) or None,
+                    "status": response.status_code,
+                    "duration_ms": duration_ms,
+                    "client_ip": request.client.host if request.client else None,
+                    "trace_id": trace_id,
+                    "span_id": span_id,
+                },
+            )
+
         return response
 
 

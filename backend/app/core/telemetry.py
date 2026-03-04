@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json as _json
 import logging
 import os
+import sys
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from opentelemetry import metrics, trace
@@ -17,6 +20,44 @@ from opentelemetry.sdk.trace.export import (
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 )
+
+
+# ── JSON log formatter ────────────────────────────────────────────────
+
+_EXTRA_FIELDS = (
+    "request_id",
+    "method",
+    "path",
+    "query",
+    "status",
+    "duration_ms",
+    "user",
+    "client_ip",
+    "trace_id",
+    "span_id",
+)
+
+
+class JSONFormatter(logging.Formatter):
+    """Emit each log record as a single JSON line."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        entry: dict = {
+            "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(
+                timespec="milliseconds"
+            ),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+        }
+        for key in _EXTRA_FIELDS:
+            val = getattr(record, key, None)
+            if val is not None:
+                entry[key] = val
+        if record.exc_info and record.exc_info[1] is not None:
+            entry["exception"] = self.formatException(record.exc_info)
+        return _json.dumps(entry, default=str)
+
 
 _resource = Resource.create({"service.name": "hcp-api"})
 
@@ -68,10 +109,10 @@ def setup_telemetry(app: FastAPI) -> None:
     FastAPIInstrumentor.instrument_app(app, server_request_hook=_server_request_hook)
     HTTPXClientInstrumentor().instrument(request_hook=_client_request_hook)
 
-    # ── Structured logging ────────────────────────────────────────────
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)-8s [%(name)s] %(message)s",
-        force=True,
-    )
+    # ── Structured JSON logging ────────────────────────────────────────
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(JSONFormatter())
+    logging.root.handlers.clear()
+    logging.root.addHandler(handler)
+    logging.root.setLevel(logging.INFO)
     logging.getLogger(__name__).info("Telemetry initialised (service.name=hcp-api)")
