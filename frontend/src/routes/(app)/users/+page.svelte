@@ -25,7 +25,7 @@
 	};
 	type Group = { groupname?: string; name?: string; description?: string };
 
-	const AVAILABLE_ROLES = ['ADMIN', 'SECURITY', 'MONITOR', 'COMPLIANCE'] as const;
+	const AVAILABLE_ROLES = ['ADMINISTRATOR', 'SECURITY', 'MONITOR', 'COMPLIANCE'] as const;
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let usersData = $derived(tenant ? get_users({ tenant }) : undefined);

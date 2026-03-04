@@ -7,7 +7,8 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { ArrowLeft, Save, Loader2, Trash2 } from 'lucide-svelte';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { ArrowLeft, Save, Loader2, Trash2, KeyRound } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import {
 		get_user,
@@ -27,7 +28,7 @@
 		roles?: { role?: string[] };
 	};
 
-	const AVAILABLE_ROLES = ['ADMIN', 'SECURITY', 'MONITOR', 'COMPLIANCE'] as const;
+	const AVAILABLE_ROLES = ['ADMINISTRATOR', 'SECURITY', 'MONITOR', 'COMPLIANCE'] as const;
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let username = $derived(page.params.username ?? '');
@@ -92,6 +93,7 @@
 	}
 
 	// --- Change Password ---
+	let passwordOpen = $state(false);
 	let newPassword = $state('');
 	let confirmPassword = $state('');
 	let changingPassword = $state(false);
@@ -106,6 +108,7 @@
 			toast.success('Password changed successfully');
 			newPassword = '';
 			confirmPassword = '';
+			passwordOpen = false;
 		} catch {
 			toast.error('Failed to change password');
 		} finally {
@@ -175,27 +178,41 @@
 
 <div class="space-y-8">
 	<!-- Header -->
-	<div class="flex items-center gap-4">
-		<Tooltip.Root>
-			<Tooltip.Trigger>
-				{#snippet child({ props })}
-					<a
-						href="/users"
-						class="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-						{...props}
-					>
-						<ArrowLeft class="h-5 w-5" />
-					</a>
-				{/snippet}
-			</Tooltip.Trigger>
-			<Tooltip.Content>Back to users</Tooltip.Content>
-		</Tooltip.Root>
-		<div>
-			<h2 class="text-2xl font-bold">{username}</h2>
-			<p class="mt-1 text-sm text-muted-foreground">
-				{user?.fullName || 'User settings and access control'}
-			</p>
+	<div class="flex items-center justify-between">
+		<div class="flex items-center gap-4">
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<a
+							href="/users"
+							class="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+							{...props}
+						>
+							<ArrowLeft class="h-5 w-5" />
+						</a>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content>Back to users</Tooltip.Content>
+			</Tooltip.Root>
+			<div>
+				<h2 class="text-2xl font-bold">{username}</h2>
+				<p class="mt-1 text-sm text-muted-foreground">
+					{user?.fullName || 'User settings and access control'}
+				</p>
+			</div>
 		</div>
+		{#if user}
+			<div class="flex items-center gap-2">
+				<Button variant="outline" size="sm" onclick={() => (passwordOpen = true)}>
+					<KeyRound class="h-4 w-4" />
+					Change Password
+				</Button>
+				<Button variant="destructive" size="sm" onclick={() => (deleteOpen = true)}>
+					<Trash2 class="h-4 w-4" />
+					Delete
+				</Button>
+			</div>
+		{/if}
 	</div>
 
 	{#if !tenant}
@@ -292,51 +309,7 @@
 				</div>
 			</section>
 
-			<!-- Section 3: Change Password -->
-			<section class="space-y-4">
-				<h3 class="text-lg font-semibold">Change Password</h3>
-				<div class="rounded-lg border p-6">
-					<div class="grid gap-4 sm:grid-cols-2">
-						<div class="space-y-2">
-							<Label for="new-password">New Password</Label>
-							<Input
-								id="new-password"
-								type="password"
-								bind:value={newPassword}
-								placeholder="Enter new password"
-							/>
-						</div>
-						<div class="space-y-2">
-							<Label for="confirm-password">Confirm Password</Label>
-							<Input
-								id="confirm-password"
-								type="password"
-								bind:value={confirmPassword}
-								placeholder="Confirm new password"
-							/>
-						</div>
-					</div>
-					{#if newPassword.length > 0 && confirmPassword.length > 0 && newPassword !== confirmPassword}
-						<p class="mt-2 text-sm text-destructive">Passwords do not match.</p>
-					{/if}
-					<div class="mt-4">
-						<Button
-							size="sm"
-							disabled={!passwordValid || changingPassword}
-							onclick={handleChangePassword}
-						>
-							{#if changingPassword}
-								<Loader2 class="h-4 w-4 animate-spin" />
-								Changing...
-							{:else}
-								Change Password
-							{/if}
-						</Button>
-					</div>
-				</div>
-			</section>
-
-			<!-- Section 4: Namespace Access -->
+			<!-- Section 3: Namespace Access -->
 			<section class="space-y-4">
 				<h3 class="text-lg font-semibold">Namespace Access</h3>
 				{#if nsAccessLoading}
@@ -387,28 +360,61 @@
 					</div>
 				{/if}
 			</section>
-
-			<!-- Section 5: Danger Zone -->
-			<section class="space-y-4">
-				<h3 class="text-lg font-semibold text-destructive">Danger Zone</h3>
-				<div class="rounded-lg border border-destructive/30 p-6">
-					<div class="flex items-center justify-between">
-						<div>
-							<p class="text-sm font-medium">Delete this user</p>
-							<p class="text-sm text-muted-foreground">
-								Permanently delete the user account "{username}". This action cannot be undone.
-							</p>
-						</div>
-						<Button variant="destructive" size="sm" onclick={() => (deleteOpen = true)}>
-							<Trash2 class="h-4 w-4" />
-							Delete User
-						</Button>
-					</div>
-				</div>
-			</section>
 		{/if}
 	{/if}
 </div>
+
+<!-- Change Password Dialog -->
+<Dialog.Root bind:open={passwordOpen}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Change Password</Dialog.Title>
+			<Dialog.Description>Set a new password for "{username}".</Dialog.Description>
+		</Dialog.Header>
+		<div class="space-y-4">
+			<div class="space-y-2">
+				<Label for="new-password">New Password</Label>
+				<Input
+					id="new-password"
+					type="password"
+					bind:value={newPassword}
+					placeholder="Enter new password"
+				/>
+			</div>
+			<div class="space-y-2">
+				<Label for="confirm-password">Confirm Password</Label>
+				<Input
+					id="confirm-password"
+					type="password"
+					bind:value={confirmPassword}
+					placeholder="Confirm new password"
+				/>
+			</div>
+			{#if newPassword.length > 0 && confirmPassword.length > 0 && newPassword !== confirmPassword}
+				<p class="text-sm text-destructive">Passwords do not match.</p>
+			{/if}
+			<Dialog.Footer>
+				<Button
+					variant="ghost"
+					type="button"
+					onclick={() => {
+						passwordOpen = false;
+						newPassword = '';
+						confirmPassword = '';
+					}}>Cancel</Button
+				>
+				<Button disabled={!passwordValid || changingPassword} onclick={handleChangePassword}>
+					{#if changingPassword}
+						<Loader2 class="h-4 w-4 animate-spin" />
+						Changing...
+					{:else}
+						Change Password
+					{/if}
+				</Button>
+			</Dialog.Footer>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
 
 <!-- Delete User Confirmation -->
 <AlertDialog.Root bind:open={deleteOpen}>

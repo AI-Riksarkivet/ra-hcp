@@ -119,7 +119,7 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "description": "Tenant administrator",
             "localAuthentication": True,
             "enabled": True,
-            "roles": {"role": ["ADMIN", "SECURITY", "MONITOR", "COMPLIANCE"]},
+            "roles": {"role": ["ADMINISTRATOR", "SECURITY", "MONITOR", "COMPLIANCE"]},
         },
         "user1": {
             "username": "user1",
@@ -137,7 +137,7 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "description": "Research tenant admin",
             "localAuthentication": True,
             "enabled": True,
-            "roles": {"role": ["ADMIN", "MONITOR"]},
+            "roles": {"role": ["ADMINISTRATOR", "MONITOR"]},
         },
     },
     "mock": {
@@ -147,7 +147,7 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "description": "Mock tenant administrator",
             "localAuthentication": True,
             "enabled": True,
-            "roles": {"role": ["ADMIN", "SECURITY", "MONITOR", "COMPLIANCE"]},
+            "roles": {"role": ["ADMINISTRATOR", "SECURITY", "MONITOR", "COMPLIANCE"]},
         },
         "analyst": {
             "username": "analyst",
@@ -175,7 +175,7 @@ GROUP_ACCOUNTS: dict[str, dict[str, dict]] = {
         "admins": {
             "groupname": "admins",
             "description": "Administrator group",
-            "roles": {"role": ["ADMIN", "SECURITY"]},
+            "roles": {"role": ["ADMINISTRATOR", "SECURITY"]},
         },
         "users": {
             "groupname": "users",
@@ -187,14 +187,14 @@ GROUP_ACCOUNTS: dict[str, dict[str, dict]] = {
         "researchers": {
             "groupname": "researchers",
             "description": "Research group",
-            "roles": {"role": ["ADMIN"]},
+            "roles": {"role": ["ADMINISTRATOR"]},
         },
     },
     "mock": {
         "administrators": {
             "groupname": "administrators",
             "description": "Tenant administrators",
-            "roles": {"role": ["ADMIN", "SECURITY"]},
+            "roles": {"role": ["ADMINISTRATOR", "SECURITY"]},
         },
         "developers": {
             "groupname": "developers",

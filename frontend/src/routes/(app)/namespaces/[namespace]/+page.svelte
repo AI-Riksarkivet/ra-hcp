@@ -132,10 +132,13 @@
 	let accessLoading = $state(true);
 	let accessVersion = $state(0);
 
-	// Users who have at least one permission for this namespace
+	// Users who have at least one permission OR had permissions originally (unsaved removal)
 	let usersWithAccess = $derived(
 		Object.entries(userPermMap)
-			.filter(([, entry]) => !entry.loading && entry.permissions.size > 0)
+			.filter(
+				([, entry]) =>
+					!entry.loading && (entry.originalPermissions.size > 0 || entry.permissions.size > 0)
+			)
 			.map(([username]) => username)
 	);
 
@@ -145,7 +148,8 @@
 			(u) =>
 				!userPermMap[u.username] ||
 				userPermMap[u.username].loading ||
-				userPermMap[u.username].permissions.size === 0
+				(userPermMap[u.username].permissions.size === 0 &&
+					userPermMap[u.username].originalPermissions.size === 0)
 		)
 	);
 
