@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Union
 from fastapi import APIRouter, Depends
 
 from app.services.mapi_service import MapiService
@@ -82,7 +83,10 @@ async def modify_default_protocols(
     return {"status": "updated"}
 
 
-@router.get(PREFIX + "/{ns_name}/protocols/{protocol_name}")
+@router.get(
+    PREFIX + "/{ns_name}/protocols/{protocol_name}",
+    response_model=Union[HttpProtocol, CifsProtocol, NfsProtocol, SmtpProtocol],
+)
 async def get_protocol(
     tenant_name: str,
     ns_name: str,
