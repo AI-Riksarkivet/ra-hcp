@@ -11,7 +11,7 @@
 5. adding icon tags for certain serice (lakefs) or NFS. in bucket and namesapce view
 
 
-5. improve auth with better auth?
+5. improve auth with better-auth? , also use reditect to auth login 302 user
 6. missing instrucions to connect nfs and if we are using auth for nfs
 7. how sign objects and generate auth tokens from api? s3?
 8. missing better logging in backend who sent and aaked for what and what was reurned , fastspi skills
