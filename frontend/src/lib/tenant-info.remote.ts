@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { query } from "$app/server";
+import { command, query } from "$app/server";
 import { apiFetch } from "$lib/server/api.js";
 
 export interface TenantInfo {
@@ -36,9 +36,7 @@ export const get_tenant = query(
   z.object({ tenant: z.string() }),
   async ({ tenant }) => {
     try {
-      const res = await apiFetch(
-        `/api/v1/mapi/tenants/${tenant}?verbose=true`,
-      );
+      const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}?verbose=true`);
       if (res.ok) return (await res.json()) as TenantInfo;
     } catch {
       // ignore
@@ -51,9 +49,7 @@ export const get_tenant_statistics = query(
   z.object({ tenant: z.string() }),
   async ({ tenant }) => {
     try {
-      const res = await apiFetch(
-        `/api/v1/mapi/tenants/${tenant}/statistics`,
-      );
+      const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/statistics`);
       if (res.ok) return (await res.json()) as TenantStatistics;
     } catch {
       // ignore
@@ -89,5 +85,59 @@ export const get_tenant_settings = query(
     );
 
     return Object.fromEntries(results) as TenantSettings;
+  },
+);
+
+export const update_contact_info = command(
+  z.object({ tenant: z.string(), body: z.record(z.string(), z.unknown()) }),
+  async ({ tenant, body }) => {
+    const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/contactInfo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update contact info",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const update_namespace_defaults = command(
+  z.object({ tenant: z.string(), body: z.record(z.string(), z.unknown()) }),
+  async ({ tenant, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaceDefaults`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update namespace defaults",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const update_permissions = command(
+  z.object({ tenant: z.string(), body: z.record(z.string(), z.unknown()) }),
+  async ({ tenant, body }) => {
+    const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/permissions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update permissions",
+      }));
+      throw new Error(err.detail);
+    }
   },
 );

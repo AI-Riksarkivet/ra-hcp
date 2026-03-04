@@ -8,7 +8,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { ArrowLeft, Save, Loader2, Trash2, KeyRound } from 'lucide-svelte';
+	import { ArrowLeft, Save, Loader2, Trash2, KeyRound, HelpCircle } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import {
 		get_user,
@@ -29,6 +29,27 @@
 	};
 
 	const AVAILABLE_ROLES = ['ADMINISTRATOR', 'SECURITY', 'MONITOR', 'COMPLIANCE'] as const;
+
+	const ROLE_DESCRIPTIONS: Record<string, string> = {
+		ADMINISTRATOR:
+			'Full tenant administration — create namespaces, manage users and groups, view statistics',
+		SECURITY: 'Manage console security, search security, and authentication settings',
+		MONITOR: 'View tenant and namespace statistics and chargeback reports (read-only)',
+		COMPLIANCE: 'Manage compliance and retention settings on namespaces',
+	};
+
+	const PERMISSION_DESCRIPTIONS: Record<string, string> = {
+		BROWSE: 'List objects in the namespace',
+		READ: 'Read object data and metadata',
+		WRITE: 'Create and modify objects',
+		DELETE: 'Delete objects',
+		PURGE: 'Permanently remove objects (bypass retention)',
+		SEARCH: 'Query objects via HCP metadata search',
+		READ_ACL: 'Read object access control lists',
+		WRITE_ACL: 'Modify object access control lists',
+		CHOWN: 'Change object ownership',
+		PRIVILEGED: 'Perform privileged operations like deleting retained objects',
+	};
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let username = $derived(page.params.username ?? '');
@@ -289,6 +310,16 @@
 									class="h-4 w-4 rounded border-input"
 								/>
 								{role}
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<span {...props} class="inline-flex items-center gap-1">
+												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+											</span>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content>{ROLE_DESCRIPTIONS[role]}</Tooltip.Content>
+								</Tooltip.Root>
 							</label>
 						{/each}
 					</div>
@@ -349,7 +380,18 @@
 										<td class="px-4 py-3">
 											<div class="flex flex-wrap gap-1">
 												{#each entry.permissions?.permission ?? [] as perm (perm)}
-													<Badge variant="secondary">{perm}</Badge>
+													<Tooltip.Root>
+														<Tooltip.Trigger>
+															{#snippet child({ props })}
+																<span {...props}>
+																	<Badge variant="secondary">{perm}</Badge>
+																</span>
+															{/snippet}
+														</Tooltip.Trigger>
+														<Tooltip.Content
+															>{PERMISSION_DESCRIPTIONS[perm] ?? perm}</Tooltip.Content
+														>
+													</Tooltip.Root>
 												{/each}
 											</div>
 										</td>

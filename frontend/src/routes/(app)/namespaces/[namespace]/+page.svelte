@@ -6,7 +6,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { ArrowLeft, Save, Loader2, Plus } from 'lucide-svelte';
+	import { ArrowLeft, Save, Loader2, Plus, HelpCircle } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import {
@@ -22,6 +22,23 @@
 		set_user_permissions,
 		type DataAccessPermissions,
 	} from '$lib/users.remote.js';
+
+	const PROTOCOL_DESCRIPTIONS: Record<string, string> = {
+		httpEnabled: 'Allow unencrypted HTTP access via REST API',
+		httpsEnabled: 'Allow encrypted HTTPS access via REST API',
+		cifsEnabled: 'Enable Windows file sharing (SMB/CIFS) access',
+		nfsEnabled: 'Enable Unix/Linux NFS mount access',
+		smtpEnabled: 'Enable email-based object ingestion',
+	};
+
+	const PERMISSION_DESCRIPTIONS: Record<string, string> = {
+		READ: 'Allow reading object data and metadata',
+		WRITE: 'Allow creating and modifying objects',
+		DELETE: 'Allow deleting objects',
+		PURGE: 'Permanently remove objects (bypass retention)',
+		SEARCH: 'Query objects via HCP metadata search engine',
+		BROWSE: 'Browse namespace directory listings',
+	};
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let namespaceName = $derived(page.params.namespace ?? '');
@@ -490,6 +507,16 @@
 								class="h-4 w-4 rounded border-input"
 							/>
 							HTTP
+							<Tooltip.Root>
+								<Tooltip.Trigger>
+									{#snippet child({ props })}
+										<span {...props}>
+											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+										</span>
+									{/snippet}
+								</Tooltip.Trigger>
+								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.httpEnabled}</Tooltip.Content>
+							</Tooltip.Root>
 						</label>
 						<label class="flex items-center gap-2 text-sm">
 							<input
@@ -498,6 +525,16 @@
 								class="h-4 w-4 rounded border-input"
 							/>
 							HTTPS
+							<Tooltip.Root>
+								<Tooltip.Trigger>
+									{#snippet child({ props })}
+										<span {...props}>
+											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+										</span>
+									{/snippet}
+								</Tooltip.Trigger>
+								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.httpsEnabled}</Tooltip.Content>
+							</Tooltip.Root>
 						</label>
 						<label class="flex items-center gap-2 text-sm">
 							<input
@@ -506,6 +543,16 @@
 								class="h-4 w-4 rounded border-input"
 							/>
 							CIFS
+							<Tooltip.Root>
+								<Tooltip.Trigger>
+									{#snippet child({ props })}
+										<span {...props}>
+											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+										</span>
+									{/snippet}
+								</Tooltip.Trigger>
+								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.cifsEnabled}</Tooltip.Content>
+							</Tooltip.Root>
 						</label>
 						<label class="flex items-center gap-2 text-sm">
 							<input
@@ -514,6 +561,16 @@
 								class="h-4 w-4 rounded border-input"
 							/>
 							NFS
+							<Tooltip.Root>
+								<Tooltip.Trigger>
+									{#snippet child({ props })}
+										<span {...props}>
+											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+										</span>
+									{/snippet}
+								</Tooltip.Trigger>
+								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.nfsEnabled}</Tooltip.Content>
+							</Tooltip.Root>
 						</label>
 						<label class="flex items-center gap-2 text-sm">
 							<input
@@ -522,6 +579,16 @@
 								class="h-4 w-4 rounded border-input"
 							/>
 							SMTP
+							<Tooltip.Root>
+								<Tooltip.Trigger>
+									{#snippet child({ props })}
+										<span {...props}>
+											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+										</span>
+									{/snippet}
+								</Tooltip.Trigger>
+								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.smtpEnabled}</Tooltip.Content>
+							</Tooltip.Root>
 						</label>
 					</div>
 					<div class="mt-4 flex items-center gap-3">
@@ -573,7 +640,25 @@
 							<tr>
 								<th class="px-4 py-3 font-medium">Username</th>
 								{#each PERMISSION_KEYS as perm (perm)}
-									<th class="px-3 py-3 text-center font-medium">{perm}</th>
+									<th class="px-3 py-3 text-center font-medium">
+										<div class="flex items-center justify-center gap-1">
+											{perm}
+											{#if PERMISSION_DESCRIPTIONS[perm]}
+												<Tooltip.Root>
+													<Tooltip.Trigger>
+														{#snippet child({ props })}
+															<span {...props}>
+																<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+															</span>
+														{/snippet}
+													</Tooltip.Trigger>
+													<Tooltip.Content side="bottom"
+														>{PERMISSION_DESCRIPTIONS[perm]}</Tooltip.Content
+													>
+												</Tooltip.Root>
+											{/if}
+										</div>
+									</th>
 								{/each}
 								<th class="w-24 px-3 py-3 text-center font-medium">Actions</th>
 							</tr>
@@ -668,6 +753,18 @@
 								class="h-4 w-4 rounded border-input"
 							/>
 							{perm}
+							{#if PERMISSION_DESCRIPTIONS[perm]}
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<span {...props}>
+												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+											</span>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content side="right">{PERMISSION_DESCRIPTIONS[perm]}</Tooltip.Content>
+								</Tooltip.Root>
+							{/if}
 						</label>
 					{/each}
 				</div>

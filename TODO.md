@@ -14,6 +14,10 @@
 
 7. **Investigate tenant admin capabilities** — The Settings page in the navbar currently shows read-only tenant settings. Understand from the backend what a tenant admin can actually change (permissions, namespace defaults, contact info, email notification, security settings). Either make the settings page editable or clarify what's possible.
 
+8. **heavy refactor** —  on the frontend. see if some of the code is weird or not used. e.g logout and login and what the /api route is. Also look if we can refacctor into some reusable ts libs in the diiffeerent routes or breakout into smallr componentss in the (app)/ routes.. looks like we can make a bit more abstracions and reuse stuff..
+
+9. **login in multiple** -- tenats add feature so we can add tenants and swap betwen them in the frontend esarier. and even see multipe of does tentant and their buckets togheter in /buckets.. perhaps and which tentant they are from? is that a good feature? perhaps a good scaffold for the plan_sync.md we are planning (1. in todo).
+
 ---
 
 ## Backlog
