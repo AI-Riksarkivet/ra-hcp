@@ -10,6 +10,8 @@
 
 5. adding icon tags for certain serice (lakefs) or NFS. in bucket and namesapce view
 
+6. missing instrucions to connect nfs and if we are using auth for nfs
+7. how sign objects and generate auth tokens from api? s3?
 ---
 
 ## Done
