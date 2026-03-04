@@ -110,7 +110,23 @@
 		creating = true;
 		createError = '';
 		try {
-			await create_namespace({ tenant, name }).updates(nsData);
+			const description = (formData.get('description') as string) || undefined;
+			const hardQuota = (formData.get('hardQuota') as string) || undefined;
+			const softQuotaStr = formData.get('softQuota') as string;
+			const softQuota = softQuotaStr ? Number(softQuotaStr) : undefined;
+			const hashScheme = (formData.get('hashScheme') as string) || undefined;
+			const searchEnabled = formData.has('searchEnabled');
+			const versioningEnabled = formData.has('versioningEnabled');
+			await create_namespace({
+				tenant,
+				name,
+				description,
+				hardQuota,
+				softQuota,
+				hashScheme,
+				searchEnabled,
+				versioningEnabled,
+			}).updates(nsData);
 			toast.success('Namespace created successfully');
 			createOpen = false;
 			form.reset();
@@ -141,8 +157,11 @@
 	</div>
 
 	<Dialog.Root bind:open={createOpen}>
-		<Dialog.Content class="sm:max-w-md">
-			<Dialog.Header><Dialog.Title>Create Namespace</Dialog.Title></Dialog.Header>
+		<Dialog.Content class="sm:max-w-lg">
+			<Dialog.Header>
+				<Dialog.Title>Create Namespace</Dialog.Title>
+				<Dialog.Description>Configure a new namespace for this tenant.</Dialog.Description>
+			</Dialog.Header>
 			<form onsubmit={handleCreate} class="space-y-4">
 				{#if createError}
 					<div
@@ -154,6 +173,51 @@
 				<div class="space-y-2">
 					<Label for="ns-name">Namespace Name</Label>
 					<Input id="ns-name" name="namespace" placeholder="my-namespace" required />
+				</div>
+				<div class="space-y-2">
+					<Label for="ns-desc">Description</Label>
+					<Input id="ns-desc" name="description" placeholder="Optional description" />
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<div class="space-y-2">
+						<Label for="ns-hard-quota">Hard Quota</Label>
+						<Input id="ns-hard-quota" name="hardQuota" placeholder="e.g. 50 GB" />
+					</div>
+					<div class="space-y-2">
+						<Label for="ns-soft-quota">Soft Quota (%)</Label>
+						<Input
+							id="ns-soft-quota"
+							name="softQuota"
+							type="number"
+							min="10"
+							max="95"
+							placeholder="85"
+						/>
+					</div>
+				</div>
+				<div class="space-y-2">
+					<Label for="ns-hash">Hash Scheme</Label>
+					<select
+						id="ns-hash"
+						name="hashScheme"
+						class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+					>
+						<option value="SHA-256">SHA-256</option>
+						<option value="SHA-512">SHA-512</option>
+						<option value="SHA-384">SHA-384</option>
+						<option value="SHA-1">SHA-1</option>
+						<option value="MD5">MD5</option>
+					</select>
+				</div>
+				<div class="flex gap-6">
+					<label class="flex items-center gap-2 text-sm">
+						<input type="checkbox" name="searchEnabled" class="h-4 w-4 rounded border-input" />
+						Enable Search
+					</label>
+					<label class="flex items-center gap-2 text-sm">
+						<input type="checkbox" name="versioningEnabled" class="h-4 w-4 rounded border-input" />
+						Enable Versioning
+					</label>
 				</div>
 				<Dialog.Footer>
 					<Button variant="ghost" type="button" onclick={() => (createOpen = false)}>Cancel</Button>
@@ -234,7 +298,15 @@
 											class="h-4 w-4 rounded border-input"
 										/>
 									</td>
-									<td class="px-4 py-3 font-medium">{ns.name}</td>
+									<td class="px-4 py-3 font-medium">
+										<a
+											href="/namespaces/{ns.name}"
+											class="text-primary underline-offset-4 hover:underline"
+											onclick={(e) => e.stopPropagation()}
+										>
+											{ns.name}
+										</a>
+									</td>
 									<td class="px-4 py-3 text-muted-foreground">{ns.description ?? '—'}</td>
 									<td class="px-4 py-3 text-muted-foreground">{ns.hardQuota ?? '—'}</td>
 									<td class="px-4 py-3 text-muted-foreground"

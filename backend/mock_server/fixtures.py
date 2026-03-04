@@ -149,6 +149,22 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "enabled": True,
             "roles": {"role": ["ADMIN", "SECURITY", "MONITOR", "COMPLIANCE"]},
         },
+        "analyst": {
+            "username": "analyst",
+            "fullName": "Data Analyst",
+            "description": "Read-only data analyst",
+            "localAuthentication": True,
+            "enabled": True,
+            "roles": {"role": ["MONITOR"]},
+        },
+        "developer": {
+            "username": "developer",
+            "fullName": "App Developer",
+            "description": "Application developer",
+            "localAuthentication": True,
+            "enabled": True,
+            "roles": {"role": ["MONITOR"]},
+        },
     },
 }
 
@@ -172,6 +188,23 @@ GROUP_ACCOUNTS: dict[str, dict[str, dict]] = {
             "groupname": "researchers",
             "description": "Research group",
             "roles": {"role": ["ADMIN"]},
+        },
+    },
+    "mock": {
+        "administrators": {
+            "groupname": "administrators",
+            "description": "Tenant administrators",
+            "roles": {"role": ["ADMIN", "SECURITY"]},
+        },
+        "developers": {
+            "groupname": "developers",
+            "description": "Application developers",
+            "roles": {"role": ["MONITOR"]},
+        },
+        "analysts": {
+            "groupname": "analysts",
+            "description": "Data analysts with read-only access",
+            "roles": {"role": ["MONITOR"]},
         },
     },
 }

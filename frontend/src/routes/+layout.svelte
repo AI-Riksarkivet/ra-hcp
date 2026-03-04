@@ -3,7 +3,6 @@
 	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner/index.js';
 	import { browser } from '$app/environment';
-
 	let { children } = $props();
 </script>
 

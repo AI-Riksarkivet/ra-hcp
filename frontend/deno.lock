@@ -10,7 +10,6 @@
     "npm:@types/node@^22.15.0": "22.19.13",
     "npm:bits-ui@^2.16.2": "2.16.2_@internationalized+date@3.11.0_svelte@5.53.5__acorn@8.16.0_@sveltejs+kit@2.53.3__@sveltejs+vite-plugin-svelte@6.2.4___svelte@5.53.5____acorn@8.16.0___vite@7.3.1____@types+node@22.19.13____picomatch@4.0.3___@types+node@22.19.13__svelte@5.53.5___acorn@8.16.0__typescript@5.9.3__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__acorn@8.16.0__@types+node@22.19.13_@sveltejs+vite-plugin-svelte@6.2.4__svelte@5.53.5___acorn@8.16.0__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__@types+node@22.19.13_typescript@5.9.3_vite@7.3.1__@types+node@22.19.13__picomatch@4.0.3_@types+node@22.19.13",
     "npm:clsx@^2.1.1": "2.1.1",
-    "npm:gsap@^3.14.2": "3.14.2",
     "npm:lucide-svelte@0.575": "0.575.0_svelte@5.53.5__acorn@8.16.0",
     "npm:mode-watcher@^1.1.0": "1.1.0_svelte@5.53.5__acorn@8.16.0",
     "npm:prettier-plugin-svelte@^3.5.0": "3.5.0_prettier@3.8.1_svelte@5.53.5__acorn@8.16.0",
@@ -555,7 +554,7 @@
         "esm-env",
         "runed@0.35.1_@sveltejs+kit@2.53.3__@sveltejs+vite-plugin-svelte@6.2.4___svelte@5.53.5____acorn@8.16.0___vite@7.3.1____@types+node@22.19.13____picomatch@4.0.3___@types+node@22.19.13__svelte@5.53.5___acorn@8.16.0__typescript@5.9.3__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__acorn@8.16.0__@types+node@22.19.13_svelte@5.53.5__acorn@8.16.0_@sveltejs+vite-plugin-svelte@6.2.4__svelte@5.53.5___acorn@8.16.0__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__@types+node@22.19.13_typescript@5.9.3_vite@7.3.1__@types+node@22.19.13__picomatch@4.0.3_@types+node@22.19.13",
         "svelte",
-        "svelte-toolbelt@0.10.6_svelte@5.53.5__acorn@8.16.0_@sveltejs+kit@2.53.3__@sveltejs+vite-plugin-svelte@6.2.4___svelte@5.53.5____acorn@8.16.0___vite@7.3.1____@types+node@22.19.13____picomatch@4.0.3___@types+node@22.19.13__svelte@5.53.5___acorn@8.16.0__typescript@5.9.3__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__acorn@8.16.0__@types+node@22.19.13_@sveltejs+vite-plugin-svelte@6.2.4__svelte@5.53.5___acorn@8.16.0__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__@types+node@22.19.13_typescript@5.9.3_vite@7.3.1__@types+node@22.19.13__picomatch@4.0.3_@types+node@22.19.13",
+        "svelte-toolbelt@0.10.6_svelte@5.53.5__acorn@8.16.0_@sveltejs+kit@2.53.3__@sveltejs+vite-plugin-svelte@6.2.4___svelte@5.53.5____acorn@8.16.0___vite@7.3.1____@types+node@22.19.13____picomatch@4.0.3___@types+node@22.19.13__svelte@5.53.5___acorn@8.16.0__typescript@5.9.3__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__acorn@8.16.0__@types+node@22.19.13",
         "tabbable"
       ]
     },
@@ -648,9 +647,6 @@
     },
     "graceful-fs@4.2.11": {
       "integrity": "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="
-    },
-    "gsap@3.14.2": {
-      "integrity": "sha512-P8/mMxVLU7o4+55+1TCnQrPmgjPKnwkzkXOK1asnR9Jg2lna4tEY5qBJjMmAaOBDDZWtlRjBXjLa0w53G/uBLA=="
     },
     "inline-style-parser@0.2.7": {
       "integrity": "sha512-Nb2ctOyNR8DqQoR0OwRG95uNWIC0C1lCgf5Naz5H6Ji72KZ8OcFZLz2P5sNgwlyoJ8Yif11oMuYs5pBQa86csA=="
@@ -935,7 +931,7 @@
         "svelte"
       ]
     },
-    "svelte-toolbelt@0.10.6_svelte@5.53.5__acorn@8.16.0_@sveltejs+kit@2.53.3__@sveltejs+vite-plugin-svelte@6.2.4___svelte@5.53.5____acorn@8.16.0___vite@7.3.1____@types+node@22.19.13____picomatch@4.0.3___@types+node@22.19.13__svelte@5.53.5___acorn@8.16.0__typescript@5.9.3__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__acorn@8.16.0__@types+node@22.19.13_@sveltejs+vite-plugin-svelte@6.2.4__svelte@5.53.5___acorn@8.16.0__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__@types+node@22.19.13_typescript@5.9.3_vite@7.3.1__@types+node@22.19.13__picomatch@4.0.3_@types+node@22.19.13": {
+    "svelte-toolbelt@0.10.6_svelte@5.53.5__acorn@8.16.0_@sveltejs+kit@2.53.3__@sveltejs+vite-plugin-svelte@6.2.4___svelte@5.53.5____acorn@8.16.0___vite@7.3.1____@types+node@22.19.13____picomatch@4.0.3___@types+node@22.19.13__svelte@5.53.5___acorn@8.16.0__typescript@5.9.3__vite@7.3.1___@types+node@22.19.13___picomatch@4.0.3__acorn@8.16.0__@types+node@22.19.13": {
       "integrity": "sha512-YWuX+RE+CnWYx09yseAe4ZVMM7e7GRFZM6OYWpBKOb++s+SQ8RBIMMe+Bs/CznBMc0QPLjr+vDBxTAkozXsFXQ==",
       "dependencies": [
         "clsx",
@@ -1109,7 +1105,6 @@
         "npm:@types/node@^22.15.0",
         "npm:bits-ui@^2.16.2",
         "npm:clsx@^2.1.1",
-        "npm:gsap@^3.14.2",
         "npm:lucide-svelte@0.575",
         "npm:mode-watcher@^1.1.0",
         "npm:prettier-plugin-svelte@^3.5.0",

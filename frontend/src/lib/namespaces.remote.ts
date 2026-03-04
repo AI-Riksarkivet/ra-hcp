@@ -8,6 +8,26 @@ export interface Namespace {
   hardQuota?: string;
   softQuota?: string;
   hashScheme?: string;
+  searchEnabled?: boolean;
+  versioningSettings?: { enabled: boolean };
+}
+
+export interface NsProtocols {
+  httpEnabled?: boolean;
+  httpsEnabled?: boolean;
+  cifsEnabled?: boolean;
+  nfsEnabled?: boolean;
+  smtpEnabled?: boolean;
+}
+
+export interface NsPermissions {
+  readAllowed?: boolean;
+  writeAllowed?: boolean;
+  deleteAllowed?: boolean;
+  purgeAllowed?: boolean;
+  searchAllowed?: boolean;
+  readAclAllowed?: boolean;
+  writeAclAllowed?: boolean;
 }
 
 export const get_namespaces = query(
@@ -77,6 +97,108 @@ export const create_namespace = command(
     if (!res.ok) {
       const err = await res.json().catch(() => ({
         detail: "Failed to create namespace",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const get_namespace = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${encodeURIComponent(name)}`,
+      );
+      if (res.ok) return (await res.json()) as Namespace;
+    } catch {
+      // ignore
+    }
+    return null;
+  },
+);
+
+export const get_ns_protocols = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/protocols`,
+      );
+      if (res.ok) return (await res.json()) as NsProtocols;
+    } catch {
+      // ignore
+    }
+    return {} as NsProtocols;
+  },
+);
+
+export const update_ns_protocol = command(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    protocol: z.enum(["http", "cifs", "nfs", "smtp"]),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, name, protocol, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/protocols/${protocol}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: `Failed to update ${protocol} protocol`,
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const get_ns_permissions = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/permissions`,
+      );
+      if (res.ok) return (await res.json()) as NsPermissions;
+    } catch {
+      // ignore
+    }
+    return {} as NsPermissions;
+  },
+);
+
+export const update_ns_permissions = command(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, name, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/permissions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update permissions",
       }));
       throw new Error(err.detail);
     }
