@@ -101,6 +101,7 @@ async def lifespan(app: FastAPI):
     from app.core.config import CacheSettings, MapiSettings
     from app.services.cache_service import CacheService
     from app.services.mapi_service import MapiService
+    from app.services.query_service import QueryService
 
     # ── Startup ──────────────────────────────────────────────────────
     cache_settings = CacheSettings()
@@ -120,9 +121,20 @@ async def lifespan(app: FastAPI):
 
     app.state.s3_cache = {}
 
+    mapi_settings = app.state.mapi.settings
+    if cache.enabled:
+        from app.services.cached_query import CachedQueryService
+
+        logger.info("Creating CachedQueryService singleton")
+        app.state.query = CachedQueryService(mapi_settings, cache, cache_settings)
+    else:
+        logger.info("Creating QueryService singleton")
+        app.state.query = QueryService(mapi_settings)
+
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────
+    await app.state.query.close()
     await app.state.mapi.close()
     await cache.close()
 
@@ -232,6 +244,12 @@ OPENAPI_TAGS = [
         "name": "Namespace: Statistics",
         "description": "View namespace statistics and chargeback reports. "
         "**Requires: tenant-level monitor role.**",
+    },
+    # ── Metadata Query API ──
+    {
+        "name": "Metadata Query",
+        "description": "Search objects by metadata and audit create/delete/purge events "
+        "via the HCP Metadata Query API.",
     },
 ]
 

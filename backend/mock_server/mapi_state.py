@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -15,6 +16,8 @@ from .fixtures import (
     AVAILABLE_SERVICE_PLANS,
     CONTENT_CLASSES,
     GROUP_ACCOUNTS,
+    MOCK_QUERY_OBJECTS,
+    MOCK_QUERY_OPERATIONS,
     NAMESPACES,
     NS_CHARGEBACK,
     NS_STATISTICS,
@@ -476,11 +479,138 @@ def _make_mapi_dispatcher(state: MockMapiState):
     return dispatcher
 
 
+# ── Metadata Query handlers ───────────────────────────────────────────
+
+_NS_PATTERN = re.compile(r'namespace:"([^"]+)"')
+
+
+def _handle_object_query(body: dict) -> HttpxResponse:
+    """Handle an object metadata query request."""
+    obj = body.get("object", {})
+    query_expr = obj.get("query", "*:*")
+    count = obj.get("count", 100)
+    offset = obj.get("offset", 0)
+    verbose = obj.get("verbose", False)
+
+    results = list(MOCK_QUERY_OBJECTS)
+
+    # Filter by namespace if query contains namespace:"xxx"
+    ns_match = _NS_PATTERN.search(query_expr)
+    if ns_match:
+        ns = ns_match.group(1)
+        results = [r for r in results if r.get("namespace") == ns]
+
+    total = len(results)
+    page = results[offset : offset + count]
+
+    if not verbose:
+        page = [
+            {
+                "urlName": r["urlName"],
+                "operation": r.get("operation", ""),
+                "changeTimeMilliseconds": r.get("changeTimeMilliseconds"),
+                "changeTimeString": r.get("changeTimeString"),
+                "version": r.get("version"),
+            }
+            for r in page
+        ]
+
+    return _json(
+        {
+            "status": {
+                "totalResults": total,
+                "results": len(page),
+                "code": "COMPLETE",
+            },
+            "resultSet": page,
+        }
+    )
+
+
+def _handle_operation_query(body: dict) -> HttpxResponse:
+    """Handle an operation metadata query request."""
+    op = body.get("operation", {})
+    count = op.get("count", 100)
+    verbose = op.get("verbose", False)
+    sys_meta = op.get("systemMetadata", {})
+
+    results = list(MOCK_QUERY_OPERATIONS)
+
+    # Filter by time range
+    time_from = sys_meta.get("changeTimeFrom")
+    time_to = sys_meta.get("changeTimeTo")
+    if time_from:
+        results = [r for r in results if r.get("changeTimeString", "") >= time_from]
+    if time_to:
+        results = [r for r in results if r.get("changeTimeString", "") <= time_to]
+
+    # Filter by namespace list
+    namespaces = sys_meta.get("namespaces")
+    if namespaces:
+        results = [r for r in results if r.get("namespace") in namespaces]
+
+    # Filter by transaction types
+    txns = sys_meta.get("transactions", {})
+    tx_list = txns.get("transaction") if txns else None
+    if tx_list:
+        tx_upper = {t.upper() for t in tx_list}
+        results = [r for r in results if r.get("operation", "").upper() in tx_upper]
+
+    total = len(results)
+    page = results[:count]
+
+    if not verbose:
+        page = [
+            {
+                "urlName": r["urlName"],
+                "operation": r.get("operation", ""),
+                "changeTimeMilliseconds": r.get("changeTimeMilliseconds"),
+                "changeTimeString": r.get("changeTimeString"),
+                "version": r.get("version"),
+            }
+            for r in page
+        ]
+
+    return _json(
+        {
+            "status": {
+                "totalResults": total,
+                "results": len(page),
+                "code": "COMPLETE",
+            },
+            "resultSet": page,
+        }
+    )
+
+
+def _make_query_dispatcher():
+    """Return a ``side_effect`` callable that routes query requests."""
+
+    def dispatcher(request: httpx.Request) -> HttpxResponse:
+        logger.info("QUERY %s %s", request.method, request.url)
+        if request.method != "POST":
+            return _not_allowed()
+
+        body = _parse_body(request)
+        if "object" in body:
+            return _handle_object_query(body)
+        if "operation" in body:
+            return _handle_operation_query(body)
+        return _json({"message": "Invalid query request"}, 400)
+
+    return dispatcher
+
+
 # ── Route setup ──────────────────────────────────────────────────────
 
 
 def setup_mapi_routes(
     mock: respx.MockRouter, state: MockMapiState, hcp_base: str
 ) -> None:
-    """Register a single catch-all respx route that dispatches to the state."""
+    """Register catch-all respx routes for MAPI and Query APIs."""
     mock.route(url__startswith=hcp_base).mock(side_effect=_make_mapi_dispatcher(state))
+
+    # Query API: https://*.*/query
+    mock.route(method="POST", url__regex=r"https://[^/]+/query$").mock(
+        side_effect=_make_query_dispatcher()
+    )

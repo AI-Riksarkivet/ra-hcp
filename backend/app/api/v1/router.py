@@ -28,6 +28,7 @@ from app.api.v1.endpoints.mapi.namespace import (
     indexing as ns_indexing,
     statistics as ns_statistics,
 )
+from app.api.v1.endpoints.query import search as query_search
 
 api_router = APIRouter()
 
@@ -68,3 +69,6 @@ api_router.include_router(ns_compliance.router, prefix="/mapi", dependencies=_au
 api_router.include_router(ns_access.router, prefix="/mapi", dependencies=_auth)
 api_router.include_router(ns_indexing.router, prefix="/mapi", dependencies=_auth)
 api_router.include_router(ns_statistics.router, prefix="/mapi", dependencies=_auth)
+
+# ── Metadata Query API ──────────────────────────────────────────────
+api_router.include_router(query_search.router, prefix="/query", dependencies=_auth)

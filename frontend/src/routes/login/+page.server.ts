@@ -1,4 +1,5 @@
 import { fail } from "@sveltejs/kit";
+import { dev } from "$app/environment";
 import { loginSchema } from "$lib/api/schemas.js";
 import type { Actions, PageServerLoad } from "./$types.js";
 import { BACKEND_URL } from "$lib/server/env.js";
@@ -53,7 +54,7 @@ export const actions = {
         path: "/",
         httpOnly: true,
         sameSite: "lax",
-        secure: false,
+        secure: !dev,
         maxAge: 60 * 60 * 8, // 8 hours
       });
     } catch (err) {

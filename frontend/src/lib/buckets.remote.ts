@@ -140,3 +140,56 @@ export const bulk_delete_objects = command(
     }
   },
 );
+
+export const get_s3_credentials = query(async () => {
+  try {
+    const res = await apiFetch("/api/v1/credentials");
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        access_key_id: (data.access_key_id ?? "") as string,
+        secret_access_key: (data.secret_access_key ?? "") as string,
+        username: (data.username ?? "") as string,
+        endpoint_url: (data.endpoint_url ?? "") as string,
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return {
+    access_key_id: "",
+    secret_access_key: "",
+    username: "",
+    endpoint_url: "",
+  };
+});
+
+export const generate_presigned_url = command(
+  z.object({
+    bucket: z.string(),
+    key: z.string(),
+    expires_in: z.number().min(1).max(604800),
+    method: z.enum(["get_object", "put_object"]),
+  }),
+  async ({ bucket, key, expires_in, method }) => {
+    const res = await apiFetch("/api/v1/presign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bucket, key, expires_in, method }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to generate presigned URL",
+      }));
+      throw new Error(err.detail);
+    }
+    const data = await res.json();
+    return {
+      url: data.url as string,
+      bucket: data.bucket as string,
+      key: data.key as string,
+      expires_in: data.expires_in as number,
+      method: data.method as string,
+    };
+  },
+);

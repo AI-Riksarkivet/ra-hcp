@@ -16,10 +16,16 @@ from unittest.mock import patch
 
 import respx
 
-from app.api.dependencies import get_mapi_service, get_mapi_settings, get_s3_service
+from app.api.dependencies import (
+    get_mapi_service,
+    get_mapi_settings,
+    get_query_service,
+    get_s3_service,
+)
 from app.core.config import AuthSettings, MapiSettings
 from app.main import app
 from app.services.mapi_service import MapiService
+from app.services.query_service import QueryService
 
 from .mapi_state import MockMapiState, seed_mapi_state, setup_mapi_routes
 from .s3_service import MockS3Service, seed_s3
@@ -59,6 +65,7 @@ async def _mock_lifespan(app_instance):
     seed_mapi_state(state)
 
     mapi_svc = MapiService(MOCK_MAPI_SETTINGS)
+    query_svc = QueryService(MOCK_MAPI_SETTINGS)
 
     async def _override_s3():
         yield mock_s3
@@ -66,11 +73,15 @@ async def _mock_lifespan(app_instance):
     async def _override_mapi():
         yield mapi_svc
 
+    async def _override_query():
+        yield query_svc
+
     def _override_mapi_settings():
         return MOCK_MAPI_SETTINGS
 
     app_instance.dependency_overrides[get_s3_service] = _override_s3
     app_instance.dependency_overrides[get_mapi_service] = _override_mapi
+    app_instance.dependency_overrides[get_query_service] = _override_query
     app_instance.dependency_overrides[get_mapi_settings] = _override_mapi_settings
 
     with (
@@ -83,6 +94,7 @@ async def _mock_lifespan(app_instance):
         logger.info("Login with username=admin password=password")
         yield
 
+    await query_svc.close()
     await mapi_svc.close()
     app_instance.dependency_overrides.clear()
 

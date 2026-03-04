@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { LayoutDashboard, Database, Users, Server, Boxes, Settings } from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
@@ -36,7 +36,7 @@
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each tenantItems as item}
-						{@const active = $page.url.pathname.startsWith(item.href)}
+						{@const active = page.url.pathname.startsWith(item.href)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
 								{#snippet child({ props })}
@@ -57,7 +57,7 @@
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each managementItems as item}
-						{@const active = $page.url.pathname.startsWith(item.href)}
+						{@const active = page.url.pathname.startsWith(item.href)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
 								{#snippet child({ props })}
@@ -78,7 +78,7 @@
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each storageItems as item}
-						{@const active = $page.url.pathname.startsWith(item.href)}
+						{@const active = page.url.pathname.startsWith(item.href)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
 								{#snippet child({ props })}

@@ -19,6 +19,7 @@ from app.core.security import (
 from app.core.tenant_routing import mapi_host_for_tenant, s3_endpoint_for_tenant
 from app.services.cache_service import CacheService
 from app.services.mapi_service import AuthenticatedMapiService, MapiService
+from app.services.query_service import AuthenticatedQueryService, QueryService
 from app.services.s3_service import S3Service
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,19 @@ async def get_mapi_service(
     settings = get_mapi_settings()
     host = mapi_host_for_tenant(creds.tenant, settings.hcp_domain)
     yield AuthenticatedMapiService(base, creds.username, creds.password, host=host)
+
+
+# ── Metadata Query service ───────────────────────────────────────────
+
+
+async def get_query_service(
+    request: Request,
+    token: Annotated[str, Depends(oauth2_scheme)],
+) -> AsyncGenerator[AuthenticatedQueryService, None]:
+    """Yield an AuthenticatedQueryService wrapping the singleton with JWT creds."""
+    base: QueryService = request.app.state.query
+    creds = verify_token_with_credentials(token)
+    yield AuthenticatedQueryService(base, creds.username, creds.password)
 
 
 # ── S3 per-credential cache ──────────────────────────────────────────

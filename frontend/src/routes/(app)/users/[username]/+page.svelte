@@ -8,7 +8,18 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { ArrowLeft, Save, Loader2, Trash2, KeyRound, HelpCircle } from 'lucide-svelte';
+	import {
+		ArrowLeft,
+		Save,
+		Loader2,
+		Trash2,
+		KeyRound,
+		HelpCircle,
+		Copy,
+		Check,
+		Eye,
+		EyeOff,
+	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import {
 		get_user,
@@ -18,6 +29,7 @@
 		get_user_permissions,
 		type DataAccessPermissions,
 	} from '$lib/users.remote.js';
+	import { get_s3_credentials } from '$lib/buckets.remote.js';
 
 	type User = {
 		username: string;
@@ -146,6 +158,24 @@
 			(entry) => entry.permissions?.permission && entry.permissions.permission.length > 0
 		)
 	);
+
+	// --- S3 Credentials ---
+	let credsData = $derived(tenant ? get_s3_credentials() : undefined);
+	let creds = $derived(
+		credsData?.current as
+			| { access_key_id: string; secret_access_key: string; username: string; endpoint_url: string }
+			| undefined
+	);
+	let showSecret = $state(false);
+	let copied = $state<string | null>(null);
+
+	function copyToClipboard(value: string, label: string) {
+		navigator.clipboard.writeText(value);
+		copied = label;
+		setTimeout(() => {
+			if (copied === label) copied = null;
+		}, 2000);
+	}
 
 	// --- Delete User ---
 	let deleteOpen = $state(false);
@@ -374,6 +404,144 @@
 							</table>
 						</div>
 					{/if}
+				{/await}
+			</section>
+
+			<!-- Section 4: S3 Credentials -->
+			<section class="space-y-4">
+				<div class="flex items-center gap-2">
+					<KeyRound class="h-5 w-5 text-muted-foreground" />
+					<h3 class="text-lg font-semibold">S3 Credentials</h3>
+				</div>
+				{#await credsData}
+					<div class="rounded-lg border p-6">
+						<div class="space-y-4">
+							{#each Array(3) as _, i (i)}
+								<div class="space-y-1">
+									<div class="h-3 w-20 animate-pulse rounded bg-muted"></div>
+									<div class="h-9 w-full animate-pulse rounded bg-muted"></div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{:then _}
+					<div class="rounded-lg border p-6">
+						{#if creds && creds.access_key_id}
+							<div class="space-y-4">
+								<div class="space-y-2">
+									<Label>Access Key ID</Label>
+									<div class="flex items-center gap-2">
+										<Input readonly value={creds.access_key_id} class="font-mono text-sm" />
+										<Tooltip.Root>
+											<Tooltip.Trigger>
+												{#snippet child({ props })}
+													<Button
+														variant="ghost"
+														size="icon"
+														onclick={() => copyToClipboard(creds!.access_key_id, 'access_key')}
+														{...props}
+													>
+														{#if copied === 'access_key'}
+															<Check class="h-4 w-4 text-emerald-500" />
+														{:else}
+															<Copy class="h-4 w-4" />
+														{/if}
+													</Button>
+												{/snippet}
+											</Tooltip.Trigger>
+											<Tooltip.Content
+												>{copied === 'access_key' ? 'Copied!' : 'Copy'}</Tooltip.Content
+											>
+										</Tooltip.Root>
+									</div>
+								</div>
+								<div class="space-y-2">
+									<Label>Secret Access Key</Label>
+									<div class="flex items-center gap-2">
+										<Input
+											readonly
+											type={showSecret ? 'text' : 'password'}
+											value={creds.secret_access_key}
+											class="font-mono text-sm"
+										/>
+										<Tooltip.Root>
+											<Tooltip.Trigger>
+												{#snippet child({ props })}
+													<Button
+														variant="ghost"
+														size="icon"
+														onclick={() => (showSecret = !showSecret)}
+														{...props}
+													>
+														{#if showSecret}
+															<EyeOff class="h-4 w-4" />
+														{:else}
+															<Eye class="h-4 w-4" />
+														{/if}
+													</Button>
+												{/snippet}
+											</Tooltip.Trigger>
+											<Tooltip.Content>{showSecret ? 'Hide' : 'Reveal'}</Tooltip.Content>
+										</Tooltip.Root>
+										<Tooltip.Root>
+											<Tooltip.Trigger>
+												{#snippet child({ props })}
+													<Button
+														variant="ghost"
+														size="icon"
+														onclick={() => copyToClipboard(creds!.secret_access_key, 'secret_key')}
+														{...props}
+													>
+														{#if copied === 'secret_key'}
+															<Check class="h-4 w-4 text-emerald-500" />
+														{:else}
+															<Copy class="h-4 w-4" />
+														{/if}
+													</Button>
+												{/snippet}
+											</Tooltip.Trigger>
+											<Tooltip.Content
+												>{copied === 'secret_key' ? 'Copied!' : 'Copy'}</Tooltip.Content
+											>
+										</Tooltip.Root>
+									</div>
+								</div>
+								{#if creds.endpoint_url}
+									<div class="space-y-2">
+										<Label>S3 Endpoint URL</Label>
+										<div class="flex items-center gap-2">
+											<Input readonly value={creds.endpoint_url} class="font-mono text-sm" />
+											<Tooltip.Root>
+												<Tooltip.Trigger>
+													{#snippet child({ props })}
+														<Button
+															variant="ghost"
+															size="icon"
+															onclick={() => copyToClipboard(creds!.endpoint_url, 'endpoint')}
+															{...props}
+														>
+															{#if copied === 'endpoint'}
+																<Check class="h-4 w-4 text-emerald-500" />
+															{:else}
+																<Copy class="h-4 w-4" />
+															{/if}
+														</Button>
+													{/snippet}
+												</Tooltip.Trigger>
+												<Tooltip.Content
+													>{copied === 'endpoint' ? 'Copied!' : 'Copy'}</Tooltip.Content
+												>
+											</Tooltip.Root>
+										</div>
+									</div>
+								{/if}
+							</div>
+						{:else}
+							<p class="text-center text-sm text-muted-foreground">
+								Could not load S3 credentials.
+							</p>
+						{/if}
+					</div>
 				{/await}
 			</section>
 		{/if}

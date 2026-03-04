@@ -82,6 +82,8 @@ class CacheSettings(BaseSettings):
     cache_config_ttl: int = 600  # 10 min — consoleSecurity, permissions, etc.
     cache_s3_list_ttl: int = 120  # 2 min — bucket/object listings
     cache_s3_meta_ttl: int = 300  # 5 min — head_bucket, head_object, ACLs
+    cache_query_object_ttl: int = 60  # 1 min — metadata query object results
+    cache_query_operation_ttl: int = 120  # 2 min — metadata query operation results
     cache_key_prefix: str = "hcp"
 
 

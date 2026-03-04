@@ -21,13 +21,23 @@
 		AlertCircle,
 		Loader2,
 		Search,
+		Link,
+		Copy,
+		Check,
 	} from 'lucide-svelte';
 	import FileViewer from '$lib/components/ui/FileViewer.svelte';
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import { get_objects, delete_object, bulk_delete_objects } from '$lib/buckets.remote.js';
+	import {
+		get_objects,
+		delete_object,
+		bulk_delete_objects,
+		generate_presigned_url,
+	} from '$lib/buckets.remote.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 
 	let bucket = $derived(page.params.bucket ?? '');
 	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
@@ -223,6 +233,59 @@
 			next.add(key);
 		}
 		selected = next;
+	}
+
+	// --- Presigned URL ---
+	const EXPIRY_PRESETS = [
+		{ label: '1 hour', value: 3600 },
+		{ label: '6 hours', value: 21600 },
+		{ label: '24 hours', value: 86400 },
+		{ label: '7 days', value: 604800 },
+	];
+
+	let shareTarget = $state<string | null>(null);
+	let shareMethod = $state<'get_object' | 'put_object'>('get_object');
+	let shareExpiry = $state(3600);
+	let shareGenerating = $state(false);
+	let shareUrl = $state('');
+	let shareCopied = $state(false);
+
+	function openShare(key: string) {
+		shareTarget = key;
+		shareMethod = 'get_object';
+		shareExpiry = 3600;
+		shareUrl = '';
+		shareCopied = false;
+	}
+
+	function closeShare() {
+		shareTarget = null;
+		shareUrl = '';
+	}
+
+	async function handleGenerateUrl() {
+		if (!shareTarget) return;
+		shareGenerating = true;
+		shareUrl = '';
+		try {
+			const result = await generate_presigned_url({
+				bucket,
+				key: shareTarget,
+				expires_in: shareExpiry,
+				method: shareMethod,
+			});
+			shareUrl = result.url;
+		} catch {
+			toast.error('Failed to generate presigned URL');
+		} finally {
+			shareGenerating = false;
+		}
+	}
+
+	function copyShareUrl() {
+		navigator.clipboard.writeText(shareUrl);
+		shareCopied = true;
+		setTimeout(() => (shareCopied = false), 2000);
 	}
 
 	let deleteTarget = $state<string | null>(null);
@@ -546,6 +609,17 @@
 												<Tooltip.Trigger
 													>{#snippet child({ props })}<button
 															type="button"
+															onclick={() => openShare(obj.key)}
+															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+															{...props}><Link class="h-4 w-4" /></button
+														>{/snippet}</Tooltip.Trigger
+												>
+												<Tooltip.Content>Share</Tooltip.Content>
+											</Tooltip.Root>
+											<Tooltip.Root>
+												<Tooltip.Trigger
+													>{#snippet child({ props })}<button
+															type="button"
 															onclick={() => (deleteTarget = obj.key)}
 															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 															{...props}><Trash2 class="h-4 w-4" /></button
@@ -596,6 +670,104 @@
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
+
+<Dialog.Root
+	open={shareTarget !== null}
+	onOpenChange={(open) => {
+		if (!open) closeShare();
+	}}
+>
+	<Dialog.Content class="sm:max-w-lg">
+		<Dialog.Header>
+			<Dialog.Title>Generate Presigned URL</Dialog.Title>
+			<Dialog.Description>
+				Create a temporary URL for accessing this object without credentials.
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="space-y-4">
+			<div class="rounded-lg bg-muted/50 p-3">
+				<div class="grid gap-1 text-sm">
+					<span class="text-muted-foreground">Bucket</span>
+					<span class="font-mono font-medium">{bucket}</span>
+					<span class="mt-1 text-muted-foreground">Key</span>
+					<span class="break-all font-mono font-medium"
+						>{shareTarget ? getDisplayName(shareTarget) : ''}</span
+					>
+				</div>
+			</div>
+
+			<div class="space-y-2">
+				<Label>Method</Label>
+				<div class="flex gap-2">
+					<Button
+						variant={shareMethod === 'get_object' ? 'default' : 'outline'}
+						size="sm"
+						onclick={() => (shareMethod = 'get_object')}
+					>
+						Download
+					</Button>
+					<Button
+						variant={shareMethod === 'put_object' ? 'default' : 'outline'}
+						size="sm"
+						onclick={() => (shareMethod = 'put_object')}
+					>
+						Upload
+					</Button>
+				</div>
+			</div>
+
+			<div class="space-y-2">
+				<Label for="share-expiry">Expiry</Label>
+				<div class="flex flex-wrap gap-2">
+					{#each EXPIRY_PRESETS as preset (preset.value)}
+						<Button
+							variant={shareExpiry === preset.value ? 'default' : 'outline'}
+							size="sm"
+							onclick={() => (shareExpiry = preset.value)}
+						>
+							{preset.label}
+						</Button>
+					{/each}
+				</div>
+			</div>
+
+			{#if !shareUrl}
+				<Button onclick={handleGenerateUrl} disabled={shareGenerating} class="w-full">
+					{#if shareGenerating}
+						<Loader2 class="h-4 w-4 animate-spin" />
+						Generating...
+					{:else}
+						Generate URL
+					{/if}
+				</Button>
+			{:else}
+				<div class="space-y-2">
+					<Label>Presigned URL</Label>
+					<div class="flex items-center gap-2">
+						<Input readonly value={shareUrl} class="font-mono text-xs" />
+						<Tooltip.Root>
+							<Tooltip.Trigger>
+								{#snippet child({ props })}
+									<Button variant="ghost" size="icon" onclick={copyShareUrl} {...props}>
+										{#if shareCopied}
+											<Check class="h-4 w-4 text-emerald-500" />
+										{:else}
+											<Copy class="h-4 w-4" />
+										{/if}
+									</Button>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content>{shareCopied ? 'Copied!' : 'Copy'}</Tooltip.Content>
+						</Tooltip.Root>
+					</div>
+				</div>
+			{/if}
+		</div>
+		<Dialog.Footer>
+			<Button variant="ghost" onclick={closeShare}>Close</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
 <AlertDialog.Root bind:open={bulkDeleteOpen}>
 	<AlertDialog.Content>
