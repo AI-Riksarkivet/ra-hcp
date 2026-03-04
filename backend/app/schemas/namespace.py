@@ -232,8 +232,13 @@ class SmtpProtocol(BaseModel):
 class Protocols(BaseModel):
     """Default namespace protocol settings (legacy)."""
 
+    model_config = {"extra": "allow"}
+
     httpEnabled: Optional[bool] = None
     httpsEnabled: Optional[bool] = None
+    cifsEnabled: Optional[bool] = None
+    nfsEnabled: Optional[bool] = None
+    smtpEnabled: Optional[bool] = None
     ipSettings: Optional[IpSettings] = None
 
 
