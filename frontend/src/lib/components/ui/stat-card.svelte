@@ -1,12 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { IconProps } from 'lucide-svelte';
-	import { SvelteComponentTyped } from 'svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 
-	type LucideIcon = new (
-		...args: ConstructorParameters<typeof SvelteComponentTyped<IconProps>>
-	) => SvelteComponentTyped<IconProps>;
+	// deno-lint-ignore no-explicit-any
+	type AnyComponent = new (...args: any[]) => any;
 
 	let {
 		label,
@@ -17,7 +14,7 @@
 	}: {
 		label: string;
 		value: string;
-		icon: LucideIcon;
+		icon: AnyComponent;
 		delay?: string;
 		children?: Snippet;
 	} = $props();
