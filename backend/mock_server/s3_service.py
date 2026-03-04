@@ -308,7 +308,7 @@ class MockS3Service:
         from urllib.parse import quote
 
         encoded_key = quote(key, safe="")
-        return f"http://localhost:8000/api/v1/buckets/{quote(bucket, safe='')}/objects/{encoded_key}?presigned=1&method={method}&expires_in={expires_in}"
+        return f"http://localhost:8000/presigned/{quote(bucket, safe='')}/{encoded_key}?method={method}&expires_in={expires_in}"
 
 
 # ── Seed data ────────────────────────────────────────────────────────

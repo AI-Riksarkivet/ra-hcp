@@ -10,11 +10,14 @@ All MAPI calls are intercepted by respx and return stateful fixture data.
 
 from __future__ import annotations
 
+import io
 import logging
 from contextlib import asynccontextmanager
 from unittest.mock import patch
 
 import respx
+from fastapi import Request
+from fastapi.responses import StreamingResponse
 
 from app.api.dependencies import (
     get_mapi_service,
@@ -84,6 +87,7 @@ async def _mock_lifespan(app_instance):
     app_instance.dependency_overrides[get_mapi_service] = _override_mapi
     app_instance.dependency_overrides[get_query_service] = _override_query
     app_instance.dependency_overrides[get_mapi_settings] = _override_mapi_settings
+    app_instance.state.mock_s3 = mock_s3
 
     with (
         respx.mock(assert_all_mocked=False, assert_all_called=False) as mock,
@@ -98,6 +102,36 @@ async def _mock_lifespan(app_instance):
     await query_svc.close()
     await mapi_svc.close()
     app_instance.dependency_overrides.clear()
+
+
+# ── Public presigned download (no auth) ──────────────────────────────
+
+
+@app.get("/presigned/{bucket}/{key:path}")
+async def presigned_download(bucket: str, key: str, request: Request):
+    """Serve mock presigned downloads without authentication."""
+    mock_s3: MockS3Service | None = getattr(request.app.state, "mock_s3", None)
+    if mock_s3 is None:
+        return StreamingResponse(
+            content=iter([b"Mock server not initialised"]),
+            status_code=503,
+        )
+    try:
+        result = mock_s3.get_object(bucket, key)
+    except Exception:
+        return StreamingResponse(
+            content=iter([b"Object not found"]),
+            status_code=404,
+        )
+    body: io.BytesIO = result["Body"]
+    return StreamingResponse(
+        content=body.iter_chunks(),
+        media_type=result.get("ContentType", "application/octet-stream"),
+        headers={
+            "Content-Length": str(result.get("ContentLength", "")),
+            "ETag": result.get("ETag", ""),
+        },
+    )
 
 
 # Replace the app's lifespan with the mock lifespan
