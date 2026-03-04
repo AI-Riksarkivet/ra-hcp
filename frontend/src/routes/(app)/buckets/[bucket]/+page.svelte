@@ -43,18 +43,6 @@
 	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
 	let objectData = $derived(get_objects({ bucket, prefix }));
 
-	let viewerOpen = $state(false);
-	let viewerUrl = $state('');
-	let viewerFilename = $state('');
-	let viewerSize = $state(0);
-
-	function openViewer(obj: { key: string; size: number }) {
-		viewerUrl = downloadUrl(obj.key);
-		viewerFilename = getDisplayName(obj.key);
-		viewerSize = obj.size;
-		viewerOpen = true;
-	}
-
 	interface FileUpload {
 		file: File;
 		key: string;
@@ -219,6 +207,30 @@
 
 	let selected = $state<Set<string>>(new Set());
 	let selectableObjects = $derived(filteredObjects.filter((obj) => !isObjFolder(obj)));
+
+	// --- File Viewer ---
+	let viewerOpen = $state(false);
+	let viewerIndex = $state(-1);
+
+	let viewerObject = $derived(viewerIndex >= 0 ? selectableObjects[viewerIndex] : undefined);
+	let viewerUrl = $derived(viewerObject ? downloadUrl(viewerObject.key) : '');
+	let viewerFilename = $derived(viewerObject ? getDisplayName(viewerObject.key) : '');
+	let viewerSize = $derived(viewerObject?.size ?? 0);
+	let viewerHasPrev = $derived(viewerIndex > 0);
+	let viewerHasNext = $derived(viewerIndex < selectableObjects.length - 1);
+
+	function openViewer(obj: { key: string; size: number }) {
+		viewerIndex = selectableObjects.findIndex((o) => o.key === obj.key);
+		viewerOpen = true;
+	}
+
+	function viewerPrev() {
+		if (viewerHasPrev) viewerIndex--;
+	}
+	function viewerNext() {
+		if (viewerHasNext) viewerIndex++;
+	}
+
 	let allSelected = $derived(
 		selectableObjects.length > 0 && selectableObjects.every((obj) => selected.has(obj.key))
 	);
@@ -649,6 +661,16 @@
 			url={viewerUrl}
 			filename={viewerFilename}
 			size={viewerSize}
+			objectKey={viewerObject?.key}
+			lastModified={viewerObject?.last_modified}
+			etag={viewerObject?.etag}
+			storageClass={viewerObject?.storage_class}
+			hasPrev={viewerHasPrev}
+			hasNext={viewerHasNext}
+			onprev={viewerPrev}
+			onnext={viewerNext}
+			currentIndex={viewerIndex}
+			totalCount={selectableObjects.length}
 			onclose={() => (viewerOpen = false)}
 		/>{/if}
 </div>

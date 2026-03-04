@@ -51,8 +51,8 @@ export const get_objects = query(
           keyCount: data.key_count ?? 0,
         };
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("[buckets.remote]", err);
     }
     return {
       objects: [] as {

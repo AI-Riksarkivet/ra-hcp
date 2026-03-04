@@ -1,5 +1,5 @@
-import type { PageServerLoad } from './$types.js';
+import type { PageServerLoad } from "./$types.js";
 
 export const load: PageServerLoad = ({ locals }) => {
-	return { hasToken: !!locals.token };
+  return { hasToken: !!locals.token };
 };
