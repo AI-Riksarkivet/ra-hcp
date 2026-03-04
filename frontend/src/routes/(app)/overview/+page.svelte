@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Boxes, FileBox, HardDrive, Activity, Users, ArrowLeftRight } from 'lucide-svelte';
+	import { Boxes, FileBox, HardDrive, Activity, Users } from 'lucide-svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import { formatBytes } from '$lib/utils/format.js';
@@ -66,10 +65,6 @@
 		}
 		return { bytesIn, bytesOut, reads, writes, deletes };
 	});
-
-	const MAX_USERS_SHOWN = 8;
-	let displayedUsers = $derived(users.slice(0, MAX_USERS_SHOWN));
-	let hasMoreUsers = $derived(users.length > MAX_USERS_SHOWN);
 </script>
 
 <svelte:head>
@@ -84,8 +79,9 @@
 
 	{#if tenant}
 		<!-- Row 1: Compact stat strip -->
-		<div class="grid gap-4 sm:grid-cols-3">
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			{#await tenantStats}
+				<CardSkeleton />
 				<CardSkeleton />
 				<CardSkeleton />
 				<CardSkeleton />
@@ -173,163 +169,114 @@
 						</Card.Content>
 					</Card.Root>
 				</div>
+				<!-- Users -->
+				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-200">
+					{#await usersData}
+						<CardSkeleton />
+					{:then _}
+						<Card.Root class="h-full">
+							<Card.Content class="pt-6">
+								<div class="flex items-center justify-between">
+									<div>
+										<p class="text-sm font-medium text-muted-foreground">Users</p>
+										<p class="mt-1 text-2xl font-bold">{users.length}</p>
+										<p class="mt-1 text-xs">
+											<a href="/users" class="text-primary underline-offset-4 hover:underline">
+												Manage &rarr;
+											</a>
+										</p>
+									</div>
+									<div class="rounded-lg bg-primary/10 p-3">
+										<Users class="h-6 w-6 text-primary" />
+									</div>
+								</div>
+							</Card.Content>
+						</Card.Root>
+					{/await}
+				</div>
 			{/await}
 		</div>
 
-		<!-- Row 2: Namespace Activity + Users -->
-		<div class="grid gap-6 lg:grid-cols-2">
-			<!-- Namespace Activity -->
-			<Card.Root>
-				<Card.Header>
-					<div class="flex items-center gap-2">
-						<Activity class="h-5 w-5 text-muted-foreground" />
-						<Card.Title>Namespace Activity</Card.Title>
-					</div>
-					<Card.Description>Ranked by total operations</Card.Description>
-				</Card.Header>
-				<Card.Content>
-					{#await chargebackData}
-						<TableSkeleton rows={4} columns={5} />
-					{:then _}
-						{#if sortedChargeback.length === 0}
-							<div class="rounded-lg border border-dashed p-8 text-center">
-								<p class="text-muted-foreground">No activity data available.</p>
-							</div>
-						{:else}
-							<div class="overflow-x-auto rounded-lg border">
-								<table class="w-full text-left text-sm">
-									<thead
-										class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
-									>
-										<tr>
-											<th class="px-4 py-3 font-medium">Namespace</th>
-											<th class="px-4 py-3 text-right font-medium">Storage</th>
-											<th class="px-4 py-3 text-right font-medium">Ingress</th>
-											<th class="px-4 py-3 text-right font-medium">Egress</th>
-											<th class="px-4 py-3 text-right font-medium">Ops</th>
-										</tr>
-									</thead>
-									<tbody class="divide-y">
-										{#each sortedChargeback as entry (entry.namespaceName)}
-											<tr class="bg-card transition-colors hover:bg-accent/50">
-												<td class="px-4 py-3 font-medium">
-													<a
-														href="/namespaces/{entry.namespaceName}"
-														class="text-primary underline-offset-4 hover:underline"
-													>
-														{entry.namespaceName ?? '—'}
-													</a>
-												</td>
-												<td class="px-4 py-3 text-right text-muted-foreground">
-													{formatBytes(entry.storageCapacityUsed ?? 0)}
-												</td>
-												<td class="px-4 py-3 text-right text-muted-foreground">
-													{formatBytes(entry.bytesIn ?? 0)}
-												</td>
-												<td class="px-4 py-3 text-right text-muted-foreground">
-													{formatBytes(entry.bytesOut ?? 0)}
-												</td>
-												<td class="px-4 py-3 text-right text-muted-foreground">
-													{(
-														(entry.reads ?? 0) +
-														(entry.writes ?? 0) +
-														(entry.deletes ?? 0)
-													).toLocaleString()}
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							</div>
-						{/if}
-					{/await}
-				</Card.Content>
-			</Card.Root>
-
-			<!-- Users -->
-			<Card.Root>
-				<Card.Header>
-					<div class="flex items-center gap-2">
-						<Users class="h-5 w-5 text-muted-foreground" />
-						<Card.Title>Users</Card.Title>
-						{#await usersData then _}
-							<Badge variant="secondary">{users.length}</Badge>
-						{/await}
-					</div>
-					<Card.Description>Tenant user accounts</Card.Description>
-				</Card.Header>
-				<Card.Content>
-					{#await usersData}
-						<div class="space-y-3">
-							{#each Array(4) as _, i (i)}
-								<div class="h-5 w-32 animate-pulse rounded bg-muted"></div>
-							{/each}
-						</div>
-					{:then _}
-						{#if users.length === 0}
-							<div class="rounded-lg border border-dashed p-8 text-center">
-								<p class="text-muted-foreground">No users found.</p>
-							</div>
-						{:else}
-							<ul class="space-y-2">
-								{#each displayedUsers as user (user.username)}
-									<li>
-										<a href="/users/{user.username}" class="text-sm text-primary hover:underline">
-											{user.username}
-										</a>
-									</li>
-								{/each}
-							</ul>
-							{#if hasMoreUsers}
-								<p class="mt-4 text-sm">
-									<a href="/users" class="text-primary underline-offset-4 hover:underline">
-										View all &rarr;
-									</a>
-								</p>
-							{/if}
-						{/if}
-					{/await}
-				</Card.Content>
-			</Card.Root>
-		</div>
-
-		<!-- Row 3: I/O Summary -->
+		<!-- Row 2: Namespace Activity (with I/O totals) -->
 		<Card.Root>
 			<Card.Header>
 				<div class="flex items-center gap-2">
-					<ArrowLeftRight class="h-5 w-5 text-muted-foreground" />
-					<Card.Title>I/O Summary</Card.Title>
+					<Activity class="h-5 w-5 text-muted-foreground" />
+					<Card.Title>Namespace Activity</Card.Title>
 				</div>
-				<Card.Description>Aggregate data transfer across all namespaces</Card.Description>
+				<Card.Description>Per-namespace I/O ranked by total operations</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				{#await chargebackData}
-					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-						{#each Array(4) as _, i (i)}
-							<div class="h-20 animate-pulse rounded-lg border bg-muted"></div>
-						{/each}
-					</div>
+					<TableSkeleton rows={4} columns={6} />
 				{:then _}
-					<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-						<div class="rounded-lg border p-4">
-							<p class="text-xl font-bold">{formatBytes(chargebackTotals.bytesIn)}</p>
-							<p class="text-xs text-muted-foreground">Data received</p>
+					{#if sortedChargeback.length === 0}
+						<div class="rounded-lg border border-dashed p-8 text-center">
+							<p class="text-muted-foreground">No activity data available.</p>
 						</div>
-						<div class="rounded-lg border p-4">
-							<p class="text-xl font-bold">{formatBytes(chargebackTotals.bytesOut)}</p>
-							<p class="text-xs text-muted-foreground">Data sent</p>
+					{:else}
+						<div class="overflow-x-auto rounded-lg border">
+							<table class="w-full text-left text-sm">
+								<thead
+									class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
+								>
+									<tr>
+										<th class="px-4 py-3 font-medium">Namespace</th>
+										<th class="px-4 py-3 text-right font-medium">Storage</th>
+										<th class="px-4 py-3 text-right font-medium">Ingress</th>
+										<th class="px-4 py-3 text-right font-medium">Egress</th>
+										<th class="px-4 py-3 text-right font-medium">Reads</th>
+										<th class="px-4 py-3 text-right font-medium">Writes</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y">
+									{#each sortedChargeback as entry (entry.namespaceName)}
+										<tr class="bg-card transition-colors hover:bg-accent/50">
+											<td class="px-4 py-3 font-medium">
+												<a
+													href="/namespaces/{entry.namespaceName}"
+													class="text-primary underline-offset-4 hover:underline"
+												>
+													{entry.namespaceName ?? '—'}
+												</a>
+											</td>
+											<td class="px-4 py-3 text-right text-muted-foreground">
+												{formatBytes(entry.storageCapacityUsed ?? 0)}
+											</td>
+											<td class="px-4 py-3 text-right text-muted-foreground">
+												{formatBytes(entry.bytesIn ?? 0)}
+											</td>
+											<td class="px-4 py-3 text-right text-muted-foreground">
+												{formatBytes(entry.bytesOut ?? 0)}
+											</td>
+											<td class="px-4 py-3 text-right text-muted-foreground">
+												{(entry.reads ?? 0).toLocaleString()}
+											</td>
+											<td class="px-4 py-3 text-right text-muted-foreground">
+												{(entry.writes ?? 0).toLocaleString()}
+											</td>
+										</tr>
+									{/each}
+									<tr class="border-t-2 bg-muted/30 font-semibold">
+										<td class="px-4 py-3">Total</td>
+										<td class="px-4 py-3 text-right">—</td>
+										<td class="px-4 py-3 text-right">
+											{formatBytes(chargebackTotals.bytesIn)}
+										</td>
+										<td class="px-4 py-3 text-right">
+											{formatBytes(chargebackTotals.bytesOut)}
+										</td>
+										<td class="px-4 py-3 text-right">
+											{chargebackTotals.reads.toLocaleString()}
+										</td>
+										<td class="px-4 py-3 text-right">
+											{(chargebackTotals.writes + chargebackTotals.deletes).toLocaleString()}
+										</td>
+									</tr>
+								</tbody>
+							</table>
 						</div>
-						<div class="rounded-lg border p-4">
-							<p class="text-xl font-bold">{chargebackTotals.reads.toLocaleString()}</p>
-							<p class="text-xs text-muted-foreground">Read operations</p>
-						</div>
-						<div class="rounded-lg border p-4">
-							<p class="text-xl font-bold">
-								{(chargebackTotals.writes + chargebackTotals.deletes).toLocaleString()}
-							</p>
-							<p class="text-xs text-muted-foreground">Write & delete ops</p>
-						</div>
-					</div>
+					{/if}
 				{/await}
 			</Card.Content>
 		</Card.Root>
