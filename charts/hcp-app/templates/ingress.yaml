@@ -28,6 +28,22 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
+          {{- if $.Values.frontend.enabled }}
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "hcp-app.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.port }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "hcp-app.frontendFullname" $ }}
+                port:
+                  number: {{ $.Values.frontend.service.port }}
+          {{- else }}
           {{- range .paths }}
           - path: {{ .path }}
             pathType: {{ .pathType }}
@@ -36,6 +52,7 @@ spec:
                 name: {{ include "hcp-app.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
+          {{- end }}
           {{- end }}
     {{- end }}
 {{- end }}

@@ -62,3 +62,18 @@ Redis selector labels.
 app.kubernetes.io/name: {{ include "hcp-app.name" . }}-redis
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Frontend fullname.
+*/}}
+{{- define "hcp-app.frontendFullname" -}}
+{{- printf "%s-frontend" (include "hcp-app.fullname" .) }}
+{{- end }}
+
+{{/*
+Frontend selector labels.
+*/}}
+{{- define "hcp-app.frontendSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "hcp-app.name" . }}-frontend
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

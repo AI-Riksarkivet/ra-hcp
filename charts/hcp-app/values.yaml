@@ -61,6 +61,27 @@ opentelemetry:
   protocol: "grpc"
   serviceName: "hcp-app"
 
+frontend:
+  enabled: false
+  image:
+    repository: hcp-app-frontend
+    tag: "latest"
+    pullPolicy: Always
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 8000
+  resources: {}
+    # limits:
+    #   cpu: 500m
+    #   memory: 512Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 256Mi
+  env:
+    BACKEND_URL: ""
+
 redis:
   enabled: false
   image:

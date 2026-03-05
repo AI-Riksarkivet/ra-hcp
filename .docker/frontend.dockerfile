@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM denoland/deno:latest AS builder
+FROM denoland/deno:2.1.4 AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY frontend/ .
 RUN deno task build
 
 # ── Production stage ─────────────────────────────────────────────────
-FROM denoland/deno:latest
+FROM denoland/deno:2.1.4
 
 RUN groupadd --system app 2>/dev/null; useradd --system --gid app app 2>/dev/null || true
 

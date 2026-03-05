@@ -34,7 +34,7 @@ func (m *HcpApp) ServeAll(source *dagger.Directory) *dagger.Service {
 func (m *HcpApp) TestServer(ctx context.Context, source *dagger.Directory) (string, error) {
 	svc := m.Serve(source)
 
-	return dag.Container().From("alpine:latest").
+	return dag.Container().From("alpine:3.21").
 		WithServiceBinding("backend", svc).
 		WithExec([]string{"wget", "-qO-", "http://backend:8000/health"}).
 		Stdout(ctx)

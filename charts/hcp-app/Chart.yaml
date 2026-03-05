@@ -1,11 +1,11 @@
 apiVersion: v2
 name: hcp-app
-description: Unified FastAPI service for HCP S3 data-plane and Management API (MAPI) operations
+description: FastAPI backend and SvelteKit frontend for HCP S3 data-plane and Management API (MAPI) operations
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
-home: https://github.com/your-org/hcp-app
+version: 0.2.0
+appVersion: "0.2.0"
+home: https://github.com/AI-Riksarkivet/hcp
 sources:
-  - https://github.com/your-org/hcp-app
+  - https://github.com/AI-Riksarkivet/hcp
 maintainers:
   - name: hcp-app-team
