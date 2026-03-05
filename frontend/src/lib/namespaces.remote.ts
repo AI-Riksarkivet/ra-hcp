@@ -10,6 +10,7 @@ export interface Namespace {
   hashScheme?: string;
   searchEnabled?: boolean;
   versioningSettings?: { enabled: boolean };
+  tags?: { tag: string[] };
 }
 
 export interface NsProtocols {
@@ -73,6 +74,7 @@ export const create_namespace = command(
     hashScheme: z.string().optional(),
     searchEnabled: z.boolean().optional(),
     versioningEnabled: z.boolean().optional(),
+    tags: z.array(z.string()).optional(),
   }),
   async ({ tenant, ...body }) => {
     const payload: Record<string, unknown> = { name: body.name };
@@ -84,6 +86,7 @@ export const create_namespace = command(
     if (body.versioningEnabled != null) {
       payload.versioningSettings = { enabled: body.versioningEnabled };
     }
+    if (body.tags) payload.tags = { tag: body.tags };
     const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/namespaces`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -92,6 +95,30 @@ export const create_namespace = command(
     if (!res.ok) {
       const err = await res.json().catch(() => ({
         detail: "Failed to create namespace",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const update_namespace = command(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, name, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${encodeURIComponent(name)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update namespace",
       }));
       throw new Error(err.detail);
     }

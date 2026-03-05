@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus, Trash2 } from 'lucide-svelte';
+	import { Plus, Trash2, X, Pencil } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -15,9 +15,11 @@
 	import {
 		get_namespaces,
 		create_namespace,
+		update_namespace,
 		delete_namespace,
 		type Namespace,
 	} from '$lib/namespaces.remote.js';
+	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 
@@ -103,6 +105,76 @@
 	let createOpen = $state(false);
 	let createError = $state('');
 	let creating = $state(false);
+	let createTags = $state<string[]>([]);
+	let tagInput = $state('');
+
+	function addTag() {
+		const t = tagInput.trim();
+		if (t && !createTags.includes(t.toLowerCase())) {
+			createTags = [...createTags, t.toLowerCase()];
+		}
+		tagInput = '';
+	}
+
+	function removeTag(t: string) {
+		createTags = createTags.filter((x) => x !== t);
+	}
+
+	function handleTagKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			addTag();
+		}
+	}
+
+	// Tag editing for existing namespaces
+	let editingTagsNs = $state('');
+	let editTags = $state<string[]>([]);
+	let editTagInput = $state('');
+	let savingTags = $state(false);
+
+	function startEditTags(ns: Namespace) {
+		editingTagsNs = ns.name;
+		editTags = [...(ns.tags?.tag ?? [])];
+		editTagInput = '';
+	}
+
+	function addEditTag() {
+		const t = editTagInput.trim();
+		if (t && !editTags.includes(t.toLowerCase())) {
+			editTags = [...editTags, t.toLowerCase()];
+		}
+		editTagInput = '';
+	}
+
+	function removeEditTag(t: string) {
+		editTags = editTags.filter((x) => x !== t);
+	}
+
+	function handleEditTagKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			addEditTag();
+		}
+	}
+
+	async function saveTags() {
+		if (!tenant || !nsData || !editingTagsNs) return;
+		savingTags = true;
+		try {
+			await update_namespace({
+				tenant,
+				name: editingTagsNs,
+				body: { tags: { tag: editTags } },
+			}).updates(nsData);
+			toast.success('Tags updated');
+			editingTagsNs = '';
+		} catch {
+			toast.error('Failed to update tags');
+		} finally {
+			savingTags = false;
+		}
+	}
 
 	async function handleCreate(e: SubmitEvent) {
 		e.preventDefault();
@@ -130,9 +202,11 @@
 				hashScheme,
 				searchEnabled,
 				versioningEnabled,
+				tags: createTags.length > 0 ? createTags : undefined,
 			}).updates(nsData);
 			toast.success('Namespace created successfully');
 			createOpen = false;
+			createTags = [];
 			form.reset();
 		} catch (err) {
 			createError = err instanceof Error ? err.message : 'Failed to create namespace';
@@ -213,6 +287,32 @@
 						<option value="MD5">MD5</option>
 					</select>
 				</div>
+				<div class="space-y-2">
+					<Label for="ns-tags">Tags</Label>
+					<div class="flex gap-2">
+						<Input
+							id="ns-tags"
+							placeholder="e.g. lakefs, nfs, s3"
+							bind:value={tagInput}
+							onkeydown={handleTagKeydown}
+						/>
+						<Button type="button" variant="secondary" size="sm" onclick={addTag}>Add</Button>
+					</div>
+					{#if createTags.length > 0}
+						<div class="flex flex-wrap gap-1 pt-1">
+							{#each createTags as t (t)}
+								<ServiceTagBadge tag={t} />
+								<button
+									type="button"
+									class="-ml-1 mr-1 rounded-full p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+									onclick={() => removeTag(t)}
+								>
+									<X class="h-3 w-3" />
+								</button>
+							{/each}
+						</div>
+					{/if}
+				</div>
 				<div class="flex gap-6">
 					<label class="flex items-center gap-2 text-sm">
 						<input type="checkbox" name="searchEnabled" class="h-4 w-4 rounded border-input" />
@@ -257,6 +357,7 @@
 								/></th
 							>
 							<th class="px-4 py-3 font-medium">Name</th>
+							<th class="px-4 py-3 font-medium">Tags</th>
 							<th class="px-4 py-3 font-medium">Description</th>
 							<th class="px-4 py-3 font-medium">Hard Quota</th>
 							<th class="px-4 py-3 font-medium">Soft Quota</th>
@@ -267,13 +368,13 @@
 					<tbody class="divide-y">
 						{#if namespaces.length === 0}
 							<tr
-								><td colspan="7" class="px-4 py-8 text-center text-muted-foreground"
+								><td colspan="8" class="px-4 py-8 text-center text-muted-foreground"
 									>No namespaces found. Create one to get started.</td
 								></tr
 							>
 						{:else if filteredNamespaces.length === 0}
 							<tr
-								><td colspan="7" class="px-4 py-8 text-center text-muted-foreground"
+								><td colspan="8" class="px-4 py-8 text-center text-muted-foreground"
 									>No results matching "{search}"</td
 								></tr
 							>
@@ -301,6 +402,72 @@
 										>
 											{ns.name}
 										</a>
+									</td>
+									<td class="px-4 py-3">
+										{#if editingTagsNs === ns.name}
+											<div class="flex flex-col gap-1.5">
+												<div class="flex gap-1.5">
+													<input
+														class="h-7 w-28 rounded border border-input bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+														placeholder="Add tag..."
+														bind:value={editTagInput}
+														onkeydown={handleEditTagKeydown}
+													/>
+													<Button
+														variant="ghost"
+														size="icon"
+														class="h-7 w-7"
+														onclick={saveTags}
+														disabled={savingTags}
+													>
+														{#if savingTags}...{:else}Save{/if}
+													</Button>
+													<Button
+														variant="ghost"
+														size="icon"
+														class="h-7 w-7"
+														onclick={() => (editingTagsNs = '')}
+													>
+														<X class="h-3 w-3" />
+													</Button>
+												</div>
+												{#if editTags.length > 0}
+													<div class="flex flex-wrap gap-1">
+														{#each editTags as t (t)}
+															<span class="inline-flex items-center gap-0.5">
+																<ServiceTagBadge tag={t} />
+																<button
+																	type="button"
+																	class="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
+																	onclick={() => removeEditTag(t)}
+																>
+																	<X class="h-2.5 w-2.5" />
+																</button>
+															</span>
+														{/each}
+													</div>
+												{/if}
+											</div>
+										{:else}
+											<div class="group flex items-center gap-1">
+												{#if ns.tags?.tag?.length}
+													<div class="flex flex-wrap gap-1">
+														{#each ns.tags.tag as t (t)}
+															<ServiceTagBadge tag={t} />
+														{/each}
+													</div>
+												{:else}
+													<span class="text-muted-foreground">—</span>
+												{/if}
+												<button
+													type="button"
+													class="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+													onclick={() => startEditTags(ns)}
+												>
+													<Pencil class="h-3 w-3" />
+												</button>
+											</div>
+										{/if}
 									</td>
 									<td class="px-4 py-3 text-muted-foreground">{ns.description ?? '—'}</td>
 									<td class="px-4 py-3 text-muted-foreground">{ns.hardQuota ?? '—'}</td>

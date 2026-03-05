@@ -51,6 +51,7 @@ NAMESPACES: dict[str, dict[str, dict]] = {
             "versioningSettings": {"enabled": False},
             "hashScheme": "SHA-256",
             "searchEnabled": True,
+            "tags": {"tag": ["s3"]},
         },
         "shared": {
             "name": "shared",
@@ -61,6 +62,7 @@ NAMESPACES: dict[str, dict[str, dict]] = {
             "versioningSettings": {"enabled": True},
             "hashScheme": "SHA-256",
             "searchEnabled": False,
+            "tags": {"tag": ["nfs", "cifs"]},
         },
     },
     "research": {
@@ -73,6 +75,7 @@ NAMESPACES: dict[str, dict[str, dict]] = {
             "versioningSettings": {"enabled": True},
             "hashScheme": "SHA-256",
             "searchEnabled": True,
+            "tags": {"tag": ["lakefs", "hdfs"]},
         },
     },
     "mock": {
@@ -85,6 +88,7 @@ NAMESPACES: dict[str, dict[str, dict]] = {
             "versioningSettings": {"enabled": False},
             "hashScheme": "SHA-256",
             "searchEnabled": True,
+            "tags": {"tag": ["lakefs"]},
         },
         "archives": {
             "name": "archives",
@@ -95,6 +99,7 @@ NAMESPACES: dict[str, dict[str, dict]] = {
             "versioningSettings": {"enabled": False},
             "hashScheme": "SHA-256",
             "searchEnabled": False,
+            "tags": {"tag": ["s3"]},
         },
         "logs": {
             "name": "logs",
@@ -105,6 +110,7 @@ NAMESPACES: dict[str, dict[str, dict]] = {
             "versioningSettings": {"enabled": False},
             "hashScheme": "SHA-256",
             "searchEnabled": True,
+            "tags": {"tag": ["nfs"]},
         },
     },
 }
