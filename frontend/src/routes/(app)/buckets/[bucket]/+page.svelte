@@ -29,6 +29,7 @@
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import {
 		get_objects,
@@ -218,7 +219,7 @@
 		})
 	);
 
-	let selected = $state<Set<string>>(new Set());
+	let selected = new SvelteSet<string>();
 	let selectableObjects = $derived(filteredObjects.filter((obj) => !isObjFolder(obj)));
 
 	// --- File Viewer ---
@@ -250,19 +251,17 @@
 
 	function toggleAll() {
 		if (allSelected) {
-			selected = new Set();
+			selected.clear();
 		} else {
-			selected = new Set(selectableObjects.map((obj) => obj.key));
+			for (const obj of selectableObjects) selected.add(obj.key);
 		}
 	}
 	function toggleOne(key: string) {
-		const next = new Set(selected);
-		if (next.has(key)) {
-			next.delete(key);
+		if (selected.has(key)) {
+			selected.delete(key);
 		} else {
-			next.add(key);
+			selected.add(key);
 		}
-		selected = next;
 	}
 
 	// --- Presigned URL ---
@@ -345,7 +344,7 @@
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to delete objects');
 		}
-		selected = new Set();
+		selected.clear();
 		deleting = false;
 		bulkDeleteOpen = false;
 	}
@@ -535,9 +534,7 @@
 				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}
 					><Trash2 class="h-3.5 w-3.5" />Delete Selected</Button
 				>
-				<Button variant="ghost" size="sm" onclick={() => (selected = new Set())}
-					>Deselect All</Button
-				>
+				<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Deselect All</Button>
 			</div>
 		{/if}
 

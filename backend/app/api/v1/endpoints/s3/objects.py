@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import io
+import zipfile
 from typing import Optional
 
 from botocore.exceptions import BotoCoreError, ClientError
@@ -14,6 +16,7 @@ from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error
 from app.schemas.s3 import (
     AclPolicy,
     AclResponse,
+    BulkDownloadRequest,
     CopyObjectRequest,
     DeleteObjectsRequest,
     DeleteObjectsResponse,
@@ -84,6 +87,37 @@ async def delete_objects(
         "deleted": len(body.keys),
         "errors": result.get("Errors", []),
     }
+
+
+# ── Bulk download (must be before {key:path} catch-all) ──────────────
+
+
+@router.post("/download")
+async def download_objects(
+    bucket: str,
+    body: BulkDownloadRequest,
+    s3: S3Service = Depends(get_s3_service),
+):
+    async def _generate_zip():
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for key in body.keys:
+                try:
+                    result = await asyncio.to_thread(s3.get_object, bucket, key)
+                    data = result["Body"].read()
+                    zf.writestr(key, data)
+                except (ClientError, BotoCoreError):
+                    continue
+        buf.seek(0)
+        yield buf.read()
+
+    return StreamingResponse(
+        content=_generate_zip(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{bucket}-objects.zip"',
+        },
+    )
 
 
 # ── Routes with /acl suffix (must be before {key:path} catch-all) ───

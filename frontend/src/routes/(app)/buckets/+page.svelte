@@ -8,6 +8,7 @@
 	import { formatDate } from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import SearchToolbar from '$lib/components/ui/search-toolbar.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
@@ -25,27 +26,25 @@
 		buckets.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()))
 	);
 
-	let selected = $state<Set<string>>(new Set());
+	let selected = new SvelteSet<string>();
 	let allSelected = $derived(
 		filteredBuckets.length > 0 && filteredBuckets.every((b) => selected.has(b.name))
 	);
 
 	function toggleAll() {
 		if (allSelected) {
-			selected = new Set();
+			selected.clear();
 		} else {
-			selected = new Set(filteredBuckets.map((b) => b.name));
+			for (const b of filteredBuckets) selected.add(b.name);
 		}
 	}
 
 	function toggleOne(name: string) {
-		const next = new Set(selected);
-		if (next.has(name)) {
-			next.delete(name);
+		if (selected.has(name)) {
+			selected.delete(name);
 		} else {
-			next.add(name);
+			selected.add(name);
 		}
-		selected = next;
 	}
 
 	let deleteTarget = $state('');
@@ -90,7 +89,7 @@
 			toast.success(`Deleted ${successCount} bucket${successCount !== 1 ? 's' : ''}`);
 		if (failCount > 0)
 			toast.error(`Failed to delete ${failCount} bucket${failCount !== 1 ? 's' : ''}`);
-		selected = new Set();
+		selected.clear();
 		deleting = false;
 		bulkDeleteOpen = false;
 	}
@@ -167,7 +166,7 @@
 			placeholder="Search buckets..."
 			selectedCount={selected.size}
 			ondeleteselected={() => (bulkDeleteOpen = true)}
-			ondeselectall={() => (selected = new Set())}
+			ondeselectall={() => selected.clear()}
 		/>
 
 		<div class="overflow-x-auto rounded-lg border">

@@ -9,9 +9,12 @@
 		ArrowUpDown,
 		ArrowUp,
 		ArrowDown,
-		HelpCircle,
+		CircleHelp,
 		X,
+		Download,
 	} from 'lucide-svelte';
+	import { toast } from 'svelte-sonner';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -143,6 +146,7 @@
 		objectLoading = true;
 		objectError = '';
 		objectSearched = true;
+		selected.clear();
 		try {
 			objectResults = await search_objects({
 				tenant,
@@ -240,6 +244,51 @@
 		{ field: 'owner', label: 'Owner' },
 		{ field: 'changeTimeMilliseconds', label: 'Modified' },
 	];
+
+	// ── Selection state (objects mode) ──
+	let selected = new SvelteSet<string>();
+	let allSelected = $derived(
+		filteredResults.length > 0 && filteredResults.every((i) => selected.has(itemKey(i)))
+	);
+
+	function itemKey(item: QueryResultObject): string {
+		return `${item.namespace ?? ''}:${item.urlName}`;
+	}
+
+	function toggleAll() {
+		if (allSelected) {
+			selected.clear();
+		} else {
+			for (const i of filteredResults) selected.add(itemKey(i));
+		}
+	}
+
+	function toggleOne(key: string) {
+		if (selected.has(key)) {
+			selected.delete(key);
+		} else {
+			selected.add(key);
+		}
+	}
+
+	function objectDownloadUrl(item: QueryResultObject): string {
+		const ns = item.namespace ?? '';
+		return `/api/v1/buckets/${encodeURIComponent(ns)}/objects/${encodeURIComponent(item.urlName)}`;
+	}
+
+	function downloadSelected() {
+		const items = filteredResults.filter((i) => selected.has(itemKey(i)));
+		if (items.length === 0) return;
+		for (const item of items) {
+			const a = document.createElement('a');
+			a.href = objectDownloadUrl(item);
+			a.download = '';
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+		}
+		toast.success(`Started ${items.length} download${items.length !== 1 ? 's' : ''}`);
+	}
 </script>
 
 <svelte:head>
@@ -283,7 +332,7 @@
 				class="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
 				onclick={() => (helpOpen = !helpOpen)}
 			>
-				<HelpCircle class="h-4 w-4" />
+				<CircleHelp class="h-4 w-4" />
 				<span class="hidden sm:inline">How does this work?</span>
 			</button>
 		</div>
@@ -427,12 +476,32 @@
 						</button>
 					{/if}
 				</div>
+
+				{#if selected.size > 0}
+					<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
+						<span class="text-sm font-medium">{selected.size} selected</span>
+						<Button size="sm" onclick={downloadSelected}>
+							<Download class="h-3.5 w-3.5" />Download Selected
+						</Button>
+						<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Deselect All</Button>
+					</div>
+				{/if}
+
 				<div class="overflow-x-auto rounded-lg border">
 					<table class="w-full text-left text-sm">
 						<thead
 							class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
 						>
 							<tr>
+								<th class="w-10 px-4 py-3">
+									<input
+										type="checkbox"
+										checked={allSelected}
+										onchange={toggleAll}
+										class="h-4 w-4 rounded border-input"
+										disabled={filteredResults.length === 0}
+									/>
+								</th>
 								{#each SORT_COLUMNS as col (col.field)}
 									<th class="px-4 py-3 font-medium {col.align === 'right' ? 'text-right' : ''}">
 										<button
@@ -452,8 +521,10 @@
 										</button>
 									</th>
 								{/each}
+								<th class="w-16 px-4 py-3 font-medium"></th>
 							</tr>
 							<tr class="border-b bg-muted/30">
+								<td class="px-4 py-1.5"></td>
 								<td class="px-4 py-1.5"></td>
 								<td class="px-4 py-1.5">
 									<input
@@ -481,11 +552,20 @@
 									/>
 								</td>
 								<td class="px-4 py-1.5"></td>
+								<td class="px-4 py-1.5"></td>
 							</tr>
 						</thead>
 						<tbody class="divide-y">
 							{#each filteredResults as item (item.urlName + (item.version ?? ''))}
 								<tr class="bg-card transition-colors hover:bg-accent/50">
+									<td class="px-4 py-3">
+										<input
+											type="checkbox"
+											checked={selected.has(itemKey(item))}
+											onchange={() => toggleOne(itemKey(item))}
+											class="h-4 w-4 rounded border-input"
+										/>
+									</td>
 									<td class="max-w-xs truncate px-4 py-3 font-medium" title={displayPath(item)}>
 										{displayPath(item)}
 									</td>
@@ -498,10 +578,20 @@
 									<td class="whitespace-nowrap px-4 py-3 text-muted-foreground">
 										{formatMillis(item.changeTimeMilliseconds)}
 									</td>
+									<td class="px-4 py-3">
+										<a
+											href={objectDownloadUrl(item)}
+											download
+											class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+											title="Download"
+										>
+											<Download class="h-4 w-4" />
+										</a>
+									</td>
 								</tr>
 							{:else}
 								<tr>
-									<td colspan="6" class="px-4 py-6 text-center text-muted-foreground">
+									<td colspan="8" class="px-4 py-6 text-center text-muted-foreground">
 										No results match your filters.
 									</td>
 								</tr>

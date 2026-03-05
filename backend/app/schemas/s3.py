@@ -61,6 +61,10 @@ class DeleteObjectsRequest(BaseModel):
     keys: List[str]
 
 
+class BulkDownloadRequest(BaseModel):
+    keys: List[str] = Field(..., min_length=1)
+
+
 class BucketVersioningResponse(BaseModel):
     status: Optional[str] = None
     mfa_delete: Optional[str] = None

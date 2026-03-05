@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import io
+import zipfile
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
@@ -70,7 +72,7 @@ async def test_list_objects_with_prefix(
     )
     assert resp.status_code == 200
     mock_s3_service.list_objects.assert_called_once_with(
-        "my-bucket", "logs/", 1000, None
+        "my-bucket", "logs/", 1000, None, None
     )
 
 
@@ -192,6 +194,80 @@ async def test_delete_objects_bulk(
     body = resp.json()
     assert body["deleted"] == 2
     assert body["errors"] == []
+
+
+async def test_download_objects_bulk(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """Bulk download returns a zip archive containing requested objects."""
+
+    def mock_get_object(bucket, key):
+        body = io.BytesIO(f"content of {key}".encode())
+        return {
+            "Body": body,
+            "ContentType": "text/plain",
+            "ContentLength": body.getbuffer().nbytes,
+            "ETag": '"abc"',
+        }
+
+    mock_s3_service.get_object.side_effect = mock_get_object
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/download",
+        headers=auth_headers,
+        json={"keys": ["file1.txt", "file2.txt"]},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/zip"
+
+    zf = zipfile.ZipFile(io.BytesIO(resp.content))
+    assert sorted(zf.namelist()) == ["file1.txt", "file2.txt"]
+    assert zf.read("file1.txt") == b"content of file1.txt"
+    assert zf.read("file2.txt") == b"content of file2.txt"
+
+
+async def test_download_objects_bulk_skips_missing(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """Bulk download skips objects that fail to fetch."""
+
+    def mock_get_object(bucket, key):
+        if key == "missing.txt":
+            raise ClientError(
+                error_response={
+                    "Error": {"Code": "NoSuchKey", "Message": "Not found"},
+                    "ResponseMetadata": {"HTTPStatusCode": 404},
+                },
+                operation_name="GetObject",
+            )
+        body = io.BytesIO(b"data")
+        return {
+            "Body": body,
+            "ContentType": "text/plain",
+            "ContentLength": 4,
+            "ETag": '"abc"',
+        }
+
+    mock_s3_service.get_object.side_effect = mock_get_object
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/download",
+        headers=auth_headers,
+        json={"keys": ["good.txt", "missing.txt"]},
+    )
+    assert resp.status_code == 200
+    zf = zipfile.ZipFile(io.BytesIO(resp.content))
+    assert zf.namelist() == ["good.txt"]
+
+
+async def test_download_objects_bulk_empty_keys(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """Bulk download rejects empty keys list."""
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/download",
+        headers=auth_headers,
+        json={"keys": []},
+    )
+    assert resp.status_code == 422
 
 
 async def test_get_object_acl(

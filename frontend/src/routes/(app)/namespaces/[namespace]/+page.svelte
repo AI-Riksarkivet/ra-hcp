@@ -322,13 +322,13 @@
 	// --- Grant Access dialog ---
 	let grantOpen = $state(false);
 	let grantUser = $state('');
-	let grantPerms = $state<Set<string>>(new Set());
+	let grantPerms = new SvelteSet<string>();
 	let granting = $state(false);
 	let grantError = $state('');
 
 	function openGrantDialog() {
 		grantUser = '';
-		grantPerms = new Set();
+		grantPerms.clear();
 		grantError = '';
 		grantOpen = true;
 	}
@@ -373,13 +373,11 @@
 	}
 
 	function toggleGrantPerm(perm: string) {
-		const next = new Set(grantPerms);
-		if (next.has(perm)) {
-			next.delete(perm);
+		if (grantPerms.has(perm)) {
+			grantPerms.delete(perm);
 		} else {
-			next.add(perm);
+			grantPerms.add(perm);
 		}
-		grantPerms = next;
 	}
 </script>
 

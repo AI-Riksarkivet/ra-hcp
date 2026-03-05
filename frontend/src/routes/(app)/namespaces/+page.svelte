@@ -8,6 +8,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { toast } from 'svelte-sonner';
+	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import SearchToolbar from '$lib/components/ui/search-toolbar.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
@@ -31,27 +32,25 @@
 		namespaces.filter((n) => n.name.toLowerCase().includes(search.toLowerCase()))
 	);
 
-	let selected = $state<Set<string>>(new Set());
+	let selected = new SvelteSet<string>();
 	let allSelected = $derived(
 		filteredNamespaces.length > 0 && filteredNamespaces.every((n) => selected.has(n.name))
 	);
 
 	function toggleAll() {
 		if (allSelected) {
-			selected = new Set();
+			selected.clear();
 		} else {
-			selected = new Set(filteredNamespaces.map((n) => n.name));
+			for (const n of filteredNamespaces) selected.add(n.name);
 		}
 	}
 
 	function toggleOne(name: string) {
-		const next = new Set(selected);
-		if (next.has(name)) {
-			next.delete(name);
+		if (selected.has(name)) {
+			selected.delete(name);
 		} else {
-			next.add(name);
+			selected.add(name);
 		}
-		selected = next;
 	}
 
 	let deleteTarget = $state('');
@@ -97,7 +96,7 @@
 			toast.success(`Deleted ${successCount} namespace${successCount !== 1 ? 's' : ''}`);
 		if (failCount > 0)
 			toast.error(`Failed to delete ${failCount} namespace${failCount !== 1 ? 's' : ''}`);
-		selected = new Set();
+		selected.clear();
 		deleting = false;
 		bulkDeleteOpen = false;
 	}
@@ -340,7 +339,7 @@
 				placeholder="Search namespaces..."
 				selectedCount={selected.size}
 				ondeleteselected={() => (bulkDeleteOpen = true)}
-				ondeselectall={() => (selected = new Set())}
+				ondeselectall={() => selected.clear()}
 			/>
 
 			<div class="overflow-x-auto rounded-lg border">
