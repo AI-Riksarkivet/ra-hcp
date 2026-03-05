@@ -36,7 +36,7 @@
 	let mode = $state<'objects' | 'operations'>('objects');
 
 	// ── Object search state ──
-	let objectQuery = $state('*:*');
+	let objectQuery = $state('');
 	let pageSize = 25;
 	let objectOffset = $state(0);
 	let objectResults = $state<ObjectQueryResponse | null>(null);
