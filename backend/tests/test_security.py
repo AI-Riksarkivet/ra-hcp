@@ -10,8 +10,8 @@ from fastapi import HTTPException
 
 from app.core.config import AuthSettings
 from app.core.security import (
+    _decode_token,
     create_access_token,
-    verify_token,
     verify_token_with_credentials,
 )
 
@@ -44,10 +44,10 @@ def test_create_access_token_expiry_matches_settings(settings: AuthSettings):
     assert exp <= after + timedelta(minutes=61)
 
 
-def test_verify_token_returns_username(settings: AuthSettings):
+def test_decode_token_returns_username(settings: AuthSettings):
     token = create_access_token("alice", "secret", settings=settings)
-    username = verify_token(token, settings=settings)
-    assert username == "alice"
+    payload = _decode_token(token, settings=settings)
+    assert payload["sub"] == "alice"
 
 
 def test_verify_token_with_credentials(settings: AuthSettings):
@@ -57,18 +57,18 @@ def test_verify_token_with_credentials(settings: AuthSettings):
     assert creds.password == "s3cr3t"
 
 
-def test_verify_token_rejects_expired_token(settings: AuthSettings):
+def test_decode_token_rejects_expired_token(settings: AuthSettings):
     expire = datetime.now(timezone.utc) - timedelta(minutes=1)
     payload = {"sub": "alice", "pwd": "secret", "exp": expire}
     token = pyjwt.encode(payload, _TEST_KEY, algorithm="HS256")
 
     with pytest.raises(HTTPException) as exc_info:
-        verify_token(token, settings=settings)
+        _decode_token(token, settings=settings)
     assert exc_info.value.status_code == 401
     assert "expired" in exc_info.value.detail.lower()
 
 
-def test_verify_token_rejects_invalid_signature(settings: AuthSettings):
+def test_decode_token_rejects_invalid_signature(settings: AuthSettings):
     token = pyjwt.encode(
         {
             "sub": "alice",
@@ -80,23 +80,23 @@ def test_verify_token_rejects_invalid_signature(settings: AuthSettings):
     )
 
     with pytest.raises(HTTPException) as exc_info:
-        verify_token(token, settings=settings)
+        _decode_token(token, settings=settings)
     assert exc_info.value.status_code == 401
 
 
-def test_verify_token_rejects_missing_subject(settings: AuthSettings):
+def test_decode_token_rejects_missing_subject(settings: AuthSettings):
     payload = {"pwd": "secret", "exp": datetime.now(timezone.utc) + timedelta(hours=1)}
     token = pyjwt.encode(payload, _TEST_KEY, algorithm="HS256")
 
     with pytest.raises(HTTPException) as exc_info:
-        verify_token(token, settings=settings)
+        _decode_token(token, settings=settings)
     assert exc_info.value.status_code == 401
     assert "no subject" in exc_info.value.detail.lower()
 
 
-def test_verify_token_rejects_garbage():
+def test_decode_token_rejects_garbage():
     with pytest.raises(HTTPException) as exc_info:
-        verify_token("not.a.jwt")
+        _decode_token("not.a.jwt")
     assert exc_info.value.status_code == 401
 
 

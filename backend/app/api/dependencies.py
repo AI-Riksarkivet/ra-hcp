@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import base64
-import hashlib
 import logging
 from functools import lru_cache
 from typing import Annotated, AsyncGenerator, Optional
 
 from fastapi import Depends, Request
 
+from app.core.auth_utils import derive_s3_keys
 from app.core.config import CacheSettings, MapiSettings, S3Settings
 from app.core.security import (
     HcpCredentials,
@@ -82,9 +81,7 @@ async def get_query_service(
 
 def _derive_s3_keys(creds: HcpCredentials) -> tuple[str, str]:
     """Derive HCP S3 access_key / secret_key from plain credentials."""
-    access_key = base64.b64encode(creds.username.encode()).decode()
-    secret_key = hashlib.md5(creds.password.encode()).hexdigest()
-    return access_key, secret_key
+    return derive_s3_keys(creds.username, creds.password)
 
 
 async def get_s3_service(

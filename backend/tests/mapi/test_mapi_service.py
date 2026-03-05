@@ -9,6 +9,7 @@ import httpx
 import pytest
 import respx
 
+from app.core.auth_utils import build_hcp_auth_token, get_hcp_auth_header
 from app.core.config import MapiSettings
 from app.services.mapi_service import MapiService
 
@@ -36,32 +37,25 @@ def service(settings: MapiSettings) -> MapiService:
 # ── Authentication ──────────────────────────────────────────────────
 
 
-def test_build_hcp_auth_token(service: MapiService):
-    token = service._build_hcp_auth_token("admin", "secret")
+def test_build_hcp_auth_token():
+    token = build_hcp_auth_token("admin", "secret")
     expected_user = base64.b64encode(b"admin").decode()
     expected_pass = hashlib.md5(b"secret").hexdigest()
     assert token == f"{expected_user}:{expected_pass}"
 
 
-def test_get_auth_header_hcp_type(service: MapiService):
-    header = service._get_auth_header("admin", "secret")
+def test_get_auth_header_hcp_type():
+    header = get_hcp_auth_header("admin", "secret")
     assert header.startswith("HCP ")
 
 
-def test_get_auth_header_ad_type(settings: MapiSettings):
-    settings_ad = MapiSettings(
-        hcp_host="test.hcp.local",
-        hcp_username="admin",
-        hcp_password="secret",
-        hcp_auth_type="ad",
-    )
-    svc = MapiService(settings_ad)
-    header = svc._get_auth_header("admin", "secret")
+def test_get_auth_header_ad_type():
+    header = get_hcp_auth_header("admin", "secret", auth_type="ad")
     assert header == "AD admin:secret"
 
 
-def test_get_auth_header_custom_credentials(service: MapiService):
-    header = service._get_auth_header(username="other", password="pass", auth_type="ad")
+def test_get_auth_header_custom_credentials():
+    header = get_hcp_auth_header(username="other", password="pass", auth_type="ad")
     assert header == "AD other:pass"
 
 

@@ -6,8 +6,6 @@ and communication with the HCP system.
 
 from __future__ import annotations
 
-import base64
-import hashlib
 import json
 from typing import Any, Dict, Optional
 from urllib.parse import urlencode
@@ -18,6 +16,7 @@ import httpx
 from fastapi import HTTPException
 from pydantic import BaseModel
 
+from app.core.auth_utils import get_hcp_auth_header
 from app.core.config import MapiSettings
 
 logger = logging.getLogger(__name__)
@@ -29,29 +28,6 @@ class MapiService:
     def __init__(self, settings: MapiSettings):
         self.settings = settings
         self._client: Optional[httpx.AsyncClient] = None
-
-    # ── Authentication ─────────────────────────────────────────────────
-
-    def _build_hcp_auth_token(self, username: str, password: str) -> str:
-        """Build HCP authentication token: base64(user):md5(password)."""
-        user_b64 = base64.b64encode(username.encode()).decode()
-        pass_md5 = hashlib.md5(password.encode()).hexdigest()
-        return f"{user_b64}:{pass_md5}"
-
-    def _get_auth_header(
-        self,
-        username: str,
-        password: str,
-        auth_type: Optional[str] = None,
-    ) -> str:
-        """Return the Authorization header value."""
-        at = auth_type or self.settings.hcp_auth_type
-
-        if at == "ad":
-            return f"AD {username}:{password}"
-        else:
-            token = self._build_hcp_auth_token(username, password)
-            return f"HCP {token}"
 
     # ── Client lifecycle ───────────────────────────────────────────────
 
@@ -107,7 +83,9 @@ class MapiService:
         url = self._build_url(path, host=host, query=query)
 
         headers = {
-            "Authorization": self._get_auth_header(username, password, auth_type),
+            "Authorization": get_hcp_auth_header(
+                username, password, auth_type or self.settings.hcp_auth_type
+            ),
             "Accept": accept,
         }
 

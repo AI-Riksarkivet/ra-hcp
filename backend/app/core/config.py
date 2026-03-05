@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import hashlib
 from typing import Any, Literal
 
 from pydantic_settings import BaseSettings
@@ -71,12 +69,16 @@ class S3Settings(BaseSettings):
     @property
     def access_key(self) -> str:
         """Base64-encoded username (HCP S3 convention)."""
-        return base64.b64encode(self.hcp_username.encode()).decode()
+        from app.core.auth_utils import derive_s3_keys
+
+        return derive_s3_keys(self.hcp_username, self.hcp_password)[0]
 
     @property
     def secret_key(self) -> str:
         """MD5-hashed password (HCP S3 convention)."""
-        return hashlib.md5(self.hcp_password.encode()).hexdigest()
+        from app.core.auth_utils import derive_s3_keys
+
+        return derive_s3_keys(self.hcp_username, self.hcp_password)[1]
 
 
 class CacheSettings(BaseSettings):

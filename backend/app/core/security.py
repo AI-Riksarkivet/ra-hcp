@@ -82,11 +82,6 @@ def _decode_token(token: str, settings: AuthSettings | None = None) -> dict:
         )
 
 
-def verify_token(token: str, settings: AuthSettings | None = None) -> str:
-    """Verify a JWT token and return the username (backward compat)."""
-    return _decode_token(token, settings)["sub"]
-
-
 def verify_token_with_credentials(
     token: str, settings: AuthSettings | None = None
 ) -> HcpCredentials:
@@ -103,4 +98,4 @@ async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
 ) -> str:
     """Dependency that extracts and validates the current user from JWT."""
-    return verify_token(token)
+    return _decode_token(token)["sub"]

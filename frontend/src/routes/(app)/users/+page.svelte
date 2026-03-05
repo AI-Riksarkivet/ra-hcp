@@ -16,16 +16,12 @@
 		create_group,
 		type DataAccessPermissions,
 	} from '$lib/users.remote.js';
+	import { AVAILABLE_ROLES, type User, getUserRoles } from '$lib/constants.js';
+	import PageHeader from '$lib/components/ui/page-header.svelte';
+	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
+	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 
-	type User = {
-		username: string;
-		fullName?: string;
-		enabled?: boolean;
-		roles?: { role?: string[] } | string[];
-	};
 	type Group = { groupname?: string; name?: string; description?: string };
-
-	const AVAILABLE_ROLES = ['ADMINISTRATOR', 'SECURITY', 'MONITOR', 'COMPLIANCE'] as const;
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let usersData = $derived(tenant ? get_users({ tenant }) : undefined);
@@ -33,12 +29,6 @@
 
 	let users = $derived((usersData?.current ?? []) as User[]);
 	let groups = $derived((groupsData?.current ?? []) as Group[]);
-
-	function getUserRoles(user: User): string[] {
-		if (!user.roles) return [];
-		if (Array.isArray(user.roles)) return user.roles;
-		return user.roles.role ?? [];
-	}
 
 	// --- Namespace access per user (async derived — auto-cancels on dependency change) ---
 	async function loadUserNsAccess(
@@ -137,10 +127,7 @@
 </svelte:head>
 
 <div class="space-y-8">
-	<div>
-		<h2 class="text-2xl font-bold">Users & Groups</h2>
-		<p class="mt-1 text-sm text-muted-foreground">Manage user accounts and groups</p>
-	</div>
+	<PageHeader title="Users & Groups" description="Manage user accounts and groups" />
 
 	{#if tenant}
 		<!-- User Accounts -->
@@ -285,9 +272,7 @@
 			{/await}
 		</div>
 	{:else}
-		<div class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Log in with a tenant to manage users and groups.</p>
-		</div>
+		<NoTenantPlaceholder message="Log in with a tenant to manage users and groups." />
 	{/if}
 </div>
 
@@ -299,13 +284,7 @@
 			<Dialog.Description>Add a new user account to this tenant.</Dialog.Description>
 		</Dialog.Header>
 		<form onsubmit={handleCreateUser} class="space-y-4">
-			{#if createUserError}
-				<div
-					class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-				>
-					{createUserError}
-				</div>
-			{/if}
+			<ErrorBanner message={createUserError} />
 			<div class="space-y-2">
 				<Label for="cu-username">Username</Label>
 				<Input id="cu-username" name="username" placeholder="jdoe" required />
@@ -353,13 +332,7 @@
 			<Dialog.Description>Add a new group to this tenant.</Dialog.Description>
 		</Dialog.Header>
 		<form onsubmit={handleCreateGroup} class="space-y-4">
-			{#if createGroupError}
-				<div
-					class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-				>
-					{createGroupError}
-				</div>
-			{/if}
+			<ErrorBanner message={createGroupError} />
 			<div class="space-y-2">
 				<Label for="cg-name">Group Name</Label>
 				<Input id="cg-name" name="groupname" placeholder="my-group" required />

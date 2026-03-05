@@ -6,8 +6,6 @@ operation metadata searches.
 
 from __future__ import annotations
 
-import base64
-import hashlib
 import json
 import logging
 from typing import Any, Optional
@@ -15,6 +13,7 @@ from typing import Any, Optional
 import httpx
 from fastapi import HTTPException
 
+from app.core.auth_utils import get_hcp_auth_header
 from app.core.config import MapiSettings
 from app.core.tenant_routing import query_url_for_tenant
 from app.schemas.query import (
@@ -35,22 +34,6 @@ class QueryService:
     def __init__(self, settings: MapiSettings):
         self.settings = settings
         self._client: Optional[httpx.AsyncClient] = None
-
-    # ── Authentication ─────────────────────────────────────────────────
-
-    def _get_auth_header(
-        self,
-        username: str,
-        password: str,
-        auth_type: Optional[str] = None,
-    ) -> str:
-        at = auth_type or self.settings.hcp_auth_type
-
-        if at == "ad":
-            return f"AD {username}:{password}"
-        user_b64 = base64.b64encode(username.encode()).decode()
-        pass_md5 = hashlib.md5(password.encode()).hexdigest()
-        return f"HCP {user_b64}:{pass_md5}"
 
     # ── Client lifecycle ───────────────────────────────────────────────
 
@@ -86,7 +69,9 @@ class QueryService:
 
         client = await self._get_client()
         headers = {
-            "Authorization": self._get_auth_header(username, password, auth_type),
+            "Authorization": get_hcp_auth_header(
+                username, password, auth_type or self.settings.hcp_auth_type
+            ),
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
@@ -103,10 +88,9 @@ class QueryService:
             logger.error("Query API transport error: POST %s — %s", url, exc)
             raise HTTPException(status_code=502, detail="HCP query connection error")
 
-        if resp.status_code != 200:
-            hcp_msg = resp.headers.get("x-hcp-errormessage", "")
-            detail = hcp_msg or resp.text or f"HCP query returned {resp.status_code}"
-            raise HTTPException(status_code=resp.status_code, detail=detail)
+        from app.api.errors import raise_for_hcp_status
+
+        raise_for_hcp_status(resp, "query")
 
         data = resp.json()
         # HCP wraps responses in {"queryResult": {...}} — unwrap it.

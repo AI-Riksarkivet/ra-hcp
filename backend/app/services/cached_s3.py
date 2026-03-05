@@ -8,7 +8,7 @@ is safe to use from these threads.
 from __future__ import annotations
 
 import logging
-from typing import IO, Any, List, Optional
+from typing import IO, List, Optional
 
 from opentelemetry import trace
 
@@ -44,14 +44,11 @@ class CachedS3Service(S3Service):
         access_key: str,
         secret_key: str,
         endpoint_url: str | None = None,
-        **kwargs: Any,
+        *,
+        cache: CacheService,
+        cache_settings: CacheSettings,
     ) -> "CachedS3Service":
-        """Create a CachedS3Service with explicit credentials + cache.
-
-        Requires ``cache`` and ``cache_settings`` keyword arguments.
-        """
-        cache: CacheService = kwargs.pop("cache")
-        cache_settings: CacheSettings = kwargs.pop("cache_settings")
+        """Create a CachedS3Service with explicit credentials + cache."""
         instance: CachedS3Service = super().with_credentials(  # type: ignore[assignment]
             settings, access_key, secret_key, endpoint_url=endpoint_url
         )

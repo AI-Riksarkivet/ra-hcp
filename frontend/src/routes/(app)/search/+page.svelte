@@ -14,13 +14,16 @@
 		Download,
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
-	import { SvelteSet } from 'svelte/reactivity';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
+	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import PageHeader from '$lib/components/ui/page-header.svelte';
+	import { useSelection } from '$lib/utils/use-selection.svelte.js';
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import {
 		search_objects,
@@ -246,30 +249,14 @@
 	];
 
 	// ── Selection state (objects mode) ──
-	let selected = new SvelteSet<string>();
-	let allSelected = $derived(
-		filteredResults.length > 0 && filteredResults.every((i) => selected.has(itemKey(i)))
-	);
-
 	function itemKey(item: QueryResultObject): string {
 		return `${item.namespace ?? ''}:${item.urlName}`;
 	}
 
-	function toggleAll() {
-		if (allSelected) {
-			selected.clear();
-		} else {
-			for (const i of filteredResults) selected.add(itemKey(i));
-		}
-	}
-
-	function toggleOne(key: string) {
-		if (selected.has(key)) {
-			selected.delete(key);
-		} else {
-			selected.add(key);
-		}
-	}
+	const { selected, allSelected, toggleAll, toggleOne } = useSelection(
+		() => filteredResults,
+		itemKey
+	);
 
 	function objectDownloadUrl(item: QueryResultObject): string {
 		const ns = item.namespace ?? '';
@@ -444,13 +431,7 @@
 			</div>
 
 			<!-- Error -->
-			{#if objectError}
-				<div
-					class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-				>
-					{objectError}
-				</div>
-			{/if}
+			<ErrorBanner message={objectError} />
 
 			<!-- Results -->
 			{#if objectLoading}
@@ -673,13 +654,7 @@
 			</div>
 
 			<!-- Error -->
-			{#if opError}
-				<div
-					class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-				>
-					{opError}
-				</div>
-			{/if}
+			<ErrorBanner message={opError} />
 
 			<!-- Results -->
 			{#if opLoading}
@@ -737,8 +712,6 @@
 			{/if}
 		{/if}
 	{:else}
-		<div class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Log in with a tenant to search.</p>
-		</div>
+		<NoTenantPlaceholder message="Log in with a tenant to search." />
 	{/if}
 </div>

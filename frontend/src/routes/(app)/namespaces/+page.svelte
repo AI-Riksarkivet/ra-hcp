@@ -18,7 +18,8 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { toast } from 'svelte-sonner';
-	import { SvelteSet } from 'svelte/reactivity';
+	import { useSelection } from '$lib/utils/use-selection.svelte.js';
+	import { useDelete } from '$lib/utils/use-delete.svelte.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import StatCard from '$lib/components/ui/stat-card.svelte';
@@ -36,10 +37,19 @@
 		get_tenant,
 		get_tenant_statistics,
 		get_tenant_chargeback,
-		type ChargebackEntry,
 	} from '$lib/tenant-info.remote.js';
 	import { get_users } from '$lib/users.remote.js';
-	import { formatBytes, parseQuotaBytes } from '$lib/utils/format.js';
+	import {
+		formatBytes,
+		parseQuotaBytes,
+		buildStorageMap,
+		calcQuotaPercent,
+		type ChargebackEntry,
+	} from '$lib/utils/format.js';
+	import PageHeader from '$lib/components/ui/page-header.svelte';
+	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
+	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
+	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
@@ -56,26 +66,14 @@
 	let users = $derived((usersData?.current ?? []) as { username: string }[]);
 
 	// Map namespace name → storage used from chargeback
-	let nsStorageMap = $derived.by(() => {
-		const map = new Map<string, number>();
-		for (const entry of chargeback) {
-			if (entry.namespaceName) map.set(entry.namespaceName, entry.storageCapacityUsed ?? 0);
-		}
-		return map;
-	});
+	let nsStorageMap = $derived(buildStorageMap(chargeback));
 
-	// Parse tenant quota to bytes
-	let tenantQuotaBytes = $derived.by(() => {
-		const info = tenantInfo?.current;
-		if (!info?.hardQuota) return null;
-		return parseQuotaBytes(info.hardQuota);
-	});
-
-	let quotaPercent = $derived.by(() => {
-		const stats = tenantStats?.current;
-		if (!tenantQuotaBytes || !stats?.storageCapacityUsed) return null;
-		return Math.min(100, (Number(stats.storageCapacityUsed) / tenantQuotaBytes) * 100);
-	});
+	let quotaPercent = $derived(
+		calcQuotaPercent(
+			Number(tenantStats?.current?.storageCapacityUsed ?? 0),
+			tenantInfo?.current?.hardQuota
+		)
+	);
 
 	// Total quota allocated across all namespaces
 	let totalAllocatedBytes = $derived.by(() => {
@@ -89,10 +87,9 @@
 		return total;
 	});
 
-	let allocatedPercent = $derived.by(() => {
-		if (!tenantQuotaBytes || totalAllocatedBytes === 0) return null;
-		return Math.min(100, (totalAllocatedBytes / tenantQuotaBytes) * 100);
-	});
+	let allocatedPercent = $derived(
+		calcQuotaPercent(totalAllocatedBytes, tenantInfo?.current?.hardQuota)
+	);
 
 	let search = $state('');
 	let namespaces = $derived((nsData?.current ?? []) as Namespace[]);
@@ -100,73 +97,28 @@
 		namespaces.filter((n) => n.name.toLowerCase().includes(search.toLowerCase()))
 	);
 
-	let selected = new SvelteSet<string>();
-	let allSelected = $derived(
-		filteredNamespaces.length > 0 && filteredNamespaces.every((n) => selected.has(n.name))
+	const { selected, allSelected, toggleAll, toggleOne } = useSelection(
+		() => filteredNamespaces,
+		(n) => n.name
 	);
 
-	function toggleAll() {
-		if (allSelected) {
-			selected.clear();
-		} else {
-			for (const n of filteredNamespaces) selected.add(n.name);
-		}
+	const del = useDelete({ entityName: 'namespace' });
+
+	function onConfirmDelete() {
+		del.confirmDelete(() =>
+			delete_namespace({ tenant: tenant!, name: del.deleteTarget }).updates(nsData!)
+		);
 	}
 
-	function toggleOne(name: string) {
-		if (selected.has(name)) {
-			selected.delete(name);
-		} else {
-			selected.add(name);
-		}
-	}
-
-	let deleteTarget = $state('');
-	let deleteDialogOpen = $state(false);
-	let bulkDeleteOpen = $state(false);
-	let deleting = $state(false);
-
-	async function confirmDelete() {
-		if (!deleteTarget || !tenant || !nsData) return;
-		deleting = true;
-		try {
-			await delete_namespace({ tenant, name: deleteTarget }).updates(nsData);
-			toast.success(`Deleted namespace "${deleteTarget}"`);
-		} catch {
-			toast.error('Failed to delete namespace');
-		} finally {
-			deleting = false;
-			deleteDialogOpen = false;
-			deleteTarget = '';
-		}
-	}
-
-	async function confirmBulkDelete() {
-		if (!tenant || !nsData) return;
-		deleting = true;
-		const names = [...selected];
-		let successCount = 0,
-			failCount = 0;
-		for (let i = 0; i < names.length; i++) {
-			try {
-				const call = delete_namespace({ tenant, name: names[i] });
-				if (i === names.length - 1) {
-					await call.updates(nsData);
-				} else {
-					await call;
-				}
-				successCount++;
-			} catch {
-				failCount++;
-			}
-		}
-		if (successCount > 0)
-			toast.success(`Deleted ${successCount} namespace${successCount !== 1 ? 's' : ''}`);
-		if (failCount > 0)
-			toast.error(`Failed to delete ${failCount} namespace${failCount !== 1 ? 's' : ''}`);
-		selected.clear();
-		deleting = false;
-		bulkDeleteOpen = false;
+	function onConfirmBulkDelete() {
+		del.confirmBulkDelete(
+			[...selected],
+			(name, isLast) => {
+				const call = delete_namespace({ tenant: tenant!, name });
+				return isLast ? call.updates(nsData!) : call;
+			},
+			() => selected.clear()
+		);
 	}
 
 	let createOpen = $state(false);
@@ -288,18 +240,16 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h2 class="text-2xl font-bold">Namespaces</h2>
-			<p class="mt-1 text-sm text-muted-foreground">Manage tenant namespaces</p>
-		</div>
-		{#if tenant}
-			<Button onclick={() => (createOpen = true)}>
-				<Plus class="h-4 w-4" />
-				Create Namespace
-			</Button>
-		{/if}
-	</div>
+	<PageHeader title="Namespaces" description="Manage tenant namespaces">
+		{#snippet actions()}
+			{#if tenant}
+				<Button onclick={() => (createOpen = true)}>
+					<Plus class="h-4 w-4" />
+					Create Namespace
+				</Button>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	<Dialog.Root bind:open={createOpen}>
 		<Dialog.Content class="sm:max-w-lg">
@@ -308,13 +258,7 @@
 				<Dialog.Description>Configure a new namespace for this tenant.</Dialog.Description>
 			</Dialog.Header>
 			<form onsubmit={handleCreate} class="space-y-4">
-				{#if createError}
-					<div
-						class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-					>
-						{createError}
-					</div>
-				{/if}
+				<ErrorBanner message={createError} />
 				<div class="space-y-2">
 					<Label for="ns-name">Namespace Name</Label>
 					<Input id="ns-name" name="namespace" placeholder="my-namespace" required />
@@ -422,16 +366,7 @@
 				>
 					{#await tenantInfo then info}
 						{#if quotaPercent !== null}
-							<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-								<div
-									class="h-full rounded-full transition-all duration-500 {quotaPercent > 90
-										? 'bg-destructive'
-										: quotaPercent > 70
-											? 'bg-yellow-500'
-											: 'bg-primary'}"
-									style="width: {quotaPercent}%"
-								></div>
-							</div>
+							<StorageProgressBar percent={quotaPercent} class="mt-2" />
 							<p class="mt-1 text-xs text-muted-foreground">
 								{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}
 							</p>
@@ -449,16 +384,7 @@
 				>
 					{#await tenantInfo then info}
 						{#if allocatedPercent !== null}
-							<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-								<div
-									class="h-full rounded-full transition-all duration-500 {allocatedPercent > 90
-										? 'bg-destructive'
-										: allocatedPercent > 70
-											? 'bg-yellow-500'
-											: 'bg-blue-500'}"
-									style="width: {allocatedPercent}%"
-								></div>
-							</div>
+							<StorageProgressBar percent={allocatedPercent} class="mt-2" />
 							<p class="mt-1 text-xs text-muted-foreground">
 								{formatBytes(totalAllocatedBytes)} / {info?.hardQuota}
 							</p>
@@ -504,7 +430,7 @@
 				bind:search
 				placeholder="Search namespaces..."
 				selectedCount={selected.size}
-				ondeleteselected={() => (bulkDeleteOpen = true)}
+				ondeleteselected={() => del.requestBulkDelete()}
 				ondeselectall={() => selected.clear()}
 			/>
 
@@ -580,18 +506,7 @@
 													>
 													{#if quota}
 														{@const pct = Math.min(100, (used / quota) * 100)}
-														<div
-															class="h-1.5 w-full max-w-24 overflow-hidden rounded-full bg-muted"
-														>
-															<div
-																class="h-full rounded-full transition-all {pct > 90
-																	? 'bg-destructive'
-																	: pct > 70
-																		? 'bg-yellow-500'
-																		: 'bg-primary'}"
-																style="width: {pct}%"
-															></div>
-														</div>
+														<StorageProgressBar percent={pct} class="max-w-24" />
 													{/if}
 												</div>
 											{:else}
@@ -688,10 +603,7 @@
 												{#snippet child({ props })}
 													<button
 														type="button"
-														onclick={() => {
-															deleteTarget = ns.name;
-															deleteDialogOpen = true;
-														}}
+														onclick={() => del.requestDelete(ns.name)}
 														class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 														{...props}
 													>
@@ -710,24 +622,22 @@
 			</div>
 		{/await}
 	{:else}
-		<div class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Log in with a tenant to manage namespaces.</p>
-		</div>
+		<NoTenantPlaceholder message="Log in with a tenant to manage namespaces." />
 	{/if}
 </div>
 
 <DeleteConfirmDialog
-	bind:open={deleteDialogOpen}
-	name={deleteTarget}
+	bind:open={del.deleteDialogOpen}
+	name={del.deleteTarget}
 	itemType="namespace"
-	loading={deleting}
-	onconfirm={confirmDelete}
+	loading={del.deleting}
+	onconfirm={onConfirmDelete}
 />
 
 <BulkDeleteDialog
-	bind:open={bulkDeleteOpen}
+	bind:open={del.bulkDeleteOpen}
 	count={selected.size}
 	itemType="namespace"
-	loading={deleting}
-	onconfirm={confirmBulkDelete}
+	loading={del.deleting}
+	onconfirm={onConfirmBulkDelete}
 />

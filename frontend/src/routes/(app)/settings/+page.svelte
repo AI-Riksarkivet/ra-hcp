@@ -2,13 +2,15 @@
 	import { page } from '$app/state';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { Save, Loader2, HelpCircle } from 'lucide-svelte';
+	import { HelpCircle } from 'lucide-svelte';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { toast } from 'svelte-sonner';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
+	import PageHeader from '$lib/components/ui/page-header.svelte';
+	import SaveButton from '$lib/components/ui/save-button.svelte';
+	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 	import {
 		get_tenant,
 		get_tenant_settings,
@@ -204,12 +206,10 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div>
-		<h2 class="text-2xl font-bold">Tenant Settings</h2>
-		<p class="mt-1 text-sm text-muted-foreground">
-			View and manage tenant configuration and permissions
-		</p>
-	</div>
+	<PageHeader
+		title="Tenant Settings"
+		description="View and manage tenant configuration and permissions"
+	/>
 
 	{#if tenant}
 		{#if !tenantData || !settingsData}
@@ -311,24 +311,11 @@
 											placeholder="+1 (555) 000-0000"
 										/>
 									</div>
-									<div class="flex items-center gap-3">
-										<Button
-											size="sm"
-											disabled={!contactDirty || savingContact}
-											onclick={saveContactInfo}
-										>
-											{#if savingContact}
-												<Loader2 class="h-4 w-4 animate-spin" />
-												Saving...
-											{:else}
-												<Save class="h-4 w-4" />
-												Save
-											{/if}
-										</Button>
-										{#if contactDirty}
-											<span class="text-xs text-muted-foreground">Unsaved changes</span>
-										{/if}
-									</div>
+									<SaveButton
+										dirty={contactDirty}
+										saving={savingContact}
+										onclick={saveContactInfo}
+									/>
 								</div>
 							{/if}
 						</Card.Content>
@@ -401,24 +388,7 @@
 											Versioning Enabled
 										</label>
 									</div>
-									<div class="flex items-center gap-3">
-										<Button
-											size="sm"
-											disabled={!nsDirty || savingNs}
-											onclick={saveNamespaceDefaults}
-										>
-											{#if savingNs}
-												<Loader2 class="h-4 w-4 animate-spin" />
-												Saving...
-											{:else}
-												<Save class="h-4 w-4" />
-												Save
-											{/if}
-										</Button>
-										{#if nsDirty}
-											<span class="text-xs text-muted-foreground">Unsaved changes</span>
-										{/if}
-									</div>
+									<SaveButton dirty={nsDirty} saving={savingNs} onclick={saveNamespaceDefaults} />
 								</div>
 							{/if}
 						</Card.Content>
@@ -465,20 +435,7 @@
 											</div>
 										{/each}
 									</div>
-									<div class="flex items-center gap-3">
-										<Button size="sm" disabled={!permDirty || savingPerm} onclick={savePermissions}>
-											{#if savingPerm}
-												<Loader2 class="h-4 w-4 animate-spin" />
-												Saving...
-											{:else}
-												<Save class="h-4 w-4" />
-												Save
-											{/if}
-										</Button>
-										{#if permDirty}
-											<span class="text-xs text-muted-foreground">Unsaved changes</span>
-										{/if}
-									</div>
+									<SaveButton dirty={permDirty} saving={savingPerm} onclick={savePermissions} />
 								</div>
 							{/if}
 						</Card.Content>
@@ -487,8 +444,6 @@
 			{/await}
 		{/if}
 	{:else}
-		<div class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Log in with a tenant to view settings.</p>
-		</div>
+		<NoTenantPlaceholder message="Log in with a tenant to view settings." />
 	{/if}
 </div>

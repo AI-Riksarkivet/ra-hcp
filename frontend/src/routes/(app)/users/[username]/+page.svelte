@@ -9,7 +9,6 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import {
-		ArrowLeft,
 		Save,
 		Loader2,
 		Trash2,
@@ -30,38 +29,16 @@
 		type DataAccessPermissions,
 	} from '$lib/users.remote.js';
 	import { get_s3_credentials } from '$lib/buckets.remote.js';
-
-	type User = {
-		username: string;
-		fullName?: string;
-		description?: string;
-		enabled?: boolean;
-		localAuthentication?: boolean;
-		roles?: { role?: string[] };
-	};
-
-	const AVAILABLE_ROLES = ['ADMINISTRATOR', 'SECURITY', 'MONITOR', 'COMPLIANCE'] as const;
-
-	const ROLE_DESCRIPTIONS: Record<string, string> = {
-		ADMINISTRATOR:
-			'Full tenant administration — create namespaces, manage users and groups, view statistics',
-		SECURITY: 'Manage console security, search security, and authentication settings',
-		MONITOR: 'View tenant and namespace statistics and chargeback reports (read-only)',
-		COMPLIANCE: 'Manage compliance and retention settings on namespaces',
-	};
-
-	const PERMISSION_DESCRIPTIONS: Record<string, string> = {
-		BROWSE: 'List objects in the namespace',
-		READ: 'Read object data and metadata',
-		WRITE: 'Create and modify objects',
-		DELETE: 'Delete objects',
-		PURGE: 'Permanently remove objects (bypass retention)',
-		SEARCH: 'Query objects via HCP metadata search',
-		READ_ACL: 'Read object access control lists',
-		WRITE_ACL: 'Modify object access control lists',
-		CHOWN: 'Change object ownership',
-		PRIVILEGED: 'Perform privileged operations like deleting retained objects',
-	};
+	import {
+		AVAILABLE_ROLES,
+		ROLE_DESCRIPTIONS,
+		PERMISSION_DESCRIPTIONS,
+		getUserRoles,
+	} from '$lib/constants.js';
+	import type { User } from '$lib/constants.js';
+	import BackButton from '$lib/components/ui/back-button.svelte';
+	import SaveButton from '$lib/components/ui/save-button.svelte';
+	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let username = $derived(page.params.username ?? '');
@@ -83,7 +60,7 @@
 		localFullName = u?.fullName ?? '';
 		localDescription = u?.description ?? '';
 		localEnabled = u?.enabled ?? true;
-		localRoles = u?.roles?.role ? [...u.roles.role] : [];
+		localRoles = u ? getUserRoles(u) : [];
 	});
 
 	let dirty = $derived(
@@ -91,7 +68,7 @@
 			localDescription !== (user?.description ?? '') ||
 			localEnabled !== (user?.enabled ?? true) ||
 			JSON.stringify([...localRoles].sort()) !==
-				JSON.stringify([...(user?.roles?.role ?? [])].sort())
+				JSON.stringify([...(user ? getUserRoles(user) : [])].sort())
 	);
 
 	let saving = $state(false);
@@ -203,20 +180,7 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-4">
-			<Tooltip.Root>
-				<Tooltip.Trigger>
-					{#snippet child({ props })}
-						<a
-							href="/users"
-							class="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-							{...props}
-						>
-							<ArrowLeft class="h-5 w-5" />
-						</a>
-					{/snippet}
-				</Tooltip.Trigger>
-				<Tooltip.Content>Back to users</Tooltip.Content>
-			</Tooltip.Root>
+			<BackButton href="/users" label="Back to users" />
 			<div>
 				<h2 class="text-2xl font-bold">{username}</h2>
 				<p class="mt-1 text-sm text-muted-foreground">
@@ -239,9 +203,7 @@
 	</div>
 
 	{#if !tenant}
-		<div class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Log in with a tenant to view user details.</p>
-		</div>
+		<NoTenantPlaceholder message="Log in with a tenant to view user details." />
 	{:else}
 		{#await userData}
 			<div class="rounded-lg border p-5">
@@ -329,20 +291,7 @@
 									</label>
 								{/each}
 							</div>
-							<div class="mt-3 flex items-center gap-3">
-								<Button size="sm" disabled={!dirty || saving} onclick={saveUser}>
-									{#if saving}
-										<Loader2 class="h-4 w-4 animate-spin" />
-										Saving...
-									{:else}
-										<Save class="h-4 w-4" />
-										Save
-									{/if}
-								</Button>
-								{#if dirty}
-									<span class="text-xs text-muted-foreground">Unsaved changes</span>
-								{/if}
-							</div>
+							<SaveButton {dirty} {saving} onclick={saveUser} />
 						</div>
 					</div>
 

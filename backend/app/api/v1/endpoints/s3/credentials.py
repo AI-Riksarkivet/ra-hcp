@@ -6,9 +6,10 @@ import asyncio
 from typing import Annotated
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.dependencies import _derive_s3_keys, get_s3_service, get_s3_settings
+from app.api.dependencies import get_s3_service, get_s3_settings
+from app.core.auth_utils import derive_s3_keys
 from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error
 from app.core.security import (
     HcpCredentials,
@@ -40,8 +41,6 @@ async def generate_presigned_url(
     Anyone with the URL can access the object — no credentials needed.
     """
     if body.method not in _ALLOWED_METHODS:
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=422,
             detail=f"method must be one of: {', '.join(sorted(_ALLOWED_METHODS))}",
@@ -81,7 +80,7 @@ async def get_s3_credentials(
     to authenticate against HCP's S3 API.
     """
     creds: HcpCredentials = verify_token_with_credentials(token)
-    access_key, secret_key = _derive_s3_keys(creds)
+    access_key, secret_key = derive_s3_keys(creds.username, creds.password)
     settings = get_s3_settings()
     endpoint_url = s3_endpoint_for_tenant(creds.tenant, settings.hcp_domain)
     return S3CredentialsResponse(

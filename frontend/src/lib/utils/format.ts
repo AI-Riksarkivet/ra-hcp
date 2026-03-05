@@ -34,6 +34,66 @@ export function parseQuotaBytes(quota: string): number | null {
   return parseFloat(match[1]) * (QUOTA_UNITS[match[2].toUpperCase()] ?? 1);
 }
 
+export interface ChargebackEntry {
+  namespaceName?: string;
+  objectCount?: number;
+  ingestedVolume?: number;
+  storageCapacityUsed?: number;
+  bytesIn?: number;
+  bytesOut?: number;
+  reads?: number;
+  writes?: number;
+  deletes?: number;
+  valid?: boolean;
+}
+
+export function buildStorageMap(
+  chargeback: ChargebackEntry[],
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const entry of chargeback) {
+    if (entry.namespaceName) {
+      map.set(entry.namespaceName, entry.storageCapacityUsed ?? 0);
+    }
+  }
+  return map;
+}
+
+export function getStorageUsed(
+  chargeback: ChargebackEntry[],
+  name: string,
+): number {
+  const entry = chargeback.find((e) => e.namespaceName === name);
+  return entry?.storageCapacityUsed ?? 0;
+}
+
+export function calcQuotaPercent(
+  used: number,
+  quotaStr: string | null | undefined,
+): number | null {
+  if (!quotaStr) return null;
+  const quotaBytes = parseQuotaBytes(quotaStr);
+  if (!quotaBytes || !used) return null;
+  return Math.min(100, (used / quotaBytes) * 100);
+}
+
+const DATE_FILTER_MS: Record<string, number> = {
+  "24h": 86_400_000,
+  "7d": 604_800_000,
+  "30d": 2_592_000_000,
+};
+
+export function matchesDateFilter(
+  date: string | Date,
+  filter: string,
+): boolean {
+  if (!filter) return true;
+  const d = typeof date === "string" ? new Date(date) : date;
+  const maxAge = DATE_FILTER_MS[filter];
+  if (!maxAge) return true;
+  return Date.now() - d.getTime() <= maxAge;
+}
+
 export function formatRelative(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const now = new Date();

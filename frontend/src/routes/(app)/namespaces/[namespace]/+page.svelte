@@ -7,22 +7,17 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import {
-		ArrowLeft,
-		Save,
-		Loader2,
-		Plus,
-		HelpCircle,
-		Terminal,
-		Copy,
-		Info,
-		X,
-		Pencil,
-	} from 'lucide-svelte';
+	import { Save, Loader2, Plus, HelpCircle, Terminal, Copy, Info, X, Pencil } from 'lucide-svelte';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 	import { toast } from 'svelte-sonner';
-	import { formatDate, formatBytes, parseQuotaBytes } from '$lib/utils/format.js';
-	import { get_tenant_chargeback, type ChargebackEntry } from '$lib/tenant-info.remote.js';
+	import { formatDate, formatBytes, parseQuotaBytes, getStorageUsed } from '$lib/utils/format.js';
+	import type { ChargebackEntry } from '$lib/utils/format.js';
+	import { get_tenant_chargeback } from '$lib/tenant-info.remote.js';
+	import { PERMISSION_DESCRIPTIONS } from '$lib/constants.js';
+	import BackButton from '$lib/components/ui/back-button.svelte';
+	import SaveButton from '$lib/components/ui/save-button.svelte';
+	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
+	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import {
 		get_namespace,
@@ -48,26 +43,18 @@
 		smtpEnabled: 'Enable email-based object ingestion',
 	};
 
-	const PERMISSION_DESCRIPTIONS: Record<string, string> = {
-		READ: 'Allow reading object data and metadata',
-		WRITE: 'Allow creating and modifying objects',
-		DELETE: 'Allow deleting objects',
-		PURGE: 'Permanently remove objects (bypass retention)',
-		SEARCH: 'Query objects via HCP metadata search engine',
-		BROWSE: 'Browse namespace directory listings',
-	};
-
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let hcpDomain = $derived((page.data.hcpDomain as string) || '');
 	let namespaceName = $derived(page.params.namespace ?? '');
 
 	// --- Storage usage from chargeback ---
 	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
-	let nsStorageUsed = $derived.by(() => {
-		const entries = (chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[];
-		const entry = entries.find((e) => e.namespaceName === namespaceName);
-		return entry?.storageCapacityUsed ?? 0;
-	});
+	let nsStorageUsed = $derived(
+		getStorageUsed(
+			(chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[],
+			namespaceName
+		)
+	);
 
 	// --- NFS connection info ---
 	let nfsDomain = $derived(hcpDomain ? `nfs.${hcpDomain}` : 'nfs.<hcp-domain>');
@@ -506,20 +493,7 @@
 <div class="space-y-8">
 	<!-- Header -->
 	<div class="flex items-center gap-4">
-		<Tooltip.Root>
-			<Tooltip.Trigger>
-				{#snippet child({ props })}
-					<a
-						href="/namespaces"
-						class="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-						{...props}
-					>
-						<ArrowLeft class="h-5 w-5" />
-					</a>
-				{/snippet}
-			</Tooltip.Trigger>
-			<Tooltip.Content>Back to namespaces</Tooltip.Content>
-		</Tooltip.Root>
+		<BackButton href="/namespaces" label="Back to namespaces" />
 		<div>
 			<h2 class="text-2xl font-bold">{namespaceName}</h2>
 			<p class="mt-1 text-sm text-muted-foreground">Namespace settings and access control</p>
@@ -527,9 +501,7 @@
 	</div>
 
 	{#if !tenant}
-		<div class="rounded-lg border border-dashed p-8 text-center">
-			<p class="text-muted-foreground">Log in with a tenant to view namespace details.</p>
-		</div>
+		<NoTenantPlaceholder message="Log in with a tenant to view namespace details." />
 	{:else}
 		<!-- Section 1: General Info -->
 		<section class="space-y-4">
@@ -630,16 +602,7 @@
 									</p>
 									{#if quota}
 										{@const pct = Math.min(100, (nsStorageUsed / quota) * 100)}
-										<div class="mt-1 h-1.5 w-full max-w-32 overflow-hidden rounded-full bg-muted">
-											<div
-												class="h-full rounded-full transition-all {pct > 90
-													? 'bg-destructive'
-													: pct > 70
-														? 'bg-yellow-500'
-														: 'bg-primary'}"
-												style="width: {pct}%"
-											></div>
-										</div>
+										<StorageProgressBar percent={pct} class="mt-1 max-w-32" />
 									{/if}
 								{/if}
 							</div>
@@ -764,23 +727,8 @@
 								</Tooltip.Root>
 							</label>
 						</div>
-						<div class="mt-4 flex items-center gap-3">
-							<Button
-								size="sm"
-								disabled={!protocolsDirty || savingProtocols}
-								onclick={saveProtocols}
-							>
-								{#if savingProtocols}
-									<Loader2 class="h-4 w-4 animate-spin" />
-									Saving...
-								{:else}
-									<Save class="h-4 w-4" />
-									Save Protocols
-								{/if}
-							</Button>
-							{#if protocolsDirty}
-								<span class="text-xs text-muted-foreground">Unsaved changes</span>
-							{/if}
+						<div class="mt-4">
+							<SaveButton dirty={protocolsDirty} saving={savingProtocols} onclick={saveProtocols} />
 						</div>
 					</div>
 				{/await}
@@ -832,23 +780,12 @@
 							</Tooltip.Root>
 						</label>
 					</div>
-					<div class="mt-4 flex items-center gap-3">
-						<Button
-							size="sm"
-							disabled={!nsSettingsDirty || savingNsSettings}
+					<div class="mt-4">
+						<SaveButton
+							dirty={nsSettingsDirty}
+							saving={savingNsSettings}
 							onclick={saveNsSettings}
-						>
-							{#if savingNsSettings}
-								<Loader2 class="h-4 w-4 animate-spin" />
-								Saving...
-							{:else}
-								<Save class="h-4 w-4" />
-								Save Features
-							{/if}
-						</Button>
-						{#if nsSettingsDirty}
-							<span class="text-xs text-muted-foreground">Unsaved changes</span>
-						{/if}
+						/>
 					</div>
 				</div>
 			</section>
@@ -898,15 +835,7 @@
 								<p class="text-sm text-muted-foreground">No tags yet</p>
 							{/if}
 							<div class="flex items-center gap-3">
-								<Button size="sm" disabled={savingTags} onclick={saveTags}>
-									{#if savingTags}
-										<Loader2 class="h-4 w-4 animate-spin" />
-										Saving...
-									{:else}
-										<Save class="h-4 w-4" />
-										Save Tags
-									{/if}
-								</Button>
+								<SaveButton dirty={true} saving={savingTags} onclick={saveTags} />
 								<Button variant="ghost" size="sm" onclick={() => (editingTags = false)}>
 									Cancel
 								</Button>

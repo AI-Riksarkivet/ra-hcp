@@ -7,6 +7,7 @@ from collections.abc import AsyncGenerator
 import httpx
 import pytest
 import respx
+from fastapi import HTTPException
 
 from app.core.config import MapiSettings
 from app.schemas.query import ObjectQuery, OperationQuery
@@ -160,30 +161,31 @@ async def test_operation_query_success(svc: QueryService, query_mock):
 async def test_query_hcp_error_raises(svc: QueryService, query_mock):
     query_mock.post(QUERY_URL).respond(403, text="Access denied")
 
-    with pytest.raises(httpx.HTTPStatusError if False else Exception):
+    with pytest.raises(HTTPException) as exc_info:
         await svc.object_query(
             "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
         )
+    assert exc_info.value.status_code == 403
 
 
 async def test_query_timeout_returns_504(svc: QueryService, query_mock):
     query_mock.post(QUERY_URL).mock(side_effect=httpx.TimeoutException("timeout"))
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await svc.object_query(
             "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
         )
-    assert exc_info.value.status_code == 504  # type: ignore[union-attr]
+    assert exc_info.value.status_code == 504
 
 
 async def test_query_connect_error_returns_502(svc: QueryService, query_mock):
     query_mock.post(QUERY_URL).mock(side_effect=httpx.ConnectError("unreachable"))
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await svc.object_query(
             "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
         )
-    assert exc_info.value.status_code == 502  # type: ignore[union-attr]
+    assert exc_info.value.status_code == 502
 
 
 async def test_query_no_domain_raises_400():
@@ -196,11 +198,11 @@ async def test_query_no_domain_raises_400():
         hcp_password="testpass",
     )
     svc = QueryService(settings)
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(HTTPException) as exc_info:
         await svc.object_query(
             "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
         )
-    assert exc_info.value.status_code == 400  # type: ignore[union-attr]
+    assert exc_info.value.status_code == 400
     await svc.close()
 
 

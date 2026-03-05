@@ -6,7 +6,6 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
 	import {
-		ArrowLeft,
 		Upload,
 		Trash2,
 		Download,
@@ -25,10 +24,21 @@
 		Check,
 	} from 'lucide-svelte';
 	import FileViewer from '$lib/components/ui/FileViewer.svelte';
-	import { formatBytes, formatDate, parseQuotaBytes } from '$lib/utils/format.js';
+	import {
+		formatBytes,
+		formatDate,
+		parseQuotaBytes,
+		getStorageUsed,
+		calcQuotaPercent,
+		matchesDateFilter,
+	} from '$lib/utils/format.js';
+	import type { ChargebackEntry } from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { SvelteSet } from 'svelte/reactivity';
+	import { useSelection } from '$lib/utils/use-selection.svelte.js';
+	import { useDelete } from '$lib/utils/use-delete.svelte.js';
+	import BackButton from '$lib/components/ui/back-button.svelte';
+	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
@@ -39,7 +49,7 @@
 		bulk_presign,
 		generate_presigned_url,
 	} from '$lib/buckets.remote.js';
-	import { get_tenant_chargeback, type ChargebackEntry } from '$lib/tenant-info.remote.js';
+	import { get_tenant_chargeback } from '$lib/tenant-info.remote.js';
 	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -51,11 +61,9 @@
 	let bucket = $derived(page.params.bucket ?? '');
 
 	// Bucket-specific storage from chargeback (bucket name = namespace name in HCP)
-	let bucketStorageUsed = $derived.by(() => {
-		const entries = (chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[];
-		const entry = entries.find((e) => e.namespaceName === bucket);
-		return entry?.storageCapacityUsed ?? 0;
-	});
+	let bucketStorageUsed = $derived(
+		getStorageUsed((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[], bucket)
+	);
 
 	// Bucket-specific quota from namespace info
 	let bucketQuotaStr = $derived.by(() => {
@@ -65,11 +73,7 @@
 	});
 
 	let bucketQuotaBytes = $derived(bucketQuotaStr ? parseQuotaBytes(bucketQuotaStr) : null);
-
-	let bucketQuotaPercent = $derived.by(() => {
-		if (!bucketQuotaBytes || !bucketStorageUsed) return null;
-		return Math.min(100, (bucketStorageUsed / bucketQuotaBytes) * 100);
-	});
+	let bucketQuotaPercent = $derived(calcQuotaPercent(bucketStorageUsed, bucketQuotaStr));
 	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
 	let objectData = $derived(get_objects({ bucket, prefix }));
 
@@ -271,12 +275,7 @@
 				if (sizeFilter === '>100MB' && s < 104857600) return false;
 			}
 			if (dateFilter && obj.last_modified) {
-				const d = new Date(obj.last_modified);
-				const now = new Date();
-				const diff = now.getTime() - d.getTime();
-				if (dateFilter === '24h' && diff > 86400000) return false;
-				if (dateFilter === '7d' && diff > 604800000) return false;
-				if (dateFilter === '30d' && diff > 2592000000) return false;
+				if (!matchesDateFilter(obj.last_modified, dateFilter)) return false;
 			}
 			return true;
 		})
@@ -289,8 +288,12 @@
 		dateFilter = '';
 	}
 
-	let selected = new SvelteSet<string>();
 	let selectableObjects = $derived(filteredObjects.filter((obj) => !isObjFolder(obj)));
+
+	const { selected, allSelected, toggleAll, toggleOne } = useSelection(
+		() => selectableObjects,
+		(o) => o.key
+	);
 
 	// --- File Viewer ---
 	let viewerOpen = $state(false);
@@ -313,25 +316,6 @@
 	}
 	function viewerNext() {
 		if (viewerHasNext) viewerIndex++;
-	}
-
-	let allSelected = $derived(
-		selectableObjects.length > 0 && selectableObjects.every((obj) => selected.has(obj.key))
-	);
-
-	function toggleAll() {
-		if (allSelected) {
-			selected.clear();
-		} else {
-			for (const obj of selectableObjects) selected.add(obj.key);
-		}
-	}
-	function toggleOne(key: string) {
-		if (selected.has(key)) {
-			selected.delete(key);
-		} else {
-			selected.add(key);
-		}
 	}
 
 	// --- Presigned URL ---
@@ -417,38 +401,22 @@
 		}
 	}
 
-	let deleteTarget = $state('');
-	let deleteDialogOpen = $state(false);
-	let bulkDeleteOpen = $state(false);
-	let deleting = $state(false);
+	const del = useDelete({ entityName: 'object' });
 
-	async function confirmDelete() {
-		if (!deleteTarget) return;
-		deleting = true;
-		try {
-			await delete_object({ bucket, key: deleteTarget }).updates(objectData);
-			toast.success(`Deleted ${getDisplayName(deleteTarget)}`);
-		} catch {
-			toast.error('Failed to delete object');
-		} finally {
-			deleting = false;
-			deleteDialogOpen = false;
-			deleteTarget = '';
-		}
+	function handleConfirmDelete() {
+		del.confirmDelete(() => delete_object({ bucket, key: del.deleteTarget }).updates(objectData));
 	}
 
-	async function confirmBulkDelete() {
-		deleting = true;
+	async function handleConfirmBulkDelete() {
 		const keys = [...selected];
-		try {
-			await bulk_delete_objects({ bucket, keys }).updates(objectData);
-			toast.success(`Deleted ${keys.length} object${keys.length !== 1 ? 's' : ''}`);
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete objects');
-		}
-		selected.clear();
-		deleting = false;
-		bulkDeleteOpen = false;
+		del.confirmBulkDelete(
+			keys,
+			async (_key, isLast) => {
+				if (!isLast) return; // batch call on last item only
+				await bulk_delete_objects({ bucket, keys }).updates(objectData);
+			},
+			() => selected.clear()
+		);
 	}
 </script>
 
@@ -457,18 +425,7 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-4">
-			<Tooltip.Root>
-				<Tooltip.Trigger>
-					{#snippet child({ props })}
-						<a
-							href="/buckets"
-							class="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-							{...props}><ArrowLeft class="h-5 w-5" /></a
-						>
-					{/snippet}
-				</Tooltip.Trigger>
-				<Tooltip.Content>Back to buckets</Tooltip.Content>
-			</Tooltip.Root>
+			<BackButton href="/buckets" label="Back to buckets" />
 			<div>
 				<h2 class="text-2xl font-bold">{bucket}</h2>
 				{#if prefix}<p class="mt-1 text-sm text-muted-foreground">
@@ -489,16 +446,7 @@
 										: ''}</span
 								>
 								{#if bucketQuotaPercent !== null}
-									<span class="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-										<span
-											class="block h-full rounded-full {bucketQuotaPercent > 90
-												? 'bg-destructive'
-												: bucketQuotaPercent > 70
-													? 'bg-yellow-500'
-													: 'bg-primary'}"
-											style="width: {bucketQuotaPercent}%"
-										></span>
-									</span>
+									<StorageProgressBar percent={bucketQuotaPercent} class="w-16" />
 								{/if}
 							</span>
 						{/snippet}
@@ -561,7 +509,7 @@
 
 			{#if selectedFiles.length > 0}
 				<div class="max-h-64 space-y-2 overflow-y-auto">
-					{#each selectedFiles as item, i}
+					{#each selectedFiles as item, i (item.key)}
 						<div class="flex items-center gap-3 rounded-lg border p-2">
 							{#if item.preview}<img
 									src={item.preview}
@@ -662,7 +610,7 @@
 				{#if uniqueOwners.length > 0}
 					<select bind:value={ownerFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
 						<option value="">All owners</option>
-						{#each uniqueOwners as o}<option value={o}>{o}</option>{/each}
+						{#each uniqueOwners as o (o)}<option value={o}>{o}</option>{/each}
 					</select>
 				{/if}
 				<select bind:value={sizeFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
@@ -697,7 +645,7 @@
 							class="h-3.5 w-3.5"
 						/>{/if}Download Selected</Button
 				>
-				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}
+				<Button variant="destructive" size="sm" onclick={() => del.requestBulkDelete()}
 					><Trash2 class="h-3.5 w-3.5" />Delete Selected</Button
 				>
 				<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Deselect All</Button>
@@ -750,7 +698,6 @@
 								role="button"
 								tabindex={0}
 							>
-								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
 									{#if !folder}<input
 											type="checkbox"
@@ -788,7 +735,6 @@
 								<td class="px-4 py-3 text-muted-foreground"
 									>{obj.last_modified ? formatDate(obj.last_modified) : '-'}</td
 								>
-								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
 									{#if !folder}
 										<span class="flex items-center gap-1">
@@ -820,10 +766,7 @@
 													>{#snippet child({ props })}<button
 															type="button"
 															{...props}
-															onclick={() => {
-																deleteTarget = obj.key;
-																deleteDialogOpen = true;
-															}}
+															onclick={() => del.requestDelete(obj.key)}
 															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 															><Trash2 class="h-4 w-4" /></button
 														>{/snippet}</Tooltip.Trigger
@@ -861,11 +804,11 @@
 </div>
 
 <DeleteConfirmDialog
-	bind:open={deleteDialogOpen}
-	name={deleteTarget ? getDisplayName(deleteTarget) : ''}
+	bind:open={del.deleteDialogOpen}
+	name={del.deleteTarget ? getDisplayName(del.deleteTarget) : ''}
 	itemType="object"
-	loading={deleting}
-	onconfirm={confirmDelete}
+	loading={del.deleting}
+	onconfirm={handleConfirmDelete}
 />
 
 <Dialog.Root
@@ -967,9 +910,9 @@
 </Dialog.Root>
 
 <BulkDeleteDialog
-	bind:open={bulkDeleteOpen}
+	bind:open={del.bulkDeleteOpen}
 	count={selected.size}
 	itemType="object"
-	loading={deleting}
-	onconfirm={confirmBulkDelete}
+	loading={del.deleting}
+	onconfirm={handleConfirmBulkDelete}
 />

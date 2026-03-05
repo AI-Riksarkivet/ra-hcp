@@ -7,19 +7,29 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { formatDate, formatBytes, parseQuotaBytes } from '$lib/utils/format.js';
+	import {
+		formatDate,
+		formatBytes,
+		parseQuotaBytes,
+		buildStorageMap,
+		calcQuotaPercent,
+		matchesDateFilter,
+	} from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { SvelteSet } from 'svelte/reactivity';
+	import { useSelection } from '$lib/utils/use-selection.svelte.js';
+	import { useDelete } from '$lib/utils/use-delete.svelte.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
+	import PageHeader from '$lib/components/ui/page-header.svelte';
+	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
+	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import { get_buckets, create_bucket, delete_bucket } from '$lib/buckets.remote.js';
 	import {
 		get_tenant,
 		get_tenant_statistics,
 		get_tenant_chargeback,
-		type ChargebackEntry,
 	} from '$lib/tenant-info.remote.js';
 	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
 
@@ -29,29 +39,17 @@
 	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
 	let nsData = $derived(tenant ? get_namespaces({ tenant }) : undefined);
 
-	let tenantQuotaBytes = $derived.by(() => {
-		const info = tenantInfo?.current;
-		if (!info?.hardQuota) return null;
-		return parseQuotaBytes(info.hardQuota);
-	});
+	let tenantQuotaPercent = $derived(
+		calcQuotaPercent(
+			Number(tenantStats?.current?.storageCapacityUsed ?? 0),
+			tenantInfo?.current?.hardQuota
+		)
+	);
 
-	let tenantQuotaPercent = $derived.by(() => {
-		const stats = tenantStats?.current;
-		if (!tenantQuotaBytes || !stats?.storageCapacityUsed) return null;
-		return Math.min(100, (Number(stats.storageCapacityUsed) / tenantQuotaBytes) * 100);
-	});
-
-	let chargeback = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
+	let chargeback = $derived(chargebackData?.current?.chargebackData ?? []);
 	let namespaces = $derived((nsData?.current ?? []) as Namespace[]);
 
-	// Map bucket/namespace name → storage used from chargeback
-	let bucketStorageMap = $derived.by(() => {
-		const map = new Map<string, number>();
-		for (const entry of chargeback) {
-			if (entry.namespaceName) map.set(entry.namespaceName, entry.storageCapacityUsed ?? 0);
-		}
-		return map;
-	});
+	let bucketStorageMap = $derived(buildStorageMap(chargeback));
 
 	// Map bucket/namespace name → hard quota from namespace info
 	let bucketQuotaMap = $derived.by(() => {
@@ -82,83 +80,31 @@
 	let filteredBuckets = $derived(
 		buckets.filter((b) => {
 			if (search && !b.name.toLowerCase().includes(search.toLowerCase())) return false;
-			if (dateFilter) {
-				const d = new Date(b.creation_date);
-				const now = new Date();
-				if (dateFilter === '24h' && now.getTime() - d.getTime() > 86400000) return false;
-				if (dateFilter === '7d' && now.getTime() - d.getTime() > 604800000) return false;
-				if (dateFilter === '30d' && now.getTime() - d.getTime() > 2592000000) return false;
-			}
+			if (dateFilter && !matchesDateFilter(b.creation_date, dateFilter)) return false;
 			return true;
 		})
 	);
 
-	let selected = new SvelteSet<string>();
-	let allSelected = $derived(
-		filteredBuckets.length > 0 && filteredBuckets.every((b) => selected.has(b.name))
+	const { selected, allSelected, toggleAll, toggleOne } = useSelection(
+		() => filteredBuckets,
+		(b) => b.name
 	);
 
-	function toggleAll() {
-		if (allSelected) {
-			selected.clear();
-		} else {
-			for (const b of filteredBuckets) selected.add(b.name);
-		}
+	const del = useDelete({ entityName: 'bucket' });
+
+	function onConfirmDelete() {
+		del.confirmDelete(() => delete_bucket({ bucket: del.deleteTarget }).updates(bucketData));
 	}
 
-	function toggleOne(name: string) {
-		if (selected.has(name)) {
-			selected.delete(name);
-		} else {
-			selected.add(name);
-		}
-	}
-
-	let deleteTarget = $state('');
-	let deleteDialogOpen = $state(false);
-	let bulkDeleteOpen = $state(false);
-	let deleting = $state(false);
-
-	async function confirmDelete() {
-		if (!deleteTarget) return;
-		deleting = true;
-		try {
-			await delete_bucket({ bucket: deleteTarget }).updates(bucketData);
-			toast.success(`Deleted bucket "${deleteTarget}"`);
-		} catch {
-			toast.error('Failed to delete bucket');
-		} finally {
-			deleting = false;
-			deleteDialogOpen = false;
-			deleteTarget = '';
-		}
-	}
-
-	async function confirmBulkDelete() {
-		deleting = true;
-		const names = [...selected];
-		let successCount = 0,
-			failCount = 0;
-		for (let i = 0; i < names.length; i++) {
-			try {
-				const call = delete_bucket({ bucket: names[i] });
-				if (i === names.length - 1) {
-					await call.updates(bucketData);
-				} else {
-					await call;
-				}
-				successCount++;
-			} catch {
-				failCount++;
-			}
-		}
-		if (successCount > 0)
-			toast.success(`Deleted ${successCount} bucket${successCount !== 1 ? 's' : ''}`);
-		if (failCount > 0)
-			toast.error(`Failed to delete ${failCount} bucket${failCount !== 1 ? 's' : ''}`);
-		selected.clear();
-		deleting = false;
-		bulkDeleteOpen = false;
+	function onConfirmBulkDelete() {
+		del.confirmBulkDelete(
+			[...selected],
+			(name, isLast) => {
+				const call = delete_bucket({ bucket: name });
+				return isLast ? call.updates(bucketData) : call;
+			},
+			() => selected.clear()
+		);
 	}
 
 	let createOpen = $state(false);
@@ -191,28 +137,20 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<div>
-			<h2 class="text-2xl font-bold">Buckets</h2>
-			<p class="mt-1 text-sm text-muted-foreground">Manage S3 buckets on your HCP system</p>
-		</div>
-		<Button onclick={() => (createOpen = true)}>
-			<Plus class="h-4 w-4" />
-			Create Bucket
-		</Button>
-	</div>
+	<PageHeader title="Buckets" description="Manage S3 buckets on your HCP system">
+		{#snippet actions()}
+			<Button onclick={() => (createOpen = true)}>
+				<Plus class="h-4 w-4" />
+				Create Bucket
+			</Button>
+		{/snippet}
+	</PageHeader>
 
 	<Dialog.Root bind:open={createOpen}>
 		<Dialog.Content class="sm:max-w-md">
 			<Dialog.Header><Dialog.Title>Create Bucket</Dialog.Title></Dialog.Header>
 			<form onsubmit={handleCreate} class="space-y-4">
-				{#if createError}
-					<div
-						class="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-					>
-						{createError}
-					</div>
-				{/if}
+				<ErrorBanner message={createError} />
 				<div class="space-y-2">
 					<Label for="bucket-name">Bucket Name</Label>
 					<Input id="bucket-name" name="bucket" placeholder="my-bucket" required />
@@ -267,16 +205,7 @@
 										<span
 											>{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}</span
 										>
-										<span class="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-											<span
-												class="block h-full rounded-full transition-all {tenantQuotaPercent > 90
-													? 'bg-destructive'
-													: tenantQuotaPercent > 70
-														? 'bg-yellow-500'
-														: 'bg-primary'}"
-												style="width: {tenantQuotaPercent}%"
-											></span>
-										</span>
+										<StorageProgressBar percent={tenantQuotaPercent} class="inline-block w-16" />
 									</span>
 									<span class="text-border">|</span>
 								{/if}
@@ -291,7 +220,7 @@
 		{#if selected.size > 0}
 			<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
 				<span class="text-sm font-medium">{selected.size} selected</span>
-				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}>
+				<Button variant="destructive" size="sm" onclick={() => del.requestBulkDelete()}>
 					<Trash2 class="h-3.5 w-3.5" />Delete Selected
 				</Button>
 				<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Deselect All</Button>
@@ -365,18 +294,7 @@
 													>
 													{#if quota}
 														{@const pct = Math.min(100, (used / quota) * 100)}
-														<div
-															class="h-1.5 w-full max-w-24 overflow-hidden rounded-full bg-muted"
-														>
-															<div
-																class="h-full rounded-full transition-all {pct > 90
-																	? 'bg-destructive'
-																	: pct > 70
-																		? 'bg-yellow-500'
-																		: 'bg-primary'}"
-																style="width: {pct}%"
-															></div>
-														</div>
+														<StorageProgressBar percent={pct} class="max-w-24" />
 													{/if}
 												</div>
 											{:else}
@@ -395,10 +313,7 @@
 												<button
 													type="button"
 													{...props}
-													onclick={() => {
-														deleteTarget = bucket.name;
-														deleteDialogOpen = true;
-													}}
+													onclick={() => del.requestDelete(bucket.name)}
 													class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 												>
 													<Trash2 class="h-4 w-4" />
@@ -418,17 +333,17 @@
 </div>
 
 <DeleteConfirmDialog
-	bind:open={deleteDialogOpen}
-	name={deleteTarget}
+	bind:open={del.deleteDialogOpen}
+	name={del.deleteTarget}
 	itemType="bucket"
-	loading={deleting}
-	onconfirm={confirmDelete}
+	loading={del.deleting}
+	onconfirm={onConfirmDelete}
 />
 
 <BulkDeleteDialog
-	bind:open={bulkDeleteOpen}
+	bind:open={del.bulkDeleteOpen}
 	count={selected.size}
 	itemType="bucket"
-	loading={deleting}
-	onconfirm={confirmBulkDelete}
+	loading={del.deleting}
+	onconfirm={onConfirmBulkDelete}
 />
