@@ -217,7 +217,7 @@
 					{/each}
 				</div>
 			</div>
-		{:then _}
+		{:then}
 			{#if !user}
 				<div class="rounded-lg border border-dashed p-8 text-center">
 					<p class="text-muted-foreground">User not found or could not be loaded.</p>
@@ -307,7 +307,7 @@
 									</div>
 								{/each}
 							</div>
-						{:then _}
+						{:then}
 							{#if creds && creds.access_key_id}
 								<div class="mt-3 space-y-3">
 									<div class="space-y-1">
@@ -437,7 +437,7 @@
 								{/each}
 							</div>
 						</div>
-					{:then _}
+					{:then}
 						{#if nsPermissions.length === 0}
 							<div class="rounded-lg border border-dashed p-6 text-center">
 								<p class="text-sm text-muted-foreground">This user has no namespace access.</p>

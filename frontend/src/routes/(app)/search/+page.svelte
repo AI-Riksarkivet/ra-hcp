@@ -20,10 +20,20 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import * as TablePrimitive from '$lib/components/ui/table/index.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
+	import {
+		DataTable,
+		createSvelteTable,
+		getCoreRowModel,
+		getSortedRowModel,
+		renderSnippet,
+		renderComponent,
+	} from '$lib/components/ui/data-table/index.js';
+	import type { ColumnDef, SortingState, OnChangeFn } from '@tanstack/table-core';
 	import { useSelection } from '$lib/utils/use-selection.svelte.js';
 	import { cn } from '$lib/utils.js';
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
@@ -34,6 +44,7 @@
 		type ObjectQueryResponse,
 		type OperationQueryResponse,
 	} from '$lib/search.remote.js';
+	import DataTableActions from './data-table/data-table-actions.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 
@@ -59,6 +70,28 @@
 		| 'changeTimeMilliseconds';
 	let sortField = $state<SortField | null>(null);
 	let sortAsc = $state(true);
+
+	// TanStack sorting integration
+	let sorting = $state<SortingState>([]);
+
+	$effect(() => {
+		sorting = sortField ? [{ id: sortField, desc: !sortAsc }] : [];
+	});
+
+	const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
+		const next = typeof updater === 'function' ? updater(sorting) : updater;
+		if (next.length === 0) {
+			sortField = null;
+			sortAsc = true;
+		} else {
+			sortField = next[0].id as SortField;
+			sortAsc = !next[0].desc;
+		}
+		if (objectSearched) {
+			objectOffset = 0;
+			handleObjectSearch();
+		}
+	};
 
 	// Column filter state
 	let filterNamespace = $state('');
@@ -123,7 +156,7 @@
 	}
 
 	function formatMillis(ms: string | undefined): string {
-		if (!ms) return '—';
+		if (!ms) return '\u2014';
 		return formatDate(new Date(Number(ms)));
 	}
 
@@ -188,24 +221,6 @@
 		}
 	}
 
-	function toggleSort(field: SortField) {
-		if (sortField === field) {
-			if (sortAsc) {
-				sortAsc = false;
-			} else {
-				sortField = null;
-				sortAsc = true;
-			}
-		} else {
-			sortField = field;
-			sortAsc = true;
-		}
-		if (objectSearched) {
-			objectOffset = 0;
-			handleObjectSearch();
-		}
-	}
-
 	function clearFilters() {
 		filterNamespace = '';
 		filterContentType = '';
@@ -241,15 +256,6 @@
 		}
 	}
 
-	const SORT_COLUMNS: { field: SortField; label: string; align?: 'right' }[] = [
-		{ field: 'utf8Name', label: 'Path' },
-		{ field: 'namespace', label: 'Namespace' },
-		{ field: 'size', label: 'Size', align: 'right' },
-		{ field: 'contentType', label: 'Content Type' },
-		{ field: 'owner', label: 'Owner' },
-		{ field: 'changeTimeMilliseconds', label: 'Modified' },
-	];
-
 	// ── Selection state (objects mode) ──
 	function itemKey(item: QueryResultObject): string {
 		return `${item.namespace ?? ''}:${item.urlName}`;
@@ -278,7 +284,211 @@
 		}
 		toast.success(`Started ${items.length} download${items.length !== 1 ? 's' : ''}`);
 	}
+
+	// ── Object search TanStack table ──
+	const objectColumns: ColumnDef<QueryResultObject>[] = [
+		{
+			id: 'select',
+			header: () =>
+				renderSnippet(selectAllCheckbox, {
+					checked: allSelected,
+					disabled: filteredResults.length === 0,
+				}),
+			cell: ({ row }) => renderSnippet(selectRowCheckbox, row.original),
+			meta: { headerClass: 'w-10', cellClass: 'px-4 py-3' },
+		},
+		{
+			accessorKey: 'utf8Name',
+			header: ({ column }) =>
+				renderSnippet(sortableHeader, {
+					label: 'Path',
+					sorted: column.getIsSorted(),
+					onclick: () => column.toggleSorting(),
+				}),
+			cell: ({ row }) => renderSnippet(pathCell, row.original),
+			meta: { cellClass: 'max-w-xs truncate px-4 py-3 font-medium' },
+		},
+		{
+			accessorKey: 'namespace',
+			header: ({ column }) =>
+				renderSnippet(sortableHeader, {
+					label: 'Namespace',
+					sorted: column.getIsSorted(),
+					onclick: () => column.toggleSorting(),
+				}),
+			cell: ({ row }) => (row.original.namespace ?? '\u2014') as string,
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			accessorKey: 'size',
+			header: ({ column }) =>
+				renderSnippet(sortableHeader, {
+					label: 'Size',
+					sorted: column.getIsSorted(),
+					onclick: () => column.toggleSorting(),
+				}),
+			cell: ({ row }) =>
+				(row.original.size != null ? formatBytes(row.original.size) : '\u2014') as string,
+			meta: { headerClass: 'text-right', cellClass: 'px-4 py-3 text-right text-muted-foreground' },
+		},
+		{
+			accessorKey: 'contentType',
+			header: ({ column }) =>
+				renderSnippet(sortableHeader, {
+					label: 'Content Type',
+					sorted: column.getIsSorted(),
+					onclick: () => column.toggleSorting(),
+				}),
+			cell: ({ row }) => (row.original.contentType ?? '\u2014') as string,
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			accessorKey: 'owner',
+			header: ({ column }) =>
+				renderSnippet(sortableHeader, {
+					label: 'Owner',
+					sorted: column.getIsSorted(),
+					onclick: () => column.toggleSorting(),
+				}),
+			cell: ({ row }) => (row.original.owner ?? '\u2014') as string,
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			accessorKey: 'changeTimeMilliseconds',
+			header: ({ column }) =>
+				renderSnippet(sortableHeader, {
+					label: 'Modified',
+					sorted: column.getIsSorted(),
+					onclick: () => column.toggleSorting(),
+				}),
+			cell: ({ row }) => formatMillis(row.original.changeTimeMilliseconds) as string,
+			meta: { cellClass: 'whitespace-nowrap px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'actions',
+			header: '',
+			cell: ({ row }) =>
+				renderComponent(DataTableActions, {
+					objectKey: displayPath(row.original),
+					downloadUrl: objectDownloadUrl(row.original),
+					namespace: row.original.namespace ?? '',
+				}),
+			meta: { headerClass: 'w-16', cellClass: 'px-4 py-3' },
+		},
+	];
+
+	let objectTable = $derived(
+		createSvelteTable({
+			get data() {
+				return filteredResults;
+			},
+			columns: objectColumns,
+			getCoreRowModel: getCoreRowModel(),
+			getSortedRowModel: getSortedRowModel(),
+			manualSorting: true,
+			state: {
+				get sorting() {
+					return sorting;
+				},
+			},
+			onSortingChange: handleSortingChange,
+		})
+	);
+
+	// ── Operation search TanStack table ──
+	const opColumns: ColumnDef<QueryResultObject>[] = [
+		{
+			accessorKey: 'utf8Name',
+			header: 'Path',
+			cell: ({ row }) => renderSnippet(pathCell, row.original),
+			meta: { cellClass: 'max-w-xs truncate px-4 py-3 font-medium' },
+		},
+		{
+			accessorKey: 'operation',
+			header: 'Operation',
+			cell: ({ row }) => renderSnippet(operationBadge, row.original),
+		},
+		{
+			accessorKey: 'namespace',
+			header: 'Namespace',
+			cell: ({ row }) => (row.original.namespace ?? '\u2014') as string,
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			accessorKey: 'changeTimeMilliseconds',
+			header: 'Time',
+			cell: ({ row }) => formatMillis(row.original.changeTimeMilliseconds) as string,
+			meta: { cellClass: 'whitespace-nowrap px-4 py-3 text-muted-foreground' },
+		},
+	];
+
+	let opTable = $derived(
+		createSvelteTable({
+			get data() {
+				return sortedOpResults;
+			},
+			columns: opColumns,
+			getCoreRowModel: getCoreRowModel(),
+		})
+	);
 </script>
+
+{#snippet sortableHeader(props: {
+	label: string;
+	sorted: false | 'asc' | 'desc';
+	onclick: () => void;
+})}
+	<button class="inline-flex items-center gap-1 hover:text-foreground" onclick={props.onclick}>
+		{props.label}
+		{#if props.sorted === 'asc'}
+			<ArrowUp class="h-3 w-3" />
+		{:else if props.sorted === 'desc'}
+			<ArrowDown class="h-3 w-3" />
+		{:else}
+			<ArrowUpDown class="h-3 w-3 opacity-30" />
+		{/if}
+	</button>
+{/snippet}
+
+{#snippet selectAllCheckbox(props: { checked: boolean; disabled: boolean })}
+	<Checkbox checked={props.checked} onCheckedChange={toggleAll} disabled={props.disabled} />
+{/snippet}
+
+{#snippet selectRowCheckbox(item: QueryResultObject)}
+	<Checkbox
+		checked={selected.has(itemKey(item))}
+		onCheckedChange={() => toggleOne(itemKey(item))}
+	/>
+{/snippet}
+
+{#snippet pathCell(item: QueryResultObject)}
+	<span title={displayPath(item)}>{displayPath(item)}</span>
+{/snippet}
+
+{#snippet operationBadge(item: QueryResultObject)}
+	<Badge variant={operationVariant(item.operation)}>
+		{item.operation}
+	</Badge>
+{/snippet}
+
+{#snippet objectSubHeaderRow()}
+	<TablePrimitive.Row class="border-b bg-muted/30 hover:bg-transparent">
+		<TablePrimitive.Cell class="px-4 py-1.5"></TablePrimitive.Cell>
+		<TablePrimitive.Cell class="px-4 py-1.5"></TablePrimitive.Cell>
+		<TablePrimitive.Cell class="px-4 py-1.5">
+			<Input bind:value={filterNamespace} placeholder="Filter..." class="h-6 px-2 text-xs" />
+		</TablePrimitive.Cell>
+		<TablePrimitive.Cell class="px-4 py-1.5"></TablePrimitive.Cell>
+		<TablePrimitive.Cell class="px-4 py-1.5">
+			<Input bind:value={filterContentType} placeholder="Filter..." class="h-6 px-2 text-xs" />
+		</TablePrimitive.Cell>
+		<TablePrimitive.Cell class="px-4 py-1.5">
+			<Input bind:value={filterOwner} placeholder="Filter..." class="h-6 px-2 text-xs" />
+		</TablePrimitive.Cell>
+		<TablePrimitive.Cell class="px-4 py-1.5"></TablePrimitive.Cell>
+		<TablePrimitive.Cell class="px-4 py-1.5"></TablePrimitive.Cell>
+	</TablePrimitive.Row>
+{/snippet}
 
 <svelte:head>
 	<title>Search - HCP Admin Console</title>
@@ -476,111 +686,11 @@
 					</div>
 				{/if}
 
-				<div class="overflow-x-auto rounded-lg border">
-					<table class="w-full text-left text-sm">
-						<thead
-							class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
-						>
-							<tr>
-								<th class="w-10 px-4 py-3">
-									<Checkbox
-										checked={allSelected}
-										onCheckedChange={toggleAll}
-										disabled={filteredResults.length === 0}
-									/>
-								</th>
-								{#each SORT_COLUMNS as col (col.field)}
-									<th class="px-4 py-3 font-medium {col.align === 'right' ? 'text-right' : ''}">
-										<button
-											class="inline-flex items-center gap-1 hover:text-foreground"
-											onclick={() => toggleSort(col.field)}
-										>
-											{col.label}
-											{#if sortField === col.field}
-												{#if sortAsc}
-													<ArrowUp class="h-3 w-3" />
-												{:else}
-													<ArrowDown class="h-3 w-3" />
-												{/if}
-											{:else}
-												<ArrowUpDown class="h-3 w-3 opacity-30" />
-											{/if}
-										</button>
-									</th>
-								{/each}
-								<th class="w-16 px-4 py-3 font-medium"></th>
-							</tr>
-							<tr class="border-b bg-muted/30">
-								<td class="px-4 py-1.5"></td>
-								<td class="px-4 py-1.5"></td>
-								<td class="px-4 py-1.5">
-									<Input
-										bind:value={filterNamespace}
-										placeholder="Filter..."
-										class="h-6 px-2 text-xs"
-									/>
-								</td>
-								<td class="px-4 py-1.5"></td>
-								<td class="px-4 py-1.5">
-									<Input
-										bind:value={filterContentType}
-										placeholder="Filter..."
-										class="h-6 px-2 text-xs"
-									/>
-								</td>
-								<td class="px-4 py-1.5">
-									<Input
-										bind:value={filterOwner}
-										placeholder="Filter..."
-										class="h-6 px-2 text-xs"
-									/>
-								</td>
-								<td class="px-4 py-1.5"></td>
-								<td class="px-4 py-1.5"></td>
-							</tr>
-						</thead>
-						<tbody class="divide-y">
-							{#each filteredResults as item (item.urlName + (item.version ?? ''))}
-								<tr class="bg-card transition-colors hover:bg-accent/50">
-									<td class="px-4 py-3">
-										<Checkbox
-											checked={selected.has(itemKey(item))}
-											onCheckedChange={() => toggleOne(itemKey(item))}
-										/>
-									</td>
-									<td class="max-w-xs truncate px-4 py-3 font-medium" title={displayPath(item)}>
-										{displayPath(item)}
-									</td>
-									<td class="px-4 py-3 text-muted-foreground">{item.namespace ?? '—'}</td>
-									<td class="px-4 py-3 text-right text-muted-foreground">
-										{item.size != null ? formatBytes(item.size) : '—'}
-									</td>
-									<td class="px-4 py-3 text-muted-foreground">{item.contentType ?? '—'}</td>
-									<td class="px-4 py-3 text-muted-foreground">{item.owner ?? '—'}</td>
-									<td class="whitespace-nowrap px-4 py-3 text-muted-foreground">
-										{formatMillis(item.changeTimeMilliseconds)}
-									</td>
-									<td class="px-4 py-3">
-										<a
-											href={objectDownloadUrl(item)}
-											download
-											class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-											title="Download"
-										>
-											<Download class="h-4 w-4" />
-										</a>
-									</td>
-								</tr>
-							{:else}
-								<tr>
-									<td colspan="8" class="px-4 py-6 text-center text-muted-foreground">
-										No results match your filters.
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<DataTable
+					table={objectTable}
+					noResultsMessage="No results match your filters."
+					subHeaderRow={objectSubHeaderRow}
+				/>
 
 				<!-- Pagination -->
 				{#if objectTotalPages > 1}
@@ -662,40 +772,7 @@
 				<div class="text-sm text-muted-foreground">
 					{opResults.status.totalResults.toLocaleString()} operations found
 				</div>
-				<div class="overflow-x-auto rounded-lg border">
-					<table class="w-full text-left text-sm">
-						<thead
-							class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
-						>
-							<tr>
-								<th class="px-4 py-3 font-medium">Path</th>
-								<th class="px-4 py-3 font-medium">Operation</th>
-								<th class="px-4 py-3 font-medium">Namespace</th>
-								<th class="px-4 py-3 font-medium">Time</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y">
-							{#each sortedOpResults as item (item.urlName + item.changeTimeMilliseconds)}
-								<tr class="bg-card transition-colors hover:bg-accent/50">
-									<td class="max-w-xs truncate px-4 py-3 font-medium" title={displayPath(item)}>
-										{displayPath(item)}
-									</td>
-									<td class="px-4 py-3">
-										<Badge variant={operationVariant(item.operation)}>
-											{item.operation}
-										</Badge>
-									</td>
-									<td class="px-4 py-3 text-muted-foreground">
-										{item.namespace ?? '—'}
-									</td>
-									<td class="whitespace-nowrap px-4 py-3 text-muted-foreground">
-										{formatMillis(item.changeTimeMilliseconds)}
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<DataTable table={opTable} noResultsMessage="No operations found." />
 			{:else if opSearched && !opError}
 				<div class="rounded-lg border border-dashed p-8 text-center">
 					<Activity class="mx-auto h-10 w-10 text-muted-foreground/50" />

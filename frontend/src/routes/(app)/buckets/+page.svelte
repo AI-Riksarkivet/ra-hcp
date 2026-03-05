@@ -2,7 +2,6 @@
 	import { page } from '$app/state';
 	import { Plus, Trash2, Search } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -34,6 +33,17 @@
 		get_tenant_chargeback,
 	} from '$lib/tenant-info.remote.js';
 	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
+	import {
+		DataTable,
+		createSvelteTable,
+		getCoreRowModel,
+		renderSnippet,
+		renderComponent,
+	} from '$lib/components/ui/data-table/index.js';
+	import type { ColumnDef } from '@tanstack/table-core';
+	import DataTableActions from './data-table/data-table-actions.svelte';
+
+	type BucketRow = { name: string; creation_date: string };
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let tenantInfo = $derived(tenant ? get_tenant({ tenant }) : undefined);
@@ -53,7 +63,7 @@
 
 	let bucketStorageMap = $derived(buildStorageMap(chargeback));
 
-	// Map bucket/namespace name → hard quota from namespace info
+	// Map bucket/namespace name -> hard quota from namespace info
 	let bucketQuotaMap = $derived.by(() => {
 		const map = new Map<string, string>();
 		for (const ns of namespaces) {
@@ -75,9 +85,7 @@
 
 	let search = $state('');
 	let dateFilter = $state('');
-	let buckets = $derived(
-		(bucketData.current?.buckets ?? []) as { name: string; creation_date: string }[]
-	);
+	let buckets = $derived((bucketData.current?.buckets ?? []) as BucketRow[]);
 
 	let filteredBuckets = $derived(
 		buckets.filter((b) => {
@@ -109,6 +117,78 @@
 		);
 	}
 
+	// --- TanStack Table columns ---
+	let columns = $derived.by((): ColumnDef<BucketRow>[] => {
+		const cols: ColumnDef<BucketRow>[] = [
+			{
+				id: 'select',
+				header: () => renderSnippet(checkboxHeader, undefined),
+				cell: ({ row }) => renderSnippet(checkboxCell, row.original),
+				meta: { headerClass: 'w-10', cellClass: 'px-4 py-3' },
+			},
+			{
+				accessorKey: 'name',
+				header: 'Name',
+				meta: { cellClass: 'px-4 py-3 font-medium' },
+			},
+		];
+
+		if (tenant) {
+			cols.push({
+				id: 'storage',
+				header: 'Storage Used',
+				cell: ({ row }) => renderSnippet(storageCell, row.original),
+				meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+			});
+		}
+
+		cols.push(
+			{
+				id: 'owner',
+				header: 'Owner',
+				cell: () => (ownerName || '-') as string,
+				meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+			},
+			{
+				id: 'created',
+				header: 'Created',
+				cell: ({ row }) => formatDate(row.original.creation_date) as string,
+				meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+			},
+			{
+				id: 'actions',
+				header: '',
+				cell: ({ row }) =>
+					renderComponent(DataTableActions, {
+						name: row.original.name,
+						ondelete: () => del.requestDelete(row.original.name),
+						onnavigate: () => goto(`/buckets/${row.original.name}`),
+					}),
+				meta: { headerClass: 'w-16', cellClass: 'px-4 py-3' },
+			}
+		);
+
+		return cols;
+	});
+
+	let table = $derived(
+		createSvelteTable({
+			get data() {
+				return filteredBuckets;
+			},
+			get columns() {
+				return columns;
+			},
+			getCoreRowModel: getCoreRowModel(),
+		})
+	);
+
+	let noResultsMessage = $derived(
+		buckets.length === 0
+			? 'No buckets found. Create one to get started.'
+			: `No results matching "${search}"`
+	);
+
 	let createOpen = $state(false);
 	let createError = $state('');
 	let creating = $state(false);
@@ -133,6 +213,47 @@
 		}
 	}
 </script>
+
+{#snippet checkboxHeader(_: undefined)}
+	<span
+		onclick={(e: MouseEvent) => e.stopPropagation()}
+		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
+		role="presentation"
+	>
+		<Checkbox
+			checked={allSelected}
+			onCheckedChange={toggleAll}
+			disabled={filteredBuckets.length === 0}
+		/>
+	</span>
+{/snippet}
+
+{#snippet checkboxCell(bucket: BucketRow)}
+	<span
+		onclick={(e: MouseEvent) => e.stopPropagation()}
+		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
+		role="presentation"
+	>
+		<Checkbox checked={selected.has(bucket.name)} onCheckedChange={() => toggleOne(bucket.name)} />
+	</span>
+{/snippet}
+
+{#snippet storageCell(bucket: BucketRow)}
+	{@const used = bucketStorageMap.get(bucket.name) ?? 0}
+	{@const quotaStr = bucketQuotaMap.get(bucket.name)}
+	{@const quota = quotaStr ? parseQuotaBytes(quotaStr) : null}
+	{#if used > 0 || quota}
+		<div class="flex flex-col gap-1">
+			<span class="text-sm">{formatBytes(used)}{quota ? ` / ${quotaStr}` : ''}</span>
+			{#if quota}
+				{@const pct = Math.min(100, (used / quota) * 100)}
+				<StorageProgressBar percent={pct} class="max-w-24" />
+			{/if}
+		</div>
+	{:else}
+		—
+	{/if}
+{/snippet}
 
 <svelte:head>
 	<title>Buckets - HCP Admin Console</title>
@@ -167,7 +288,7 @@
 
 	{#await bucketData}
 		<TableSkeleton rows={5} columns={5} />
-	{:then _}
+	{:then}
 		<div class="space-y-2">
 			<div class="relative">
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -235,104 +356,7 @@
 			</div>
 		{/if}
 
-		<div class="overflow-x-auto rounded-lg border">
-			<table class="w-full text-left text-sm">
-				<thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-					<tr>
-						<th class="w-10 px-4 py-3"
-							><Checkbox
-								checked={allSelected}
-								onCheckedChange={toggleAll}
-								disabled={filteredBuckets.length === 0}
-							/></th
-						>
-						<th class="px-4 py-3 font-medium">Name</th>
-						{#if tenant}
-							<th class="px-4 py-3 font-medium">Storage Used</th>
-						{/if}
-						<th class="px-4 py-3 font-medium">Owner</th>
-						<th class="px-4 py-3 font-medium">Created</th>
-						<th class="w-16 px-4 py-3 font-medium"></th>
-					</tr>
-				</thead>
-				<tbody class="divide-y">
-					{#if buckets.length === 0}
-						<tr
-							><td colspan={tenant ? 6 : 5} class="px-4 py-8 text-center text-muted-foreground"
-								>No buckets found. Create one to get started.</td
-							></tr
-						>
-					{:else if filteredBuckets.length === 0}
-						<tr
-							><td colspan={tenant ? 6 : 5} class="px-4 py-8 text-center text-muted-foreground"
-								>No results matching "{search}"</td
-							></tr
-						>
-					{:else}
-						{#each filteredBuckets as bucket (bucket.name)}
-							<tr
-								class="cursor-pointer bg-card transition-colors hover:bg-accent/50"
-								onclick={() => goto(`/buckets/${bucket.name}`)}
-								onkeydown={(e) => e.key === 'Enter' && goto(`/buckets/${bucket.name}`)}
-								role="button"
-								tabindex="0"
-							>
-								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
-									<Checkbox
-										checked={selected.has(bucket.name)}
-										onCheckedChange={() => toggleOne(bucket.name)}
-									/>
-								</td>
-								<td class="px-4 py-3 font-medium">{bucket.name}</td>
-								{#if tenant}
-									<td class="px-4 py-3 text-muted-foreground">
-										{#if true}
-											{@const used = bucketStorageMap.get(bucket.name) ?? 0}
-											{@const quotaStr = bucketQuotaMap.get(bucket.name)}
-											{@const quota = quotaStr ? parseQuotaBytes(quotaStr) : null}
-											{#if used > 0 || quota}
-												<div class="flex flex-col gap-1">
-													<span class="text-sm"
-														>{formatBytes(used)}{quota ? ` / ${quotaStr}` : ''}</span
-													>
-													{#if quota}
-														{@const pct = Math.min(100, (used / quota) * 100)}
-														<StorageProgressBar percent={pct} class="max-w-24" />
-													{/if}
-												</div>
-											{:else}
-												—
-											{/if}
-										{/if}
-									</td>
-								{/if}
-								<td class="px-4 py-3 text-muted-foreground">{ownerName || '-'}</td>
-								<td class="px-4 py-3 text-muted-foreground">{formatDate(bucket.creation_date)}</td>
-								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
-									<Tooltip.Root>
-										<Tooltip.Trigger>
-											{#snippet child({ props })}
-												<button
-													type="button"
-													{...props}
-													onclick={() => del.requestDelete(bucket.name)}
-													class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-												>
-													<Trash2 class="h-4 w-4" />
-												</button>
-											{/snippet}
-										</Tooltip.Trigger>
-										<Tooltip.Content>Delete bucket</Tooltip.Content>
-									</Tooltip.Root>
-								</td>
-							</tr>
-						{/each}
-					{/if}
-				</tbody>
-			</table>
-		</div>
+		<DataTable {table} onrowclick={(row) => goto(`/buckets/${row.name}`)} {noResultsMessage} />
 	{/await}
 </div>
 

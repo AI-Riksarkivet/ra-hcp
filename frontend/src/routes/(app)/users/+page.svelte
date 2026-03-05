@@ -21,6 +21,13 @@
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import {
+		DataTable,
+		createSvelteTable,
+		getCoreRowModel,
+		renderSnippet,
+	} from '$lib/components/ui/data-table/index.js';
+	import type { ColumnDef } from '@tanstack/table-core';
 
 	type Group = { groupname?: string; name?: string; description?: string };
 
@@ -61,6 +68,73 @@
 	}
 
 	let userNsAccess = $derived(await loadUserNsAccess(tenant, users));
+
+	// --- Groups TanStack Table ---
+	const groupColumns: ColumnDef<Group>[] = [
+		{
+			accessorFn: (row) => row.groupname ?? row.name ?? '—',
+			header: 'Group Name',
+			meta: { cellClass: 'px-4 py-3 font-medium' },
+		},
+		{
+			accessorFn: (row) => row.description || '—',
+			header: 'Description',
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+	];
+
+	let groupsTable = $derived(
+		createSvelteTable({
+			get data() {
+				return groups;
+			},
+			columns: groupColumns,
+			getCoreRowModel: getCoreRowModel(),
+		})
+	);
+
+	// --- Users TanStack Table ---
+	let userColumns = $derived.by((): ColumnDef<User>[] => [
+		{
+			accessorKey: 'username',
+			header: 'Username',
+			cell: ({ row }) => renderSnippet(usernameCell, row.original),
+			meta: { cellClass: 'px-4 py-3 font-medium' },
+		},
+		{
+			accessorKey: 'fullName',
+			header: 'Full Name',
+			cell: ({ row }) => (row.original.fullName || '—') as string,
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'status',
+			header: 'Status',
+			cell: ({ row }) => renderSnippet(statusCell, row.original),
+		},
+		{
+			id: 'roles',
+			header: 'Roles',
+			cell: ({ row }) => renderSnippet(rolesCell, row.original),
+		},
+		{
+			id: 'namespaceAccess',
+			header: 'Namespace Access',
+			cell: ({ row }) => renderSnippet(nsAccessCell, row.original),
+		},
+	]);
+
+	let usersTable = $derived(
+		createSvelteTable({
+			get data() {
+				return users;
+			},
+			get columns() {
+				return userColumns;
+			},
+			getCoreRowModel: getCoreRowModel(),
+		})
+	);
 
 	// --- Create User dialog ---
 	let createUserOpen = $state(false);
@@ -123,6 +197,43 @@
 	}
 </script>
 
+{#snippet usernameCell(user: User)}
+	<a href="/users/{user.username}" class="text-primary underline-offset-4 hover:underline">
+		{user.username}
+	</a>
+{/snippet}
+
+{#snippet statusCell(user: User)}
+	<Badge variant={user.enabled !== false ? 'default' : 'outline'}>
+		{user.enabled !== false ? 'Active' : 'Disabled'}
+	</Badge>
+{/snippet}
+
+{#snippet rolesCell(user: User)}
+	{#each getUserRoles(user) as role (role)}
+		<Badge variant="secondary" class="mr-1">{role}</Badge>
+	{/each}
+	{#if getUserRoles(user).length === 0}
+		<span class="text-muted-foreground">—</span>
+	{/if}
+{/snippet}
+
+{#snippet nsAccessCell(user: User)}
+	{#if userNsAccess[user.username] === undefined}
+		<div class="h-5 w-20 animate-pulse rounded bg-muted"></div>
+	{:else if userNsAccess[user.username].length > 0}
+		<div class="flex flex-wrap gap-1">
+			{#each userNsAccess[user.username] as ns (ns)}
+				<a href="/namespaces/{ns}">
+					<Badge variant="outline" class="cursor-pointer hover:bg-accent">{ns}</Badge>
+				</a>
+			{/each}
+		</div>
+	{:else}
+		<span class="text-muted-foreground">—</span>
+	{/if}
+{/snippet}
+
 <svelte:head>
 	<title>Users - HCP Admin Console</title>
 </svelte:head>
@@ -140,7 +251,7 @@
 					</div>
 				</div>
 				<TableSkeleton rows={5} columns={6} />
-			{:then _}
+			{:then}
 				<div class="mb-4 flex items-center justify-between">
 					<div class="flex items-center gap-3">
 						<h3 class="text-lg font-semibold">User Accounts</h3>
@@ -151,74 +262,7 @@
 						Create User
 					</Button>
 				</div>
-				<div class="overflow-x-auto rounded-lg border">
-					<table class="w-full text-left text-sm">
-						<thead
-							class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
-						>
-							<tr>
-								<th class="px-4 py-3 font-medium">Username</th>
-								<th class="px-4 py-3 font-medium">Full Name</th>
-								<th class="px-4 py-3 font-medium">Status</th>
-								<th class="px-4 py-3 font-medium">Roles</th>
-								<th class="px-4 py-3 font-medium">Namespace Access</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y">
-							{#if users.length === 0}
-								<tr>
-									<td colspan="5" class="px-4 py-8 text-center text-muted-foreground"
-										>No user accounts found.</td
-									>
-								</tr>
-							{:else}
-								{#each users as user (user.username)}
-									<tr class="bg-card transition-colors hover:bg-accent/50">
-										<td class="px-4 py-3 font-medium">
-											<a
-												href="/users/{user.username}"
-												class="text-primary underline-offset-4 hover:underline"
-											>
-												{user.username}
-											</a>
-										</td>
-										<td class="px-4 py-3 text-muted-foreground">{user.fullName || '—'}</td>
-										<td class="px-4 py-3">
-											<Badge variant={user.enabled !== false ? 'default' : 'outline'}>
-												{user.enabled !== false ? 'Active' : 'Disabled'}
-											</Badge>
-										</td>
-										<td class="px-4 py-3">
-											{#each getUserRoles(user) as role (role)}
-												<Badge variant="secondary" class="mr-1">{role}</Badge>
-											{/each}
-											{#if getUserRoles(user).length === 0}
-												<span class="text-muted-foreground">—</span>
-											{/if}
-										</td>
-										<td class="px-4 py-3">
-											{#if userNsAccess[user.username] === undefined}
-												<div class="h-5 w-20 animate-pulse rounded bg-muted"></div>
-											{:else if userNsAccess[user.username].length > 0}
-												<div class="flex flex-wrap gap-1">
-													{#each userNsAccess[user.username] as ns (ns)}
-														<a href="/namespaces/{ns}">
-															<Badge variant="outline" class="cursor-pointer hover:bg-accent"
-																>{ns}</Badge
-															>
-														</a>
-													{/each}
-												</div>
-											{:else}
-												<span class="text-muted-foreground">—</span>
-											{/if}
-										</td>
-									</tr>
-								{/each}
-							{/if}
-						</tbody>
-					</table>
-				</div>
+				<DataTable table={usersTable} noResultsMessage="No user accounts found." />
 			{/await}
 		</div>
 
@@ -231,7 +275,7 @@
 					</div>
 				</div>
 				<TableSkeleton rows={3} columns={2} />
-			{:then _}
+			{:then}
 				<div class="mb-4 flex items-center justify-between">
 					<div class="flex items-center gap-3">
 						<h3 class="text-lg font-semibold">Groups</h3>
@@ -242,34 +286,7 @@
 						Create Group
 					</Button>
 				</div>
-				<div class="overflow-x-auto rounded-lg border">
-					<table class="w-full text-left text-sm">
-						<thead
-							class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
-						>
-							<tr>
-								<th class="px-4 py-3 font-medium">Group Name</th>
-								<th class="px-4 py-3 font-medium">Description</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y">
-							{#if groups.length === 0}
-								<tr>
-									<td colspan="2" class="px-4 py-8 text-center text-muted-foreground"
-										>No groups found.</td
-									>
-								</tr>
-							{:else}
-								{#each groups as group (group.groupname ?? group.name ?? '')}
-									<tr class="bg-card transition-colors hover:bg-accent/50">
-										<td class="px-4 py-3 font-medium">{group.groupname ?? group.name ?? '—'}</td>
-										<td class="px-4 py-3 text-muted-foreground">{group.description || '—'}</td>
-									</tr>
-								{/each}
-							{/if}
-						</tbody>
-					</table>
-				</div>
+				<DataTable table={groupsTable} noResultsMessage="No groups found." />
 			{/await}
 		</div>
 	{:else}

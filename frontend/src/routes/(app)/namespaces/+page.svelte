@@ -1,18 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import {
-		Plus,
-		Trash2,
-		X,
-		Pencil,
-		FileBox,
-		HardDrive,
-		Boxes,
-		Users,
-		PieChart,
-	} from 'lucide-svelte';
+	import { goto } from '$app/navigation';
+	import { Plus, X, Pencil, FileBox, HardDrive, Boxes, Users, ChartPie } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
@@ -53,6 +43,15 @@
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
+	import {
+		DataTable,
+		createSvelteTable,
+		getCoreRowModel,
+		renderSnippet,
+		renderComponent,
+	} from '$lib/components/ui/data-table/index.js';
+	import type { ColumnDef } from '@tanstack/table-core';
+	import DataTableActions from './data-table/data-table-actions.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 
@@ -236,7 +235,209 @@
 			creating = false;
 		}
 	}
+
+	// --- TanStack Table ---
+	let nsColumns = $derived.by((): ColumnDef<Namespace>[] => [
+		{
+			id: 'select',
+			header: () =>
+				renderSnippet(checkboxHeaderSnippet, {
+					all: allSelected,
+					toggle: toggleAll,
+					disabled: filteredNamespaces.length === 0,
+				}),
+			cell: ({ row }) => renderSnippet(checkboxCellSnippet, row.original),
+			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
+		},
+		{
+			accessorKey: 'name',
+			header: 'Name',
+			cell: ({ row }) => renderSnippet(nameCellSnippet, row.original),
+			meta: { cellClass: 'px-4 py-3 font-medium' },
+		},
+		{
+			id: 'storage',
+			header: 'Storage Used',
+			cell: ({ row }) => renderSnippet(storageCellSnippet, row.original),
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'tags',
+			header: 'Tags',
+			cell: ({ row }) => renderSnippet(tagsCellSnippet, row.original),
+		},
+		{
+			accessorKey: 'description',
+			header: 'Description',
+			cell: ({ row }) => (row.original.description ?? '—') as string,
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			accessorKey: 'hardQuota',
+			header: 'Hard Quota',
+			cell: ({ row }) => (row.original.hardQuota ?? '—') as string,
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'softQuota',
+			header: 'Soft Quota',
+			cell: ({ row }) =>
+				(row.original.softQuota != null ? `${row.original.softQuota}%` : '—') as string,
+			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'hashScheme',
+			header: 'Hash Scheme',
+			cell: ({ row }) => renderSnippet(hashSchemeCellSnippet, row.original),
+		},
+		{
+			id: 'actions',
+			header: '',
+			cell: ({ row }) =>
+				renderComponent(DataTableActions, {
+					name: row.original.name,
+					ondelete: () => del.requestDelete(row.original.name),
+					onnavigate: () => goto(`/namespaces/${row.original.name}`),
+					onedittags: () => startEditTags(row.original),
+				}),
+			meta: { headerClass: 'w-16 px-4 py-3', cellClass: 'px-4 py-3' },
+		},
+	]);
+
+	let nsTable = $derived(
+		createSvelteTable({
+			get data() {
+				return filteredNamespaces;
+			},
+			get columns() {
+				return nsColumns;
+			},
+			getCoreRowModel: getCoreRowModel(),
+		})
+	);
 </script>
+
+{#snippet checkboxHeaderSnippet(props: {
+	all: boolean;
+	toggle: (checked: boolean) => void;
+	disabled: boolean;
+})}
+	<Checkbox checked={props.all} onCheckedChange={props.toggle} disabled={props.disabled} />
+{/snippet}
+
+{#snippet checkboxCellSnippet(ns: Namespace)}
+	<span
+		onclick={(e: MouseEvent) => e.stopPropagation()}
+		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
+		role="presentation"
+	>
+		<Checkbox checked={selected.has(ns.name)} onCheckedChange={() => toggleOne(ns.name)} />
+	</span>
+{/snippet}
+
+{#snippet nameCellSnippet(ns: Namespace)}
+	<a
+		href="/namespaces/{ns.name}"
+		class="text-primary underline-offset-4 hover:underline"
+		onclick={(e: MouseEvent) => e.stopPropagation()}
+	>
+		{ns.name}
+	</a>
+{/snippet}
+
+{#snippet storageCellSnippet(ns: Namespace)}
+	{@const used = nsStorageMap.get(ns.name) ?? 0}
+	{@const quota = ns.hardQuota ? parseQuotaBytes(ns.hardQuota) : null}
+	{#if used > 0 || quota}
+		<div class="flex flex-col gap-1">
+			<span class="text-sm">{formatBytes(used)}{quota ? ` / ${ns.hardQuota}` : ''}</span>
+			{#if quota}
+				{@const pct = Math.min(100, (used / quota) * 100)}
+				<StorageProgressBar percent={pct} class="max-w-24" />
+			{/if}
+		</div>
+	{:else}
+		—
+	{/if}
+{/snippet}
+
+{#snippet tagsCellSnippet(ns: Namespace)}
+	{#if editingTagsNs === ns.name}
+		<div
+			class="flex flex-col gap-1.5"
+			onclick={(e: MouseEvent) => e.stopPropagation()}
+			onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
+			role="presentation"
+		>
+			<div class="flex gap-1.5">
+				<Input
+					class="h-7 w-28 px-2 text-xs"
+					placeholder="Add tag..."
+					bind:value={editTagInput}
+					onkeydown={handleEditTagKeydown}
+				/>
+				<Button
+					variant="ghost"
+					size="icon"
+					class="h-7 w-7"
+					onclick={saveTags}
+					disabled={savingTags}
+				>
+					{#if savingTags}...{:else}Save{/if}
+				</Button>
+				<Button variant="ghost" size="icon" class="h-7 w-7" onclick={() => (editingTagsNs = '')}>
+					<X class="h-3 w-3" />
+				</Button>
+			</div>
+			{#if editTags.length > 0}
+				<div class="flex flex-wrap gap-1">
+					{#each editTags as t (t)}
+						<span class="inline-flex items-center gap-0.5">
+							<ServiceTagBadge tag={t} />
+							<button
+								type="button"
+								class="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
+								onclick={() => removeEditTag(t)}
+							>
+								<X class="h-2.5 w-2.5" />
+							</button>
+						</span>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	{:else}
+		<div class="group flex items-center gap-1">
+			{#if ns.tags?.tag?.length}
+				<div class="flex flex-wrap gap-1">
+					{#each ns.tags.tag as t (t)}
+						<ServiceTagBadge tag={t} />
+					{/each}
+				</div>
+			{:else}
+				<span class="text-muted-foreground">—</span>
+			{/if}
+			<button
+				type="button"
+				class="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+				onclick={(e: MouseEvent) => {
+					e.stopPropagation();
+					startEditTags(ns);
+				}}
+			>
+				<Pencil class="h-3 w-3" />
+			</button>
+		</div>
+	{/if}
+{/snippet}
+
+{#snippet hashSchemeCellSnippet(ns: Namespace)}
+	{#if ns.hashScheme}
+		<Badge variant="secondary">{ns.hashScheme}</Badge>
+	{:else}
+		<span class="text-muted-foreground">—</span>
+	{/if}
+{/snippet}
 
 <svelte:head>
 	<title>Namespaces - HCP Admin Console</title>
@@ -382,7 +583,7 @@
 				<StatCard
 					label="Quota Allocated"
 					value={formatBytes(totalAllocatedBytes)}
-					icon={PieChart}
+					icon={ChartPie}
 					delay="delay-150"
 				>
 					{#await tenantInfo then info}
@@ -401,7 +602,7 @@
 
 				{#await nsData}
 					<CardSkeleton />
-				{:then _}
+				{:then}
 					<StatCard
 						label="Namespaces"
 						value={String(namespaces.length)}
@@ -413,7 +614,7 @@
 				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-300">
 					{#await usersData}
 						<CardSkeleton />
-					{:then _}
+					{:then}
 						<StatCard label="Users" value={String(users.length)} icon={Users}>
 							<p class="mt-1 text-xs">
 								<a href="/users" class="text-primary underline-offset-4 hover:underline">
@@ -428,7 +629,7 @@
 
 		{#await nsData}
 			<TableSkeleton rows={5} columns={5} />
-		{:then _}
+		{:then}
 			<SearchToolbar
 				bind:search
 				placeholder="Search namespaces..."
@@ -437,188 +638,12 @@
 				ondeselectall={() => selected.clear()}
 			/>
 
-			<div class="overflow-x-auto rounded-lg border">
-				<table class="w-full text-left text-sm">
-					<thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-						<tr>
-							<th class="w-10 px-4 py-3"
-								><Checkbox
-									checked={allSelected}
-									onCheckedChange={toggleAll}
-									disabled={filteredNamespaces.length === 0}
-								/></th
-							>
-							<th class="px-4 py-3 font-medium">Name</th>
-							<th class="px-4 py-3 font-medium">Storage Used</th>
-							<th class="px-4 py-3 font-medium">Tags</th>
-							<th class="px-4 py-3 font-medium">Description</th>
-							<th class="px-4 py-3 font-medium">Hard Quota</th>
-							<th class="px-4 py-3 font-medium">Soft Quota</th>
-							<th class="px-4 py-3 font-medium">Hash Scheme</th>
-							<th class="w-16 px-4 py-3 font-medium"></th>
-						</tr>
-					</thead>
-					<tbody class="divide-y">
-						{#if namespaces.length === 0}
-							<tr
-								><td colspan="9" class="px-4 py-8 text-center text-muted-foreground"
-									>No namespaces found. Create one to get started.</td
-								></tr
-							>
-						{:else if filteredNamespaces.length === 0}
-							<tr
-								><td colspan="9" class="px-4 py-8 text-center text-muted-foreground"
-									>No results matching "{search}"</td
-								></tr
-							>
-						{:else}
-							{#each filteredNamespaces as ns (ns.name)}
-								<tr class="bg-card transition-colors hover:bg-accent/50">
-									<td
-										class="px-4 py-3"
-										onclick={(e) => e.stopPropagation()}
-										onkeydown={() => {}}
-										role="cell"
-									>
-										<Checkbox
-											checked={selected.has(ns.name)}
-											onCheckedChange={() => toggleOne(ns.name)}
-										/>
-									</td>
-									<td class="px-4 py-3 font-medium">
-										<a
-											href="/namespaces/{ns.name}"
-											class="text-primary underline-offset-4 hover:underline"
-											onclick={(e) => e.stopPropagation()}
-										>
-											{ns.name}
-										</a>
-									</td>
-									<td class="px-4 py-3 text-muted-foreground">
-										{#if true}
-											{@const used = nsStorageMap.get(ns.name) ?? 0}
-											{@const quota = ns.hardQuota ? parseQuotaBytes(ns.hardQuota) : null}
-											{#if used > 0 || quota}
-												<div class="flex flex-col gap-1">
-													<span class="text-sm"
-														>{formatBytes(used)}{quota ? ` / ${ns.hardQuota}` : ''}</span
-													>
-													{#if quota}
-														{@const pct = Math.min(100, (used / quota) * 100)}
-														<StorageProgressBar percent={pct} class="max-w-24" />
-													{/if}
-												</div>
-											{:else}
-												—
-											{/if}
-										{/if}
-									</td>
-									<td class="px-4 py-3">
-										{#if editingTagsNs === ns.name}
-											<div class="flex flex-col gap-1.5">
-												<div class="flex gap-1.5">
-													<Input
-														class="h-7 w-28 px-2 text-xs"
-														placeholder="Add tag..."
-														bind:value={editTagInput}
-														onkeydown={handleEditTagKeydown}
-													/>
-													<Button
-														variant="ghost"
-														size="icon"
-														class="h-7 w-7"
-														onclick={saveTags}
-														disabled={savingTags}
-													>
-														{#if savingTags}...{:else}Save{/if}
-													</Button>
-													<Button
-														variant="ghost"
-														size="icon"
-														class="h-7 w-7"
-														onclick={() => (editingTagsNs = '')}
-													>
-														<X class="h-3 w-3" />
-													</Button>
-												</div>
-												{#if editTags.length > 0}
-													<div class="flex flex-wrap gap-1">
-														{#each editTags as t (t)}
-															<span class="inline-flex items-center gap-0.5">
-																<ServiceTagBadge tag={t} />
-																<button
-																	type="button"
-																	class="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
-																	onclick={() => removeEditTag(t)}
-																>
-																	<X class="h-2.5 w-2.5" />
-																</button>
-															</span>
-														{/each}
-													</div>
-												{/if}
-											</div>
-										{:else}
-											<div class="group flex items-center gap-1">
-												{#if ns.tags?.tag?.length}
-													<div class="flex flex-wrap gap-1">
-														{#each ns.tags.tag as t (t)}
-															<ServiceTagBadge tag={t} />
-														{/each}
-													</div>
-												{:else}
-													<span class="text-muted-foreground">—</span>
-												{/if}
-												<button
-													type="button"
-													class="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-													onclick={() => startEditTags(ns)}
-												>
-													<Pencil class="h-3 w-3" />
-												</button>
-											</div>
-										{/if}
-									</td>
-									<td class="px-4 py-3 text-muted-foreground">{ns.description ?? '—'}</td>
-									<td class="px-4 py-3 text-muted-foreground">{ns.hardQuota ?? '—'}</td>
-									<td class="px-4 py-3 text-muted-foreground"
-										>{ns.softQuota != null ? `${ns.softQuota}%` : '—'}</td
-									>
-									<td class="px-4 py-3">
-										{#if ns.hashScheme}
-											<Badge variant="secondary">{ns.hashScheme}</Badge>
-										{:else}
-											<span class="text-muted-foreground">—</span>
-										{/if}
-									</td>
-									<td
-										class="px-4 py-3"
-										onclick={(e) => e.stopPropagation()}
-										onkeydown={() => {}}
-										role="cell"
-									>
-										<Tooltip.Root>
-											<Tooltip.Trigger>
-												{#snippet child({ props })}
-													<button
-														type="button"
-														onclick={() => del.requestDelete(ns.name)}
-														class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-														{...props}
-													>
-														<Trash2 class="h-4 w-4" />
-													</button>
-												{/snippet}
-											</Tooltip.Trigger>
-											<Tooltip.Content>Delete namespace</Tooltip.Content>
-										</Tooltip.Root>
-									</td>
-								</tr>
-							{/each}
-						{/if}
-					</tbody>
-				</table>
-			</div>
+			<DataTable
+				table={nsTable}
+				noResultsMessage={namespaces.length === 0
+					? 'No namespaces found. Create one to get started.'
+					: `No results matching "${search}"`}
+			/>
 		{/await}
 	{:else}
 		<NoTenantPlaceholder message="Log in with a tenant to manage namespaces." />

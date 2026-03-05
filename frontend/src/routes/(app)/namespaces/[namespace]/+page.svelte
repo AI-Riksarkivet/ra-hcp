@@ -11,6 +11,13 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Save, Loader2, Plus, HelpCircle, Terminal, Copy, Info, X, Pencil } from 'lucide-svelte';
+	import {
+		DataTable,
+		createSvelteTable,
+		getCoreRowModel,
+		renderSnippet,
+	} from '$lib/components/ui/data-table/index.js';
+	import type { ColumnDef } from '@tanstack/table-core';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 	import { toast } from 'svelte-sonner';
 	import { formatDate, formatBytes, parseQuotaBytes, getStorageUsed } from '$lib/utils/format.js';
@@ -487,7 +494,92 @@
 			grantPerms.add(perm);
 		}
 	}
+
+	// --- Permissions TanStack Table ---
+	let permColumns = $derived.by((): ColumnDef<string>[] => [
+		{
+			id: 'username',
+			header: 'Username',
+			cell: ({ row }) => renderSnippet(permUserCell, row.original),
+			meta: { cellClass: 'px-4 py-3 font-medium' },
+		},
+		...PERMISSION_KEYS.map(
+			(perm): ColumnDef<string> => ({
+				id: perm,
+				header: () => renderSnippet(permHeaderCell, perm),
+				cell: ({ row }) => renderSnippet(permCheckCell, { username: row.original, perm }),
+				meta: { headerClass: 'px-3 py-3 text-center', cellClass: 'px-3 py-3 text-center' },
+			})
+		),
+		{
+			id: 'actions',
+			header: 'Actions',
+			cell: ({ row }) => renderSnippet(permSaveCell, row.original),
+			meta: { headerClass: 'w-24 px-3 py-3 text-center', cellClass: 'px-3 py-3 text-center' },
+		},
+	]);
+
+	let permTable = $derived(
+		createSvelteTable({
+			get data() {
+				return usersWithAccess;
+			},
+			get columns() {
+				return permColumns;
+			},
+			getCoreRowModel: getCoreRowModel(),
+		})
+	);
 </script>
+
+{#snippet permUserCell(username: string)}
+	<a href="/users/{username}" class="text-primary underline-offset-4 hover:underline">
+		{username}
+	</a>
+{/snippet}
+
+{#snippet permHeaderCell(perm: string)}
+	<div class="flex items-center justify-center gap-1">
+		{perm}
+		{#if PERMISSION_DESCRIPTIONS[perm]}
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<span {...props}>
+							<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+						</span>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content side="bottom">{PERMISSION_DESCRIPTIONS[perm]}</Tooltip.Content>
+			</Tooltip.Root>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet permCheckCell(props: { username: string; perm: string })}
+	{@const entry = userPermMap[props.username]}
+	<Checkbox
+		checked={entry?.permissions.has(props.perm) ?? false}
+		onCheckedChange={() => toggleUserPerm(props.username, props.perm)}
+		disabled={entry?.saving ?? false}
+	/>
+{/snippet}
+
+{#snippet permSaveCell(username: string)}
+	{@const entry = userPermMap[username]}
+	<Button
+		variant="ghost"
+		size="sm"
+		disabled={!entry?.dirty || entry?.saving}
+		onclick={() => saveUserPerms(username)}
+	>
+		{#if entry?.saving}
+			<Loader2 class="h-3.5 w-3.5 animate-spin" />
+		{:else}
+			<Save class="h-3.5 w-3.5" />
+		{/if}
+	</Button>
+{/snippet}
 
 <svelte:head>
 	<title>{namespaceName} - Namespace Settings - HCP Admin Console</title>
@@ -520,7 +612,7 @@
 						{/each}
 					</div>
 				</div>
-			{:then _}
+			{:then}
 				<div class="rounded-lg border p-6">
 					{#if ns}
 						<div class="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-3">
@@ -598,15 +690,17 @@
 								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
 									Storage Used
 								</p>
-								{#if true}
-									{@const quota = ns.hardQuota ? parseQuotaBytes(ns.hardQuota) : null}
+								{#if ns.hardQuota}
+									{@const quota = parseQuotaBytes(ns.hardQuota)}
 									<p class="mt-1 text-sm">
-										{formatBytes(nsStorageUsed)}{quota ? ` / ${ns.hardQuota}` : ''}
+										{formatBytes(nsStorageUsed)} / {ns.hardQuota}
 									</p>
 									{#if quota}
 										{@const pct = Math.min(100, (nsStorageUsed / quota) * 100)}
 										<StorageProgressBar percent={pct} class="mt-1 max-w-32" />
 									{/if}
+								{:else}
+									<p class="mt-1 text-sm">{formatBytes(nsStorageUsed)}</p>
 								{/if}
 							</div>
 						</div>
@@ -631,7 +725,7 @@
 							{/each}
 						</div>
 					</div>
-				{:then _}
+				{:then}
 					<div class="rounded-lg border p-6">
 						<div class="flex flex-wrap gap-x-8 gap-y-4">
 							<label class="flex items-center gap-2 text-sm">
@@ -937,77 +1031,7 @@
 					</p>
 				</div>
 			{:else}
-				<div class="overflow-x-auto rounded-lg border">
-					<table class="w-full text-left text-sm">
-						<thead
-							class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
-						>
-							<tr>
-								<th class="px-4 py-3 font-medium">Username</th>
-								{#each PERMISSION_KEYS as perm (perm)}
-									<th class="px-3 py-3 text-center font-medium">
-										<div class="flex items-center justify-center gap-1">
-											{perm}
-											{#if PERMISSION_DESCRIPTIONS[perm]}
-												<Tooltip.Root>
-													<Tooltip.Trigger>
-														{#snippet child({ props })}
-															<span {...props}>
-																<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-															</span>
-														{/snippet}
-													</Tooltip.Trigger>
-													<Tooltip.Content side="bottom"
-														>{PERMISSION_DESCRIPTIONS[perm]}</Tooltip.Content
-													>
-												</Tooltip.Root>
-											{/if}
-										</div>
-									</th>
-								{/each}
-								<th class="w-24 px-3 py-3 text-center font-medium">Actions</th>
-							</tr>
-						</thead>
-						<tbody class="divide-y">
-							{#each usersWithAccess as username (username)}
-								{@const entry = userPermMap[username]}
-								<tr class="bg-card transition-colors hover:bg-accent/50">
-									<td class="px-4 py-3 font-medium">
-										<a
-											href="/users/{username}"
-											class="text-primary underline-offset-4 hover:underline"
-										>
-											{username}
-										</a>
-									</td>
-									{#each PERMISSION_KEYS as perm (perm)}
-										<td class="px-3 py-3 text-center">
-											<Checkbox
-												checked={entry?.permissions.has(perm) ?? false}
-												onCheckedChange={() => toggleUserPerm(username, perm)}
-												disabled={entry?.saving ?? false}
-											/>
-										</td>
-									{/each}
-									<td class="px-3 py-3 text-center">
-										<Button
-											variant="ghost"
-											size="sm"
-											disabled={!entry?.dirty || entry?.saving}
-											onclick={() => saveUserPerms(username)}
-										>
-											{#if entry?.saving}
-												<Loader2 class="h-3.5 w-3.5 animate-spin" />
-											{:else}
-												<Save class="h-3.5 w-3.5" />
-											{/if}
-										</Button>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
+				<DataTable table={permTable} noResultsMessage="No users have access." />
 			{/if}
 		</section>
 	{/if}

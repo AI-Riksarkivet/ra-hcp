@@ -21,7 +21,6 @@
 		AlertCircle,
 		Loader2,
 		Search,
-		Link,
 		Copy,
 		Check,
 	} from 'lucide-svelte';
@@ -56,6 +55,15 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { cn } from '$lib/utils.js';
+	import {
+		DataTable,
+		createSvelteTable,
+		getCoreRowModel,
+		renderSnippet,
+		renderComponent,
+	} from '$lib/components/ui/data-table/index.js';
+	import type { ColumnDef } from '@tanstack/table-core';
+	import DataTableActions from './data-table/data-table-actions.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
@@ -421,7 +429,142 @@
 			() => selected.clear()
 		);
 	}
+
+	// --- TanStack Table ---
+	function handleRowClick(obj: S3Object) {
+		if (isObjFolder(obj)) {
+			navigatePrefix(obj.key);
+		} else {
+			openViewer(obj);
+		}
+	}
+
+	let objColumns = $derived.by((): ColumnDef<S3Object>[] => [
+		{
+			id: 'select',
+			header: () =>
+				renderSnippet(checkboxHeaderSnippet, {
+					all: allSelected,
+					toggle: toggleAll,
+					disabled: selectableObjects.length === 0,
+				}),
+			cell: ({ row }) => renderSnippet(checkboxCellSnippet, row.original),
+			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
+		},
+		{
+			id: 'name',
+			header: 'Name',
+			cell: ({ row }) => renderSnippet(nameCellSnippet, row.original),
+		},
+		{
+			id: 'key',
+			header: 'Key',
+			cell: ({ row }) => renderSnippet(keyCellSnippet, row.original),
+		},
+		{
+			id: 'owner',
+			header: 'Owner',
+			cell: ({ row }) =>
+				(isObjFolder(row.original) ? '-' : getOwnerName(row.original) || '-') as string,
+			meta: { headerClass: 'w-32 px-4 py-3', cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'size',
+			header: 'Size',
+			cell: ({ row }) =>
+				(isObjFolder(row.original) ? '-' : formatBytes(row.original.size)) as string,
+			meta: { headerClass: 'w-32 px-4 py-3', cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'lastModified',
+			header: 'Last Modified',
+			cell: ({ row }) =>
+				(row.original.last_modified ? formatDate(row.original.last_modified) : '-') as string,
+			meta: { headerClass: 'w-48 px-4 py-3', cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'actions',
+			header: 'Actions',
+			cell: ({ row }) => renderSnippet(actionsCellSnippet, row.original),
+			meta: { headerClass: 'w-24 px-4 py-3', cellClass: 'px-4 py-3' },
+		},
+	]);
+
+	let objTable = $derived(
+		createSvelteTable({
+			get data() {
+				return filteredObjects;
+			},
+			get columns() {
+				return objColumns;
+			},
+			getCoreRowModel: getCoreRowModel(),
+		})
+	);
 </script>
+
+{#snippet checkboxHeaderSnippet(props: {
+	all: boolean;
+	toggle: (checked: boolean) => void;
+	disabled: boolean;
+})}
+	<Checkbox checked={props.all} onCheckedChange={props.toggle} disabled={props.disabled} />
+{/snippet}
+
+{#snippet checkboxCellSnippet(obj: S3Object)}
+	<span
+		onclick={(e: MouseEvent) => e.stopPropagation()}
+		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
+		role="presentation"
+	>
+		{#if !isObjFolder(obj)}
+			<Checkbox checked={selected.has(obj.key)} onCheckedChange={() => toggleOne(obj.key)} />
+		{/if}
+	</span>
+{/snippet}
+
+{#snippet nameCellSnippet(obj: S3Object)}
+	<span class="flex items-center gap-2">
+		{#if isObjFolder(obj)}
+			<Folder class="h-4 w-4 text-amber-500" />
+		{:else}
+			{@const Icon = getFileIcon(obj.key)}
+			<Icon class="h-4 w-4 text-muted-foreground" />
+		{/if}
+		<span class="font-medium">{getDisplayName(obj.key)}</span>
+	</span>
+{/snippet}
+
+{#snippet keyCellSnippet(obj: S3Object)}
+	<Tooltip.Root>
+		<Tooltip.Trigger>
+			{#snippet child({ props })}
+				<span class="block max-w-xs truncate font-mono text-xs text-muted-foreground" {...props}
+					>{obj.key}</span
+				>
+			{/snippet}
+		</Tooltip.Trigger>
+		<Tooltip.Content class="max-w-lg break-all font-mono text-xs">{obj.key}</Tooltip.Content>
+	</Tooltip.Root>
+{/snippet}
+
+{#snippet actionsCellSnippet(obj: S3Object)}
+	<span
+		onclick={(e: MouseEvent) => e.stopPropagation()}
+		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
+		role="presentation"
+	>
+		{#if !isObjFolder(obj)}
+			<DataTableActions
+				objectKey={obj.key}
+				downloadUrl={downloadUrl(obj.key)}
+				ondelete={() => del.requestDelete(obj.key)}
+				onshare={() => openShare(obj.key)}
+				onview={() => openViewer(obj)}
+			/>
+		{/if}
+	</span>
+{/snippet}
 
 <svelte:head><title>{bucket} - HCP Admin Console</title></svelte:head>
 
@@ -601,7 +744,7 @@
 
 	{#await objectData}
 		<TableSkeleton rows={5} columns={7} />
-	{:then _}
+	{:then}
 		<div class="space-y-2">
 			<div class="relative">
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -674,132 +817,13 @@
 			</div>
 		{/if}
 
-		<div class="overflow-x-auto rounded-lg border">
-			<table class="w-full text-left text-sm">
-				<thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-					<tr>
-						<th class="w-10 px-4 py-3"
-							><Checkbox
-								checked={allSelected}
-								onCheckedChange={toggleAll}
-								disabled={selectableObjects.length === 0}
-							/></th
-						>
-						<th class="px-4 py-3 font-medium">Name</th>
-						<th class="px-4 py-3 font-medium">Key</th>
-						<th class="w-32 px-4 py-3 font-medium">Owner</th>
-						<th class="w-32 px-4 py-3 font-medium">Size</th>
-						<th class="w-48 px-4 py-3 font-medium">Last Modified</th>
-						<th class="w-24 px-4 py-3 font-medium">Actions</th>
-					</tr>
-				</thead>
-				<tbody class="divide-y">
-					{#if objects.length === 0}<tr
-							><td colspan="7" class="px-4 py-8 text-center text-muted-foreground"
-								>No objects in this bucket</td
-							></tr
-						>
-					{:else if filteredObjects.length === 0}<tr
-							><td colspan="7" class="px-4 py-8 text-center text-muted-foreground"
-								>No results matching "{search}"</td
-							></tr
-						>
-					{:else}
-						{#each filteredObjects as obj (obj.key)}
-							{@const folder = isObjFolder(obj)}
-							<tr
-								class="cursor-pointer bg-card transition-colors hover:bg-accent/50"
-								onclick={folder ? () => navigatePrefix(obj.key) : () => openViewer(obj)}
-								onkeydown={(e: KeyboardEvent) => {
-									if (e.key === 'Enter') {
-										folder ? navigatePrefix(obj.key) : openViewer(obj);
-									}
-								}}
-								role="button"
-								tabindex={0}
-							>
-								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
-									{#if !folder}<Checkbox
-											checked={selected.has(obj.key)}
-											onCheckedChange={() => toggleOne(obj.key)}
-										/>{/if}
-								</td>
-								<td class="px-4 py-3">
-									<span class="flex items-center gap-2">
-										{#if folder}<Folder class="h-4 w-4 text-amber-500" />{:else}{@const Icon =
-												getFileIcon(obj.key)}<Icon class="h-4 w-4 text-muted-foreground" />{/if}
-										<span class="font-medium">{getDisplayName(obj.key)}</span>
-									</span>
-								</td>
-								<td class="px-4 py-3">
-									<Tooltip.Root>
-										<Tooltip.Trigger
-											>{#snippet child({ props })}<span
-													class="block max-w-xs truncate font-mono text-xs text-muted-foreground"
-													{...props}>{obj.key}</span
-												>{/snippet}</Tooltip.Trigger
-										>
-										<Tooltip.Content class="max-w-lg break-all font-mono text-xs"
-											>{obj.key}</Tooltip.Content
-										>
-									</Tooltip.Root>
-								</td>
-								<td class="px-4 py-3 text-muted-foreground"
-									>{folder ? '-' : getOwnerName(obj) || '-'}</td
-								>
-								<td class="px-4 py-3 text-muted-foreground"
-									>{folder ? '-' : formatBytes(obj.size)}</td
-								>
-								<td class="px-4 py-3 text-muted-foreground"
-									>{obj.last_modified ? formatDate(obj.last_modified) : '-'}</td
-								>
-								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
-									{#if !folder}
-										<span class="flex items-center gap-1">
-											<Tooltip.Root>
-												<Tooltip.Trigger
-													>{#snippet child({ props })}<a
-															href={downloadUrl(obj.key)}
-															download
-															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-															{...props}><Download class="h-4 w-4" /></a
-														>{/snippet}</Tooltip.Trigger
-												>
-												<Tooltip.Content>Download</Tooltip.Content>
-											</Tooltip.Root>
-											<Tooltip.Root>
-												<Tooltip.Trigger
-													>{#snippet child({ props })}<button
-															type="button"
-															{...props}
-															onclick={() => openShare(obj.key)}
-															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-															><Link class="h-4 w-4" /></button
-														>{/snippet}</Tooltip.Trigger
-												>
-												<Tooltip.Content>Share</Tooltip.Content>
-											</Tooltip.Root>
-											<Tooltip.Root>
-												<Tooltip.Trigger
-													>{#snippet child({ props })}<button
-															type="button"
-															{...props}
-															onclick={() => del.requestDelete(obj.key)}
-															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-															><Trash2 class="h-4 w-4" /></button
-														>{/snippet}</Tooltip.Trigger
-												>
-												<Tooltip.Content>Delete</Tooltip.Content>
-											</Tooltip.Root>
-										</span>
-									{/if}
-								</td>
-							</tr>
-						{/each}
-					{/if}
-				</tbody>
-			</table>
-		</div>
+		<DataTable
+			table={objTable}
+			onrowclick={handleRowClick}
+			noResultsMessage={objects.length === 0
+				? 'No objects in this bucket'
+				: `No results matching "${search}"`}
+		/>
 	{/await}
 
 	{#if viewerOpen}<FileViewer

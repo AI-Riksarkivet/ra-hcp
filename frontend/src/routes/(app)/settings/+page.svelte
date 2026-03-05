@@ -229,7 +229,7 @@
 					<CardSkeleton />
 					<CardSkeleton />
 				</div>
-			{:then _}
+			{:then}
 				<div class="grid gap-6 lg:grid-cols-2">
 					<!-- General Card (read-only) -->
 					<Card.Root class="animate-in fade-in slide-in-from-bottom-2 duration-300">
