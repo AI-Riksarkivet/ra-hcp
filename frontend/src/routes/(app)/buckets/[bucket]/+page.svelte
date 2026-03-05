@@ -23,8 +23,6 @@
 		Link,
 		Copy,
 		Check,
-		HardDrive,
-		FileBox,
 	} from 'lucide-svelte';
 	import FileViewer from '$lib/components/ui/FileViewer.svelte';
 	import { formatBytes, formatDate, parseQuotaBytes } from '$lib/utils/format.js';
@@ -32,8 +30,6 @@
 	import { toast } from 'svelte-sonner';
 	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
-	import StatCard from '$lib/components/ui/stat-card.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import {
@@ -472,6 +468,39 @@
 			{#await objectData then od}
 				<Badge variant="secondary">{od.keyCount} objects</Badge>
 			{/await}
+			{#if tenant}
+				{#await tenantStats then stats}
+					{#await tenantInfo then info}
+						{#if quotaPercent !== null}
+							<Tooltip.Root>
+								<Tooltip.Trigger>
+									{#snippet child({ props })}
+										<span
+											class="flex items-center gap-1.5 text-xs text-muted-foreground"
+											{...props}
+										>
+											<span
+												>{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}</span
+											>
+											<span class="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+												<span
+													class="block h-full rounded-full {quotaPercent > 90
+														? 'bg-destructive'
+														: quotaPercent > 70
+															? 'bg-yellow-500'
+															: 'bg-primary'}"
+													style="width: {quotaPercent}%"
+												></span>
+											</span>
+										</span>
+									{/snippet}
+								</Tooltip.Trigger>
+								<Tooltip.Content>Tenant storage usage</Tooltip.Content>
+							</Tooltip.Root>
+						{/if}
+					{/await}
+				{/await}
+			{/if}
 		</div>
 		<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>
 	</div>
@@ -604,54 +633,6 @@
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
-
-	{#if tenant}
-		<div class="grid gap-4 sm:grid-cols-2">
-			{#await tenantStats}
-				<CardSkeleton />
-				<CardSkeleton />
-			{:then stats}
-				<StatCard
-					label="Tenant Storage"
-					value={formatBytes(Number(stats?.storageCapacityUsed ?? 0))}
-					icon={HardDrive}
-				>
-					{#await tenantInfo then info}
-						{#if quotaPercent !== null}
-							<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-								<div
-									class="h-full rounded-full transition-all duration-500 {quotaPercent > 90
-										? 'bg-destructive'
-										: quotaPercent > 70
-											? 'bg-yellow-500'
-											: 'bg-primary'}"
-									style="width: {quotaPercent}%"
-								></div>
-							</div>
-							<p class="mt-1 text-xs text-muted-foreground">
-								{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}
-							</p>
-						{:else}
-							<p class="mt-1 text-xs text-muted-foreground">No quota limit</p>
-						{/if}
-					{/await}
-				</StatCard>
-
-				{#await objectData then od}
-					<StatCard
-						label="Objects in Bucket"
-						value={String(od.keyCount)}
-						icon={FileBox}
-						delay="delay-75"
-					>
-						<p class="mt-1 text-xs text-muted-foreground">
-							{stats?.objectCount?.toLocaleString() ?? 0} total across tenant
-						</p>
-					</StatCard>
-				{/await}
-			{/await}
-		</div>
-	{/if}
 
 	{#if prefix}<button
 			onclick={() => navigatePrefix(parentPrefix)}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus, Trash2, Search, HardDrive, FolderOpen } from 'lucide-svelte';
+	import { Plus, Trash2, Search } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -12,8 +12,6 @@
 	import { toast } from 'svelte-sonner';
 	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
-	import StatCard from '$lib/components/ui/stat-card.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import { get_buckets, create_bucket, delete_bucket } from '$lib/buckets.remote.js';
@@ -198,52 +196,6 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-	{#if tenant}
-		<div class="grid gap-4 sm:grid-cols-2">
-			{#await tenantStats}
-				<CardSkeleton />
-				<CardSkeleton />
-			{:then stats}
-				<StatCard
-					label="Storage Used"
-					value={formatBytes(Number(stats?.storageCapacityUsed ?? 0))}
-					icon={HardDrive}
-				>
-					{#await tenantInfo then info}
-						{#if quotaPercent !== null}
-							<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-								<div
-									class="h-full rounded-full transition-all duration-500 {quotaPercent > 90
-										? 'bg-destructive'
-										: quotaPercent > 70
-											? 'bg-yellow-500'
-											: 'bg-primary'}"
-									style="width: {quotaPercent}%"
-								></div>
-							</div>
-							<p class="mt-1 text-xs text-muted-foreground">
-								{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}
-							</p>
-						{:else}
-							<p class="mt-1 text-xs text-muted-foreground">No quota limit</p>
-						{/if}
-					{/await}
-				</StatCard>
-
-				<StatCard
-					label="Total Buckets"
-					value={String(buckets.length)}
-					icon={FolderOpen}
-					delay="delay-75"
-				>
-					<p class="mt-1 text-xs text-muted-foreground">
-						{stats?.objectCount?.toLocaleString() ?? 0} objects across all buckets
-					</p>
-				</StatCard>
-			{/await}
-		</div>
-	{/if}
-
 	{#await bucketData}
 		<TableSkeleton rows={5} columns={5} />
 	{:then _}
@@ -277,9 +229,33 @@
 						Clear filters
 					</Button>
 				{/if}
-				<span class="ml-auto text-xs text-muted-foreground"
-					>{filteredBuckets.length} of {buckets.length} buckets</span
-				>
+				<span class="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+					{#if tenant}
+						{#await tenantStats then stats}
+							{#await tenantInfo then info}
+								{#if quotaPercent !== null}
+									<span class="flex items-center gap-1.5">
+										<span
+											>{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}</span
+										>
+										<span class="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+											<span
+												class="block h-full rounded-full transition-all {quotaPercent > 90
+													? 'bg-destructive'
+													: quotaPercent > 70
+														? 'bg-yellow-500'
+														: 'bg-primary'}"
+												style="width: {quotaPercent}%"
+											></span>
+										</span>
+									</span>
+									<span class="text-border">|</span>
+								{/if}
+							{/await}
+						{/await}
+					{/if}
+					{filteredBuckets.length} of {buckets.length} buckets
+				</span>
 			</div>
 		</div>
 
