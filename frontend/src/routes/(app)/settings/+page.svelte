@@ -4,6 +4,8 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
+	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { HelpCircle } from 'lucide-svelte';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { toast } from 'svelte-sonner';
@@ -344,49 +346,41 @@
 											<Input id="ns-soft-quota" bind:value={localSoftQuota} placeholder="e.g. 85" />
 										</div>
 										<div class="space-y-2">
-											<Label for="ns-optimized-for">Optimized For</Label>
-											<select
-												id="ns-optimized-for"
-												bind:value={localOptimizedFor}
-												class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-											>
-												<option value="">Select...</option>
-												<option value="CLOUD">CLOUD</option>
-												<option value="DEFAULT">DEFAULT</option>
-											</select>
+											<Label>Optimized For</Label>
+											<Select.Root type="single" bind:value={localOptimizedFor}>
+												<Select.Trigger class="w-full">
+													{localOptimizedFor || 'Select...'}
+												</Select.Trigger>
+												<Select.Content>
+													<Select.Item value="CLOUD">CLOUD</Select.Item>
+													<Select.Item value="DEFAULT">DEFAULT</Select.Item>
+												</Select.Content>
+											</Select.Root>
 										</div>
 										<div class="space-y-2">
-											<Label for="ns-hash-scheme">Hash Scheme</Label>
-											<select
-												id="ns-hash-scheme"
-												bind:value={localHashScheme}
-												class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-											>
-												<option value="">Select...</option>
-												<option value="MD5">MD5</option>
-												<option value="SHA-256">SHA-256</option>
-												<option value="SHA-384">SHA-384</option>
-												<option value="SHA-512">SHA-512</option>
-											</select>
+											<Label>Hash Scheme</Label>
+											<Select.Root type="single" bind:value={localHashScheme}>
+												<Select.Trigger class="w-full">
+													{localHashScheme || 'Select...'}
+												</Select.Trigger>
+												<Select.Content>
+													<Select.Item value="MD5">MD5</Select.Item>
+													<Select.Item value="SHA-256">SHA-256</Select.Item>
+													<Select.Item value="SHA-384">SHA-384</Select.Item>
+													<Select.Item value="SHA-512">SHA-512</Select.Item>
+												</Select.Content>
+											</Select.Root>
 										</div>
 									</div>
 									<div class="flex flex-wrap gap-x-8 gap-y-4">
-										<label class="flex items-center gap-2 text-sm">
-											<input
-												type="checkbox"
-												bind:checked={localSearchEnabled}
-												class="h-4 w-4 rounded border-input"
-											/>
-											Search Enabled
-										</label>
-										<label class="flex items-center gap-2 text-sm">
-											<input
-												type="checkbox"
-												bind:checked={localVersioningEnabled}
-												class="h-4 w-4 rounded border-input"
-											/>
-											Versioning Enabled
-										</label>
+										<div class="flex items-center gap-2">
+											<Switch id="ns-search" bind:checked={localSearchEnabled} />
+											<Label for="ns-search" class="text-sm">Search Enabled</Label>
+										</div>
+										<div class="flex items-center gap-2">
+											<Switch id="ns-versioning" bind:checked={localVersioningEnabled} />
+											<Label for="ns-versioning" class="text-sm">Versioning Enabled</Label>
+										</div>
 									</div>
 									<SaveButton dirty={nsDirty} saving={savingNs} onclick={saveNamespaceDefaults} />
 								</div>

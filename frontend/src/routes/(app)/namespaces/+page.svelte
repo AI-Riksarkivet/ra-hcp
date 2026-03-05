@@ -14,6 +14,8 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -124,6 +126,7 @@
 	let createOpen = $state(false);
 	let createError = $state('');
 	let creating = $state(false);
+	let createHashScheme = $state('SHA-256');
 	let createTags = $state<string[]>([]);
 	let tagInput = $state('');
 
@@ -286,17 +289,17 @@
 				</div>
 				<div class="space-y-2">
 					<Label for="ns-hash">Hash Scheme</Label>
-					<select
-						id="ns-hash"
-						name="hashScheme"
-						class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-					>
-						<option value="SHA-256">SHA-256</option>
-						<option value="SHA-512">SHA-512</option>
-						<option value="SHA-384">SHA-384</option>
-						<option value="SHA-1">SHA-1</option>
-						<option value="MD5">MD5</option>
-					</select>
+					<Select.Root type="single" bind:value={createHashScheme}>
+						<Select.Trigger class="h-9 w-full">{createHashScheme}</Select.Trigger>
+						<Select.Content>
+							<Select.Item value="SHA-256">SHA-256</Select.Item>
+							<Select.Item value="SHA-512">SHA-512</Select.Item>
+							<Select.Item value="SHA-384">SHA-384</Select.Item>
+							<Select.Item value="SHA-1">SHA-1</Select.Item>
+							<Select.Item value="MD5">MD5</Select.Item>
+						</Select.Content>
+					</Select.Root>
+					<input type="hidden" name="hashScheme" value={createHashScheme} />
 				</div>
 				<div class="space-y-2">
 					<Label for="ns-tags">Tags</Label>
@@ -325,14 +328,14 @@
 					{/if}
 				</div>
 				<div class="flex gap-6">
-					<label class="flex items-center gap-2 text-sm">
-						<input type="checkbox" name="searchEnabled" class="h-4 w-4 rounded border-input" />
-						Enable Search
-					</label>
-					<label class="flex items-center gap-2 text-sm">
-						<input type="checkbox" name="versioningEnabled" class="h-4 w-4 rounded border-input" />
-						Enable Versioning
-					</label>
+					<div class="flex items-center gap-2">
+						<Checkbox id="ns-search" name="searchEnabled" />
+						<Label for="ns-search">Enable Search</Label>
+					</div>
+					<div class="flex items-center gap-2">
+						<Checkbox id="ns-versioning" name="versioningEnabled" />
+						<Label for="ns-versioning">Enable Versioning</Label>
+					</div>
 				</div>
 				<Dialog.Footer>
 					<Button variant="ghost" type="button" onclick={() => (createOpen = false)}>Cancel</Button>
@@ -439,11 +442,9 @@
 					<thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
 						<tr>
 							<th class="w-10 px-4 py-3"
-								><input
-									type="checkbox"
+								><Checkbox
 									checked={allSelected}
-									onchange={toggleAll}
-									class="h-4 w-4 rounded border-input"
+									onCheckedChange={toggleAll}
 									disabled={filteredNamespaces.length === 0}
 								/></th
 							>
@@ -479,11 +480,9 @@
 										onkeydown={() => {}}
 										role="cell"
 									>
-										<input
-											type="checkbox"
+										<Checkbox
 											checked={selected.has(ns.name)}
-											onchange={() => toggleOne(ns.name)}
-											class="h-4 w-4 rounded border-input"
+											onCheckedChange={() => toggleOne(ns.name)}
 										/>
 									</td>
 									<td class="px-4 py-3 font-medium">

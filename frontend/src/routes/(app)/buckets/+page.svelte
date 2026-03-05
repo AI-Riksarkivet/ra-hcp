@@ -5,6 +5,8 @@
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import {
@@ -180,12 +182,23 @@
 				{#if ownerName}
 					<Badge variant="outline">Owner: {ownerName}</Badge>
 				{/if}
-				<select bind:value={dateFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
-					<option value="">All dates</option>
-					<option value="24h">Last 24 hours</option>
-					<option value="7d">Last 7 days</option>
-					<option value="30d">Last 30 days</option>
-				</select>
+				<Select.Root type="single" bind:value={dateFilter}>
+					<Select.Trigger class="h-8 w-auto min-w-[120px] px-2 text-xs">
+						{dateFilter === '24h'
+							? 'Last 24 hours'
+							: dateFilter === '7d'
+								? 'Last 7 days'
+								: dateFilter === '30d'
+									? 'Last 30 days'
+									: 'All dates'}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Item value="">All dates</Select.Item>
+						<Select.Item value="24h">Last 24 hours</Select.Item>
+						<Select.Item value="7d">Last 7 days</Select.Item>
+						<Select.Item value="30d">Last 30 days</Select.Item>
+					</Select.Content>
+				</Select.Root>
 				{#if dateFilter}
 					<Button
 						variant="ghost"
@@ -232,11 +245,9 @@
 				<thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
 					<tr>
 						<th class="w-10 px-4 py-3"
-							><input
-								type="checkbox"
+							><Checkbox
 								checked={allSelected}
-								onchange={toggleAll}
-								class="h-4 w-4 rounded border-input"
+								onCheckedChange={toggleAll}
 								disabled={filteredBuckets.length === 0}
 							/></th
 						>
@@ -273,11 +284,9 @@
 							>
 								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
-									<input
-										type="checkbox"
+									<Checkbox
 										checked={selected.has(bucket.name)}
-										onchange={() => toggleOne(bucket.name)}
-										class="h-4 w-4 rounded border-input"
+										onCheckedChange={() => toggleOne(bucket.name)}
 									/>
 								</td>
 								<td class="px-4 py-3 font-medium">{bucket.name}</td>

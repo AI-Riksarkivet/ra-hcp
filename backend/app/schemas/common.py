@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from pydantic import BaseModel, field_validator
-from typing import Optional, List
+from typing import Any, Optional, List
 from enum import Enum
 
 
@@ -248,6 +248,24 @@ class ListQueryParams(BaseModel):
     filterString: Optional[str] = None
     verbose: Optional[bool] = False
     prettyprint: Optional[bool] = False
+
+    def to_query(self, **extra: Any) -> dict | None:
+        """Build query dict from non-None fields, plus any extra params."""
+        q: dict = {}
+        if self.offset is not None:
+            q["offset"] = self.offset
+        if self.count is not None:
+            q["count"] = self.count
+        if self.sortType:
+            q["sortType"] = self.sortType
+        if self.sortOrder:
+            q["sortOrder"] = self.sortOrder
+        if self.filterType:
+            q["filterType"] = self.filterType
+        if self.filterString:
+            q["filterString"] = self.filterString
+        q.update(extra)
+        return q or None
 
 
 class ChargebackParams(BaseModel):

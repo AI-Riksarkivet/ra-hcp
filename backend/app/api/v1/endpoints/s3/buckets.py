@@ -8,7 +8,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, Response
 
 from app.api.dependencies import get_s3_service
-from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error
+from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error, run_s3
 from app.schemas.s3 import (
     AclPolicy,
     AclResponse,
@@ -48,34 +48,19 @@ async def create_bucket(
     body: CreateBucketRequest,
     s3: S3Service = Depends(get_s3_service),
 ):
-    try:
-        await asyncio.to_thread(s3.create_bucket, body.bucket)
-    except ClientError as exc:
-        raise_for_s3_error(exc, f"bucket '{body.bucket}'")
-    except BotoCoreError as exc:
-        raise_for_s3_transport_error(exc, f"bucket '{body.bucket}'")
+    await run_s3(s3.create_bucket, f"bucket '{body.bucket}'", body.bucket)
     return {"status": "created", "bucket": body.bucket}
 
 
 @router.head("/{bucket}")
 async def head_bucket(bucket: str, s3: S3Service = Depends(get_s3_service)):
-    try:
-        await asyncio.to_thread(s3.head_bucket, bucket)
-    except ClientError as exc:
-        raise_for_s3_error(exc, f"bucket '{bucket}'")
-    except BotoCoreError as exc:
-        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
+    await run_s3(s3.head_bucket, f"bucket '{bucket}'", bucket)
     return Response(status_code=200)
 
 
 @router.delete("/{bucket}", response_model=BucketMutationResponse)
 async def delete_bucket(bucket: str, s3: S3Service = Depends(get_s3_service)):
-    try:
-        await asyncio.to_thread(s3.delete_bucket, bucket)
-    except ClientError as exc:
-        raise_for_s3_error(exc, f"bucket '{bucket}'")
-    except BotoCoreError as exc:
-        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
+    await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
     return {"status": "deleted", "bucket": bucket}
 
 
@@ -87,12 +72,7 @@ async def get_bucket_versioning(
     bucket: str,
     s3: S3Service = Depends(get_s3_service),
 ):
-    try:
-        result = await asyncio.to_thread(s3.get_bucket_versioning, bucket)
-    except ClientError as exc:
-        raise_for_s3_error(exc, f"bucket '{bucket}'")
-    except BotoCoreError as exc:
-        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
+    result = await run_s3(s3.get_bucket_versioning, f"bucket '{bucket}'", bucket)
     return BucketVersioningResponse(
         status=result.get("Status"),
         mfa_delete=result.get("MFADelete"),
@@ -105,12 +85,7 @@ async def put_bucket_versioning(
     body: PutBucketVersioningRequest,
     s3: S3Service = Depends(get_s3_service),
 ):
-    try:
-        await asyncio.to_thread(s3.put_bucket_versioning, bucket, body.status)
-    except ClientError as exc:
-        raise_for_s3_error(exc, f"bucket '{bucket}'")
-    except BotoCoreError as exc:
-        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
+    await run_s3(s3.put_bucket_versioning, f"bucket '{bucket}'", bucket, body.status)
     return {"status": "updated", "versioning": body.status}
 
 
@@ -119,12 +94,7 @@ async def put_bucket_versioning(
 
 @router.get("/{bucket}/acl", response_model=AclResponse)
 async def get_bucket_acl(bucket: str, s3: S3Service = Depends(get_s3_service)):
-    try:
-        result = await asyncio.to_thread(s3.get_bucket_acl, bucket)
-    except ClientError as exc:
-        raise_for_s3_error(exc, f"bucket '{bucket}'")
-    except BotoCoreError as exc:
-        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
+    result = await run_s3(s3.get_bucket_acl, f"bucket '{bucket}'", bucket)
     return {
         "owner": result.get("Owner", {}),
         "grants": result.get("Grants", []),
@@ -137,12 +107,10 @@ async def put_bucket_acl(
     body: AclPolicy,
     s3: S3Service = Depends(get_s3_service),
 ):
-    try:
-        await asyncio.to_thread(
-            s3.put_bucket_acl, bucket, body.model_dump(exclude_none=True)
-        )
-    except ClientError as exc:
-        raise_for_s3_error(exc, f"bucket '{bucket}'")
-    except BotoCoreError as exc:
-        raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
+    await run_s3(
+        s3.put_bucket_acl,
+        f"bucket '{bucket}'",
+        bucket,
+        body.model_dump(exclude_none=True),
+    )
     return {"status": "updated"}

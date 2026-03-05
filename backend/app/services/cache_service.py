@@ -63,11 +63,17 @@ class CacheService:
             self._redis = aioredis.from_url(
                 self._settings.redis_url,
                 decode_responses=True,
+                socket_timeout=5.0,
+                socket_connect_timeout=2.0,
+                retry_on_timeout=True,
             )
             await self._redis.ping()  # type: ignore[misc]
             self._sync_redis = sync_redis.from_url(
                 self._settings.redis_url,
                 decode_responses=True,
+                socket_timeout=5.0,
+                socket_connect_timeout=2.0,
+                retry_on_timeout=True,
             )
             self._enabled = True
             logger.info("Redis connected — caching enabled")
@@ -174,9 +180,10 @@ class CacheService:
             deleted = 0
             try:
                 full_pattern = self._key(pattern)
-                async for key in self._redis.scan_iter(match=full_pattern):  # type: ignore[union-attr]
-                    await self._redis.delete(key)  # type: ignore[union-attr]
-                    deleted += 1
+                keys = [key async for key in self._redis.scan_iter(match=full_pattern)]  # type: ignore[union-attr]
+                if keys:
+                    await self._redis.delete(*keys)  # type: ignore[union-attr]
+                deleted = len(keys)
                 span.set_attribute("cache.keys_deleted", deleted)
             except Exception:
                 span.set_attribute("cache.error", True)
@@ -249,9 +256,10 @@ class CacheService:
             deleted = 0
             try:
                 full_pattern = self._key(pattern)
-                for key in self._sync_redis.scan_iter(match=full_pattern):
-                    self._sync_redis.delete(key)
-                    deleted += 1
+                keys = list(self._sync_redis.scan_iter(match=full_pattern))
+                if keys:
+                    self._sync_redis.delete(*keys)
+                deleted = len(keys)
                 span.set_attribute("cache.keys_deleted", deleted)
             except Exception:
                 span.set_attribute("cache.error", True)

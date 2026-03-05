@@ -28,23 +28,10 @@ async def list_namespaces(
     qp: ListQueryParams = Depends(),
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    q: dict = {}
-    if qp.offset is not None:
-        q["offset"] = qp.offset
-    if qp.count is not None:
-        q["count"] = qp.count
-    if qp.sortType:
-        q["sortType"] = qp.sortType
-    if qp.sortOrder:
-        q["sortOrder"] = qp.sortOrder
-    if qp.filterType:
-        q["filterType"] = qp.filterType
-    if qp.filterString:
-        q["filterString"] = qp.filterString
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces",
         resource="namespaces",
-        query=q or None,
+        query=qp.to_query(),
     )
 
 

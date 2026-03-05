@@ -27,20 +27,10 @@ async def list_user_accounts(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    q: dict = {"verbose": str(verbose).lower()}
-    if qp.offset is not None:
-        q["offset"] = qp.offset
-    if qp.count is not None:
-        q["count"] = qp.count
-    if qp.sortType:
-        q["sortType"] = qp.sortType
-    if qp.sortOrder:
-        q["sortOrder"] = qp.sortOrder
-    if qp.filterType:
-        q["filterType"] = qp.filterType
-    if qp.filterString:
-        q["filterString"] = qp.filterString
-    return await hcp.fetch_json(f"/tenants/{tenant_name}/userAccounts", query=q)
+    return await hcp.fetch_json(
+        f"/tenants/{tenant_name}/userAccounts",
+        query=qp.to_query(verbose=str(verbose).lower()),
+    )
 
 
 @router.put(T_PREFIX, response_model=StatusResponse, status_code=201)
@@ -168,18 +158,9 @@ async def get_user_data_perms(
     qp: ListQueryParams = Depends(),
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    q: dict = {}
-    if qp.offset is not None:
-        q["offset"] = qp.offset
-    if qp.count is not None:
-        q["count"] = qp.count
-    if qp.sortType:
-        q["sortType"] = qp.sortType
-    if qp.sortOrder:
-        q["sortOrder"] = qp.sortOrder
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/userAccounts/{username}/dataAccessPermissions",
-        query=q or None,
+        query=qp.to_query(),
     )
 
 

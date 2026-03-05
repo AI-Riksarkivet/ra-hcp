@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from typing import Any, Callable
 
 from botocore.exceptions import (
     BotoCoreError,
@@ -85,3 +87,15 @@ def parse_json_response(resp: httpx.Response) -> dict:
         except (ValueError, TypeError):
             return {}
     return {}
+
+
+async def run_s3(
+    func: Callable[..., Any], resource: str, *args: Any, **kwargs: Any
+) -> Any:
+    """Run a sync S3 operation in a thread with standard error handling."""
+    try:
+        return await asyncio.to_thread(func, *args, **kwargs)
+    except ClientError as exc:
+        raise_for_s3_error(exc, resource)
+    except BotoCoreError as exc:
+        raise_for_s3_transport_error(exc, resource)

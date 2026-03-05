@@ -15,6 +15,7 @@
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -475,11 +476,9 @@
 						>
 							<tr>
 								<th class="w-10 px-4 py-3">
-									<input
-										type="checkbox"
+									<Checkbox
 										checked={allSelected}
-										onchange={toggleAll}
-										class="h-4 w-4 rounded border-input"
+										onCheckedChange={toggleAll}
 										disabled={filteredResults.length === 0}
 									/>
 								</th>
@@ -540,11 +539,9 @@
 							{#each filteredResults as item (item.urlName + (item.version ?? ''))}
 								<tr class="bg-card transition-colors hover:bg-accent/50">
 									<td class="px-4 py-3">
-										<input
-											type="checkbox"
+										<Checkbox
 											checked={selected.has(itemKey(item))}
-											onchange={() => toggleOne(itemKey(item))}
-											class="h-4 w-4 rounded border-input"
+											onCheckedChange={() => toggleOne(itemKey(item))}
 										/>
 									</td>
 									<td class="max-w-xs truncate px-4 py-3 font-medium" title={displayPath(item)}>
@@ -626,11 +623,9 @@
 					<div class="mt-1.5 flex gap-4">
 						{#each ['create', 'delete', 'purge'] as tx (tx)}
 							<label class="flex items-center gap-2 text-sm">
-								<input
-									type="checkbox"
+								<Checkbox
 									checked={opTransactions.includes(tx)}
-									onchange={() => toggleTransaction(tx)}
-									class="h-4 w-4 rounded border-input"
+									onCheckedChange={() => toggleTransaction(tx)}
 								/>
 								<span class="capitalize">{tx}</span>
 							</label>

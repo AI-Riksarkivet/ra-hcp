@@ -4,6 +4,8 @@
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
 	import {
 		Upload,
@@ -608,24 +610,45 @@
 			</div>
 			<div class="flex flex-wrap items-center gap-2">
 				{#if uniqueOwners.length > 0}
-					<select bind:value={ownerFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
-						<option value="">All owners</option>
-						{#each uniqueOwners as o (o)}<option value={o}>{o}</option>{/each}
-					</select>
+					<Select.Root type="single" bind:value={ownerFilter}>
+						<Select.Trigger class="h-8 w-auto min-w-[120px] px-2 text-xs">
+							{ownerFilter || 'All owners'}
+						</Select.Trigger>
+						<Select.Content>
+							<Select.Item value="">All owners</Select.Item>
+							{#each uniqueOwners as o (o)}<Select.Item value={o}>{o}</Select.Item>{/each}
+						</Select.Content>
+					</Select.Root>
 				{/if}
-				<select bind:value={sizeFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
-					<option value="">All sizes</option>
-					<option value="<1KB">&lt; 1 KB</option>
-					<option value="1KB-1MB">1 KB - 1 MB</option>
-					<option value="1MB-100MB">1 MB - 100 MB</option>
-					<option value=">100MB">&gt; 100 MB</option>
-				</select>
-				<select bind:value={dateFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
-					<option value="">All dates</option>
-					<option value="24h">Last 24 hours</option>
-					<option value="7d">Last 7 days</option>
-					<option value="30d">Last 30 days</option>
-				</select>
+				<Select.Root type="single" bind:value={sizeFilter}>
+					<Select.Trigger class="h-8 w-auto min-w-[120px] px-2 text-xs">
+						{sizeFilter || 'All sizes'}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Item value="">All sizes</Select.Item>
+						<Select.Item value="<1KB">&lt; 1 KB</Select.Item>
+						<Select.Item value="1KB-1MB">1 KB - 1 MB</Select.Item>
+						<Select.Item value="1MB-100MB">1 MB - 100 MB</Select.Item>
+						<Select.Item value=">100MB">&gt; 100 MB</Select.Item>
+					</Select.Content>
+				</Select.Root>
+				<Select.Root type="single" bind:value={dateFilter}>
+					<Select.Trigger class="h-8 w-auto min-w-[100px] px-2 text-xs">
+						{dateFilter === '24h'
+							? 'Last 24 hours'
+							: dateFilter === '7d'
+								? 'Last 7 days'
+								: dateFilter === '30d'
+									? 'Last 30 days'
+									: 'All dates'}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Item value="">All dates</Select.Item>
+						<Select.Item value="24h">Last 24 hours</Select.Item>
+						<Select.Item value="7d">Last 7 days</Select.Item>
+						<Select.Item value="30d">Last 30 days</Select.Item>
+					</Select.Content>
+				</Select.Root>
 				{#if hasActiveFilters}
 					<Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={clearFilters}>
 						Clear filters
@@ -657,11 +680,9 @@
 				<thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
 					<tr>
 						<th class="w-10 px-4 py-3"
-							><input
-								type="checkbox"
+							><Checkbox
 								checked={allSelected}
-								onchange={toggleAll}
-								class="h-4 w-4 rounded border-input"
+								onCheckedChange={toggleAll}
 								disabled={selectableObjects.length === 0}
 							/></th
 						>
