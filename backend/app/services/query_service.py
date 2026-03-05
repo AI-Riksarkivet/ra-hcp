@@ -175,5 +175,39 @@ class AuthenticatedQueryService(QueryService):
         kwargs["password"] = self._password
         return await self._base._post_query(tenant, body, **kwargs)
 
+    async def object_query(
+        self,
+        tenant,
+        query,
+        *,
+        username=None,
+        password=None,
+        auth_type=None,
+    ):
+        return await super().object_query(
+            tenant,
+            query,
+            username=username or self._username,
+            password=password or self._password,
+            auth_type=auth_type,
+        )
+
+    async def operation_query(
+        self,
+        tenant,
+        query,
+        *,
+        username=None,
+        password=None,
+        auth_type=None,
+    ):
+        return await super().operation_query(
+            tenant,
+            query,
+            username=username or self._username,
+            password=password or self._password,
+            auth_type=auth_type,
+        )
+
     async def close(self):
         pass  # base owns the client

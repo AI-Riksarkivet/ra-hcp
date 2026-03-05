@@ -7,7 +7,19 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { ArrowLeft, Save, Loader2, Plus, HelpCircle, Terminal, Copy, Info } from 'lucide-svelte';
+	import {
+		ArrowLeft,
+		Save,
+		Loader2,
+		Plus,
+		HelpCircle,
+		Terminal,
+		Copy,
+		Info,
+		X,
+		Pencil,
+	} from 'lucide-svelte';
+	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 	import { toast } from 'svelte-sonner';
 	import { formatDate } from '$lib/utils/format.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
@@ -192,6 +204,55 @@
 			toast.error('Failed to update settings');
 		} finally {
 			savingNsSettings = false;
+		}
+	}
+
+	// --- Tags ---
+	let editingTags = $state(false);
+	let editTags = $state<string[]>([]);
+	let editTagInput = $state('');
+	let savingTags = $state(false);
+
+	function startEditTags() {
+		editTags = [...(ns?.tags?.tag ?? [])];
+		editTagInput = '';
+		editingTags = true;
+	}
+
+	function addEditTag() {
+		const t = editTagInput.trim().toLowerCase();
+		if (t && !editTags.includes(t)) {
+			editTags = [...editTags, t];
+		}
+		editTagInput = '';
+	}
+
+	function removeEditTag(t: string) {
+		editTags = editTags.filter((x) => x !== t);
+	}
+
+	function handleEditTagKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			addEditTag();
+		}
+	}
+
+	async function saveTags() {
+		if (!tenant || !nsData) return;
+		savingTags = true;
+		try {
+			await update_namespace({
+				tenant,
+				name: namespaceName,
+				body: { tags: { tag: editTags } },
+			}).updates(nsData);
+			toast.success('Tags updated');
+			editingTags = false;
+		} catch {
+			toast.error('Failed to update tags');
+		} finally {
+			savingTags = false;
 		}
 	}
 
@@ -549,6 +610,83 @@
 								</p>
 								<p class="mt-1 text-sm">{ns.creationTime ? formatDate(ns.creationTime) : '—'}</p>
 							</div>
+						</div>
+
+						<!-- Tags -->
+						<div class="mt-6 border-t pt-4">
+							<div class="flex items-center gap-2">
+								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+									Tags
+								</p>
+								{#if !editingTags}
+									<button
+										type="button"
+										class="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+										onclick={startEditTags}
+									>
+										<Pencil class="h-3 w-3" />
+									</button>
+								{/if}
+							</div>
+							{#if editingTags}
+								<div class="mt-2 space-y-2">
+									<div class="flex gap-2">
+										<input
+											class="h-8 w-40 rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+											placeholder="Add tag..."
+											bind:value={editTagInput}
+											onkeydown={handleEditTagKeydown}
+										/>
+										<Button variant="secondary" size="sm" class="h-8" onclick={addEditTag}>
+											Add
+										</Button>
+										<Button size="sm" class="h-8" disabled={savingTags} onclick={saveTags}>
+											{#if savingTags}
+												<Loader2 class="h-3.5 w-3.5 animate-spin" />
+											{:else}
+												<Save class="h-3.5 w-3.5" />
+											{/if}
+											Save
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											class="h-8"
+											onclick={() => (editingTags = false)}
+										>
+											Cancel
+										</Button>
+									</div>
+									{#if editTags.length > 0}
+										<div class="flex flex-wrap gap-1.5">
+											{#each editTags as t (t)}
+												<span class="inline-flex items-center gap-0.5">
+													<ServiceTagBadge tag={t} />
+													<button
+														type="button"
+														class="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
+														onclick={() => removeEditTag(t)}
+													>
+														<X class="h-2.5 w-2.5" />
+													</button>
+												</span>
+											{/each}
+										</div>
+									{/if}
+								</div>
+							{:else}
+								<div class="mt-1">
+									{#if ns.tags?.tag?.length}
+										<div class="flex flex-wrap gap-1.5">
+											{#each ns.tags.tag as t (t)}
+												<ServiceTagBadge tag={t} />
+											{/each}
+										</div>
+									{:else}
+										<p class="text-sm text-muted-foreground">No tags</p>
+									{/if}
+								</div>
+							{/if}
 						</div>
 					{:else}
 						<p class="text-center text-sm text-muted-foreground">

@@ -18,8 +18,8 @@ from app.api.dependencies import (
 from app.core.config import AuthSettings, MapiSettings, S3Settings
 from app.core.security import create_access_token
 from app.main import app
-from app.services.mapi_service import MapiService
-from app.services.query_service import QueryService
+from app.services.mapi_service import AuthenticatedMapiService, MapiService
+from app.services.query_service import AuthenticatedQueryService, QueryService
 from app.services.s3_service import S3Service
 
 # Base URL for MAPI mock routes (must match mapi_settings fixture)
@@ -150,14 +150,17 @@ async def client(
     mapi_svc = MapiService(mapi_settings)
     query_svc = QueryService(mapi_settings)
 
+    auth_mapi = AuthenticatedMapiService(mapi_svc, "testuser", "testpass")
+    auth_query = AuthenticatedQueryService(query_svc, "testuser", "testpass")
+
     async def _override_s3():
         yield mock_s3_service
 
     async def _override_mapi():
-        yield mapi_svc
+        yield auth_mapi
 
     async def _override_query():
-        yield query_svc
+        yield auth_query
 
     def _override_mapi_settings():
         return mapi_settings

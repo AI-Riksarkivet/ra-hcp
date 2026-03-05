@@ -44,7 +44,7 @@ def test_build_hcp_auth_token(service: MapiService):
 
 
 def test_get_auth_header_hcp_type(service: MapiService):
-    header = service._get_auth_header()
+    header = service._get_auth_header("admin", "secret")
     assert header.startswith("HCP ")
 
 
@@ -56,7 +56,7 @@ def test_get_auth_header_ad_type(settings: MapiSettings):
         hcp_auth_type="ad",
     )
     svc = MapiService(settings_ad)
-    header = svc._get_auth_header()
+    header = svc._get_auth_header("admin", "secret")
     assert header == "AD admin:secret"
 
 
@@ -92,7 +92,7 @@ async def test_request_sends_correct_headers(service: MapiService):
     route = respx.get(f"{HCP_BASE}/tenants").mock(
         return_value=httpx.Response(200, json={"ok": True})
     )
-    resp = await service.get("/tenants")
+    resp = await service.get("/tenants", username="admin", password="secret")
 
     assert resp.status_code == 200
     assert route.called
@@ -104,7 +104,9 @@ async def test_request_sends_correct_headers(service: MapiService):
 @respx.mock
 async def test_request_with_json_body(service: MapiService):
     route = respx.post(f"{HCP_BASE}/tenants/t1").mock(return_value=httpx.Response(200))
-    await service.request("POST", "/tenants/t1", body={"name": "t1"})
+    await service.request(
+        "POST", "/tenants/t1", body={"name": "t1"}, username="admin", password="secret"
+    )
 
     request = route.calls.last.request
     assert b"t1" in request.content
@@ -114,7 +116,12 @@ async def test_request_with_json_body(service: MapiService):
 async def test_request_with_raw_body(service: MapiService):
     route = respx.put(f"{HCP_BASE}/path").mock(return_value=httpx.Response(200))
     await service.request(
-        "PUT", "/path", raw_body=b"<xml>data</xml>", content_type="application/xml"
+        "PUT",
+        "/path",
+        raw_body=b"<xml>data</xml>",
+        content_type="application/xml",
+        username="admin",
+        password="secret",
     )
 
     request = route.calls.last.request
@@ -127,7 +134,7 @@ async def test_request_with_raw_body(service: MapiService):
 @respx.mock
 async def test_get_delegates_to_request(service: MapiService):
     route = respx.get(f"{HCP_BASE}/tenants").mock(return_value=httpx.Response(200))
-    await service.get("/tenants")
+    await service.get("/tenants", username="admin", password="secret")
 
     assert route.called
     assert route.calls.last.request.method == "GET"
@@ -136,7 +143,9 @@ async def test_get_delegates_to_request(service: MapiService):
 @respx.mock
 async def test_post_delegates_to_request(service: MapiService):
     route = respx.post(f"{HCP_BASE}/tenants/t1").mock(return_value=httpx.Response(200))
-    await service.post("/tenants/t1", body={"key": "val"})
+    await service.post(
+        "/tenants/t1", body={"key": "val"}, username="admin", password="secret"
+    )
 
     assert route.called
     assert route.calls.last.request.method == "POST"
@@ -147,7 +156,7 @@ async def test_delete_delegates_to_request(service: MapiService):
     route = respx.delete(f"{HCP_BASE}/tenants/t1").mock(
         return_value=httpx.Response(200)
     )
-    await service.delete("/tenants/t1")
+    await service.delete("/tenants/t1", username="admin", password="secret")
 
     assert route.called
     assert route.calls.last.request.method == "DELETE"
@@ -160,7 +169,7 @@ async def test_delete_delegates_to_request(service: MapiService):
 async def test_close_closes_client(service: MapiService):
     # Trigger client creation
     respx.get(f"{HCP_BASE}/tenants").mock(return_value=httpx.Response(200))
-    await service.get("/tenants")
+    await service.get("/tenants", username="admin", password="secret")
     assert service._client is not None
     assert not service._client.is_closed
 
@@ -176,7 +185,7 @@ async def test_close_noop_when_no_client(service: MapiService):
 async def test_close_noop_when_already_closed(service: MapiService):
     # Trigger client creation
     respx.get(f"{HCP_BASE}/tenants").mock(return_value=httpx.Response(200))
-    await service.get("/tenants")
+    await service.get("/tenants", username="admin", password="secret")
     assert service._client is not None
     await service._client.aclose()
     assert service._client.is_closed

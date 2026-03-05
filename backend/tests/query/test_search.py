@@ -18,8 +18,8 @@ from app.api.dependencies import (
 from app.core.config import AuthSettings, MapiSettings
 from app.core.security import create_access_token
 from app.main import app
-from app.services.mapi_service import MapiService
-from app.services.query_service import QueryService
+from app.services.mapi_service import AuthenticatedMapiService, MapiService
+from app.services.query_service import AuthenticatedQueryService, QueryService
 
 # Test settings — must include hcp_domain so QueryService can build URLs
 _MAPI_SETTINGS = MapiSettings(
@@ -58,6 +58,8 @@ async def client(hcp_mock) -> AsyncGenerator[AsyncClient, None]:
     """Async test client with a real QueryService backed by respx."""
     mapi_svc = MapiService(_MAPI_SETTINGS)
     query_svc = QueryService(_MAPI_SETTINGS)
+    auth_mapi = AuthenticatedMapiService(mapi_svc, "testuser", "testpass")
+    auth_query = AuthenticatedQueryService(query_svc, "testuser", "testpass")
 
     mock_s3 = None  # Not needed for query tests
 
@@ -65,10 +67,10 @@ async def client(hcp_mock) -> AsyncGenerator[AsyncClient, None]:
         yield mock_s3
 
     async def _override_mapi():
-        yield mapi_svc
+        yield auth_mapi
 
     async def _override_query():
-        yield query_svc
+        yield auth_query
 
     def _override_mapi_settings():
         return _MAPI_SETTINGS
