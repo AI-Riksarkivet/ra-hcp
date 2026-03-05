@@ -39,27 +39,37 @@
 		bulk_presign,
 		generate_presigned_url,
 	} from '$lib/buckets.remote.js';
-	import { get_tenant, get_tenant_statistics } from '$lib/tenant-info.remote.js';
+	import { get_tenant_chargeback, type ChargebackEntry } from '$lib/tenant-info.remote.js';
+	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
-	let tenantInfo = $derived(tenant ? get_tenant({ tenant }) : undefined);
-	let tenantStats = $derived(tenant ? get_tenant_statistics({ tenant }) : undefined);
-
-	let tenantQuotaBytes = $derived.by(() => {
-		const info = tenantInfo?.current;
-		if (!info?.hardQuota) return null;
-		return parseQuotaBytes(info.hardQuota);
-	});
-
-	let quotaPercent = $derived.by(() => {
-		const stats = tenantStats?.current;
-		if (!tenantQuotaBytes || !stats?.storageCapacityUsed) return null;
-		return Math.min(100, (Number(stats.storageCapacityUsed) / tenantQuotaBytes) * 100);
-	});
+	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
+	let nsData = $derived(tenant ? get_namespaces({ tenant }) : undefined);
 
 	let bucket = $derived(page.params.bucket ?? '');
+
+	// Bucket-specific storage from chargeback (bucket name = namespace name in HCP)
+	let bucketStorageUsed = $derived.by(() => {
+		const entries = (chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[];
+		const entry = entries.find((e) => e.namespaceName === bucket);
+		return entry?.storageCapacityUsed ?? 0;
+	});
+
+	// Bucket-specific quota from namespace info
+	let bucketQuotaStr = $derived.by(() => {
+		const nsList = (nsData?.current ?? []) as Namespace[];
+		const ns = nsList.find((n) => n.name === bucket);
+		return ns?.hardQuota ?? null;
+	});
+
+	let bucketQuotaBytes = $derived(bucketQuotaStr ? parseQuotaBytes(bucketQuotaStr) : null);
+
+	let bucketQuotaPercent = $derived.by(() => {
+		if (!bucketQuotaBytes || !bucketStorageUsed) return null;
+		return Math.min(100, (bucketStorageUsed / bucketQuotaBytes) * 100);
+	});
 	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
 	let objectData = $derived(get_objects({ bucket, prefix }));
 
@@ -468,38 +478,33 @@
 			{#await objectData then od}
 				<Badge variant="secondary">{od.keyCount} objects</Badge>
 			{/await}
-			{#if tenant}
-				{#await tenantStats then stats}
-					{#await tenantInfo then info}
-						{#if quotaPercent !== null}
-							<Tooltip.Root>
-								<Tooltip.Trigger>
-									{#snippet child({ props })}
+			{#if tenant && (bucketStorageUsed > 0 || bucketQuotaBytes)}
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<span class="flex items-center gap-1.5 text-xs text-muted-foreground" {...props}>
+								<span
+									>{formatBytes(bucketStorageUsed)}{bucketQuotaStr
+										? ` / ${bucketQuotaStr}`
+										: ''}</span
+								>
+								{#if bucketQuotaPercent !== null}
+									<span class="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-muted">
 										<span
-											class="flex items-center gap-1.5 text-xs text-muted-foreground"
-											{...props}
-										>
-											<span
-												>{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}</span
-											>
-											<span class="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-												<span
-													class="block h-full rounded-full {quotaPercent > 90
-														? 'bg-destructive'
-														: quotaPercent > 70
-															? 'bg-yellow-500'
-															: 'bg-primary'}"
-													style="width: {quotaPercent}%"
-												></span>
-											</span>
-										</span>
-									{/snippet}
-								</Tooltip.Trigger>
-								<Tooltip.Content>Tenant storage usage</Tooltip.Content>
-							</Tooltip.Root>
-						{/if}
-					{/await}
-				{/await}
+											class="block h-full rounded-full {bucketQuotaPercent > 90
+												? 'bg-destructive'
+												: bucketQuotaPercent > 70
+													? 'bg-yellow-500'
+													: 'bg-primary'}"
+											style="width: {bucketQuotaPercent}%"
+										></span>
+									</span>
+								{/if}
+							</span>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content>Bucket storage usage</Tooltip.Content>
+				</Tooltip.Root>
 			{/if}
 		</div>
 		<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>

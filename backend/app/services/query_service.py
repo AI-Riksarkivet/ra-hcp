@@ -40,18 +40,16 @@ class QueryService:
 
     def _get_auth_header(
         self,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str,
+        password: str,
         auth_type: Optional[str] = None,
     ) -> str:
-        u = username or self.settings.hcp_username
-        p = password or self.settings.hcp_password
         at = auth_type or self.settings.hcp_auth_type
 
         if at == "ad":
-            return f"AD {u}:{p}"
-        user_b64 = base64.b64encode(u.encode()).decode()
-        pass_md5 = hashlib.md5(p.encode()).hexdigest()
+            return f"AD {username}:{password}"
+        user_b64 = base64.b64encode(username.encode()).decode()
+        pass_md5 = hashlib.md5(password.encode()).hexdigest()
         return f"HCP {user_b64}:{pass_md5}"
 
     # ── Client lifecycle ───────────────────────────────────────────────
@@ -75,8 +73,8 @@ class QueryService:
         tenant: str,
         body: dict[str, Any],
         *,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str,
+        password: str,
         auth_type: Optional[str] = None,
     ) -> dict:
         url = query_url_for_tenant(tenant, self.settings.hcp_domain)
@@ -173,8 +171,10 @@ class AuthenticatedQueryService(QueryService):
         return await self._base._get_client()
 
     async def _post_query(self, tenant, body, **kwargs):
-        kwargs.setdefault("username", self._username)
-        kwargs.setdefault("password", self._password)
+        if not kwargs.get("username"):
+            kwargs["username"] = self._username
+        if not kwargs.get("password"):
+            kwargs["password"] = self._password
         return await self._base._post_query(tenant, body, **kwargs)
 
     async def close(self):

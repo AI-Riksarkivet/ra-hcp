@@ -15,22 +15,32 @@
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import { get_buckets, create_bucket, delete_bucket } from '$lib/buckets.remote.js';
-	import { get_tenant, get_tenant_statistics } from '$lib/tenant-info.remote.js';
+	import { get_tenant_chargeback, type ChargebackEntry } from '$lib/tenant-info.remote.js';
+	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
-	let tenantInfo = $derived(tenant ? get_tenant({ tenant }) : undefined);
-	let tenantStats = $derived(tenant ? get_tenant_statistics({ tenant }) : undefined);
+	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
+	let nsData = $derived(tenant ? get_namespaces({ tenant }) : undefined);
 
-	let tenantQuotaBytes = $derived.by(() => {
-		const info = tenantInfo?.current;
-		if (!info?.hardQuota) return null;
-		return parseQuotaBytes(info.hardQuota);
+	let chargeback = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
+	let namespaces = $derived((nsData?.current ?? []) as Namespace[]);
+
+	// Map bucket/namespace name → storage used from chargeback
+	let bucketStorageMap = $derived.by(() => {
+		const map = new Map<string, number>();
+		for (const entry of chargeback) {
+			if (entry.namespaceName) map.set(entry.namespaceName, entry.storageCapacityUsed ?? 0);
+		}
+		return map;
 	});
 
-	let quotaPercent = $derived.by(() => {
-		const stats = tenantStats?.current;
-		if (!tenantQuotaBytes || !stats?.storageCapacityUsed) return null;
-		return Math.min(100, (Number(stats.storageCapacityUsed) / tenantQuotaBytes) * 100);
+	// Map bucket/namespace name → hard quota from namespace info
+	let bucketQuotaMap = $derived.by(() => {
+		const map = new Map<string, string>();
+		for (const ns of namespaces) {
+			if (ns.hardQuota) map.set(ns.name, ns.hardQuota);
+		}
+		return map;
 	});
 
 	let bucketData = get_buckets();
@@ -229,33 +239,9 @@
 						Clear filters
 					</Button>
 				{/if}
-				<span class="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
-					{#if tenant}
-						{#await tenantStats then stats}
-							{#await tenantInfo then info}
-								{#if quotaPercent !== null}
-									<span class="flex items-center gap-1.5">
-										<span
-											>{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}</span
-										>
-										<span class="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-											<span
-												class="block h-full rounded-full transition-all {quotaPercent > 90
-													? 'bg-destructive'
-													: quotaPercent > 70
-														? 'bg-yellow-500'
-														: 'bg-primary'}"
-												style="width: {quotaPercent}%"
-											></span>
-										</span>
-									</span>
-									<span class="text-border">|</span>
-								{/if}
-							{/await}
-						{/await}
-					{/if}
-					{filteredBuckets.length} of {buckets.length} buckets
-				</span>
+				<span class="ml-auto text-xs text-muted-foreground"
+					>{filteredBuckets.length} of {buckets.length} buckets</span
+				>
 			</div>
 		</div>
 
@@ -283,6 +269,9 @@
 							/></th
 						>
 						<th class="px-4 py-3 font-medium">Name</th>
+						{#if tenant}
+							<th class="px-4 py-3 font-medium">Storage Used</th>
+						{/if}
 						<th class="px-4 py-3 font-medium">Owner</th>
 						<th class="px-4 py-3 font-medium">Created</th>
 						<th class="w-16 px-4 py-3 font-medium"></th>
@@ -291,13 +280,13 @@
 				<tbody class="divide-y">
 					{#if buckets.length === 0}
 						<tr
-							><td colspan="5" class="px-4 py-8 text-center text-muted-foreground"
+							><td colspan={tenant ? 6 : 5} class="px-4 py-8 text-center text-muted-foreground"
 								>No buckets found. Create one to get started.</td
 							></tr
 						>
 					{:else if filteredBuckets.length === 0}
 						<tr
-							><td colspan="5" class="px-4 py-8 text-center text-muted-foreground"
+							><td colspan={tenant ? 6 : 5} class="px-4 py-8 text-center text-muted-foreground"
 								>No results matching "{search}"</td
 							></tr
 						>
@@ -320,6 +309,39 @@
 									/>
 								</td>
 								<td class="px-4 py-3 font-medium">{bucket.name}</td>
+								{#if tenant}
+									<td class="px-4 py-3 text-muted-foreground">
+										{#if true}
+											{@const used = bucketStorageMap.get(bucket.name) ?? 0}
+											{@const quotaStr = bucketQuotaMap.get(bucket.name)}
+											{@const quota = quotaStr ? parseQuotaBytes(quotaStr) : null}
+											{#if used > 0 || quota}
+												<div class="flex flex-col gap-1">
+													<span class="text-sm"
+														>{formatBytes(used)}{quota ? ` / ${quotaStr}` : ''}</span
+													>
+													{#if quota}
+														{@const pct = Math.min(100, (used / quota) * 100)}
+														<div
+															class="h-1.5 w-full max-w-24 overflow-hidden rounded-full bg-muted"
+														>
+															<div
+																class="h-full rounded-full transition-all {pct > 90
+																	? 'bg-destructive'
+																	: pct > 70
+																		? 'bg-yellow-500'
+																		: 'bg-primary'}"
+																style="width: {pct}%"
+															></div>
+														</div>
+													{/if}
+												</div>
+											{:else}
+												—
+											{/if}
+										{/if}
+									</td>
+								{/if}
 								<td class="px-4 py-3 text-muted-foreground">{ownerName || '-'}</td>
 								<td class="px-4 py-3 text-muted-foreground">{formatDate(bucket.creation_date)}</td>
 								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
