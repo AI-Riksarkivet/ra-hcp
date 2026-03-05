@@ -1,6 +1,16 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus, Trash2, X, Pencil, FileBox, HardDrive, Boxes, Users } from 'lucide-svelte';
+	import {
+		Plus,
+		Trash2,
+		X,
+		Pencil,
+		FileBox,
+		HardDrive,
+		Boxes,
+		Users,
+		PieChart,
+	} from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -22,9 +32,14 @@
 		delete_namespace,
 		type Namespace,
 	} from '$lib/namespaces.remote.js';
-	import { get_tenant, get_tenant_statistics } from '$lib/tenant-info.remote.js';
+	import {
+		get_tenant,
+		get_tenant_statistics,
+		get_tenant_chargeback,
+		type ChargebackEntry,
+	} from '$lib/tenant-info.remote.js';
 	import { get_users } from '$lib/users.remote.js';
-	import { formatBytes } from '$lib/utils/format.js';
+	import { formatBytes, parseQuotaBytes } from '$lib/utils/format.js';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
@@ -34,27 +49,49 @@
 	// Tenant stats
 	let tenantInfo = $derived(tenant ? get_tenant({ tenant }) : undefined);
 	let tenantStats = $derived(tenant ? get_tenant_statistics({ tenant }) : undefined);
+	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
 	let usersData = $derived(tenant ? get_users({ tenant }) : undefined);
 
+	let chargeback = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
 	let users = $derived((usersData?.current ?? []) as { username: string }[]);
 
-	let quotaPercent = $derived.by(() => {
+	// Map namespace name → storage used from chargeback
+	let nsStorageMap = $derived.by(() => {
+		const map = new Map<string, number>();
+		for (const entry of chargeback) {
+			if (entry.namespaceName) map.set(entry.namespaceName, entry.storageCapacityUsed ?? 0);
+		}
+		return map;
+	});
+
+	// Parse tenant quota to bytes
+	let tenantQuotaBytes = $derived.by(() => {
 		const info = tenantInfo?.current;
+		if (!info?.hardQuota) return null;
+		return parseQuotaBytes(info.hardQuota);
+	});
+
+	let quotaPercent = $derived.by(() => {
 		const stats = tenantStats?.current;
-		if (!info?.hardQuota || !stats?.storageCapacityUsed) return null;
-		const quotaMatch = info.hardQuota.match(/([\d.]+)\s*(B|KB|MB|GB|TB|PB)/i);
-		if (!quotaMatch) return null;
-		const units: Record<string, number> = {
-			B: 1,
-			KB: 1024,
-			MB: 1024 ** 2,
-			GB: 1024 ** 3,
-			TB: 1024 ** 4,
-			PB: 1024 ** 5,
-		};
-		const quotaBytes = parseFloat(quotaMatch[1]) * (units[quotaMatch[2].toUpperCase()] ?? 1);
-		if (quotaBytes <= 0) return null;
-		return Math.min(100, (Number(stats.storageCapacityUsed) / quotaBytes) * 100);
+		if (!tenantQuotaBytes || !stats?.storageCapacityUsed) return null;
+		return Math.min(100, (Number(stats.storageCapacityUsed) / tenantQuotaBytes) * 100);
+	});
+
+	// Total quota allocated across all namespaces
+	let totalAllocatedBytes = $derived.by(() => {
+		let total = 0;
+		for (const ns of namespaces) {
+			if (ns.hardQuota) {
+				const bytes = parseQuotaBytes(ns.hardQuota);
+				if (bytes) total += bytes;
+			}
+		}
+		return total;
+	});
+
+	let allocatedPercent = $derived.by(() => {
+		if (!tenantQuotaBytes || totalAllocatedBytes === 0) return null;
+		return Math.min(100, (totalAllocatedBytes / tenantQuotaBytes) * 100);
 	});
 
 	let search = $state('');
@@ -363,8 +400,9 @@
 
 	{#if tenant}
 		<!-- Tenant Stats -->
-		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
 			{#await tenantStats}
+				<CardSkeleton />
 				<CardSkeleton />
 				<CardSkeleton />
 				<CardSkeleton />
@@ -377,7 +415,7 @@
 				</StatCard>
 
 				<StatCard
-					label="Storage"
+					label="Storage Used"
 					value={formatBytes(Number(stats?.storageCapacityUsed ?? 0))}
 					icon={HardDrive}
 					delay="delay-75"
@@ -403,6 +441,35 @@
 					{/await}
 				</StatCard>
 
+				<StatCard
+					label="Quota Allocated"
+					value={formatBytes(totalAllocatedBytes)}
+					icon={PieChart}
+					delay="delay-150"
+				>
+					{#await tenantInfo then info}
+						{#if allocatedPercent !== null}
+							<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+								<div
+									class="h-full rounded-full transition-all duration-500 {allocatedPercent > 90
+										? 'bg-destructive'
+										: allocatedPercent > 70
+											? 'bg-yellow-500'
+											: 'bg-blue-500'}"
+									style="width: {allocatedPercent}%"
+								></div>
+							</div>
+							<p class="mt-1 text-xs text-muted-foreground">
+								{formatBytes(totalAllocatedBytes)} / {info?.hardQuota}
+							</p>
+						{:else}
+							<p class="mt-1 text-xs text-muted-foreground">
+								{namespaces.filter((n) => n.hardQuota).length} of {namespaces.length} with quotas
+							</p>
+						{/if}
+					{/await}
+				</StatCard>
+
 				{#await nsData}
 					<CardSkeleton />
 				{:then _}
@@ -410,11 +477,11 @@
 						label="Namespaces"
 						value={String(namespaces.length)}
 						icon={Boxes}
-						delay="delay-150"
+						delay="delay-200"
 					/>
 				{/await}
 
-				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-200">
+				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-300">
 					{#await usersData}
 						<CardSkeleton />
 					{:then _}
@@ -455,6 +522,7 @@
 								/></th
 							>
 							<th class="px-4 py-3 font-medium">Name</th>
+							<th class="px-4 py-3 font-medium">Storage Used</th>
 							<th class="px-4 py-3 font-medium">Tags</th>
 							<th class="px-4 py-3 font-medium">Description</th>
 							<th class="px-4 py-3 font-medium">Hard Quota</th>
@@ -466,13 +534,13 @@
 					<tbody class="divide-y">
 						{#if namespaces.length === 0}
 							<tr
-								><td colspan="8" class="px-4 py-8 text-center text-muted-foreground"
+								><td colspan="9" class="px-4 py-8 text-center text-muted-foreground"
 									>No namespaces found. Create one to get started.</td
 								></tr
 							>
 						{:else if filteredNamespaces.length === 0}
 							<tr
-								><td colspan="8" class="px-4 py-8 text-center text-muted-foreground"
+								><td colspan="9" class="px-4 py-8 text-center text-muted-foreground"
 									>No results matching "{search}"</td
 								></tr
 							>
@@ -500,6 +568,36 @@
 										>
 											{ns.name}
 										</a>
+									</td>
+									<td class="px-4 py-3 text-muted-foreground">
+										{#if true}
+											{@const used = nsStorageMap.get(ns.name) ?? 0}
+											{@const quota = ns.hardQuota ? parseQuotaBytes(ns.hardQuota) : null}
+											{#if used > 0 || quota}
+												<div class="flex flex-col gap-1">
+													<span class="text-sm"
+														>{formatBytes(used)}{quota ? ` / ${ns.hardQuota}` : ''}</span
+													>
+													{#if quota}
+														{@const pct = Math.min(100, (used / quota) * 100)}
+														<div
+															class="h-1.5 w-full max-w-24 overflow-hidden rounded-full bg-muted"
+														>
+															<div
+																class="h-full rounded-full transition-all {pct > 90
+																	? 'bg-destructive'
+																	: pct > 70
+																		? 'bg-yellow-500'
+																		: 'bg-primary'}"
+																style="width: {pct}%"
+															></div>
+														</div>
+													{/if}
+												</div>
+											{:else}
+												—
+											{/if}
+										{/if}
 									</td>
 									<td class="px-4 py-3">
 										{#if editingTagsNs === ns.name}

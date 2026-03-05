@@ -19,6 +19,21 @@ export function formatDate(date: string | Date): string {
   });
 }
 
+const QUOTA_UNITS: Record<string, number> = {
+  B: 1,
+  KB: 1024,
+  MB: 1024 ** 2,
+  GB: 1024 ** 3,
+  TB: 1024 ** 4,
+  PB: 1024 ** 5,
+};
+
+export function parseQuotaBytes(quota: string): number | null {
+  const match = quota.match(/([\d.]+)\s*(B|KB|MB|GB|TB|PB)/i);
+  if (!match) return null;
+  return parseFloat(match[1]) * (QUOTA_UNITS[match[2].toUpperCase()] ?? 1);
+}
+
 export function formatRelative(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const now = new Date();

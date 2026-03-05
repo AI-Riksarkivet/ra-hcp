@@ -1,19 +1,39 @@
 <script lang="ts">
-	import { Plus, Trash2, Search } from 'lucide-svelte';
+	import { page } from '$app/state';
+	import { Plus, Trash2, Search, HardDrive, FolderOpen } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { formatDate } from '$lib/utils/format.js';
+	import { formatDate, formatBytes, parseQuotaBytes } from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
+	import StatCard from '$lib/components/ui/stat-card.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import { get_buckets, create_bucket, delete_bucket } from '$lib/buckets.remote.js';
+	import { get_tenant, get_tenant_statistics } from '$lib/tenant-info.remote.js';
+
+	let tenant = $derived(page.data.tenant as string | undefined);
+	let tenantInfo = $derived(tenant ? get_tenant({ tenant }) : undefined);
+	let tenantStats = $derived(tenant ? get_tenant_statistics({ tenant }) : undefined);
+
+	let tenantQuotaBytes = $derived.by(() => {
+		const info = tenantInfo?.current;
+		if (!info?.hardQuota) return null;
+		return parseQuotaBytes(info.hardQuota);
+	});
+
+	let quotaPercent = $derived.by(() => {
+		const stats = tenantStats?.current;
+		if (!tenantQuotaBytes || !stats?.storageCapacityUsed) return null;
+		return Math.min(100, (Number(stats.storageCapacityUsed) / tenantQuotaBytes) * 100);
+	});
 
 	let bucketData = get_buckets();
 	let owner = $derived(
@@ -177,6 +197,52 @@
 			</form>
 		</Dialog.Content>
 	</Dialog.Root>
+
+	{#if tenant}
+		<div class="grid gap-4 sm:grid-cols-2">
+			{#await tenantStats}
+				<CardSkeleton />
+				<CardSkeleton />
+			{:then stats}
+				<StatCard
+					label="Storage Used"
+					value={formatBytes(Number(stats?.storageCapacityUsed ?? 0))}
+					icon={HardDrive}
+				>
+					{#await tenantInfo then info}
+						{#if quotaPercent !== null}
+							<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+								<div
+									class="h-full rounded-full transition-all duration-500 {quotaPercent > 90
+										? 'bg-destructive'
+										: quotaPercent > 70
+											? 'bg-yellow-500'
+											: 'bg-primary'}"
+									style="width: {quotaPercent}%"
+								></div>
+							</div>
+							<p class="mt-1 text-xs text-muted-foreground">
+								{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}
+							</p>
+						{:else}
+							<p class="mt-1 text-xs text-muted-foreground">No quota limit</p>
+						{/if}
+					{/await}
+				</StatCard>
+
+				<StatCard
+					label="Total Buckets"
+					value={String(buckets.length)}
+					icon={FolderOpen}
+					delay="delay-75"
+				>
+					<p class="mt-1 text-xs text-muted-foreground">
+						{stats?.objectCount?.toLocaleString() ?? 0} objects across all buckets
+					</p>
+				</StatCard>
+			{/await}
+		</div>
+	{/if}
 
 	{#await bucketData}
 		<TableSkeleton rows={5} columns={5} />

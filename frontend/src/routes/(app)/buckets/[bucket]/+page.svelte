@@ -23,13 +23,17 @@
 		Link,
 		Copy,
 		Check,
+		HardDrive,
+		FileBox,
 	} from 'lucide-svelte';
 	import FileViewer from '$lib/components/ui/FileViewer.svelte';
-	import { formatBytes, formatDate } from '$lib/utils/format.js';
+	import { formatBytes, formatDate, parseQuotaBytes } from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
+	import StatCard from '$lib/components/ui/stat-card.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import {
@@ -39,8 +43,25 @@
 		bulk_presign,
 		generate_presigned_url,
 	} from '$lib/buckets.remote.js';
+	import { get_tenant, get_tenant_statistics } from '$lib/tenant-info.remote.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+
+	let tenant = $derived(page.data.tenant as string | undefined);
+	let tenantInfo = $derived(tenant ? get_tenant({ tenant }) : undefined);
+	let tenantStats = $derived(tenant ? get_tenant_statistics({ tenant }) : undefined);
+
+	let tenantQuotaBytes = $derived.by(() => {
+		const info = tenantInfo?.current;
+		if (!info?.hardQuota) return null;
+		return parseQuotaBytes(info.hardQuota);
+	});
+
+	let quotaPercent = $derived.by(() => {
+		const stats = tenantStats?.current;
+		if (!tenantQuotaBytes || !stats?.storageCapacityUsed) return null;
+		return Math.min(100, (Number(stats.storageCapacityUsed) / tenantQuotaBytes) * 100);
+	});
 
 	let bucket = $derived(page.params.bucket ?? '');
 	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
@@ -583,6 +604,54 @@
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
+
+	{#if tenant}
+		<div class="grid gap-4 sm:grid-cols-2">
+			{#await tenantStats}
+				<CardSkeleton />
+				<CardSkeleton />
+			{:then stats}
+				<StatCard
+					label="Tenant Storage"
+					value={formatBytes(Number(stats?.storageCapacityUsed ?? 0))}
+					icon={HardDrive}
+				>
+					{#await tenantInfo then info}
+						{#if quotaPercent !== null}
+							<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+								<div
+									class="h-full rounded-full transition-all duration-500 {quotaPercent > 90
+										? 'bg-destructive'
+										: quotaPercent > 70
+											? 'bg-yellow-500'
+											: 'bg-primary'}"
+									style="width: {quotaPercent}%"
+								></div>
+							</div>
+							<p class="mt-1 text-xs text-muted-foreground">
+								{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}
+							</p>
+						{:else}
+							<p class="mt-1 text-xs text-muted-foreground">No quota limit</p>
+						{/if}
+					{/await}
+				</StatCard>
+
+				{#await objectData then od}
+					<StatCard
+						label="Objects in Bucket"
+						value={String(od.keyCount)}
+						icon={FileBox}
+						delay="delay-75"
+					>
+						<p class="mt-1 text-xs text-muted-foreground">
+							{stats?.objectCount?.toLocaleString() ?? 0} total across tenant
+						</p>
+					</StatCard>
+				{/await}
+			{/await}
+		</div>
+	{/if}
 
 	{#if prefix}<button
 			onclick={() => navigatePrefix(parentPrefix)}
