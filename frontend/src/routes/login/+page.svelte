@@ -18,14 +18,14 @@
 	// Redirect if already logged in
 	onMount(() => {
 		if (data.hasToken) {
-			goto('/overview', { replaceState: true });
+			goto('/namespaces', { replaceState: true });
 		}
 	});
 
 	// Redirect on successful login
 	$effect(() => {
 		if (form?.success) {
-			goto('/overview', { replaceState: true });
+			goto('/namespaces', { replaceState: true });
 		}
 	});
 </script>

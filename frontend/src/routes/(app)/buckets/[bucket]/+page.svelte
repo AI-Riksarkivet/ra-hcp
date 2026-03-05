@@ -1,10 +1,37 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import {
+		type ColumnDef,
+		type ColumnFiltersState,
+		type PaginationState,
+		type RowSelectionState,
+		type SortingState,
+		type VisibilityState,
+		getCoreRowModel,
+		getFilteredRowModel,
+		getPaginationRowModel,
+		getSortedRowModel,
+	} from '@tanstack/table-core';
+	import { createRawSnippet } from 'svelte';
+	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import * as Table from '$lib/components/ui/table/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import {
+		FlexRender,
+		createSvelteTable,
+		renderComponent,
+		renderSnippet,
+	} from '$lib/components/ui/data-table/index.js';
+	import DataTableCheckbox from '$lib/components/ui/data-table/data-table-checkbox.svelte';
+	import DataTableActions from './data-table/data-table-actions.svelte';
+	import DataTableHeaderButton from '$lib/components/ui/data-table/data-table-header-button.svelte';
 	import {
 		ArrowLeft,
 		Upload,
@@ -19,7 +46,6 @@
 		CheckCircle,
 		AlertCircle,
 		Loader2,
-		Search,
 		Link,
 		Copy,
 		Check,
@@ -28,10 +54,8 @@
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
-	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import {
 		get_objects,
 		delete_object,
@@ -39,13 +63,288 @@
 		bulk_presign,
 		generate_presigned_url,
 	} from '$lib/buckets.remote.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
 
+	// ── Route state ────────────────────────────────────────────────
 	let bucket = $derived(page.params.bucket ?? '');
 	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
 	let objectData = $derived(get_objects({ bucket, prefix }));
 
+	// ── Data model ─────────────────────────────────────────────────
+	interface S3Object {
+		key: string;
+		size: number;
+		last_modified: string;
+		etag: string;
+		storage_class: string;
+		owner: {
+			display_name?: string;
+			id?: string;
+			DisplayName?: string;
+			ID?: string;
+		} | null;
+		isFolder: boolean;
+	}
+
+	function getOwnerName(obj: S3Object): string {
+		return obj.owner?.display_name ?? obj.owner?.DisplayName ?? '';
+	}
+	function getDisplayName(key: string): string {
+		return key.split('/').filter(Boolean).pop() ?? key;
+	}
+	function downloadUrlFor(key: string): string {
+		return `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${encodeURIComponent(key)}`;
+	}
+	function getFileIcon(name: string) {
+		const ext = name.split('.').pop()?.toLowerCase() ?? '';
+		if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) return Image;
+		if (['zip', 'tar', 'gz', 'rar', '7z'].includes(ext)) return FileArchive;
+		if (['js', 'ts', 'py', 'json', 'html', 'css', 'xml', 'yaml', 'yml', 'toml'].includes(ext))
+			return FileCode;
+		return FileText;
+	}
+	function navigatePrefix(p: string) {
+		goto(`/buckets/${bucket}?prefix=${encodeURIComponent(p)}`);
+	}
+
+	let rawObjects = $derived(
+		((objectData.current?.objects ?? []) as Omit<S3Object, 'isFolder'>[]).map(
+			(o) => ({ ...o, isFolder: false }) as S3Object
+		)
+	);
+	let commonPrefixes = $derived((objectData.current?.commonPrefixes ?? []) as string[]);
+	let folderEntries = $derived<S3Object[]>(
+		commonPrefixes.map((p) => ({
+			key: p,
+			size: 0,
+			last_modified: '',
+			etag: '',
+			storage_class: '',
+			owner: null,
+			isFolder: true,
+		}))
+	);
+	let data = $derived<S3Object[]>([...folderEntries, ...rawObjects]);
+	let keyCount = $derived(objectData.current?.keyCount ?? 0);
+
+	// ── Column definitions ─────────────────────────────────────────
+	const columns: ColumnDef<S3Object>[] = [
+		{
+			id: 'select',
+			header: ({ table: t }) =>
+				renderComponent(DataTableCheckbox, {
+					checked: t.getIsAllPageRowsSelected(),
+					indeterminate: t.getIsSomePageRowsSelected() && !t.getIsAllPageRowsSelected(),
+					onCheckedChange: (value: boolean) => t.toggleAllPageRowsSelected(!!value),
+					'aria-label': 'Select all',
+				}),
+			cell: ({ row }) => {
+				if (row.original.isFolder) {
+					const empty = createRawSnippet(() => ({ render: () => '' }));
+					return renderSnippet(empty);
+				}
+				return renderComponent(DataTableCheckbox, {
+					checked: row.getIsSelected(),
+					onCheckedChange: (value: boolean) => row.toggleSelected(!!value),
+					'aria-label': 'Select row',
+				});
+			},
+			enableSorting: false,
+			enableHiding: false,
+		},
+		{
+			accessorKey: 'key',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Name',
+					onclick: column.getToggleSortingHandler(),
+				}),
+			cell: ({ row }) => {
+				const s = createRawSnippet<[{ displayName: string; isFolder: boolean; fullKey: string }]>(
+					(getProps) => {
+						const { displayName, isFolder, fullKey } = getProps();
+						const icon = isFolder
+							? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500 inline-block mr-2 align-text-bottom"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>'
+							: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground inline-block mr-2 align-text-bottom"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>';
+						return {
+							render: () =>
+								`<span class="flex items-center gap-1" title="${fullKey}">${icon}<span class="font-medium">${displayName}</span></span>`,
+						};
+					}
+				);
+				return renderSnippet(s, {
+					displayName: getDisplayName(row.original.key),
+					isFolder: row.original.isFolder,
+					fullKey: row.original.key,
+				});
+			},
+			filterFn: (row, _columnId, filterValue) => {
+				const q = (filterValue as string).toLowerCase();
+				return (
+					getDisplayName(row.original.key).toLowerCase().includes(q) ||
+					row.original.key.toLowerCase().includes(q)
+				);
+			},
+		},
+		{
+			accessorKey: 'owner',
+			header: 'Owner',
+			accessorFn: (row) => getOwnerName(row),
+			cell: ({ row }) => {
+				const s = createRawSnippet<[{ owner: string }]>((getOwner) => {
+					const { owner } = getOwner();
+					return {
+						render: () =>
+							`<span class="text-muted-foreground">${row.original.isFolder ? '-' : owner || '-'}</span>`,
+					};
+				});
+				return renderSnippet(s, { owner: getOwnerName(row.original) });
+			},
+			filterFn: 'equalsString',
+		},
+		{
+			accessorKey: 'size',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Size',
+					onclick: column.getToggleSortingHandler(),
+				}),
+			cell: ({ row }) => {
+				const s = createRawSnippet<[{ size: string }]>((getSize) => {
+					const { size } = getSize();
+					return {
+						render: () => `<span class="text-muted-foreground">${size}</span>`,
+					};
+				});
+				return renderSnippet(s, {
+					size: row.original.isFolder ? '-' : formatBytes(row.original.size),
+				});
+			},
+		},
+		{
+			accessorKey: 'last_modified',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Last Modified',
+					onclick: column.getToggleSortingHandler(),
+				}),
+			cell: ({ row }) => {
+				const s = createRawSnippet<[{ date: string }]>((getDate) => {
+					const { date } = getDate();
+					return {
+						render: () => `<span class="text-muted-foreground">${date}</span>`,
+					};
+				});
+				return renderSnippet(s, {
+					date: row.original.last_modified ? formatDate(row.original.last_modified) : '-',
+				});
+			},
+			sortingFn: (a, b) => {
+				const da = new Date(a.original.last_modified || 0).getTime();
+				const db = new Date(b.original.last_modified || 0).getTime();
+				return da - db;
+			},
+		},
+		{
+			id: 'actions',
+			enableHiding: false,
+			cell: ({ row }) => {
+				if (row.original.isFolder) {
+					const empty = createRawSnippet(() => ({ render: () => '' }));
+					return renderSnippet(empty);
+				}
+				return renderComponent(DataTableActions, {
+					objectKey: row.original.key,
+					downloadUrl: downloadUrlFor(row.original.key),
+					ondelete: () => {
+						deleteTarget = row.original.key;
+						deleteDialogOpen = true;
+					},
+					onshare: () => openShare(row.original.key),
+					onview: () => openViewer(row.original),
+				});
+			},
+		},
+	];
+
+	// ── Table state ────────────────────────────────────────────────
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 50 });
+	let sorting = $state<SortingState>([]);
+	let columnFilters = $state<ColumnFiltersState>([]);
+	let rowSelection = $state<RowSelectionState>({});
+	let columnVisibility = $state<VisibilityState>({});
+
+	const table = createSvelteTable({
+		get data() {
+			return data;
+		},
+		columns,
+		enableRowSelection: (row) => !row.original.isFolder,
+		state: {
+			get pagination() {
+				return pagination;
+			},
+			get sorting() {
+				return sorting;
+			},
+			get columnFilters() {
+				return columnFilters;
+			},
+			get columnVisibility() {
+				return columnVisibility;
+			},
+			get rowSelection() {
+				return rowSelection;
+			},
+		},
+		getCoreRowModel: getCoreRowModel(),
+		getPaginationRowModel: getPaginationRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+		getFilteredRowModel: getFilteredRowModel(),
+		onPaginationChange: (updater) => {
+			pagination = typeof updater === 'function' ? updater(pagination) : updater;
+		},
+		onSortingChange: (updater) => {
+			sorting = typeof updater === 'function' ? updater(sorting) : updater;
+		},
+		onColumnFiltersChange: (updater) => {
+			columnFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
+		},
+		onColumnVisibilityChange: (updater) => {
+			columnVisibility = typeof updater === 'function' ? updater(columnVisibility) : updater;
+		},
+		onRowSelectionChange: (updater) => {
+			rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+		},
+	});
+
+	let selectedCount = $derived(table.getFilteredSelectedRowModel().rows.length);
+
+	// ── File Viewer ────────────────────────────────────────────────
+	let viewerOpen = $state(false);
+	let viewerIndex = $state(-1);
+
+	let selectableRows = $derived(
+		table.getFilteredRowModel().rows.filter((r) => !r.original.isFolder)
+	);
+	let viewerObject = $derived(viewerIndex >= 0 ? selectableRows[viewerIndex]?.original : undefined);
+	let viewerUrl = $derived(viewerObject ? downloadUrlFor(viewerObject.key) : '');
+	let viewerFilename = $derived(viewerObject ? getDisplayName(viewerObject.key) : '');
+	let viewerSize = $derived(viewerObject?.size ?? 0);
+	let viewerHasPrev = $derived(viewerIndex > 0);
+	let viewerHasNext = $derived(viewerIndex < selectableRows.length - 1);
+
+	function openViewer(obj: S3Object) {
+		viewerIndex = selectableRows.findIndex((r) => r.original.key === obj.key);
+		viewerOpen = true;
+	}
+	function viewerPrev() {
+		if (viewerHasPrev) viewerIndex--;
+	}
+	function viewerNext() {
+		if (viewerHasNext) viewerIndex++;
+	}
+
+	// ── Upload ─────────────────────────────────────────────────────
 	interface FileUpload {
 		file: File;
 		key: string;
@@ -60,62 +359,9 @@
 	let uploading = $state(false);
 	let dragover = $state(false);
 
-	interface S3Object {
-		key: string;
-		size: number;
-		last_modified: string;
-		etag: string;
-		storage_class: string;
-		owner: { display_name?: string; id?: string; DisplayName?: string; ID?: string } | null;
-	}
-
-	function getOwnerName(obj: S3Object): string {
-		return obj.owner?.display_name ?? obj.owner?.DisplayName ?? '';
-	}
-
-	let rawObjects = $derived((objectData.current?.objects ?? []) as S3Object[]);
-	let commonPrefixes = $derived((objectData.current?.commonPrefixes ?? []) as string[]);
-	let folderEntries = $derived(
-		commonPrefixes.map(
-			(p): S3Object => ({
-				key: p,
-				size: 0,
-				last_modified: '',
-				etag: '',
-				storage_class: '',
-				owner: null,
-			})
-		)
-	);
-	let objects = $derived([...folderEntries, ...rawObjects]);
-	let keyCount = $derived(objectData.current?.keyCount ?? 0);
-
-	function navigatePrefix(p: string) {
-		goto(`/buckets/${bucket}?prefix=${encodeURIComponent(p)}`);
-	}
-	function downloadUrl(key: string): string {
-		return `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${encodeURIComponent(key)}`;
-	}
-	function getDisplayName(key: string): string {
-		return key.split('/').filter(Boolean).pop() ?? key;
-	}
-	function isObjFolder(obj: S3Object): boolean {
-		return obj.size === 0 && obj.key.endsWith('/');
-	}
-
-	function getFileIcon(name: string) {
-		const ext = name.split('.').pop()?.toLowerCase() ?? '';
-		if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) return Image;
-		if (['zip', 'tar', 'gz', 'rar', '7z'].includes(ext)) return FileArchive;
-		if (['js', 'ts', 'py', 'json', 'html', 'css', 'xml', 'yaml', 'yml', 'toml'].includes(ext))
-			return FileCode;
-		return FileText;
-	}
-
 	function isImageFile(file: File): boolean {
 		return file.type.startsWith('image/');
 	}
-
 	function addFiles(files: FileList | null) {
 		if (!files) return;
 		for (const file of files) {
@@ -124,19 +370,16 @@
 			selectedFiles = [...selectedFiles, { file, key, preview, status: 'pending', progress: 0 }];
 		}
 	}
-
 	function removeFile(index: number) {
 		const removed = selectedFiles[index];
 		if (removed.preview) URL.revokeObjectURL(removed.preview);
 		selectedFiles = selectedFiles.filter((_, i) => i !== index);
 	}
-
 	function handleDrop(e: DragEvent) {
 		e.preventDefault();
 		dragover = false;
 		addFiles(e.dataTransfer?.files ?? null);
 	}
-
 	function uploadFile(index: number): Promise<void> {
 		return new Promise((resolve) => {
 			const item = selectedFiles[index];
@@ -171,31 +414,30 @@
 				resolve();
 			};
 			xhr.onerror = () => {
-				selectedFiles[index] = { ...selectedFiles[index], status: 'error', error: 'Network error' };
+				selectedFiles[index] = {
+					...selectedFiles[index],
+					status: 'error',
+					error: 'Network error',
+				};
 				resolve();
 			};
 			selectedFiles[index] = { ...selectedFiles[index], status: 'uploading', progress: 0 };
 			xhr.send(formData);
 		});
 	}
-
 	async function uploadAll() {
 		if (selectedFiles.length === 0) return;
 		uploading = true;
 		for (let i = 0; i < selectedFiles.length; i++) {
-			if (selectedFiles[i].status === 'pending') {
-				await uploadFile(i);
-			}
+			if (selectedFiles[i].status === 'pending') await uploadFile(i);
 		}
 		uploading = false;
 		const doneCount = selectedFiles.filter((f) => f.status === 'done').length;
 		const errCount = selectedFiles.filter((f) => f.status === 'error').length;
-		if (doneCount > 0)
-			toast.success(`Uploaded ${doneCount} file${doneCount !== 1 ? 's' : ''} successfully`);
-		if (errCount > 0) toast.error(`${errCount} file${errCount !== 1 ? 's' : ''} failed to upload`);
+		if (doneCount > 0) toast.success(`Uploaded ${doneCount} file${doneCount !== 1 ? 's' : ''}`);
+		if (errCount > 0) toast.error(`${errCount} file${errCount !== 1 ? 's' : ''} failed`);
 		await objectData.refresh();
 	}
-
 	function closeUpload() {
 		for (const f of selectedFiles) {
 			if (f.preview) URL.revokeObjectURL(f.preview);
@@ -203,7 +445,6 @@
 		selectedFiles = [];
 		uploadOpen = false;
 	}
-
 	let allDone = $derived(
 		selectedFiles.length > 0 && selectedFiles.every((f) => f.status === 'done')
 	);
@@ -218,104 +459,14 @@
 		return parts.length > 0 ? parts.join('/') + '/' : '';
 	});
 
-	let search = $state('');
-	let ownerFilter = $state('');
-	let sizeFilter = $state('');
-	let dateFilter = $state('');
-
-	let uniqueOwners = $derived([...new Set(rawObjects.map(getOwnerName).filter(Boolean))]);
-
-	let filteredObjects = $derived(
-		objects.filter((obj) => {
-			if (search) {
-				const q = search.toLowerCase();
-				if (
-					!getDisplayName(obj.key).toLowerCase().includes(q) &&
-					!obj.key.toLowerCase().includes(q)
-				)
-					return false;
-			}
-			if (ownerFilter && getOwnerName(obj) !== ownerFilter && !isObjFolder(obj)) return false;
-			if (sizeFilter && !isObjFolder(obj)) {
-				const s = obj.size;
-				if (sizeFilter === '<1KB' && s >= 1024) return false;
-				if (sizeFilter === '1KB-1MB' && (s < 1024 || s >= 1048576)) return false;
-				if (sizeFilter === '1MB-100MB' && (s < 1048576 || s >= 104857600)) return false;
-				if (sizeFilter === '>100MB' && s < 104857600) return false;
-			}
-			if (dateFilter && obj.last_modified) {
-				const d = new Date(obj.last_modified);
-				const now = new Date();
-				const diff = now.getTime() - d.getTime();
-				if (dateFilter === '24h' && diff > 86400000) return false;
-				if (dateFilter === '7d' && diff > 604800000) return false;
-				if (dateFilter === '30d' && diff > 2592000000) return false;
-			}
-			return true;
-		})
-	);
-
-	let hasActiveFilters = $derived(!!ownerFilter || !!sizeFilter || !!dateFilter);
-	function clearFilters() {
-		ownerFilter = '';
-		sizeFilter = '';
-		dateFilter = '';
-	}
-
-	let selected = new SvelteSet<string>();
-	let selectableObjects = $derived(filteredObjects.filter((obj) => !isObjFolder(obj)));
-
-	// --- File Viewer ---
-	let viewerOpen = $state(false);
-	let viewerIndex = $state(-1);
-
-	let viewerObject = $derived(viewerIndex >= 0 ? selectableObjects[viewerIndex] : undefined);
-	let viewerUrl = $derived(viewerObject ? downloadUrl(viewerObject.key) : '');
-	let viewerFilename = $derived(viewerObject ? getDisplayName(viewerObject.key) : '');
-	let viewerSize = $derived(viewerObject?.size ?? 0);
-	let viewerHasPrev = $derived(viewerIndex > 0);
-	let viewerHasNext = $derived(viewerIndex < selectableObjects.length - 1);
-
-	function openViewer(obj: { key: string; size: number }) {
-		viewerIndex = selectableObjects.findIndex((o) => o.key === obj.key);
-		viewerOpen = true;
-	}
-
-	function viewerPrev() {
-		if (viewerHasPrev) viewerIndex--;
-	}
-	function viewerNext() {
-		if (viewerHasNext) viewerIndex++;
-	}
-
-	let allSelected = $derived(
-		selectableObjects.length > 0 && selectableObjects.every((obj) => selected.has(obj.key))
-	);
-
-	function toggleAll() {
-		if (allSelected) {
-			selected.clear();
-		} else {
-			for (const obj of selectableObjects) selected.add(obj.key);
-		}
-	}
-	function toggleOne(key: string) {
-		if (selected.has(key)) {
-			selected.delete(key);
-		} else {
-			selected.add(key);
-		}
-	}
-
-	// --- Presigned URL ---
+	// ── Presigned URL ──────────────────────────────────────────────
 	const EXPIRY_PRESETS = [
-		{ label: '5 minutes', value: 300 },
-		{ label: '1 hour', value: 3600 },
-		{ label: '6 hours', value: 21600 },
-		{ label: '24 hours', value: 86400 },
+		{ label: '5 min', value: 300 },
+		{ label: '1 hr', value: 3600 },
+		{ label: '6 hr', value: 21600 },
+		{ label: '24 hr', value: 86400 },
 		{ label: '7 days', value: 604800 },
 	];
-
 	let shareTarget = $state<string | null>(null);
 	let shareMethod = $state<'get_object' | 'put_object'>('get_object');
 	let shareExpiry = $state(3600);
@@ -330,12 +481,10 @@
 		shareUrl = '';
 		shareCopied = false;
 	}
-
 	function closeShare() {
 		shareTarget = null;
 		shareUrl = '';
 	}
-
 	async function handleGenerateUrl() {
 		if (!shareTarget) return;
 		shareGenerating = true;
@@ -354,17 +503,19 @@
 			shareGenerating = false;
 		}
 	}
-
 	function copyShareUrl() {
 		navigator.clipboard.writeText(shareUrl);
 		shareCopied = true;
 		setTimeout(() => (shareCopied = false), 2000);
 	}
 
+	// ── Bulk download ──────────────────────────────────────────────
 	let downloading = $state(false);
-
 	async function bulkDownload() {
-		const keys = [...selected].filter((k) => !k.endsWith('/'));
+		const keys = table
+			.getFilteredSelectedRowModel()
+			.rows.map((r) => r.original.key)
+			.filter((k) => !k.endsWith('/'));
 		if (keys.length === 0) return;
 		downloading = true;
 		try {
@@ -377,19 +528,19 @@
 				document.body.appendChild(a);
 				a.click();
 				document.body.removeChild(a);
-				// Small delay to avoid browser blocking multiple downloads
 				await new Promise((r) => setTimeout(r, 150));
 			}
 			toast.success(
 				`Started downloading ${result.urls.length} file${result.urls.length !== 1 ? 's' : ''}`
 			);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to download objects');
+			toast.error(err instanceof Error ? err.message : 'Failed to download');
 		} finally {
 			downloading = false;
 		}
 	}
 
+	// ── Delete ─────────────────────────────────────────────────────
 	let deleteTarget = $state('');
 	let deleteDialogOpen = $state(false);
 	let bulkDeleteOpen = $state(false);
@@ -409,17 +560,16 @@
 			deleteTarget = '';
 		}
 	}
-
 	async function confirmBulkDelete() {
 		deleting = true;
-		const keys = [...selected];
+		const keys = table.getFilteredSelectedRowModel().rows.map((r) => r.original.key);
 		try {
 			await bulk_delete_objects({ bucket, keys }).updates(objectData);
 			toast.success(`Deleted ${keys.length} object${keys.length !== 1 ? 's' : ''}`);
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to delete objects');
 		}
-		selected.clear();
+		rowSelection = {};
 		deleting = false;
 		bulkDeleteOpen = false;
 	}
@@ -427,7 +577,8 @@
 
 <svelte:head><title>{bucket} - HCP Admin Console</title></svelte:head>
 
-<div class="space-y-6">
+<div class="space-y-4">
+	<!-- Header -->
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-4">
 			<Tooltip.Root>
@@ -444,12 +595,14 @@
 			</Tooltip.Root>
 			<div>
 				<h2 class="text-2xl font-bold">{bucket}</h2>
-				{#if prefix}<p class="mt-1 text-sm text-muted-foreground">
+				{#if prefix}
+					<p class="mt-1 text-sm text-muted-foreground">
 						<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{prefix}</code>
-					</p>{/if}
+					</p>
+				{/if}
 			</div>
-			{#await objectData then od}
-				<Badge variant="secondary">{od.keyCount} objects</Badge>
+			{#await objectData then _od}
+				<Badge variant="secondary">{keyCount} objects</Badge>
 			{/await}
 		</div>
 		<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>
@@ -464,10 +617,11 @@
 	>
 		<Dialog.Content class="sm:max-w-lg">
 			<Dialog.Header><Dialog.Title>Upload Files to {bucket}</Dialog.Title></Dialog.Header>
-			{#if prefix}<p class="text-sm text-muted-foreground">
+			{#if prefix}
+				<p class="text-sm text-muted-foreground">
 					Prefix: <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{prefix}</code>
-				</p>{/if}
-
+				</p>
+			{/if}
 			<div
 				role="region"
 				aria-label="File drop zone"
@@ -494,7 +648,6 @@
 					>
 				</p>
 			</div>
-
 			{#if uploading}
 				<div>
 					<div class="mb-1 flex items-center justify-between text-xs text-muted-foreground">
@@ -503,23 +656,26 @@
 					<Progress value={totalProgress} max={100} class="h-2" />
 				</div>
 			{/if}
-
 			{#if selectedFiles.length > 0}
 				<div class="max-h-64 space-y-2 overflow-y-auto">
 					{#each selectedFiles as item, i}
 						<div class="flex items-center gap-3 rounded-lg border p-2">
-							{#if item.preview}<img
+							{#if item.preview}
+								<img
 									src={item.preview}
 									alt={item.file.name}
 									class="h-12 w-12 rounded object-cover"
 								/>
-							{:else}{@const Icon = getFileIcon(item.file.name)}
+							{:else}
+								{@const Icon = getFileIcon(item.file.name)}
 								<div class="flex h-12 w-12 items-center justify-center rounded bg-muted">
 									<Icon class="h-6 w-6 text-muted-foreground" />
-								</div>{/if}
+								</div>
+							{/if}
 							<div class="min-w-0 flex-1">
 								<p class="truncate text-sm font-medium">{item.file.name}</p>
-								{#if item.status === 'pending'}<input
+								{#if item.status === 'pending'}
+									<input
 										type="text"
 										value={item.key}
 										oninput={(e) => {
@@ -528,47 +684,50 @@
 										class="mt-1 w-full rounded border bg-background px-2 py-0.5 font-mono text-xs text-muted-foreground"
 										placeholder="Object key"
 									/>
-								{:else}<p class="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+								{:else}
+									<p class="mt-0.5 truncate font-mono text-xs text-muted-foreground">
 										{item.key}
-									</p>{/if}
+									</p>
+								{/if}
 								<p class="text-xs text-muted-foreground">{formatBytes(item.file.size)}</p>
-								{#if item.status === 'uploading'}<Progress
-										value={item.progress}
-										max={100}
-										class="mt-1 h-1.5"
-									/>{/if}
+								{#if item.status === 'uploading'}
+									<Progress value={item.progress} max={100} class="mt-1 h-1.5" />
+								{/if}
 							</div>
-							{#if item.status === 'uploading'}<span class="text-xs font-medium text-primary"
-									>{item.progress}%</span
-								>
-							{:else if item.status === 'done'}<CheckCircle class="h-5 w-5 text-emerald-500" />
+							{#if item.status === 'uploading'}
+								<span class="text-xs font-medium text-primary">{item.progress}%</span>
+							{:else if item.status === 'done'}
+								<CheckCircle class="h-5 w-5 text-emerald-500" />
 							{:else if item.status === 'error'}
 								<Tooltip.Root>
-									<Tooltip.Trigger
-										>{#snippet child({ props })}<span {...props}
-												><AlertCircle class="h-5 w-5 text-destructive" /></span
-											>{/snippet}</Tooltip.Trigger
-									>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<span {...props}><AlertCircle class="h-5 w-5 text-destructive" /></span>
+										{/snippet}
+									</Tooltip.Trigger>
 									<Tooltip.Content
 										class="max-w-xs border-destructive/20 bg-destructive/10 text-destructive"
-										>{item.error}</Tooltip.Content
 									>
+										{item.error}
+									</Tooltip.Content>
 								</Tooltip.Root>
-							{:else}<button
+							{:else}
+								<button
 									onclick={() => removeFile(i)}
 									class="rounded p-1 text-muted-foreground hover:text-destructive"
 									title="Remove"><X class="h-4 w-4" /></button
-								>{/if}
+								>
+							{/if}
 						</div>
 					{/each}
 				</div>
 			{/if}
-
 			<Dialog.Footer>
-				<Button variant="ghost" onclick={closeUpload} disabled={uploading}
-					>{allDone ? 'Close' : 'Cancel'}</Button
-				>
-				{#if !allDone}<Button
+				<Button variant="ghost" onclick={closeUpload} disabled={uploading}>
+					{allDone ? 'Close' : 'Cancel'}
+				</Button>
+				{#if !allDone}
+					<Button
 						onclick={uploadAll}
 						disabled={uploading ||
 							selectedFiles.length === 0 ||
@@ -579,214 +738,165 @@
 							).length} file{selectedFiles.filter((f) => f.status === 'pending').length !== 1
 								? 's'
 								: ''}{/if}
-					</Button>{/if}
+					</Button>
+				{/if}
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
 
-	{#if prefix}<button
+	{#if prefix}
+		<button
 			onclick={() => navigatePrefix(parentPrefix)}
 			class="flex items-center gap-2 text-sm text-primary hover:underline"
-			><Folder class="h-4 w-4" />.. (parent directory)</button
-		>{/if}
+		>
+			<Folder class="h-4 w-4" />.. (parent directory)
+		</button>
+	{/if}
 
 	{#await objectData}
 		<TableSkeleton rows={5} columns={7} />
 	{:then _}
-		<div class="space-y-2">
-			<div class="relative">
-				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-				<input
-					type="text"
-					bind:value={search}
-					placeholder="Search objects..."
-					class="w-full rounded-lg border bg-background py-2 pl-10 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-				/>
-			</div>
-			<div class="flex flex-wrap items-center gap-2">
-				{#if uniqueOwners.length > 0}
-					<select bind:value={ownerFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
-						<option value="">All owners</option>
-						{#each uniqueOwners as o}<option value={o}>{o}</option>{/each}
-					</select>
-				{/if}
-				<select bind:value={sizeFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
-					<option value="">All sizes</option>
-					<option value="<1KB">&lt; 1 KB</option>
-					<option value="1KB-1MB">1 KB - 1 MB</option>
-					<option value="1MB-100MB">1 MB - 100 MB</option>
-					<option value=">100MB">&gt; 100 MB</option>
-				</select>
-				<select bind:value={dateFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
-					<option value="">All dates</option>
-					<option value="24h">Last 24 hours</option>
-					<option value="7d">Last 7 days</option>
-					<option value="30d">Last 30 days</option>
-				</select>
-				{#if hasActiveFilters}
-					<Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={clearFilters}>
-						Clear filters
-					</Button>
-				{/if}
-				<span class="ml-auto text-xs text-muted-foreground"
-					>{filteredObjects.length} of {objects.length} items</span
-				>
-			</div>
+		<!-- Toolbar -->
+		<div class="flex items-center gap-2">
+			<Input
+				placeholder="Filter objects..."
+				value={(table.getColumn('key')?.getFilterValue() as string) ?? ''}
+				oninput={(e) => table.getColumn('key')?.setFilterValue(e.currentTarget.value)}
+				class="max-w-sm"
+			/>
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger>
+					{#snippet child({ props })}
+						<Button {...props} variant="outline" class="ml-auto">
+							Columns <ChevronDown class="ml-2 size-4" />
+						</Button>
+					{/snippet}
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end">
+					{#each table.getAllColumns().filter((col) => col.getCanHide()) as column (column.id)}
+						<DropdownMenu.CheckboxItem
+							class="capitalize"
+							checked={column.getIsVisible()}
+							onCheckedChange={(v) => column.toggleVisibility(!!v)}
+						>
+							{column.id === 'key'
+								? 'name'
+								: column.id === 'last_modified'
+									? 'last modified'
+									: column.id}
+						</DropdownMenu.CheckboxItem>
+					{/each}
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
 		</div>
 
-		{#if selected.size > 0}
+		{#if selectedCount > 0}
 			<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-				<span class="text-sm font-medium">{selected.size} selected</span>
-				<Button size="sm" onclick={bulkDownload} disabled={downloading}
-					>{#if downloading}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Download
+				<span class="text-sm font-medium">{selectedCount} selected</span>
+				<Button size="sm" onclick={bulkDownload} disabled={downloading}>
+					{#if downloading}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Download
 							class="h-3.5 w-3.5"
-						/>{/if}Download Selected</Button
-				>
-				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}
-					><Trash2 class="h-3.5 w-3.5" />Delete Selected</Button
-				>
-				<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Deselect All</Button>
+						/>{/if}
+					Download
+				</Button>
+				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}>
+					<Trash2 class="h-3.5 w-3.5" />Delete
+				</Button>
+				<Button variant="ghost" size="sm" onclick={() => (rowSelection = {})}>Deselect All</Button>
 			</div>
 		{/if}
 
-		<div class="overflow-x-auto rounded-lg border">
-			<table class="w-full text-left text-sm">
-				<thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-					<tr>
-						<th class="w-10 px-4 py-3"
-							><input
-								type="checkbox"
-								checked={allSelected}
-								onchange={toggleAll}
-								class="h-4 w-4 rounded border-input"
-								disabled={selectableObjects.length === 0}
-							/></th
-						>
-						<th class="px-4 py-3 font-medium">Name</th>
-						<th class="px-4 py-3 font-medium">Key</th>
-						<th class="w-32 px-4 py-3 font-medium">Owner</th>
-						<th class="w-32 px-4 py-3 font-medium">Size</th>
-						<th class="w-48 px-4 py-3 font-medium">Last Modified</th>
-						<th class="w-24 px-4 py-3 font-medium">Actions</th>
-					</tr>
-				</thead>
-				<tbody class="divide-y">
-					{#if objects.length === 0}<tr
-							><td colspan="7" class="px-4 py-8 text-center text-muted-foreground"
-								>No objects in this bucket</td
-							></tr
-						>
-					{:else if filteredObjects.length === 0}<tr
-							><td colspan="7" class="px-4 py-8 text-center text-muted-foreground"
-								>No results matching "{search}"</td
-							></tr
-						>
-					{:else}
-						{#each filteredObjects as obj (obj.key)}
-							{@const folder = isObjFolder(obj)}
-							<tr
-								class="cursor-pointer bg-card transition-colors hover:bg-accent/50"
-								onclick={folder ? () => navigatePrefix(obj.key) : () => openViewer(obj)}
-								onkeydown={(e: KeyboardEvent) => {
-									if (e.key === 'Enter') {
-										folder ? navigatePrefix(obj.key) : openViewer(obj);
-									}
-								}}
-								role="button"
-								tabindex={0}
-							>
-								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
-									{#if !folder}<input
-											type="checkbox"
-											checked={selected.has(obj.key)}
-											onchange={() => toggleOne(obj.key)}
-											class="h-4 w-4 rounded border-input"
-										/>{/if}
-								</td>
-								<td class="px-4 py-3">
-									<span class="flex items-center gap-2">
-										{#if folder}<Folder class="h-4 w-4 text-amber-500" />{:else}{@const Icon =
-												getFileIcon(obj.key)}<Icon class="h-4 w-4 text-muted-foreground" />{/if}
-										<span class="font-medium">{getDisplayName(obj.key)}</span>
-									</span>
-								</td>
-								<td class="px-4 py-3">
-									<Tooltip.Root>
-										<Tooltip.Trigger
-											>{#snippet child({ props })}<span
-													class="block max-w-xs truncate font-mono text-xs text-muted-foreground"
-													{...props}>{obj.key}</span
-												>{/snippet}</Tooltip.Trigger
-										>
-										<Tooltip.Content class="max-w-lg break-all font-mono text-xs"
-											>{obj.key}</Tooltip.Content
-										>
-									</Tooltip.Root>
-								</td>
-								<td class="px-4 py-3 text-muted-foreground"
-									>{folder ? '-' : getOwnerName(obj) || '-'}</td
-								>
-								<td class="px-4 py-3 text-muted-foreground"
-									>{folder ? '-' : formatBytes(obj.size)}</td
-								>
-								<td class="px-4 py-3 text-muted-foreground"
-									>{obj.last_modified ? formatDate(obj.last_modified) : '-'}</td
-								>
-								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
-									{#if !folder}
-										<span class="flex items-center gap-1">
-											<Tooltip.Root>
-												<Tooltip.Trigger
-													>{#snippet child({ props })}<a
-															href={downloadUrl(obj.key)}
-															download
-															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-															{...props}><Download class="h-4 w-4" /></a
-														>{/snippet}</Tooltip.Trigger
-												>
-												<Tooltip.Content>Download</Tooltip.Content>
-											</Tooltip.Root>
-											<Tooltip.Root>
-												<Tooltip.Trigger
-													>{#snippet child({ props })}<button
-															type="button"
-															{...props}
-															onclick={() => openShare(obj.key)}
-															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-															><Link class="h-4 w-4" /></button
-														>{/snippet}</Tooltip.Trigger
-												>
-												<Tooltip.Content>Share</Tooltip.Content>
-											</Tooltip.Root>
-											<Tooltip.Root>
-												<Tooltip.Trigger
-													>{#snippet child({ props })}<button
-															type="button"
-															{...props}
-															onclick={() => {
-																deleteTarget = obj.key;
-																deleteDialogOpen = true;
-															}}
-															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-															><Trash2 class="h-4 w-4" /></button
-														>{/snippet}</Tooltip.Trigger
-												>
-												<Tooltip.Content>Delete</Tooltip.Content>
-											</Tooltip.Root>
-										</span>
+		<!-- Table -->
+		<div class="rounded-md border">
+			<Table.Root>
+				<Table.Header>
+					{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
+						<Table.Row>
+							{#each headerGroup.headers as header (header.id)}
+								<Table.Head class="[&:has([role=checkbox])]:ps-3">
+									{#if !header.isPlaceholder}
+										<FlexRender
+											content={header.column.columnDef.header}
+											context={header.getContext()}
+										/>
 									{/if}
-								</td>
-							</tr>
-						{/each}
-					{/if}
-				</tbody>
-			</table>
+								</Table.Head>
+							{/each}
+						</Table.Row>
+					{/each}
+				</Table.Header>
+				<Table.Body>
+					{#each table.getRowModel().rows as row (row.id)}
+						<Table.Row
+							data-state={row.getIsSelected() && 'selected'}
+							class="cursor-pointer"
+							onclick={() => {
+								if (row.original.isFolder) {
+									navigatePrefix(row.original.key);
+								} else {
+									openViewer(row.original);
+								}
+							}}
+						>
+							{#each row.getVisibleCells() as cell (cell.id)}
+								<Table.Cell
+									class="[&:has([role=checkbox])]:ps-3"
+									onclick={(e) => {
+										const target = e.target as HTMLElement;
+										if (
+											target.closest('[role=checkbox]') ||
+											target.closest('[role=menuitem]') ||
+											target.closest('button') ||
+											target.closest('a')
+										) {
+											e.stopPropagation();
+										}
+									}}
+								>
+									<FlexRender content={cell.column.columnDef.cell} context={cell.getContext()} />
+								</Table.Cell>
+							{/each}
+						</Table.Row>
+					{:else}
+						<Table.Row>
+							<Table.Cell colspan={columns.length} class="h-24 text-center">
+								No objects in this bucket.
+							</Table.Cell>
+						</Table.Row>
+					{/each}
+				</Table.Body>
+			</Table.Root>
+		</div>
+
+		<!-- Pagination -->
+		<div class="flex items-center justify-end space-x-2">
+			<div class="flex-1 text-sm text-muted-foreground">
+				{table.getFilteredSelectedRowModel().rows.length} of
+				{table.getFilteredRowModel().rows.length} row(s) selected.
+			</div>
+			<div class="space-x-2">
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => table.previousPage()}
+					disabled={!table.getCanPreviousPage()}
+				>
+					Previous
+				</Button>
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => table.nextPage()}
+					disabled={!table.getCanNextPage()}
+				>
+					Next
+				</Button>
+			</div>
 		</div>
 	{/await}
 
-	{#if viewerOpen}<FileViewer
+	{#if viewerOpen}
+		<FileViewer
 			bind:open={viewerOpen}
 			url={viewerUrl}
 			filename={viewerFilename}
@@ -800,9 +910,10 @@
 			onprev={viewerPrev}
 			onnext={viewerNext}
 			currentIndex={viewerIndex}
-			totalCount={selectableObjects.length}
+			totalCount={selectableRows.length}
 			onclose={() => (viewerOpen = false)}
-		/>{/if}
+		/>
+	{/if}
 </div>
 
 <DeleteConfirmDialog
@@ -813,6 +924,7 @@
 	onconfirm={confirmDelete}
 />
 
+<!-- Share dialog -->
 <Dialog.Root
 	open={shareTarget !== null}
 	onOpenChange={(open) => {
@@ -837,50 +949,38 @@
 					>
 				</div>
 			</div>
-
 			<div class="space-y-2">
 				<Label>Method</Label>
 				<div class="flex gap-2">
 					<Button
 						variant={shareMethod === 'get_object' ? 'default' : 'outline'}
 						size="sm"
-						onclick={() => (shareMethod = 'get_object')}
+						onclick={() => (shareMethod = 'get_object')}>Download</Button
 					>
-						Download
-					</Button>
 					<Button
 						variant={shareMethod === 'put_object' ? 'default' : 'outline'}
 						size="sm"
-						onclick={() => (shareMethod = 'put_object')}
+						onclick={() => (shareMethod = 'put_object')}>Upload</Button
 					>
-						Upload
-					</Button>
 				</div>
 			</div>
-
 			<div class="space-y-2">
-				<Label for="share-expiry">Expiry</Label>
+				<Label>Expiry</Label>
 				<div class="flex flex-wrap gap-2">
 					{#each EXPIRY_PRESETS as preset (preset.value)}
 						<Button
 							variant={shareExpiry === preset.value ? 'default' : 'outline'}
 							size="sm"
-							onclick={() => (shareExpiry = preset.value)}
+							onclick={() => (shareExpiry = preset.value)}>{preset.label}</Button
 						>
-							{preset.label}
-						</Button>
 					{/each}
 				</div>
 			</div>
-
 			{#if !shareUrl}
 				<Button onclick={handleGenerateUrl} disabled={shareGenerating} class="w-full">
 					{#if shareGenerating}
-						<Loader2 class="h-4 w-4 animate-spin" />
-						Generating...
-					{:else}
-						Generate URL
-					{/if}
+						<Loader2 class="h-4 w-4 animate-spin" />Generating...
+					{:else}Generate URL{/if}
 				</Button>
 			{:else}
 				<div class="space-y-2">
@@ -891,11 +991,9 @@
 							<Tooltip.Trigger>
 								{#snippet child({ props })}
 									<Button {...props} variant="ghost" size="icon" onclick={copyShareUrl}>
-										{#if shareCopied}
-											<Check class="h-4 w-4 text-emerald-500" />
-										{:else}
-											<Copy class="h-4 w-4" />
-										{/if}
+										{#if shareCopied}<Check class="h-4 w-4 text-emerald-500" />{:else}<Copy
+												class="h-4 w-4"
+											/>{/if}
 									</Button>
 								{/snippet}
 							</Tooltip.Trigger>
@@ -911,10 +1009,18 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<BulkDeleteDialog
-	bind:open={bulkDeleteOpen}
-	count={selected.size}
-	itemType="object"
-	loading={deleting}
-	onconfirm={confirmBulkDelete}
-/>
+<!-- Bulk delete dialog -->
+<Dialog.Root bind:open={bulkDeleteOpen}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>Delete {selectedCount} objects?</Dialog.Title>
+			<Dialog.Description>This action cannot be undone.</Dialog.Description>
+		</Dialog.Header>
+		<Dialog.Footer>
+			<Button variant="ghost" onclick={() => (bulkDeleteOpen = false)}>Cancel</Button>
+			<Button variant="destructive" onclick={confirmBulkDelete} disabled={deleting}>
+				{deleting ? 'Deleting...' : 'Delete All'}
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>

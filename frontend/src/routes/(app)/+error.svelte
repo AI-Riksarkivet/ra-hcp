@@ -12,7 +12,7 @@
 			{page.error?.message ?? 'Something went wrong'}
 		</p>
 		<div class="mt-8 flex items-center justify-center gap-3">
-			<Button href="/overview">Go to Overview</Button>
+			<Button href="/namespaces">Go to Namespaces</Button>
 			<Button variant="outline" onclick={() => history.back()}>Go Back</Button>
 		</div>
 	</div>

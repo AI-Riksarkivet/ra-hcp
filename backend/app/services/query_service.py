@@ -106,7 +106,8 @@ class QueryService:
             raise HTTPException(status_code=502, detail="HCP query connection error")
 
         if resp.status_code != 200:
-            detail = resp.text or f"HCP query returned {resp.status_code}"
+            hcp_msg = resp.headers.get("x-hcp-errormessage", "")
+            detail = hcp_msg or resp.text or f"HCP query returned {resp.status_code}"
             raise HTTPException(status_code=resp.status_code, detail=detail)
 
         data = resp.json()

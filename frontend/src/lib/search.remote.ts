@@ -45,7 +45,7 @@ export interface OperationQueryResponse {
 export const search_objects = command(
   z.object({
     tenant: z.string(),
-    query: z.string().default("*:*"),
+    query: z.string(),
     count: z.number().optional(),
     offset: z.number().optional(),
     verbose: z.boolean().optional(),
@@ -92,14 +92,19 @@ export const search_operations = command(
     if (params.verbose != null) body.verbose = params.verbose;
 
     const systemMetadata: Record<string, unknown> = {};
-    if (params.changeTimeFrom) {
-      systemMetadata.changeTimeFrom = params.changeTimeFrom;
-    }
-    if (params.changeTimeTo) {
-      systemMetadata.changeTimeTo = params.changeTimeTo;
+    if (params.changeTimeFrom || params.changeTimeTo) {
+      const changeTime: Record<string, string> = {};
+      if (params.changeTimeFrom) changeTime.start = params.changeTimeFrom;
+      if (params.changeTimeTo) changeTime.end = params.changeTimeTo;
+      systemMetadata.changeTime = changeTime;
     }
     if (params.namespaces?.length) {
-      systemMetadata.namespaces = params.namespaces;
+      // HCP expects namespace names qualified with tenant: "ns-name.tenant-name"
+      systemMetadata.namespaces = {
+        namespace: params.namespaces.map((ns) =>
+          ns.includes(".") ? ns : `${ns}.${tenant}`
+        ),
+      };
     }
     if (params.transactions?.length) {
       systemMetadata.transactions = { transaction: params.transactions };

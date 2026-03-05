@@ -146,14 +146,14 @@ async def test_query_hcp_error_raises(svc: QueryService, query_mock):
     query_mock.post(QUERY_URL).respond(403, text="Access denied")
 
     with pytest.raises(httpx.HTTPStatusError if False else Exception):
-        await svc.object_query("mock", ObjectQuery())
+        await svc.object_query("mock", ObjectQuery(query="*:*"))
 
 
 async def test_query_timeout_returns_504(svc: QueryService, query_mock):
     query_mock.post(QUERY_URL).mock(side_effect=httpx.TimeoutException("timeout"))
 
     with pytest.raises(Exception) as exc_info:
-        await svc.object_query("mock", ObjectQuery())
+        await svc.object_query("mock", ObjectQuery(query="*:*"))
     assert exc_info.value.status_code == 504  # type: ignore[union-attr]
 
 
@@ -161,7 +161,7 @@ async def test_query_connect_error_returns_502(svc: QueryService, query_mock):
     query_mock.post(QUERY_URL).mock(side_effect=httpx.ConnectError("unreachable"))
 
     with pytest.raises(Exception) as exc_info:
-        await svc.object_query("mock", ObjectQuery())
+        await svc.object_query("mock", ObjectQuery(query="*:*"))
     assert exc_info.value.status_code == 502  # type: ignore[union-attr]
 
 
@@ -176,7 +176,7 @@ async def test_query_no_domain_raises_400():
     )
     svc = QueryService(settings)
     with pytest.raises(Exception) as exc_info:
-        await svc.object_query("mock", ObjectQuery())
+        await svc.object_query("mock", ObjectQuery(query="*:*"))
     assert exc_info.value.status_code == 400  # type: ignore[union-attr]
     await svc.close()
 
@@ -194,7 +194,7 @@ async def test_authenticated_passes_credentials(svc: QueryService, query_mock):
     )
 
     auth_svc = AuthenticatedQueryService(svc, "myuser", "mypass")
-    await auth_svc.object_query("mock", ObjectQuery())
+    await auth_svc.object_query("mock", ObjectQuery(query="*:*"))
 
     assert route.called
     request = route.calls[0].request

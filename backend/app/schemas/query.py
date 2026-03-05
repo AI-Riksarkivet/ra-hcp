@@ -15,7 +15,7 @@ class ObjectQuery(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    query: str = Field(default="*:*", description="Query expression")
+    query: str = Field(description="Query expression (Lucene syntax)")
     count: int = Field(default=100, description="Max results to return", alias="count")
     offset: int = Field(default=0, description="Starting offset")
     sort: Optional[str] = Field(
@@ -44,22 +44,40 @@ class OperationSystemMetadataTransactions(BaseModel):
     )
 
 
+class ChangeTimeRange(BaseModel):
+    """Time range filter for operation queries."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    start: Optional[str] = Field(
+        default=None, description="Start time (epoch ms or ISO 8601)"
+    )
+    end: Optional[str] = Field(
+        default=None, description="End time (epoch ms or ISO 8601)"
+    )
+
+
+class NamespaceList(BaseModel):
+    """Namespace filter wrapper for operation queries."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    namespace: Optional[list[str]] = Field(
+        default=None, description="List of namespace names"
+    )
+
+
 class OperationSystemMetadata(BaseModel):
     """System metadata filter for operation queries."""
 
     model_config = ConfigDict(populate_by_name=True)
 
-    change_time_from: Optional[str] = Field(
+    change_time: Optional[ChangeTimeRange] = Field(
         default=None,
-        alias="changeTimeFrom",
-        description="Start time (ISO 8601)",
+        alias="changeTime",
+        description="Time range filter",
     )
-    change_time_to: Optional[str] = Field(
-        default=None,
-        alias="changeTimeTo",
-        description="End time (ISO 8601)",
-    )
-    namespaces: Optional[list[str]] = Field(
+    namespaces: Optional[NamespaceList] = Field(
         default=None, description="Filter to specific namespaces"
     )
     transactions: Optional[OperationSystemMetadataTransactions] = Field(

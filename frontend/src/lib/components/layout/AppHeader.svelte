@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { LogOut } from 'lucide-svelte';
+	import { LogOut, Moon, Sun, ChevronDown } from 'lucide-svelte';
+	import { toggleMode, mode } from 'mode-watcher';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import * as Avatar from '$lib/components/ui/avatar/index.js';
-	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
-	import ThemeToggle from './ThemeToggle.svelte';
 
 	interface Props {
 		username: string;
@@ -13,15 +12,6 @@
 	}
 
 	let { username, tenant }: Props = $props();
-
-	let initials = $derived(
-		username
-			.split(/[\s._@-]+/)
-			.filter(Boolean)
-			.slice(0, 2)
-			.map((s) => s[0].toUpperCase())
-			.join('') || 'U'
-	);
 </script>
 
 <header
@@ -39,32 +29,37 @@
 		</h1>
 	</div>
 
-	<div class="flex items-center gap-2">
-		<ThemeToggle />
-
-		<div class="flex items-center gap-2">
-			<Avatar.Root class="h-8 w-8">
-				<Avatar.Fallback class="bg-primary/10 text-xs font-semibold text-primary"
-					>{initials}</Avatar.Fallback
-				>
-			</Avatar.Root>
-			<span class="hidden text-sm font-medium sm:inline">
-				{username}
-			</span>
-		</div>
-
-		<Tooltip.Root>
-			<Tooltip.Trigger>
-				{#snippet child({ props })}
-					<a href="/logout" {...props}>
-						<Button variant="ghost" size="sm">
-							<LogOut class="h-4 w-4" />
-							<span class="hidden sm:inline">Logout</span>
-						</Button>
-					</a>
-				{/snippet}
-			</Tooltip.Trigger>
-			<Tooltip.Content class="sm:hidden">Sign out</Tooltip.Content>
-		</Tooltip.Root>
-	</div>
+	<DropdownMenu.Root>
+		<DropdownMenu.Trigger>
+			{#snippet child({ props })}
+				<Button {...props} variant="outline" size="sm" class="gap-1.5">
+					<span class="text-sm font-medium">{username}</span>
+					<ChevronDown class="h-4 w-4 opacity-50" />
+				</Button>
+			{/snippet}
+		</DropdownMenu.Trigger>
+		<DropdownMenu.Content align="end" class="w-48">
+			<DropdownMenu.Label>{username}</DropdownMenu.Label>
+			<DropdownMenu.Separator />
+			<DropdownMenu.Item onclick={toggleMode}>
+				{#if mode.current === 'dark'}
+					<Sun class="h-4 w-4" />
+					Light mode
+				{:else}
+					<Moon class="h-4 w-4" />
+					Dark mode
+				{/if}
+			</DropdownMenu.Item>
+			<DropdownMenu.Separator />
+			<DropdownMenu.Item
+				variant="destructive"
+				onclick={() => {
+					window.location.href = '/logout';
+				}}
+			>
+				<LogOut class="h-4 w-4" />
+				Logout
+			</DropdownMenu.Item>
+		</DropdownMenu.Content>
+	</DropdownMenu.Root>
 </header>

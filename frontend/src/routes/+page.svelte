@@ -5,6 +5,6 @@
 	let { data } = $props();
 
 	onMount(() => {
-		goto(data.hasToken ? '/overview' : '/login', { replaceState: true });
+		goto(data.hasToken ? '/namespaces' : '/login', { replaceState: true });
 	});
 </script>

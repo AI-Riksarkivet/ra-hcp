@@ -206,7 +206,7 @@ export const change_password = command(
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ newPassword: password }),
       },
     );
     if (!res.ok) {

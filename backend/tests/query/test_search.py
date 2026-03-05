@@ -269,7 +269,7 @@ async def test_query_operations_with_filters(
             "count": 10,
             "systemMetadata": {
                 "transactions": {"transaction": ["create"]},
-                "namespaces": ["documents"],
+                "namespaces": {"namespace": ["documents"]},
             },
         },
     )
