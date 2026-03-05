@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Plus, Trash2 } from 'lucide-svelte';
+	import { Plus, Trash2, Search } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -10,20 +11,39 @@
 	import { toast } from 'svelte-sonner';
 	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import SearchToolbar from '$lib/components/ui/search-toolbar.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import { get_buckets, create_bucket, delete_bucket } from '$lib/buckets.remote.js';
 
 	let bucketData = get_buckets();
+	let owner = $derived(
+		bucketData.current?.owner as {
+			display_name?: string;
+			id?: string;
+			DisplayName?: string;
+			ID?: string;
+		} | null
+	);
+	let ownerName = $derived(owner?.display_name ?? owner?.DisplayName ?? '');
 
 	let search = $state('');
+	let dateFilter = $state('');
 	let buckets = $derived(
 		(bucketData.current?.buckets ?? []) as { name: string; creation_date: string }[]
 	);
 
 	let filteredBuckets = $derived(
-		buckets.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()))
+		buckets.filter((b) => {
+			if (search && !b.name.toLowerCase().includes(search.toLowerCase())) return false;
+			if (dateFilter) {
+				const d = new Date(b.creation_date);
+				const now = new Date();
+				if (dateFilter === '24h' && now.getTime() - d.getTime() > 86400000) return false;
+				if (dateFilter === '7d' && now.getTime() - d.getTime() > 604800000) return false;
+				if (dateFilter === '30d' && now.getTime() - d.getTime() > 2592000000) return false;
+			}
+			return true;
+		})
 	);
 
 	let selected = new SvelteSet<string>();
@@ -159,15 +179,53 @@
 	</Dialog.Root>
 
 	{#await bucketData}
-		<TableSkeleton rows={5} columns={4} />
+		<TableSkeleton rows={5} columns={5} />
 	{:then _}
-		<SearchToolbar
-			bind:search
-			placeholder="Search buckets..."
-			selectedCount={selected.size}
-			ondeleteselected={() => (bulkDeleteOpen = true)}
-			ondeselectall={() => selected.clear()}
-		/>
+		<div class="space-y-2">
+			<div class="relative">
+				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+				<input
+					type="text"
+					bind:value={search}
+					placeholder="Search buckets..."
+					class="w-full rounded-lg border bg-background py-2 pl-10 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+				/>
+			</div>
+			<div class="flex flex-wrap items-center gap-2">
+				{#if ownerName}
+					<Badge variant="outline">Owner: {ownerName}</Badge>
+				{/if}
+				<select bind:value={dateFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
+					<option value="">All dates</option>
+					<option value="24h">Last 24 hours</option>
+					<option value="7d">Last 7 days</option>
+					<option value="30d">Last 30 days</option>
+				</select>
+				{#if dateFilter}
+					<Button
+						variant="ghost"
+						size="sm"
+						class="h-7 px-2 text-xs"
+						onclick={() => (dateFilter = '')}
+					>
+						Clear filters
+					</Button>
+				{/if}
+				<span class="ml-auto text-xs text-muted-foreground"
+					>{filteredBuckets.length} of {buckets.length} buckets</span
+				>
+			</div>
+		</div>
+
+		{#if selected.size > 0}
+			<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
+				<span class="text-sm font-medium">{selected.size} selected</span>
+				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}>
+					<Trash2 class="h-3.5 w-3.5" />Delete Selected
+				</Button>
+				<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Deselect All</Button>
+			</div>
+		{/if}
 
 		<div class="overflow-x-auto rounded-lg border">
 			<table class="w-full text-left text-sm">
@@ -183,6 +241,7 @@
 							/></th
 						>
 						<th class="px-4 py-3 font-medium">Name</th>
+						<th class="px-4 py-3 font-medium">Owner</th>
 						<th class="px-4 py-3 font-medium">Created</th>
 						<th class="w-16 px-4 py-3 font-medium"></th>
 					</tr>
@@ -190,13 +249,13 @@
 				<tbody class="divide-y">
 					{#if buckets.length === 0}
 						<tr
-							><td colspan="4" class="px-4 py-8 text-center text-muted-foreground"
+							><td colspan="5" class="px-4 py-8 text-center text-muted-foreground"
 								>No buckets found. Create one to get started.</td
 							></tr
 						>
 					{:else if filteredBuckets.length === 0}
 						<tr
-							><td colspan="4" class="px-4 py-8 text-center text-muted-foreground"
+							><td colspan="5" class="px-4 py-8 text-center text-muted-foreground"
 								>No results matching "{search}"</td
 							></tr
 						>
@@ -219,6 +278,7 @@
 									/>
 								</td>
 								<td class="px-4 py-3 font-medium">{bucket.name}</td>
+								<td class="px-4 py-3 text-muted-foreground">{ownerName || '-'}</td>
 								<td class="px-4 py-3 text-muted-foreground">{formatDate(bucket.creation_date)}</td>
 								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>

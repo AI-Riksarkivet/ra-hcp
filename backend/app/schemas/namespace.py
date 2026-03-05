@@ -120,6 +120,8 @@ class NamespaceResponse(BaseModel):
     serviceRemoteSystemRequests: Optional[bool] = None
     versioningSettings: Optional[VersioningSettings] = None
     tags: Optional[TagList] = None
+    creationTime: Optional[str] = None
+    id: Optional[str] = None
 
 
 class NamespaceList(BaseModel):

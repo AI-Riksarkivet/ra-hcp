@@ -11,6 +11,8 @@ export interface Namespace {
   searchEnabled?: boolean;
   versioningSettings?: { enabled: boolean };
   tags?: { tag: string[] };
+  owner?: string;
+  creationTime?: string;
 }
 
 export interface NsProtocols {
@@ -221,6 +223,32 @@ export const update_ns_permissions = command(
     if (!res.ok) {
       const err = await res.json().catch(() => ({
         detail: "Failed to update permissions",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const update_versioning = command(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    enabled: z.boolean(),
+  }),
+  async ({ tenant, name, enabled }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/versioningSettings`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update versioning",
       }));
       throw new Error(err.detail);
     }

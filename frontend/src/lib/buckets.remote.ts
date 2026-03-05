@@ -46,6 +46,12 @@ export const get_objects = query(
           last_modified: o.last_modified ?? o.LastModified ?? "",
           etag: o.etag ?? o.ETag ?? "",
           storage_class: o.storage_class ?? o.StorageClass ?? "",
+          owner: (o.owner ?? o.Owner ?? null) as {
+            display_name?: string;
+            id?: string;
+            DisplayName?: string;
+            ID?: string;
+          } | null,
         }));
         const commonPrefixes = (data.common_prefixes ?? []) as string[];
         return {
@@ -66,6 +72,12 @@ export const get_objects = query(
         last_modified: string;
         etag: string;
         storage_class: string;
+        owner: {
+          display_name?: string;
+          id?: string;
+          DisplayName?: string;
+          ID?: string;
+        } | null;
       }[],
       commonPrefixes: [] as string[],
       isTruncated: false,

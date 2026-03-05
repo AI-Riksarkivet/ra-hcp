@@ -8,11 +8,14 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { ArrowLeft, Save, Loader2, Plus, HelpCircle, Terminal, Copy, Info } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import { formatDate } from '$lib/utils/format.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import {
 		get_namespace,
 		get_ns_protocols,
 		update_ns_protocol,
+		update_namespace,
+		update_versioning,
 		type Namespace,
 		type NsProtocols,
 	} from '$lib/namespaces.remote.js';
@@ -64,6 +67,25 @@
 	);
 	let ns = $derived((nsData?.current ?? null) as Namespace | null);
 
+	// --- Namespace settings (search & versioning) ---
+	let nsSyncVersion = $state(0);
+	let localSearchEnabled = $state(false);
+	let localVersioningEnabled = $state(false);
+
+	$effect(() => {
+		const n = ns;
+		void nsSyncVersion;
+		localSearchEnabled = n?.searchEnabled ?? false;
+		localVersioningEnabled = n?.versioningSettings?.enabled ?? false;
+	});
+
+	let nsSettingsDirty = $derived(
+		localSearchEnabled !== (ns?.searchEnabled ?? false) ||
+			localVersioningEnabled !== (ns?.versioningSettings?.enabled ?? false)
+	);
+
+	let savingNsSettings = $state(false);
+
 	// --- Protocols ---
 	let protocolsData = $derived(
 		tenant && namespaceName ? get_ns_protocols({ tenant, name: namespaceName }) : undefined
@@ -105,7 +127,6 @@
 				protocol: 'http' | 'cifs' | 'nfs' | 'smtp';
 				body: Record<string, unknown>;
 			}> = [];
-
 			if (
 				localHttpEnabled !== (protocols.httpEnabled ?? false) ||
 				localHttpsEnabled !== (protocols.httpsEnabled ?? false)
@@ -124,7 +145,6 @@
 			if (localSmtpEnabled !== (protocols.smtpEnabled ?? false)) {
 				changes.push({ protocol: 'smtp', body: { smtpEnabled: localSmtpEnabled } });
 			}
-
 			for (let i = 0; i < changes.length; i++) {
 				const call = update_ns_protocol({
 					tenant,
@@ -139,11 +159,38 @@
 				}
 			}
 			protocolSyncVersion++;
-			toast.success('Protocols updated successfully');
+			toast.success('Protocols updated');
 		} catch {
 			toast.error('Failed to update protocols');
 		} finally {
 			savingProtocols = false;
+		}
+	}
+
+	async function saveNsSettings() {
+		if (!tenant || !nsData) return;
+		savingNsSettings = true;
+		try {
+			if (localSearchEnabled !== (ns?.searchEnabled ?? false)) {
+				await update_namespace({
+					tenant,
+					name: namespaceName,
+					body: { searchEnabled: localSearchEnabled },
+				});
+			}
+			if (localVersioningEnabled !== (ns?.versioningSettings?.enabled ?? false)) {
+				await update_versioning({
+					tenant,
+					name: namespaceName,
+					enabled: localVersioningEnabled,
+				});
+			}
+			nsSyncVersion++;
+			toast.success('Settings updated');
+		} catch {
+			toast.error('Failed to update settings');
+		} finally {
+			savingNsSettings = false;
 		}
 	}
 
@@ -489,6 +536,18 @@
 									</Badge>
 								</p>
 							</div>
+							<div>
+								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+									Owner
+								</p>
+								<p class="mt-1 text-sm">{ns.owner || '—'}</p>
+							</div>
+							<div>
+								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+									Created
+								</p>
+								<p class="mt-1 text-sm">{ns.creationTime ? formatDate(ns.creationTime) : '—'}</p>
+							</div>
 						</div>
 					{:else}
 						<p class="text-center text-sm text-muted-foreground">
@@ -499,27 +558,151 @@
 			{/await}
 		</section>
 
-		<!-- Section 2: Protocols -->
-		<section class="space-y-4">
-			<h3 class="text-lg font-semibold">Protocols</h3>
-			{#await protocolsData}
-				<div class="rounded-lg border p-6">
-					<div class="flex flex-wrap gap-6">
-						{#each Array(5) as _, i (i)}
-							<div class="h-5 w-28 animate-pulse rounded bg-muted"></div>
-						{/each}
+		<!-- Section 2: Protocols & Features -->
+		<div class="grid gap-6 lg:grid-cols-2">
+			<section class="space-y-4">
+				<h3 class="text-lg font-semibold">Protocols</h3>
+				{#await protocolsData}
+					<div class="rounded-lg border p-6">
+						<div class="flex flex-wrap gap-6">
+							{#each Array(5) as _, i (i)}
+								<div class="h-5 w-28 animate-pulse rounded bg-muted"></div>
+							{/each}
+						</div>
 					</div>
-				</div>
-			{:then _}
+				{:then _}
+					<div class="rounded-lg border p-6">
+						<div class="flex flex-wrap gap-x-8 gap-y-4">
+							<label class="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									bind:checked={localHttpEnabled}
+									class="h-4 w-4 rounded border-input"
+								/>
+								HTTP
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<span {...props}>
+												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+											</span>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.httpEnabled}</Tooltip.Content
+									>
+								</Tooltip.Root>
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									bind:checked={localHttpsEnabled}
+									class="h-4 w-4 rounded border-input"
+								/>
+								HTTPS
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<span {...props}>
+												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+											</span>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content side="right"
+										>{PROTOCOL_DESCRIPTIONS.httpsEnabled}</Tooltip.Content
+									>
+								</Tooltip.Root>
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									bind:checked={localCifsEnabled}
+									class="h-4 w-4 rounded border-input"
+								/>
+								CIFS
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<span {...props}>
+												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+											</span>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.cifsEnabled}</Tooltip.Content
+									>
+								</Tooltip.Root>
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									bind:checked={localNfsEnabled}
+									class="h-4 w-4 rounded border-input"
+								/>
+								NFS
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<span {...props}>
+												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+											</span>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.nfsEnabled}</Tooltip.Content>
+								</Tooltip.Root>
+							</label>
+							<label class="flex items-center gap-2 text-sm">
+								<input
+									type="checkbox"
+									bind:checked={localSmtpEnabled}
+									class="h-4 w-4 rounded border-input"
+								/>
+								SMTP
+								<Tooltip.Root>
+									<Tooltip.Trigger>
+										{#snippet child({ props })}
+											<span {...props}>
+												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+											</span>
+										{/snippet}
+									</Tooltip.Trigger>
+									<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.smtpEnabled}</Tooltip.Content
+									>
+								</Tooltip.Root>
+							</label>
+						</div>
+						<div class="mt-4 flex items-center gap-3">
+							<Button
+								size="sm"
+								disabled={!protocolsDirty || savingProtocols}
+								onclick={saveProtocols}
+							>
+								{#if savingProtocols}
+									<Loader2 class="h-4 w-4 animate-spin" />
+									Saving...
+								{:else}
+									<Save class="h-4 w-4" />
+									Save Protocols
+								{/if}
+							</Button>
+							{#if protocolsDirty}
+								<span class="text-xs text-muted-foreground">Unsaved changes</span>
+							{/if}
+						</div>
+					</div>
+				{/await}
+			</section>
+
+			<!-- Section 3: Features -->
+			<section class="space-y-4">
+				<h3 class="text-lg font-semibold">Features</h3>
 				<div class="rounded-lg border p-6">
 					<div class="flex flex-wrap gap-x-8 gap-y-4">
 						<label class="flex items-center gap-2 text-sm">
 							<input
 								type="checkbox"
-								bind:checked={localHttpEnabled}
+								bind:checked={localSearchEnabled}
 								class="h-4 w-4 rounded border-input"
 							/>
-							HTTP
+							Search
 							<Tooltip.Root>
 								<Tooltip.Trigger>
 									{#snippet child({ props })}
@@ -528,16 +711,18 @@
 										</span>
 									{/snippet}
 								</Tooltip.Trigger>
-								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.httpEnabled}</Tooltip.Content>
+								<Tooltip.Content side="right"
+									>Enable metadata query engine indexing for this namespace</Tooltip.Content
+								>
 							</Tooltip.Root>
 						</label>
 						<label class="flex items-center gap-2 text-sm">
 							<input
 								type="checkbox"
-								bind:checked={localHttpsEnabled}
+								bind:checked={localVersioningEnabled}
 								class="h-4 w-4 rounded border-input"
 							/>
-							HTTPS
+							Versioning
 							<Tooltip.Root>
 								<Tooltip.Trigger>
 									{#snippet child({ props })}
@@ -546,81 +731,33 @@
 										</span>
 									{/snippet}
 								</Tooltip.Trigger>
-								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.httpsEnabled}</Tooltip.Content>
-							</Tooltip.Root>
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								bind:checked={localCifsEnabled}
-								class="h-4 w-4 rounded border-input"
-							/>
-							CIFS
-							<Tooltip.Root>
-								<Tooltip.Trigger>
-									{#snippet child({ props })}
-										<span {...props}>
-											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-										</span>
-									{/snippet}
-								</Tooltip.Trigger>
-								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.cifsEnabled}</Tooltip.Content>
-							</Tooltip.Root>
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								bind:checked={localNfsEnabled}
-								class="h-4 w-4 rounded border-input"
-							/>
-							NFS
-							<Tooltip.Root>
-								<Tooltip.Trigger>
-									{#snippet child({ props })}
-										<span {...props}>
-											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-										</span>
-									{/snippet}
-								</Tooltip.Trigger>
-								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.nfsEnabled}</Tooltip.Content>
-							</Tooltip.Root>
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								bind:checked={localSmtpEnabled}
-								class="h-4 w-4 rounded border-input"
-							/>
-							SMTP
-							<Tooltip.Root>
-								<Tooltip.Trigger>
-									{#snippet child({ props })}
-										<span {...props}>
-											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-										</span>
-									{/snippet}
-								</Tooltip.Trigger>
-								<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.smtpEnabled}</Tooltip.Content>
+								<Tooltip.Content side="right"
+									>Keep previous versions of objects on update or delete</Tooltip.Content
+								>
 							</Tooltip.Root>
 						</label>
 					</div>
 					<div class="mt-4 flex items-center gap-3">
-						<Button size="sm" disabled={!protocolsDirty || savingProtocols} onclick={saveProtocols}>
-							{#if savingProtocols}
+						<Button
+							size="sm"
+							disabled={!nsSettingsDirty || savingNsSettings}
+							onclick={saveNsSettings}
+						>
+							{#if savingNsSettings}
 								<Loader2 class="h-4 w-4 animate-spin" />
 								Saving...
 							{:else}
 								<Save class="h-4 w-4" />
-								Save Protocols
+								Save Features
 							{/if}
 						</Button>
-						{#if protocolsDirty}
+						{#if nsSettingsDirty}
 							<span class="text-xs text-muted-foreground">Unsaved changes</span>
 						{/if}
 					</div>
 				</div>
-			{/await}
-		</section>
+			</section>
+		</div>
 
 		<!-- NFS Connection Instructions (shown when NFS is enabled) -->
 		{#if localNfsEnabled}

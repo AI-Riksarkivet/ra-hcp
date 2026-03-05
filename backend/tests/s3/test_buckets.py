@@ -15,7 +15,7 @@ async def test_list_buckets_empty(
     mock_s3_service.list_buckets.return_value = {"Buckets": []}
     resp = await client.get("/api/v1/buckets", headers=auth_headers)
     assert resp.status_code == 200
-    assert resp.json() == {"buckets": []}
+    assert resp.json() == {"buckets": [], "owner": None}
 
 
 async def test_list_buckets_with_data(
@@ -31,15 +31,17 @@ async def test_list_buckets_with_data(
                 "Name": "bucket-2",
                 "CreationDate": datetime(2024, 6, 15, tzinfo=timezone.utc),
             },
-        ]
+        ],
+        "Owner": {"DisplayName": "testuser", "ID": "user123"},
     }
     resp = await client.get("/api/v1/buckets", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()
     assert len(body["buckets"]) == 2
-    # FastAPI serializes using aliases (Name, CreationDate)
     assert body["buckets"][0]["Name"] == "bucket-1"
     assert body["buckets"][1]["Name"] == "bucket-2"
+    assert body["owner"]["DisplayName"] == "testuser"
+    assert body["owner"]["ID"] == "user123"
 
 
 async def test_create_bucket_success(

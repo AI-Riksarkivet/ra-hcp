@@ -66,7 +66,7 @@ def test_list_objects_basic(service: S3Service, mock_boto_client: MagicMock):
     mock_boto_client.list_objects_v2.return_value = {"Contents": []}
     service.list_objects("bucket")
     mock_boto_client.list_objects_v2.assert_called_once_with(
-        Bucket="bucket", MaxKeys=1000
+        Bucket="bucket", MaxKeys=1000, FetchOwner=True
     )
 
 
@@ -82,6 +82,7 @@ def test_list_objects_with_prefix_and_token(
         MaxKeys=10,
         Prefix="logs/",
         ContinuationToken="tok123",
+        FetchOwner=True,
     )
 
 
@@ -125,11 +126,9 @@ def test_copy_object(service: S3Service, mock_boto_client: MagicMock):
 
 
 def test_delete_objects(service: S3Service, mock_boto_client: MagicMock):
-    mock_boto_client.delete_objects.return_value = {"Deleted": []}
-    service.delete_objects("bucket", ["f1.txt", "f2.txt"])
-    call_kwargs = mock_boto_client.delete_objects.call_args.kwargs
-    assert call_kwargs["Bucket"] == "bucket"
-    assert len(call_kwargs["Delete"]["Objects"]) == 2
+    result = service.delete_objects("bucket", ["f1.txt", "f2.txt"])
+    assert mock_boto_client.delete_object.call_count == 2
+    assert result == {}
 
 
 # ── Versioning ──────────────────────────────────────────────────────

@@ -66,6 +66,11 @@
 		last_modified: string;
 		etag: string;
 		storage_class: string;
+		owner: { display_name?: string; id?: string; DisplayName?: string; ID?: string } | null;
+	}
+
+	function getOwnerName(obj: S3Object): string {
+		return obj.owner?.display_name ?? obj.owner?.DisplayName ?? '';
 	}
 
 	let rawObjects = $derived((objectData.current?.objects ?? []) as S3Object[]);
@@ -78,6 +83,7 @@
 				last_modified: '',
 				etag: '',
 				storage_class: '',
+				owner: null,
 			})
 		)
 	);
@@ -213,13 +219,48 @@
 	});
 
 	let search = $state('');
+	let ownerFilter = $state('');
+	let sizeFilter = $state('');
+	let dateFilter = $state('');
+
+	let uniqueOwners = $derived([...new Set(rawObjects.map(getOwnerName).filter(Boolean))]);
+
 	let filteredObjects = $derived(
 		objects.filter((obj) => {
-			if (!search) return true;
-			const q = search.toLowerCase();
-			return getDisplayName(obj.key).toLowerCase().includes(q) || obj.key.toLowerCase().includes(q);
+			if (search) {
+				const q = search.toLowerCase();
+				if (
+					!getDisplayName(obj.key).toLowerCase().includes(q) &&
+					!obj.key.toLowerCase().includes(q)
+				)
+					return false;
+			}
+			if (ownerFilter && getOwnerName(obj) !== ownerFilter && !isObjFolder(obj)) return false;
+			if (sizeFilter && !isObjFolder(obj)) {
+				const s = obj.size;
+				if (sizeFilter === '<1KB' && s >= 1024) return false;
+				if (sizeFilter === '1KB-1MB' && (s < 1024 || s >= 1048576)) return false;
+				if (sizeFilter === '1MB-100MB' && (s < 1048576 || s >= 104857600)) return false;
+				if (sizeFilter === '>100MB' && s < 104857600) return false;
+			}
+			if (dateFilter && obj.last_modified) {
+				const d = new Date(obj.last_modified);
+				const now = new Date();
+				const diff = now.getTime() - d.getTime();
+				if (dateFilter === '24h' && diff > 86400000) return false;
+				if (dateFilter === '7d' && diff > 604800000) return false;
+				if (dateFilter === '30d' && diff > 2592000000) return false;
+			}
+			return true;
 		})
 	);
+
+	let hasActiveFilters = $derived(!!ownerFilter || !!sizeFilter || !!dateFilter);
+	function clearFilters() {
+		ownerFilter = '';
+		sizeFilter = '';
+		dateFilter = '';
+	}
 
 	let selected = new SvelteSet<string>();
 	let selectableObjects = $derived(filteredObjects.filter((obj) => !isObjFolder(obj)));
@@ -550,16 +591,47 @@
 		>{/if}
 
 	{#await objectData}
-		<TableSkeleton rows={5} columns={6} />
+		<TableSkeleton rows={5} columns={7} />
 	{:then _}
-		<div class="relative">
-			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-			<input
-				type="text"
-				bind:value={search}
-				placeholder="Search objects..."
-				class="w-full rounded-lg border bg-background py-2 pl-10 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-			/>
+		<div class="space-y-2">
+			<div class="relative">
+				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+				<input
+					type="text"
+					bind:value={search}
+					placeholder="Search objects..."
+					class="w-full rounded-lg border bg-background py-2 pl-10 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+				/>
+			</div>
+			<div class="flex flex-wrap items-center gap-2">
+				{#if uniqueOwners.length > 0}
+					<select bind:value={ownerFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
+						<option value="">All owners</option>
+						{#each uniqueOwners as o}<option value={o}>{o}</option>{/each}
+					</select>
+				{/if}
+				<select bind:value={sizeFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
+					<option value="">All sizes</option>
+					<option value="<1KB">&lt; 1 KB</option>
+					<option value="1KB-1MB">1 KB - 1 MB</option>
+					<option value="1MB-100MB">1 MB - 100 MB</option>
+					<option value=">100MB">&gt; 100 MB</option>
+				</select>
+				<select bind:value={dateFilter} class="h-8 rounded-md border bg-background px-2 text-xs">
+					<option value="">All dates</option>
+					<option value="24h">Last 24 hours</option>
+					<option value="7d">Last 7 days</option>
+					<option value="30d">Last 30 days</option>
+				</select>
+				{#if hasActiveFilters}
+					<Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={clearFilters}>
+						Clear filters
+					</Button>
+				{/if}
+				<span class="ml-auto text-xs text-muted-foreground"
+					>{filteredObjects.length} of {objects.length} items</span
+				>
+			</div>
 		</div>
 
 		{#if selected.size > 0}
@@ -592,6 +664,7 @@
 						>
 						<th class="px-4 py-3 font-medium">Name</th>
 						<th class="px-4 py-3 font-medium">Key</th>
+						<th class="w-32 px-4 py-3 font-medium">Owner</th>
 						<th class="w-32 px-4 py-3 font-medium">Size</th>
 						<th class="w-48 px-4 py-3 font-medium">Last Modified</th>
 						<th class="w-24 px-4 py-3 font-medium">Actions</th>
@@ -599,12 +672,12 @@
 				</thead>
 				<tbody class="divide-y">
 					{#if objects.length === 0}<tr
-							><td colspan="6" class="px-4 py-8 text-center text-muted-foreground"
+							><td colspan="7" class="px-4 py-8 text-center text-muted-foreground"
 								>No objects in this bucket</td
 							></tr
 						>
 					{:else if filteredObjects.length === 0}<tr
-							><td colspan="6" class="px-4 py-8 text-center text-muted-foreground"
+							><td colspan="7" class="px-4 py-8 text-center text-muted-foreground"
 								>No results matching "{search}"</td
 							></tr
 						>
@@ -651,6 +724,9 @@
 										>
 									</Tooltip.Root>
 								</td>
+								<td class="px-4 py-3 text-muted-foreground"
+									>{folder ? '-' : getOwnerName(obj) || '-'}</td
+								>
 								<td class="px-4 py-3 text-muted-foreground"
 									>{folder ? '-' : formatBytes(obj.size)}</td
 								>
