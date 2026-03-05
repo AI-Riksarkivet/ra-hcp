@@ -102,12 +102,22 @@ async def test_object_query_cache_miss_then_hit(
     route = query_mock.post(QUERY_URL).respond(200, json=_OBJ_RESPONSE)
 
     # First call — miss, hits HCP
-    r1 = await query_svc.object_query("mock", ObjectQuery(query="*:*", count=5))
+    r1 = await query_svc.object_query(
+        "mock",
+        ObjectQuery(query="*:*", count=5),
+        username="testuser",
+        password="testpass",
+    )
     assert r1.status.total_results == 2
     assert route.call_count == 1
 
     # Second call — hit, no HCP request
-    r2 = await query_svc.object_query("mock", ObjectQuery(query="*:*", count=5))
+    r2 = await query_svc.object_query(
+        "mock",
+        ObjectQuery(query="*:*", count=5),
+        username="testuser",
+        password="testpass",
+    )
     assert r2.status.total_results == 2
     assert route.call_count == 1  # Still 1
 
@@ -120,11 +130,15 @@ async def test_operation_query_cache_miss_then_hit(
 ):
     route = query_mock.post(QUERY_URL).respond(200, json=_OP_RESPONSE)
 
-    r1 = await query_svc.operation_query("mock", OperationQuery(count=10))
+    r1 = await query_svc.operation_query(
+        "mock", OperationQuery(count=10), username="testuser", password="testpass"
+    )
     assert r1.status.total_results == 1
     assert route.call_count == 1
 
-    r2 = await query_svc.operation_query("mock", OperationQuery(count=10))
+    r2 = await query_svc.operation_query(
+        "mock", OperationQuery(count=10), username="testuser", password="testpass"
+    )
     assert r2.status.total_results == 1
     assert route.call_count == 1  # Still 1
 
@@ -135,11 +149,21 @@ async def test_operation_query_cache_miss_then_hit(
 async def test_different_params_miss_cache(query_svc: CachedQueryService, query_mock):
     route = query_mock.post(QUERY_URL).respond(200, json=_OBJ_RESPONSE)
 
-    await query_svc.object_query("mock", ObjectQuery(query="*:*", count=5))
+    await query_svc.object_query(
+        "mock",
+        ObjectQuery(query="*:*", count=5),
+        username="testuser",
+        password="testpass",
+    )
     assert route.call_count == 1
 
     # Different count → different cache key → miss
-    await query_svc.object_query("mock", ObjectQuery(query="*:*", count=10))
+    await query_svc.object_query(
+        "mock",
+        ObjectQuery(query="*:*", count=10),
+        username="testuser",
+        password="testpass",
+    )
     assert route.call_count == 2
 
 
@@ -155,11 +179,15 @@ async def test_works_without_cache(query_mock):
     svc = CachedQueryService(_settings(), cache, cache_settings)
     route = query_mock.post(QUERY_URL).respond(200, json=_OBJ_RESPONSE)
 
-    r1 = await svc.object_query("mock", ObjectQuery(query="*:*"))
+    r1 = await svc.object_query(
+        "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
+    )
     assert r1.status.total_results == 2
 
     # Without cache, second call should also hit HCP
-    r2 = await svc.object_query("mock", ObjectQuery(query="*:*"))
+    r2 = await svc.object_query(
+        "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
+    )
     assert r2.status.total_results == 2
     assert route.call_count == 2
 

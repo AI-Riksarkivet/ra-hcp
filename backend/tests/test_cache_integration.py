@@ -28,6 +28,7 @@ from app.core.security import create_access_token
 from app.main import app
 from app.services.cache_service import CacheService
 from app.services.cached_mapi import CachedMapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.services.s3_service import S3Service
 
 HCP_BASE = "https://test.hcp.example.com:9090/mapi"
@@ -132,9 +133,10 @@ async def cached_client(
     verify caching behavior through the full API stack.
     """
     cached_mapi = CachedMapiService(mapi_settings, cache_service, cache_settings)
+    auth_mapi = AuthenticatedMapiService(cached_mapi, "testuser", "testpass")
 
     async def _override_mapi():
-        yield cached_mapi
+        yield auth_mapi
 
     async def _override_s3():
         yield mock_s3_service

@@ -51,8 +51,8 @@ class CachedQueryService(QueryService):
         tenant: str,
         query: ObjectQuery,
         *,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str,
+        password: str,
         auth_type: Optional[str] = None,
     ) -> ObjectQueryResponse:
         with tracer.start_as_current_span(
@@ -91,8 +91,8 @@ class CachedQueryService(QueryService):
         tenant: str,
         query: OperationQuery,
         *,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str,
+        password: str,
         auth_type: Optional[str] = None,
     ) -> OperationQueryResponse:
         with tracer.start_as_current_span(

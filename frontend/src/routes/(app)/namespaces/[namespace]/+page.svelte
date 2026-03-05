@@ -21,7 +21,8 @@
 	} from 'lucide-svelte';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 	import { toast } from 'svelte-sonner';
-	import { formatDate } from '$lib/utils/format.js';
+	import { formatDate, formatBytes, parseQuotaBytes } from '$lib/utils/format.js';
+	import { get_tenant_chargeback, type ChargebackEntry } from '$lib/tenant-info.remote.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import {
 		get_namespace,
@@ -59,6 +60,14 @@
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let hcpDomain = $derived((page.data.hcpDomain as string) || '');
 	let namespaceName = $derived(page.params.namespace ?? '');
+
+	// --- Storage usage from chargeback ---
+	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
+	let nsStorageUsed = $derived.by(() => {
+		const entries = (chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[];
+		const entry = entries.find((e) => e.namespaceName === namespaceName);
+		return entry?.storageCapacityUsed ?? 0;
+	});
 
 	// --- NFS connection info ---
 	let nfsDomain = $derived(hcpDomain ? `nfs.${hcpDomain}` : 'nfs.<hcp-domain>');
@@ -610,83 +619,30 @@
 								</p>
 								<p class="mt-1 text-sm">{ns.creationTime ? formatDate(ns.creationTime) : '—'}</p>
 							</div>
-						</div>
-
-						<!-- Tags -->
-						<div class="mt-6 border-t pt-4">
-							<div class="flex items-center gap-2">
+							<div>
 								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-									Tags
+									Storage Used
 								</p>
-								{#if !editingTags}
-									<button
-										type="button"
-										class="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-										onclick={startEditTags}
-									>
-										<Pencil class="h-3 w-3" />
-									</button>
+								{#if true}
+									{@const quota = ns.hardQuota ? parseQuotaBytes(ns.hardQuota) : null}
+									<p class="mt-1 text-sm">
+										{formatBytes(nsStorageUsed)}{quota ? ` / ${ns.hardQuota}` : ''}
+									</p>
+									{#if quota}
+										{@const pct = Math.min(100, (nsStorageUsed / quota) * 100)}
+										<div class="mt-1 h-1.5 w-full max-w-32 overflow-hidden rounded-full bg-muted">
+											<div
+												class="h-full rounded-full transition-all {pct > 90
+													? 'bg-destructive'
+													: pct > 70
+														? 'bg-yellow-500'
+														: 'bg-primary'}"
+												style="width: {pct}%"
+											></div>
+										</div>
+									{/if}
 								{/if}
 							</div>
-							{#if editingTags}
-								<div class="mt-2 space-y-2">
-									<div class="flex gap-2">
-										<input
-											class="h-8 w-40 rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-											placeholder="Add tag..."
-											bind:value={editTagInput}
-											onkeydown={handleEditTagKeydown}
-										/>
-										<Button variant="secondary" size="sm" class="h-8" onclick={addEditTag}>
-											Add
-										</Button>
-										<Button size="sm" class="h-8" disabled={savingTags} onclick={saveTags}>
-											{#if savingTags}
-												<Loader2 class="h-3.5 w-3.5 animate-spin" />
-											{:else}
-												<Save class="h-3.5 w-3.5" />
-											{/if}
-											Save
-										</Button>
-										<Button
-											variant="ghost"
-											size="sm"
-											class="h-8"
-											onclick={() => (editingTags = false)}
-										>
-											Cancel
-										</Button>
-									</div>
-									{#if editTags.length > 0}
-										<div class="flex flex-wrap gap-1.5">
-											{#each editTags as t (t)}
-												<span class="inline-flex items-center gap-0.5">
-													<ServiceTagBadge tag={t} />
-													<button
-														type="button"
-														class="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
-														onclick={() => removeEditTag(t)}
-													>
-														<X class="h-2.5 w-2.5" />
-													</button>
-												</span>
-											{/each}
-										</div>
-									{/if}
-								</div>
-							{:else}
-								<div class="mt-1">
-									{#if ns.tags?.tag?.length}
-										<div class="flex flex-wrap gap-1.5">
-											{#each ns.tags.tag as t (t)}
-												<ServiceTagBadge tag={t} />
-											{/each}
-										</div>
-									{:else}
-										<p class="text-sm text-muted-foreground">No tags</p>
-									{/if}
-								</div>
-							{/if}
 						</div>
 					{:else}
 						<p class="text-center text-sm text-muted-foreground">
@@ -697,8 +653,8 @@
 			{/await}
 		</section>
 
-		<!-- Section 2: Protocols & Features -->
-		<div class="grid gap-6 lg:grid-cols-2">
+		<!-- Section 2: Protocols, Features & Tags -->
+		<div class="grid gap-6 lg:grid-cols-3">
 			<section class="space-y-4">
 				<h3 class="text-lg font-semibold">Protocols</h3>
 				{#await protocolsData}
@@ -894,6 +850,77 @@
 							<span class="text-xs text-muted-foreground">Unsaved changes</span>
 						{/if}
 					</div>
+				</div>
+			</section>
+
+			<!-- Tags -->
+			<section class="space-y-4">
+				<div class="flex items-center gap-2">
+					<h3 class="text-lg font-semibold">Tags</h3>
+					{#if !editingTags}
+						<button
+							type="button"
+							class="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+							onclick={startEditTags}
+						>
+							<Pencil class="h-3.5 w-3.5" />
+						</button>
+					{/if}
+				</div>
+				<div class="rounded-lg border p-6">
+					{#if editingTags}
+						<div class="space-y-3">
+							<div class="flex gap-2">
+								<input
+									class="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+									placeholder="Add tag..."
+									bind:value={editTagInput}
+									onkeydown={handleEditTagKeydown}
+								/>
+								<Button variant="secondary" size="sm" class="h-8" onclick={addEditTag}>Add</Button>
+							</div>
+							{#if editTags.length > 0}
+								<div class="flex flex-wrap gap-1.5">
+									{#each editTags as t (t)}
+										<span class="inline-flex items-center gap-0.5">
+											<ServiceTagBadge tag={t} />
+											<button
+												type="button"
+												class="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
+												onclick={() => removeEditTag(t)}
+											>
+												<X class="h-2.5 w-2.5" />
+											</button>
+										</span>
+									{/each}
+								</div>
+							{:else}
+								<p class="text-sm text-muted-foreground">No tags yet</p>
+							{/if}
+							<div class="flex items-center gap-3">
+								<Button size="sm" disabled={savingTags} onclick={saveTags}>
+									{#if savingTags}
+										<Loader2 class="h-4 w-4 animate-spin" />
+										Saving...
+									{:else}
+										<Save class="h-4 w-4" />
+										Save Tags
+									{/if}
+								</Button>
+								<Button variant="ghost" size="sm" onclick={() => (editingTags = false)}>
+									Cancel
+								</Button>
+							</div>
+						</div>
+					{:else if ns?.tags?.tag?.length}
+						<div class="flex flex-wrap gap-1.5">
+							{#each ns.tags.tag as t (t)}
+								<ServiceTagBadge tag={t} />
+							{/each}
+						</div>
+					{:else}
+						<p class="text-sm text-muted-foreground">No tags</p>
+					{/if}
 				</div>
 			</section>
 		</div>

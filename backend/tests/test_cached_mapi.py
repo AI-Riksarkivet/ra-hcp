@@ -74,13 +74,13 @@ async def test_get_cache_miss_then_hit(
     )
 
     # First call — miss, hits HCP
-    resp1 = await mapi.get("/tenants")
+    resp1 = await mapi.get("/tenants", username="testuser", password="testpass")
     assert resp1.status_code == 200
     assert resp1.json() == {"name": ["t1", "t2"]}
     assert route.call_count == 1
 
     # Second call — hit, no HCP request
-    resp2 = await mapi.get("/tenants")
+    resp2 = await mapi.get("/tenants", username="testuser", password="testpass")
     assert resp2.status_code == 200
     assert resp2.json() == {"name": ["t1", "t2"]}
     assert route.call_count == 1  # Still 1
@@ -100,19 +100,26 @@ async def test_put_invalidates_cache(
     put_route = hcp_mock.put(f"{HCP_BASE}/tenants/t1/namespaces/ns1").respond(200)
 
     # Populate cache
-    await mapi.get("/tenants/t1/namespaces")
+    await mapi.get("/tenants/t1/namespaces", username="testuser", password="testpass")
     assert get_route.call_count == 1
 
     # Second GET — cache hit, no HCP call
-    await mapi.get("/tenants/t1/namespaces")
+    await mapi.get("/tenants/t1/namespaces", username="testuser", password="testpass")
     assert get_route.call_count == 1  # Still 1
 
     # Write invalidates
-    await mapi.put("/tenants/t1/namespaces/ns1", body={"some": "data"})
+    await mapi.put(
+        "/tenants/t1/namespaces/ns1",
+        body={"some": "data"},
+        username="testuser",
+        password="testpass",
+    )
     assert put_route.call_count == 1
 
     # Next GET should miss cache — hits HCP again
-    resp = await mapi.get("/tenants/t1/namespaces")
+    resp = await mapi.get(
+        "/tenants/t1/namespaces", username="testuser", password="testpass"
+    )
     assert resp.status_code == 200
     assert get_route.call_count == 2  # Now 2 — cache was invalidated
 
@@ -127,8 +134,8 @@ async def test_no_cache_paths(
 ):
     route = hcp_mock.get(f"{HCP_BASE}/logs").respond(200, json={"logs": []})
 
-    await mapi.get("/logs")
-    await mapi.get("/logs")
+    await mapi.get("/logs", username="testuser", password="testpass")
+    await mapi.get("/logs", username="testuser", password="testpass")
     # Both should hit HCP — /logs is never cached
     assert route.call_count == 2
 
@@ -165,8 +172,8 @@ async def test_error_responses_not_cached(
         404, json={"error": "not found"}
     )
 
-    await mapi.get("/tenants/t1")
-    await mapi.get("/tenants/t1")
+    await mapi.get("/tenants/t1", username="testuser", password="testpass")
+    await mapi.get("/tenants/t1", username="testuser", password="testpass")
     # Both should hit HCP — 404 should not be cached
     assert route.call_count == 2
 
@@ -184,7 +191,7 @@ async def test_works_without_cache(hcp_mock):
     mapi = CachedMapiService(_mapi_settings(), cache, cache_settings)
     route = hcp_mock.get(f"{HCP_BASE}/tenants").respond(200, json={"name": ["t1"]})
 
-    resp = await mapi.get("/tenants")
+    resp = await mapi.get("/tenants", username="testuser", password="testpass")
     assert resp.json() == {"name": ["t1"]}
     assert route.call_count == 1
 
