@@ -102,6 +102,7 @@ class S3Service:
         prefix: Optional[str] = None,
         max_keys: int = 1000,
         continuation_token: Optional[str] = None,
+        delimiter: Optional[str] = None,
     ) -> dict:
         with tracer.start_as_current_span(
             "s3.list_objects",
@@ -112,6 +113,8 @@ class S3Service:
                 kwargs["Prefix"] = prefix
             if continuation_token:
                 kwargs["ContinuationToken"] = continuation_token
+            if delimiter:
+                kwargs["Delimiter"] = delimiter
             return self._client.list_objects_v2(**kwargs)
 
     def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:

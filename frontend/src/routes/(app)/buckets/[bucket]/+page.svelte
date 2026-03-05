@@ -65,7 +65,20 @@
 		storage_class: string;
 	}
 
-	let objects = $derived((objectData.current?.objects ?? []) as S3Object[]);
+	let rawObjects = $derived((objectData.current?.objects ?? []) as S3Object[]);
+	let commonPrefixes = $derived((objectData.current?.commonPrefixes ?? []) as string[]);
+	let folderEntries = $derived(
+		commonPrefixes.map(
+			(p): S3Object => ({
+				key: p,
+				size: 0,
+				last_modified: '',
+				etag: '',
+				storage_class: '',
+			})
+		)
+	);
+	let objects = $derived([...folderEntries, ...rawObjects]);
 	let keyCount = $derived(objectData.current?.keyCount ?? 0);
 
 	function navigatePrefix(p: string) {

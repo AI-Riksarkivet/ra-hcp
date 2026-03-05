@@ -134,12 +134,31 @@ class MockS3Service:
         prefix: Optional[str] = None,
         max_keys: int = 1000,
         continuation_token: Optional[str] = None,
+        delimiter: Optional[str] = None,
     ) -> dict:
         self._logger.info("list_objects bucket=%s prefix=%s", bucket, prefix)
         self._require_bucket(bucket)
         all_keys = sorted(self._objects.get(bucket, {}).keys())
         if prefix:
             all_keys = [k for k in all_keys if k.startswith(prefix)]
+
+        # Delimiter grouping: split keys into direct objects vs common prefixes
+        common_prefixes: List[str] = []
+        if delimiter:
+            grouped_keys: List[str] = []
+            seen_prefixes: set[str] = set()
+            for key in all_keys:
+                rest = key[len(prefix or "") :]
+                idx = rest.find(delimiter)
+                if idx >= 0:
+                    # Key is nested — extract common prefix
+                    cp = (prefix or "") + rest[: idx + len(delimiter)]
+                    if cp not in seen_prefixes:
+                        seen_prefixes.add(cp)
+                        common_prefixes.append(cp)
+                else:
+                    grouped_keys.append(key)
+            all_keys = grouped_keys
 
         start = 0
         if continuation_token:
@@ -166,6 +185,7 @@ class MockS3Service:
 
         result: dict[str, Any] = {
             "Contents": contents,
+            "CommonPrefixes": [{"Prefix": cp} for cp in common_prefixes],
             "IsTruncated": is_truncated,
             "KeyCount": len(contents),
         }

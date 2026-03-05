@@ -28,7 +28,10 @@ export const get_objects = query(
   z.object({ bucket: z.string(), prefix: z.string() }),
   async ({ bucket, prefix }) => {
     try {
-      const params = new URLSearchParams({ max_keys: "100" });
+      const params = new URLSearchParams({
+        max_keys: "100",
+        delimiter: "/",
+      });
       if (prefix) params.set("prefix", prefix);
       const res = await apiFetch(
         `/api/v1/buckets/${encodeURIComponent(bucket)}/objects?${params}`,
@@ -44,8 +47,10 @@ export const get_objects = query(
           etag: o.etag ?? o.ETag ?? "",
           storage_class: o.storage_class ?? o.StorageClass ?? "",
         }));
+        const commonPrefixes = (data.common_prefixes ?? []) as string[];
         return {
           objects,
+          commonPrefixes,
           isTruncated: data.is_truncated ?? false,
           nextToken: data.next_continuation_token ?? null,
           keyCount: data.key_count ?? 0,
@@ -62,6 +67,7 @@ export const get_objects = query(
         etag: string;
         storage_class: string;
       }[],
+      commonPrefixes: [] as string[],
       isTruncated: false,
       keyCount: 0,
       nextToken: null,

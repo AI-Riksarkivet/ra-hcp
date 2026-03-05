@@ -97,21 +97,26 @@ class CachedS3Service(S3Service):
         prefix: Optional[str] = None,
         max_keys: int = 1000,
         continuation_token: Optional[str] = None,
+        delimiter: Optional[str] = None,
     ) -> dict:
         # Only cache the first page (no continuation token)
         if continuation_token is not None:
-            return super().list_objects(bucket, prefix, max_keys, continuation_token)
+            return super().list_objects(
+                bucket, prefix, max_keys, continuation_token, delimiter
+            )
         with tracer.start_as_current_span(
             "cached_s3.list_objects",
             attributes={"s3.bucket": bucket, "s3.prefix": prefix or ""},
         ) as span:
-            key = self._key("list_objects", bucket, prefix or "")
+            key = self._key("list_objects", bucket, prefix or "", delimiter or "")
             cached = self._cache.get_sync(key)
             if cached is not None:
                 span.set_attribute("cache.hit", True)
                 return cached
             span.set_attribute("cache.hit", False)
-            result = super().list_objects(bucket, prefix, max_keys, continuation_token)
+            result = super().list_objects(
+                bucket, prefix, max_keys, continuation_token, delimiter
+            )
             self._cache.set_sync(key, result, ttl=self._cs.cache_s3_list_ttl)
             return result
 

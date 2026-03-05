@@ -33,6 +33,7 @@ class ObjectInfo(BaseModel):
 
 class ListObjectsResponse(BaseModel):
     objects: List[ObjectInfo] = []
+    common_prefixes: List[str] = []
     is_truncated: bool = False
     next_continuation_token: Optional[str] = None
     key_count: int = 0

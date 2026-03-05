@@ -35,6 +35,7 @@ async def list_objects(
     prefix: Optional[str] = Query(None),
     max_keys: int = Query(1000, le=1000),
     continuation_token: Optional[str] = Query(None),
+    delimiter: Optional[str] = Query(None),
     s3: S3Service = Depends(get_s3_service),
 ):
     try:
@@ -44,14 +45,19 @@ async def list_objects(
             prefix,
             max_keys,
             continuation_token,
+            delimiter,
         )
     except ClientError as exc:
         raise_for_s3_error(exc, f"bucket '{bucket}'")
     except BotoCoreError as exc:
         raise_for_s3_transport_error(exc, f"bucket '{bucket}'")
     objects = [ObjectInfo.model_validate(o) for o in result.get("Contents", [])]
+    common_prefixes = [
+        cp["Prefix"] for cp in result.get("CommonPrefixes", []) if "Prefix" in cp
+    ]
     return ListObjectsResponse(
         objects=objects,
+        common_prefixes=common_prefixes,
         is_truncated=result.get("IsTruncated", False),
         next_continuation_token=result.get("NextContinuationToken"),
         key_count=result.get("KeyCount", 0),
