@@ -17,6 +17,8 @@ from app.schemas.s3 import (
     AclPolicy,
     AclResponse,
     BulkDownloadRequest,
+    BulkPresignRequest,
+    BulkPresignResponse,
     CopyObjectRequest,
     DeleteObjectsRequest,
     DeleteObjectsResponse,
@@ -118,6 +120,27 @@ async def download_objects(
             "Content-Disposition": f'attachment; filename="{bucket}-objects.zip"',
         },
     )
+
+
+# ── Bulk presign (must be before {key:path} catch-all) ───────────────
+
+
+@router.post("/presign", response_model=BulkPresignResponse)
+async def bulk_presign(
+    bucket: str,
+    body: BulkPresignRequest,
+    s3: S3Service = Depends(get_s3_service),
+):
+    urls = []
+    for key in body.keys:
+        try:
+            url = await asyncio.to_thread(
+                s3.generate_presigned_url, bucket, key, body.expires_in
+            )
+            urls.append({"key": key, "url": url})
+        except (ClientError, BotoCoreError):
+            continue
+    return BulkPresignResponse(urls=urls, expires_in=body.expires_in)
 
 
 # ── Routes with /acl suffix (must be before {key:path} catch-all) ───

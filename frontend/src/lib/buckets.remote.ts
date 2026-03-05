@@ -129,22 +129,24 @@ export const delete_object = command(
 export const bulk_delete_objects = command(
   z.object({ bucket: z.string(), keys: z.array(z.string()) }),
   async ({ bucket, keys }) => {
-    const results = await Promise.allSettled(
-      keys.map((key) =>
-        apiFetch(
-          `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${
-            encodeURIComponent(key)
-          }`,
-          { method: "DELETE" },
-        ).then((res) => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        })
-      ),
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/delete`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keys }),
+      },
     );
-    const failCount = results.filter((r) => r.status === "rejected").length;
-    if (failCount > 0) {
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to delete objects",
+      }));
+      throw new Error(err.detail);
+    }
+    const data = await res.json();
+    if (data.errors && data.errors.length > 0) {
       throw new Error(
-        `Failed to delete ${failCount} of ${keys.length} objects`,
+        `Failed to delete ${data.errors.length} of ${keys.length} objects`,
       );
     }
   },
@@ -172,6 +174,35 @@ export const get_s3_credentials = query(async () => {
     endpoint_url: "",
   };
 });
+
+export const bulk_presign = command(
+  z.object({
+    bucket: z.string(),
+    keys: z.array(z.string()).min(1),
+    expires_in: z.number().min(1).max(604800).default(3600),
+  }),
+  async ({ bucket, keys, expires_in }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/presign`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keys, expires_in }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to generate presigned URLs",
+      }));
+      throw new Error(err.detail);
+    }
+    const data = await res.json();
+    return {
+      urls: (data.urls ?? []) as { key: string; url: string }[],
+      expires_in: (data.expires_in ?? expires_in) as number,
+    };
+  },
+);
 
 export const generate_presigned_url = command(
   z.object({

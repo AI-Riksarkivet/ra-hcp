@@ -270,6 +270,64 @@ async def test_download_objects_bulk_empty_keys(
     assert resp.status_code == 422
 
 
+async def test_bulk_presign_returns_urls(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    mock_s3_service.generate_presigned_url.side_effect = (
+        lambda bucket, key, expires_in, *a: (
+            f"https://s3.example.com/{bucket}/{key}?sig=abc"
+        )
+    )
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/presign",
+        headers=auth_headers,
+        json={"keys": ["file1.txt", "file2.txt"], "expires_in": 7200},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["urls"]) == 2
+    assert body["urls"][0]["key"] == "file1.txt"
+    assert "s3.example.com" in body["urls"][0]["url"]
+    assert body["expires_in"] == 7200
+
+
+async def test_bulk_presign_skips_failed_keys(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    def mock_presign(bucket, key, expires_in, *a):
+        if key == "missing.txt":
+            raise ClientError(
+                error_response={
+                    "Error": {"Code": "NoSuchKey", "Message": "Not found"},
+                    "ResponseMetadata": {"HTTPStatusCode": 404},
+                },
+                operation_name="GeneratePresignedUrl",
+            )
+        return f"https://s3.example.com/{bucket}/{key}?sig=abc"
+
+    mock_s3_service.generate_presigned_url.side_effect = mock_presign
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/presign",
+        headers=auth_headers,
+        json={"keys": ["good.txt", "missing.txt"]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["urls"]) == 1
+    assert body["urls"][0]["key"] == "good.txt"
+
+
+async def test_bulk_presign_empty_keys(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/presign",
+        headers=auth_headers,
+        json={"keys": []},
+    )
+    assert resp.status_code == 422
+
+
 async def test_get_object_acl(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):

@@ -35,6 +35,7 @@
 		get_objects,
 		delete_object,
 		bulk_delete_objects,
+		bulk_presign,
 		generate_presigned_url,
 	} from '$lib/buckets.remote.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -317,6 +318,35 @@
 		setTimeout(() => (shareCopied = false), 2000);
 	}
 
+	let downloading = $state(false);
+
+	async function bulkDownload() {
+		const keys = [...selected].filter((k) => !k.endsWith('/'));
+		if (keys.length === 0) return;
+		downloading = true;
+		try {
+			const result = await bulk_presign({ bucket, keys, expires_in: 3600 });
+			for (const item of result.urls) {
+				const a = document.createElement('a');
+				a.href = item.url;
+				a.download = item.key.split('/').pop() ?? item.key;
+				a.style.display = 'none';
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				// Small delay to avoid browser blocking multiple downloads
+				await new Promise((r) => setTimeout(r, 150));
+			}
+			toast.success(
+				`Started downloading ${result.urls.length} file${result.urls.length !== 1 ? 's' : ''}`
+			);
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to download objects');
+		} finally {
+			downloading = false;
+		}
+	}
+
 	let deleteTarget = $state<string | null>(null);
 	let bulkDeleteOpen = $state(false);
 	let deleting = $state(false);
@@ -531,6 +561,11 @@
 		{#if selected.size > 0}
 			<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
 				<span class="text-sm font-medium">{selected.size} selected</span>
+				<Button size="sm" onclick={bulkDownload} disabled={downloading}
+					>{#if downloading}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Download
+							class="h-3.5 w-3.5"
+						/>{/if}Download Selected</Button
+				>
 				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}
 					><Trash2 class="h-3.5 w-3.5" />Delete Selected</Button
 				>

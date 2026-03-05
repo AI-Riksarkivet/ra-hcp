@@ -65,6 +65,21 @@ class BulkDownloadRequest(BaseModel):
     keys: List[str] = Field(..., min_length=1)
 
 
+class BulkPresignRequest(BaseModel):
+    keys: List[str] = Field(..., min_length=1)
+    expires_in: int = Field(3600, ge=1, le=604800)
+
+
+class BulkPresignItem(BaseModel):
+    key: str
+    url: str
+
+
+class BulkPresignResponse(BaseModel):
+    urls: List[BulkPresignItem]
+    expires_in: int
+
+
 class BucketVersioningResponse(BaseModel):
     status: Optional[str] = None
     mfa_delete: Optional[str] = None
