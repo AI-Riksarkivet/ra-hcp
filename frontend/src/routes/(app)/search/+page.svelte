@@ -1,35 +1,25 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import {
-		type ColumnDef,
-		type ColumnFiltersState,
-		type RowSelectionState,
-		type SortingState,
-		type VisibilityState,
-		getCoreRowModel,
-		getFilteredRowModel,
-		getSortedRowModel,
-	} from '@tanstack/table-core';
-	import { createRawSnippet } from 'svelte';
-	import ChevronDown from 'lucide-svelte/icons/chevron-down';
-	import { Search, FileSearch, Activity, CircleHelp, Download, Trash2 } from 'lucide-svelte';
+		Search,
+		FileSearch,
+		Activity,
+		ChevronLeft,
+		ChevronRight,
+		ArrowUpDown,
+		ArrowUp,
+		ArrowDown,
+		CircleHelp,
+		X,
+		Download,
+	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
-	import * as Card from '$lib/components/ui/card/index.js';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import {
-		FlexRender,
-		createSvelteTable,
-		renderComponent,
-		renderSnippet,
-	} from '$lib/components/ui/data-table/index.js';
-	import DataTableCheckbox from '$lib/components/ui/data-table/data-table-checkbox.svelte';
-	import DataTableHeaderButton from '$lib/components/ui/data-table/data-table-header-button.svelte';
-	import DataTableActions from './data-table/data-table-actions.svelte';
+	import { Badge } from '$lib/components/ui/badge/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import {
@@ -45,8 +35,8 @@
 	// Search mode
 	let mode = $state<'objects' | 'operations'>('objects');
 
-	// ── Object search state ──────────────────────────────────────
-	let objectQuery = $state('');
+	// ── Object search state ──
+	let objectQuery = $state('*:*');
 	let pageSize = 25;
 	let objectOffset = $state(0);
 	let objectResults = $state<ObjectQueryResponse | null>(null);
@@ -54,7 +44,7 @@
 	let objectError = $state('');
 	let objectSearched = $state(false);
 
-	// Server-side sort state
+	// Sort state
 	type SortField =
 		| 'utf8Name'
 		| 'namespace'
@@ -65,7 +55,12 @@
 	let sortField = $state<SortField | null>(null);
 	let sortAsc = $state(true);
 
-	// ── Operation search state ───────────────────────────────────
+	// Column filter state
+	let filterNamespace = $state('');
+	let filterContentType = $state('');
+	let filterOwner = $state('');
+
+	// ── Operation search state ──
 	let opTransactions = $state<string[]>([]);
 	let opNamespace = $state('');
 	let opResults = $state<OperationQueryResponse | null>(null);
@@ -81,6 +76,37 @@
 		objectResults ? Math.max(1, Math.ceil(objectResults.status.totalResults / pageSize)) : 0
 	);
 	let objectCurrentPage = $derived(Math.floor(objectOffset / pageSize) + 1);
+
+	// Client-side filtering of results
+	let filteredResults = $derived.by(() => {
+		if (!objectResults) return [];
+		let items = objectResults.resultSet;
+		if (filterNamespace) {
+			const f = filterNamespace.toLowerCase();
+			items = items.filter((i) => (i.namespace ?? '').toLowerCase().includes(f));
+		}
+		if (filterContentType) {
+			const f = filterContentType.toLowerCase();
+			items = items.filter((i) => (i.contentType ?? '').toLowerCase().includes(f));
+		}
+		if (filterOwner) {
+			const f = filterOwner.toLowerCase();
+			items = items.filter((i) => (i.owner ?? '').toLowerCase().includes(f));
+		}
+		return items;
+	});
+
+	let hasActiveFilters = $derived(
+		filterNamespace !== '' || filterContentType !== '' || filterOwner !== ''
+	);
+
+	// Operation results sorted latest first
+	let sortedOpResults = $derived.by(() => {
+		if (!opResults) return [];
+		return [...opResults.resultSet].sort(
+			(a, b) => Number(b.changeTimeMilliseconds ?? 0) - Number(a.changeTimeMilliseconds ?? 0)
+		);
+	});
 
 	function displayPath(item: QueryResultObject): string {
 		if (item.utf8Name) return item.utf8Name;
@@ -115,17 +141,12 @@
 		return `${sortAsc ? '+' : '-'}${sortField}`;
 	}
 
-	function objectDownloadUrl(item: QueryResultObject): string {
-		const ns = item.namespace ?? '';
-		return `/api/v1/buckets/${encodeURIComponent(ns)}/objects/${encodeURIComponent(item.urlName)}`;
-	}
-
 	async function handleObjectSearch() {
 		if (!tenant) return;
 		objectLoading = true;
 		objectError = '';
 		objectSearched = true;
-		objRowSelection = {};
+		selected.clear();
 		try {
 			objectResults = await search_objects({
 				tenant,
@@ -162,7 +183,7 @@
 		}
 	}
 
-	function toggleServerSort(field: SortField) {
+	function toggleSort(field: SortField) {
 		if (sortField === field) {
 			if (sortAsc) {
 				sortAsc = false;
@@ -178,6 +199,12 @@
 			objectOffset = 0;
 			handleObjectSearch();
 		}
+	}
+
+	function clearFilters() {
+		filterNamespace = '';
+		filterContentType = '';
+		filterOwner = '';
 	}
 
 	async function handleOpSearch() {
@@ -209,198 +236,48 @@
 		}
 	}
 
-	// ── Object results table ─────────────────────────────────────
-	type ObjRow = {
-		urlName: string;
-		path: string;
-		namespace: string;
-		size: number | null;
-		contentType: string;
-		owner: string;
-		changeTimeMilliseconds: string;
-		_raw: QueryResultObject;
-	};
-
-	let objData = $derived<ObjRow[]>(
-		(objectResults?.resultSet ?? []).map((item) => ({
-			urlName: item.urlName,
-			path: displayPath(item),
-			namespace: item.namespace ?? '',
-			size: item.size ?? null,
-			contentType: item.contentType ?? '',
-			owner: item.owner ?? '',
-			changeTimeMilliseconds: item.changeTimeMilliseconds ?? '',
-			_raw: item,
-		}))
-	);
-
-	// Server-side sort header helper (renders sort arrow inline)
-	function serverSortHeader(field: SortField, label: string) {
-		return createRawSnippet(() => {
-			const isActive = sortField === field;
-			const arrow = isActive ? (sortAsc ? ' ↑' : ' ↓') : '';
-			return {
-				render: () =>
-					`<button class="inline-flex items-center gap-1 hover:text-foreground"><span>${label}</span>${isActive ? `<span class="text-xs">${arrow}</span>` : '<svg class="ml-1 size-3.5 opacity-30" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>'}</button>`,
-			};
-		});
-	}
-
-	const objColumns: ColumnDef<ObjRow>[] = [
-		{
-			id: 'select',
-			header: ({ table }) =>
-				renderComponent(DataTableCheckbox, {
-					checked: table.getIsAllPageRowsSelected(),
-					indeterminate: table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected(),
-					onCheckedChange: (value: boolean) => table.toggleAllPageRowsSelected(!!value),
-					'aria-label': 'Select all',
-				}),
-			cell: ({ row }) =>
-				renderComponent(DataTableCheckbox, {
-					checked: row.getIsSelected(),
-					onCheckedChange: (value: boolean) => row.toggleSelected(!!value),
-					'aria-label': 'Select row',
-				}),
-			enableSorting: false,
-			enableHiding: false,
-		},
-		{
-			accessorKey: 'path',
-			header: () => serverSortHeader('utf8Name', 'Path'),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ path: string }]>((getP) => {
-					const { path } = getP();
-					return {
-						render: () =>
-							`<span class="max-w-xs truncate font-medium" title="${path}">${path}</span>`,
-					};
-				});
-				return renderSnippet(s, { path: row.original.path });
-			},
-			enableSorting: false,
-		},
-		{
-			accessorKey: 'namespace',
-			header: () => serverSortHeader('namespace', 'Namespace'),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ val: string }]>((getVal) => {
-					const { val } = getVal();
-					return {
-						render: () => `<span class="text-muted-foreground">${val || '—'}</span>`,
-					};
-				});
-				return renderSnippet(s, { val: row.original.namespace });
-			},
-			enableSorting: false,
-		},
-		{
-			accessorKey: 'size',
-			header: () => serverSortHeader('size', 'Size'),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ val: number | null }]>((getVal) => {
-					const { val } = getVal();
-					return {
-						render: () =>
-							`<span class="text-right text-muted-foreground">${val != null ? formatBytes(val) : '—'}</span>`,
-					};
-				});
-				return renderSnippet(s, { val: row.original.size });
-			},
-			enableSorting: false,
-		},
-		{
-			accessorKey: 'contentType',
-			header: () => serverSortHeader('contentType', 'Content Type'),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ val: string }]>((getVal) => {
-					const { val } = getVal();
-					return {
-						render: () => `<span class="text-muted-foreground">${val || '—'}</span>`,
-					};
-				});
-				return renderSnippet(s, { val: row.original.contentType });
-			},
-			enableSorting: false,
-		},
-		{
-			accessorKey: 'owner',
-			header: () => serverSortHeader('owner', 'Owner'),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ val: string }]>((getVal) => {
-					const { val } = getVal();
-					return {
-						render: () => `<span class="text-muted-foreground">${val || '—'}</span>`,
-					};
-				});
-				return renderSnippet(s, { val: row.original.owner });
-			},
-			enableSorting: false,
-		},
-		{
-			accessorKey: 'changeTimeMilliseconds',
-			header: () => serverSortHeader('changeTimeMilliseconds', 'Modified'),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ val: string }]>((getVal) => {
-					const { val } = getVal();
-					return {
-						render: () =>
-							`<span class="whitespace-nowrap text-muted-foreground">${formatMillis(val)}</span>`,
-					};
-				});
-				return renderSnippet(s, { val: row.original.changeTimeMilliseconds });
-			},
-			enableSorting: false,
-		},
-		{
-			id: 'actions',
-			enableHiding: false,
-			cell: ({ row }) =>
-				renderComponent(DataTableActions, {
-					objectKey: row.original.path,
-					downloadUrl: objectDownloadUrl(row.original._raw),
-					namespace: row.original.namespace,
-				}),
-		},
+	const SORT_COLUMNS: { field: SortField; label: string; align?: 'right' }[] = [
+		{ field: 'utf8Name', label: 'Path' },
+		{ field: 'namespace', label: 'Namespace' },
+		{ field: 'size', label: 'Size', align: 'right' },
+		{ field: 'contentType', label: 'Content Type' },
+		{ field: 'owner', label: 'Owner' },
+		{ field: 'changeTimeMilliseconds', label: 'Modified' },
 	];
 
-	let objRowSelection = $state<RowSelectionState>({});
-	let objColumnFilters = $state<ColumnFiltersState>([]);
-	let objColumnVisibility = $state<VisibilityState>({});
+	// ── Selection state (objects mode) ──
+	let selected = new SvelteSet<string>();
+	let allSelected = $derived(
+		filteredResults.length > 0 && filteredResults.every((i) => selected.has(itemKey(i)))
+	);
 
-	const objTable = createSvelteTable({
-		get data() {
-			return objData;
-		},
-		columns: objColumns,
-		state: {
-			get rowSelection() {
-				return objRowSelection;
-			},
-			get columnFilters() {
-				return objColumnFilters;
-			},
-			get columnVisibility() {
-				return objColumnVisibility;
-			},
-		},
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		onRowSelectionChange: (updater) => {
-			objRowSelection = typeof updater === 'function' ? updater(objRowSelection) : updater;
-		},
-		onColumnFiltersChange: (updater) => {
-			objColumnFilters = typeof updater === 'function' ? updater(objColumnFilters) : updater;
-		},
-		onColumnVisibilityChange: (updater) => {
-			objColumnVisibility = typeof updater === 'function' ? updater(objColumnVisibility) : updater;
-		},
-	});
+	function itemKey(item: QueryResultObject): string {
+		return `${item.namespace ?? ''}:${item.urlName}`;
+	}
 
-	let objSelectedCount = $derived(objTable.getFilteredSelectedRowModel().rows.length);
+	function toggleAll() {
+		if (allSelected) {
+			selected.clear();
+		} else {
+			for (const i of filteredResults) selected.add(itemKey(i));
+		}
+	}
+
+	function toggleOne(key: string) {
+		if (selected.has(key)) {
+			selected.delete(key);
+		} else {
+			selected.add(key);
+		}
+	}
+
+	function objectDownloadUrl(item: QueryResultObject): string {
+		const ns = item.namespace ?? '';
+		return `/api/v1/buckets/${encodeURIComponent(ns)}/objects/${encodeURIComponent(item.urlName)}`;
+	}
 
 	function downloadSelected() {
-		const items = objTable.getFilteredSelectedRowModel().rows.map((r) => r.original._raw);
+		const items = filteredResults.filter((i) => selected.has(itemKey(i)));
 		if (items.length === 0) return;
 		for (const item of items) {
 			const a = document.createElement('a');
@@ -412,132 +289,6 @@
 		}
 		toast.success(`Started ${items.length} download${items.length !== 1 ? 's' : ''}`);
 	}
-
-	// ── Operation results table ──────────────────────────────────
-	type OpRow = {
-		urlName: string;
-		path: string;
-		operation: string;
-		namespace: string;
-		changeTimeMilliseconds: string;
-	};
-
-	let opData = $derived<OpRow[]>(
-		(opResults?.resultSet ?? [])
-			.map((item) => ({
-				urlName: item.urlName,
-				path: displayPath(item),
-				operation: item.operation,
-				namespace: item.namespace ?? '',
-				changeTimeMilliseconds: item.changeTimeMilliseconds ?? '',
-			}))
-			.sort((a, b) => Number(b.changeTimeMilliseconds || 0) - Number(a.changeTimeMilliseconds || 0))
-	);
-
-	const opColumns: ColumnDef<OpRow>[] = [
-		{
-			accessorKey: 'path',
-			header: ({ column }) =>
-				renderComponent(DataTableHeaderButton, {
-					label: 'Path',
-					onclick: column.getToggleSortingHandler(),
-				}),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ path: string }]>((getP) => {
-					const { path } = getP();
-					return {
-						render: () =>
-							`<span class="max-w-xs truncate font-medium" title="${path}">${path}</span>`,
-					};
-				});
-				return renderSnippet(s, { path: row.original.path });
-			},
-		},
-		{
-			accessorKey: 'operation',
-			header: 'Operation',
-			cell: ({ row }) =>
-				renderComponent(Badge, {
-					variant: operationVariant(row.original.operation),
-					children: createRawSnippet(() => ({
-						render: () => row.original.operation,
-					})),
-				}),
-			enableSorting: false,
-		},
-		{
-			accessorKey: 'namespace',
-			header: ({ column }) =>
-				renderComponent(DataTableHeaderButton, {
-					label: 'Namespace',
-					onclick: column.getToggleSortingHandler(),
-				}),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ val: string }]>((getVal) => {
-					const { val } = getVal();
-					return {
-						render: () => `<span class="text-muted-foreground">${val || '—'}</span>`,
-					};
-				});
-				return renderSnippet(s, { val: row.original.namespace });
-			},
-		},
-		{
-			accessorKey: 'changeTimeMilliseconds',
-			header: ({ column }) =>
-				renderComponent(DataTableHeaderButton, {
-					label: 'Time',
-					onclick: column.getToggleSortingHandler(),
-				}),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ val: string }]>((getVal) => {
-					const { val } = getVal();
-					return {
-						render: () =>
-							`<span class="whitespace-nowrap text-muted-foreground">${formatMillis(val)}</span>`,
-					};
-				});
-				return renderSnippet(s, { val: row.original.changeTimeMilliseconds });
-			},
-			sortingFn: (a, b) =>
-				Number(a.original.changeTimeMilliseconds || 0) -
-				Number(b.original.changeTimeMilliseconds || 0),
-		},
-	];
-
-	let opSorting = $state<SortingState>([]);
-	let opColumnFilters = $state<ColumnFiltersState>([]);
-	let opColumnVisibility = $state<VisibilityState>({});
-
-	const opTable = createSvelteTable({
-		get data() {
-			return opData;
-		},
-		columns: opColumns,
-		state: {
-			get sorting() {
-				return opSorting;
-			},
-			get columnFilters() {
-				return opColumnFilters;
-			},
-			get columnVisibility() {
-				return opColumnVisibility;
-			},
-		},
-		getCoreRowModel: getCoreRowModel(),
-		getSortedRowModel: getSortedRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		onSortingChange: (updater) => {
-			opSorting = typeof updater === 'function' ? updater(opSorting) : updater;
-		},
-		onColumnFiltersChange: (updater) => {
-			opColumnFilters = typeof updater === 'function' ? updater(opColumnFilters) : updater;
-		},
-		onColumnVisibilityChange: (updater) => {
-			opColumnVisibility = typeof updater === 'function' ? updater(opColumnVisibility) : updater;
-		},
-	});
 </script>
 
 <svelte:head>
@@ -594,17 +345,18 @@
 						<div class="space-y-3 text-sm">
 							<p class="text-foreground">
 								<strong>Object Search</strong> queries the HCP Metadata Query Engine. It searches indexed
-								metadata for all objects stored across your namespaces.
+								metadata for all objects stored across your namespaces. Results include file paths, sizes,
+								content types, owners, and timestamps.
 							</p>
 							<div class="grid gap-4 sm:grid-cols-2">
 								<div>
 									<p class="mb-1.5 font-medium text-foreground">Query syntax</p>
 									<p class="mb-2 text-muted-foreground">
-										Queries use <code class="rounded bg-muted px-1">field:value</code> Lucene
-										syntax. Leading wildcards are not allowed. Combine with
+										Queries use <code class="rounded bg-muted px-1">field:value</code> format. Use
+										<code class="rounded bg-muted px-1">*:*</code> to match everything. Combine with
 										<code class="rounded bg-muted px-1">AND</code>,
 										<code class="rounded bg-muted px-1">OR</code>,
-										<code class="rounded bg-muted px-1">NOT</code>.
+										<code class="rounded bg-muted px-1">NOT</code> operators.
 									</p>
 									<ul class="space-y-1 text-muted-foreground">
 										<li>
@@ -626,7 +378,8 @@
 									<p class="mb-1.5 font-medium text-foreground">Range &amp; boolean queries</p>
 									<ul class="space-y-1 text-muted-foreground">
 										<li>
-											<code class="rounded bg-muted px-1">size:[1024 TO *]</code> — larger than 1 KB
+											<code class="rounded bg-muted px-1">size:[1024 TO *]</code> — objects larger than
+											1 KB
 										</li>
 										<li>
 											<code class="rounded bg-muted px-1">size:[* TO 1048576]</code> — smaller than 1
@@ -639,24 +392,26 @@
 											<code class="rounded bg-muted px-1"
 												>customMetadata:true AND namespace:logs</code
 											>
+											— combine conditions
 										</li>
 									</ul>
 								</div>
 							</div>
 							<p class="text-xs text-muted-foreground">
-								Click column headers to sort results server-side. Use the filter input to narrow
-								results client-side within the current page.
+								Click column headers to sort results server-side. Use the filter inputs below
+								headers to narrow results client-side within the current page.
 							</p>
 						</div>
 					{:else}
 						<div class="space-y-3 text-sm">
 							<p class="text-foreground">
 								<strong>Operation Search</strong> queries the HCP audit log for object lifecycle events.
-								It shows when objects were created, deleted, or purged.
+								It shows when objects were created, deleted, or purged across your namespaces. This is
+								useful for auditing changes and tracking data modifications.
 							</p>
 							<p class="text-muted-foreground">
 								Use the operation type checkboxes to filter by event type. Optionally filter to a
-								specific namespace.
+								specific namespace. Results are sorted with the most recent operations first.
 							</p>
 						</div>
 					{/if}
@@ -676,13 +431,13 @@
 						<Input
 							id="obj-query"
 							bind:value={objectQuery}
-							placeholder="objectPath:reports/* OR contentType:application/pdf"
+							placeholder="*:*"
 							class="pl-9"
 							onkeydown={(e) => e.key === 'Enter' && searchFromStart()}
 						/>
 					</div>
 				</div>
-				<Button onclick={searchFromStart} disabled={objectLoading || !objectQuery.trim()}>
+				<Button onclick={searchFromStart} disabled={objectLoading}>
 					<Search class="h-4 w-4" />
 					{objectLoading ? 'Searching...' : 'Search'}
 				</Button>
@@ -699,150 +454,176 @@
 
 			<!-- Results -->
 			{#if objectLoading}
-				<TableSkeleton rows={5} columns={7} />
+				<TableSkeleton rows={5} columns={6} />
 			{:else if objectResults && objectResults.resultSet.length > 0}
-				<!-- Toolbar -->
-				<div class="flex items-center gap-2">
-					<Input
-						placeholder="Filter results..."
-						value={(objTable.getColumn('path')?.getFilterValue() as string) ?? ''}
-						oninput={(e) => objTable.getColumn('path')?.setFilterValue(e.currentTarget.value)}
-						class="max-w-sm"
-					/>
-					<span class="text-sm text-muted-foreground">
+				<div class="flex items-center justify-between text-sm text-muted-foreground">
+					<span>
+						{#if hasActiveFilters}
+							{filteredResults.length} filtered /
+						{/if}
 						Showing {objectOffset + 1}–{Math.min(
 							objectOffset + objectResults.resultSet.length,
 							objectResults.status.totalResults
-						)} of {objectResults.status.totalResults.toLocaleString()}
+						)} of {objectResults.status.totalResults.toLocaleString()} results
 					</span>
-					<DropdownMenu.Root>
-						<DropdownMenu.Trigger>
-							{#snippet child({ props })}
-								<Button {...props} variant="outline" class="ml-auto">
-									Columns <ChevronDown class="ml-2 size-4" />
-								</Button>
-							{/snippet}
-						</DropdownMenu.Trigger>
-						<DropdownMenu.Content align="end">
-							{#each objTable
-								.getAllColumns()
-								.filter((col) => col.getCanHide()) as column (column.id)}
-								<DropdownMenu.CheckboxItem
-									class="capitalize"
-									checked={column.getIsVisible()}
-									onCheckedChange={(v) => column.toggleVisibility(!!v)}
-								>
-									{column.id}
-								</DropdownMenu.CheckboxItem>
-							{/each}
-						</DropdownMenu.Content>
-					</DropdownMenu.Root>
+					{#if hasActiveFilters}
+						<button
+							class="flex items-center gap-1 text-xs text-primary hover:underline"
+							onclick={clearFilters}
+						>
+							<X class="h-3 w-3" />
+							Clear filters
+						</button>
+					{/if}
 				</div>
 
-				{#if objSelectedCount > 0}
+				{#if selected.size > 0}
 					<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-						<span class="text-sm font-medium">{objSelectedCount} selected</span>
+						<span class="text-sm font-medium">{selected.size} selected</span>
 						<Button size="sm" onclick={downloadSelected}>
 							<Download class="h-3.5 w-3.5" />Download Selected
 						</Button>
-						<Button variant="ghost" size="sm" onclick={() => (objRowSelection = {})}
-							>Deselect All</Button
-						>
+						<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Deselect All</Button>
 					</div>
 				{/if}
 
-				<!-- Table -->
-				<div class="rounded-md border">
-					<Table.Root>
-						<Table.Header>
-							{#each objTable.getHeaderGroups() as headerGroup (headerGroup.id)}
-								<Table.Row>
-									{#each headerGroup.headers as header (header.id)}
-										<Table.Head class="[&:has([role=checkbox])]:ps-3">
-											{#if !header.isPlaceholder}
-												{@const field = {
-													path: 'utf8Name',
-													namespace: 'namespace',
-													size: 'size',
-													contentType: 'contentType',
-													owner: 'owner',
-													changeTimeMilliseconds: 'changeTimeMilliseconds',
-												}[header.column.id] as SortField | undefined}
-												{#if field}
-													<button
-														class="inline-flex items-center"
-														onclick={() => toggleServerSort(field)}
-													>
-														<FlexRender
-															content={header.column.columnDef.header}
-															context={header.getContext()}
-														/>
-													</button>
+				<div class="overflow-x-auto rounded-lg border">
+					<table class="w-full text-left text-sm">
+						<thead
+							class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
+						>
+							<tr>
+								<th class="w-10 px-4 py-3">
+									<input
+										type="checkbox"
+										checked={allSelected}
+										onchange={toggleAll}
+										class="h-4 w-4 rounded border-input"
+										disabled={filteredResults.length === 0}
+									/>
+								</th>
+								{#each SORT_COLUMNS as col (col.field)}
+									<th class="px-4 py-3 font-medium {col.align === 'right' ? 'text-right' : ''}">
+										<button
+											class="inline-flex items-center gap-1 hover:text-foreground"
+											onclick={() => toggleSort(col.field)}
+										>
+											{col.label}
+											{#if sortField === col.field}
+												{#if sortAsc}
+													<ArrowUp class="h-3 w-3" />
 												{:else}
-													<FlexRender
-														content={header.column.columnDef.header}
-														context={header.getContext()}
-													/>
+													<ArrowDown class="h-3 w-3" />
 												{/if}
+											{:else}
+												<ArrowUpDown class="h-3 w-3 opacity-30" />
 											{/if}
-										</Table.Head>
-									{/each}
-								</Table.Row>
-							{/each}
-						</Table.Header>
-						<Table.Body>
-							{#each objTable.getRowModel().rows as row (row.id)}
-								<Table.Row data-state={row.getIsSelected() && 'selected'}>
-									{#each row.getVisibleCells() as cell (cell.id)}
-										<Table.Cell class="[&:has([role=checkbox])]:ps-3">
-											<FlexRender
-												content={cell.column.columnDef.cell}
-												context={cell.getContext()}
-											/>
-										</Table.Cell>
-									{/each}
-								</Table.Row>
+										</button>
+									</th>
+								{/each}
+								<th class="w-16 px-4 py-3 font-medium"></th>
+							</tr>
+							<tr class="border-b bg-muted/30">
+								<td class="px-4 py-1.5"></td>
+								<td class="px-4 py-1.5"></td>
+								<td class="px-4 py-1.5">
+									<input
+										type="text"
+										bind:value={filterNamespace}
+										placeholder="Filter..."
+										class="h-6 w-full rounded border border-input bg-background px-2 text-xs"
+									/>
+								</td>
+								<td class="px-4 py-1.5"></td>
+								<td class="px-4 py-1.5">
+									<input
+										type="text"
+										bind:value={filterContentType}
+										placeholder="Filter..."
+										class="h-6 w-full rounded border border-input bg-background px-2 text-xs"
+									/>
+								</td>
+								<td class="px-4 py-1.5">
+									<input
+										type="text"
+										bind:value={filterOwner}
+										placeholder="Filter..."
+										class="h-6 w-full rounded border border-input bg-background px-2 text-xs"
+									/>
+								</td>
+								<td class="px-4 py-1.5"></td>
+								<td class="px-4 py-1.5"></td>
+							</tr>
+						</thead>
+						<tbody class="divide-y">
+							{#each filteredResults as item (item.urlName + (item.version ?? ''))}
+								<tr class="bg-card transition-colors hover:bg-accent/50">
+									<td class="px-4 py-3">
+										<input
+											type="checkbox"
+											checked={selected.has(itemKey(item))}
+											onchange={() => toggleOne(itemKey(item))}
+											class="h-4 w-4 rounded border-input"
+										/>
+									</td>
+									<td class="max-w-xs truncate px-4 py-3 font-medium" title={displayPath(item)}>
+										{displayPath(item)}
+									</td>
+									<td class="px-4 py-3 text-muted-foreground">{item.namespace ?? '—'}</td>
+									<td class="px-4 py-3 text-right text-muted-foreground">
+										{item.size != null ? formatBytes(item.size) : '—'}
+									</td>
+									<td class="px-4 py-3 text-muted-foreground">{item.contentType ?? '—'}</td>
+									<td class="px-4 py-3 text-muted-foreground">{item.owner ?? '—'}</td>
+									<td class="whitespace-nowrap px-4 py-3 text-muted-foreground">
+										{formatMillis(item.changeTimeMilliseconds)}
+									</td>
+									<td class="px-4 py-3">
+										<a
+											href={objectDownloadUrl(item)}
+											download
+											class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+											title="Download"
+										>
+											<Download class="h-4 w-4" />
+										</a>
+									</td>
+								</tr>
 							{:else}
-								<Table.Row>
-									<Table.Cell colspan={objColumns.length} class="h-24 text-center">
-										No results match your filter.
-									</Table.Cell>
-								</Table.Row>
+								<tr>
+									<td colspan="8" class="px-4 py-6 text-center text-muted-foreground">
+										No results match your filters.
+									</td>
+								</tr>
 							{/each}
-						</Table.Body>
-					</Table.Root>
+						</tbody>
+					</table>
 				</div>
 
-				<!-- Server-side pagination -->
+				<!-- Pagination -->
 				{#if objectTotalPages > 1}
-					<div class="flex items-center justify-end space-x-2">
-						<div class="flex-1 text-sm text-muted-foreground">
-							{objSelectedCount} of
-							{objectResults.resultSet.length} row(s) selected.
-						</div>
-						<div class="flex items-center gap-4">
-							<span class="text-sm text-muted-foreground">
-								Page {objectCurrentPage} of {objectTotalPages}
-							</span>
-							<div class="space-x-2">
-								<Button
-									variant="outline"
-									size="sm"
-									onclick={objectPagePrev}
-									disabled={objectOffset === 0}
-								>
-									Previous
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									onclick={objectPageNext}
-									disabled={objectCurrentPage >= objectTotalPages}
-								>
-									Next
-								</Button>
-							</div>
-						</div>
+					<div class="flex items-center justify-center gap-4">
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={objectPagePrev}
+							disabled={objectOffset === 0}
+						>
+							<ChevronLeft class="h-4 w-4" />
+							Previous
+						</Button>
+						<span class="text-sm text-muted-foreground">
+							Page {objectCurrentPage} of {objectTotalPages}
+						</span>
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={objectPageNext}
+							disabled={objectCurrentPage >= objectTotalPages}
+						>
+							Next
+							<ChevronRight class="h-4 w-4" />
+						</Button>
 					</div>
 				{/if}
 			{:else if objectSearched && !objectError}
@@ -903,89 +684,43 @@
 			<!-- Results -->
 			{#if opLoading}
 				<TableSkeleton rows={5} columns={4} />
-			{:else if opResults && opData.length > 0}
-				<!-- Toolbar -->
-				<div class="flex items-center gap-2">
-					<Input
-						placeholder="Filter operations..."
-						value={(opTable.getColumn('path')?.getFilterValue() as string) ?? ''}
-						oninput={(e) => opTable.getColumn('path')?.setFilterValue(e.currentTarget.value)}
-						class="max-w-sm"
-					/>
-					<span class="text-sm text-muted-foreground">
-						{opResults.status.totalResults.toLocaleString()} operations found
-					</span>
-					<DropdownMenu.Root>
-						<DropdownMenu.Trigger>
-							{#snippet child({ props })}
-								<Button {...props} variant="outline" class="ml-auto">
-									Columns <ChevronDown class="ml-2 size-4" />
-								</Button>
-							{/snippet}
-						</DropdownMenu.Trigger>
-						<DropdownMenu.Content align="end">
-							{#each opTable
-								.getAllColumns()
-								.filter((col) => col.getCanHide()) as column (column.id)}
-								<DropdownMenu.CheckboxItem
-									class="capitalize"
-									checked={column.getIsVisible()}
-									onCheckedChange={(v) => column.toggleVisibility(!!v)}
-								>
-									{column.id}
-								</DropdownMenu.CheckboxItem>
-							{/each}
-						</DropdownMenu.Content>
-					</DropdownMenu.Root>
+			{:else if opResults && sortedOpResults.length > 0}
+				<div class="text-sm text-muted-foreground">
+					{opResults.status.totalResults.toLocaleString()} operations found
 				</div>
-
-				<!-- Table -->
-				<div class="rounded-md border">
-					<Table.Root>
-						<Table.Header>
-							{#each opTable.getHeaderGroups() as headerGroup (headerGroup.id)}
-								<Table.Row>
-									{#each headerGroup.headers as header (header.id)}
-										<Table.Head>
-											{#if !header.isPlaceholder}
-												<FlexRender
-													content={header.column.columnDef.header}
-													context={header.getContext()}
-												/>
-											{/if}
-										</Table.Head>
-									{/each}
-								</Table.Row>
+				<div class="overflow-x-auto rounded-lg border">
+					<table class="w-full text-left text-sm">
+						<thead
+							class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
+						>
+							<tr>
+								<th class="px-4 py-3 font-medium">Path</th>
+								<th class="px-4 py-3 font-medium">Operation</th>
+								<th class="px-4 py-3 font-medium">Namespace</th>
+								<th class="px-4 py-3 font-medium">Time</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y">
+							{#each sortedOpResults as item (item.urlName + item.changeTimeMilliseconds)}
+								<tr class="bg-card transition-colors hover:bg-accent/50">
+									<td class="max-w-xs truncate px-4 py-3 font-medium" title={displayPath(item)}>
+										{displayPath(item)}
+									</td>
+									<td class="px-4 py-3">
+										<Badge variant={operationVariant(item.operation)}>
+											{item.operation}
+										</Badge>
+									</td>
+									<td class="px-4 py-3 text-muted-foreground">
+										{item.namespace ?? '—'}
+									</td>
+									<td class="whitespace-nowrap px-4 py-3 text-muted-foreground">
+										{formatMillis(item.changeTimeMilliseconds)}
+									</td>
+								</tr>
 							{/each}
-						</Table.Header>
-						<Table.Body>
-							{#each opTable.getRowModel().rows as row (row.id)}
-								<Table.Row>
-									{#each row.getVisibleCells() as cell (cell.id)}
-										<Table.Cell>
-											<FlexRender
-												content={cell.column.columnDef.cell}
-												context={cell.getContext()}
-											/>
-										</Table.Cell>
-									{/each}
-								</Table.Row>
-							{:else}
-								<Table.Row>
-									<Table.Cell colspan={opColumns.length} class="h-24 text-center">
-										No operations found.
-									</Table.Cell>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				</div>
-
-				<!-- Pagination -->
-				<div class="flex items-center justify-end space-x-2">
-					<div class="flex-1 text-sm text-muted-foreground">
-						{opTable.getFilteredRowModel().rows.length} operation(s) shown.
-					</div>
+						</tbody>
+					</table>
 				</div>
 			{:else if opSearched && !opError}
 				<div class="rounded-lg border border-dashed p-8 text-center">

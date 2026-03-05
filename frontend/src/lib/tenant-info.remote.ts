@@ -19,10 +19,12 @@ export interface TenantInfo {
 
 export interface TenantStatistics {
   objectCount: number;
-  bytesUsed: string;
-  customMetadataObjectCount?: number;
-  shredObjectCount?: number;
-  namespacesUsed?: number;
+  storageCapacityUsed: number;
+  ingestedVolume?: number;
+  customMetadataCount?: number;
+  customMetadataSize?: number;
+  shredCount?: number;
+  shredSize?: number;
 }
 
 export interface TenantSettings {
@@ -73,7 +75,7 @@ export const get_tenant_statistics = query(
     }
     return {
       objectCount: 0,
-      bytesUsed: "0",
+      storageCapacityUsed: 0,
     } as TenantStatistics;
   },
 );

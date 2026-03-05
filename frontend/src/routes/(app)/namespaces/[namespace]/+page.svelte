@@ -3,6 +3,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -966,18 +967,17 @@
 				</div>
 			{/if}
 			<div class="space-y-2">
-				<Label for="grant-user">User</Label>
-				<select
-					id="grant-user"
-					bind:value={grantUser}
-					class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-					required
-				>
-					<option value="" disabled>Select a user...</option>
-					{#each usersWithoutAccess as user (user.username)}
-						<option value={user.username}>{user.username}</option>
-					{/each}
-				</select>
+				<Label>User</Label>
+				<Select.Root type="single" bind:value={grantUser}>
+					<Select.Trigger>
+						{grantUser || 'Select a user...'}
+					</Select.Trigger>
+					<Select.Content>
+						{#each usersWithoutAccess as user (user.username)}
+							<Select.Item value={user.username}>{user.username}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
 			</div>
 			<div class="space-y-2">
 				<Label>Permissions</Label>

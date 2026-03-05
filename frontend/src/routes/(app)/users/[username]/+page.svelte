@@ -374,11 +374,11 @@
 												<Tooltip.Trigger>
 													{#snippet child({ props })}
 														<Button
-															{...props}
 															variant="ghost"
 															size="icon"
 															class="h-8 w-8 shrink-0"
 															onclick={() => copyToClipboard(creds!.access_key_id, 'access_key')}
+															{...props}
 														>
 															{#if copied === 'access_key'}<Check
 																	class="h-3.5 w-3.5 text-emerald-500"
@@ -405,11 +405,11 @@
 												<Tooltip.Trigger>
 													{#snippet child({ props })}
 														<Button
-															{...props}
 															variant="ghost"
 															size="icon"
 															class="h-8 w-8 shrink-0"
 															onclick={() => (showSecret = !showSecret)}
+															{...props}
 														>
 															{#if showSecret}<EyeOff class="h-3.5 w-3.5" />{:else}<Eye
 																	class="h-3.5 w-3.5"
@@ -423,12 +423,12 @@
 												<Tooltip.Trigger>
 													{#snippet child({ props })}
 														<Button
-															{...props}
 															variant="ghost"
 															size="icon"
 															class="h-8 w-8 shrink-0"
 															onclick={() =>
 																copyToClipboard(creds!.secret_access_key, 'secret_key')}
+															{...props}
 														>
 															{#if copied === 'secret_key'}<Check
 																	class="h-3.5 w-3.5 text-emerald-500"
@@ -451,11 +451,11 @@
 													<Tooltip.Trigger>
 														{#snippet child({ props })}
 															<Button
-																{...props}
 																variant="ghost"
 																size="icon"
 																class="h-8 w-8 shrink-0"
 																onclick={() => copyToClipboard(creds!.endpoint_url, 'endpoint')}
+																{...props}
 															>
 																{#if copied === 'endpoint'}<Check
 																		class="h-3.5 w-3.5 text-emerald-500"

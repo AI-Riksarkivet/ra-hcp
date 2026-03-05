@@ -1,42 +1,18 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import {
-		type ColumnDef,
-		type ColumnFiltersState,
-		type PaginationState,
-		type RowSelectionState,
-		type SortingState,
-		type VisibilityState,
-		getCoreRowModel,
-		getFilteredRowModel,
-		getPaginationRowModel,
-		getSortedRowModel,
-	} from '@tanstack/table-core';
-	import { createRawSnippet } from 'svelte';
-	import ChevronDown from 'lucide-svelte/icons/chevron-down';
-	import { Plus, Trash2, X } from 'lucide-svelte';
+	import { Plus, Trash2, X, Pencil } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import {
-		FlexRender,
-		createSvelteTable,
-		renderComponent,
-		renderSnippet,
-	} from '$lib/components/ui/data-table/index.js';
-	import DataTableCheckbox from '$lib/components/ui/data-table/data-table-checkbox.svelte';
-	import DataTableHeaderButton from '$lib/components/ui/data-table/data-table-header-button.svelte';
-	import DataTableActions from './data-table/data-table-actions.svelte';
-	import DataTableTagCell from './data-table/data-table-tag-cell.svelte';
-	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
-	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { toast } from 'svelte-sonner';
-	import { goto } from '$app/navigation';
+	import { SvelteSet } from 'svelte/reactivity';
+	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import SearchToolbar from '$lib/components/ui/search-toolbar.svelte';
+	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
+	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import {
 		get_namespaces,
 		create_namespace,
@@ -44,232 +20,42 @@
 		delete_namespace,
 		type Namespace,
 	} from '$lib/namespaces.remote.js';
+	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
+
 	let nsData = $derived(tenant ? get_namespaces({ tenant }) : undefined);
 
-	type NsRow = {
-		name: string;
-		tags: string[];
-		description: string;
-		hardQuota: string;
-		softQuota: string;
-		hashScheme: string;
-	};
-
-	let data = $derived<NsRow[]>(
-		((nsData?.current ?? []) as Namespace[]).map((ns) => ({
-			name: ns.name,
-			tags: ns.tags?.tag ?? [],
-			description: ns.description ?? '',
-			hardQuota: ns.hardQuota ?? '',
-			softQuota: ns.softQuota != null ? `${ns.softQuota}%` : '',
-			hashScheme: ns.hashScheme ?? '',
-		}))
+	let search = $state('');
+	let namespaces = $derived((nsData?.current ?? []) as Namespace[]);
+	let filteredNamespaces = $derived(
+		namespaces.filter((n) => n.name.toLowerCase().includes(search.toLowerCase()))
 	);
 
-	// ── Tag editing state ─────────────────────────────────────────
-	let editingTagsNs = $state('');
+	let selected = new SvelteSet<string>();
+	let allSelected = $derived(
+		filteredNamespaces.length > 0 && filteredNamespaces.every((n) => selected.has(n.name))
+	);
 
-	function startEditTags(name: string) {
-		editingTagsNs = name;
-	}
-
-	async function saveTags(name: string, tags: string[]) {
-		if (!tenant || !nsData) return;
-		try {
-			await update_namespace({
-				tenant,
-				name,
-				body: { tags: { tag: tags } },
-			}).updates(nsData);
-			toast.success('Tags updated');
-			editingTagsNs = '';
-		} catch {
-			toast.error('Failed to update tags');
+	function toggleAll() {
+		if (allSelected) {
+			selected.clear();
+		} else {
+			for (const n of filteredNamespaces) selected.add(n.name);
 		}
 	}
 
-	// ── Column definitions ─────────────────────────────────────────
-	const columns: ColumnDef<NsRow>[] = [
-		{
-			id: 'select',
-			header: ({ table }) =>
-				renderComponent(DataTableCheckbox, {
-					checked: table.getIsAllPageRowsSelected(),
-					indeterminate: table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected(),
-					onCheckedChange: (value: boolean) => table.toggleAllPageRowsSelected(!!value),
-					'aria-label': 'Select all',
-				}),
-			cell: ({ row }) =>
-				renderComponent(DataTableCheckbox, {
-					checked: row.getIsSelected(),
-					onCheckedChange: (value: boolean) => row.toggleSelected(!!value),
-					'aria-label': 'Select row',
-				}),
-			enableSorting: false,
-			enableHiding: false,
-		},
-		{
-			accessorKey: 'name',
-			header: ({ column }) =>
-				renderComponent(DataTableHeaderButton, {
-					label: 'Name',
-					onclick: column.getToggleSortingHandler(),
-				}),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ name: string }]>((getName) => {
-					const { name } = getName();
-					return {
-						render: () =>
-							`<a href="/namespaces/${encodeURIComponent(name)}" class="font-medium text-primary underline-offset-4 hover:underline">${name}</a>`,
-					};
-				});
-				return renderSnippet(s, { name: row.original.name });
-			},
-		},
-		{
-			accessorKey: 'tags',
-			header: 'Tags',
-			cell: ({ row }) =>
-				renderComponent(DataTableTagCell, {
-					tags: row.original.tags,
-					editing: editingTagsNs === row.original.name,
-					onsave: (tags: string[]) => saveTags(row.original.name, tags),
-					onstartedit: () => startEditTags(row.original.name),
-					oncanceledit: () => (editingTagsNs = ''),
-				}),
-			enableSorting: false,
-		},
-		{
-			accessorKey: 'description',
-			header: 'Description',
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ desc: string }]>((getDesc) => {
-					const { desc } = getDesc();
-					return {
-						render: () => `<span class="text-muted-foreground">${desc || '—'}</span>`,
-					};
-				});
-				return renderSnippet(s, { desc: row.original.description });
-			},
-		},
-		{
-			accessorKey: 'hardQuota',
-			header: ({ column }) =>
-				renderComponent(DataTableHeaderButton, {
-					label: 'Hard Quota',
-					onclick: column.getToggleSortingHandler(),
-				}),
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ val: string }]>((getVal) => {
-					const { val } = getVal();
-					return {
-						render: () => `<span class="text-muted-foreground">${val || '—'}</span>`,
-					};
-				});
-				return renderSnippet(s, { val: row.original.hardQuota });
-			},
-		},
-		{
-			accessorKey: 'softQuota',
-			header: 'Soft Quota',
-			cell: ({ row }) => {
-				const s = createRawSnippet<[{ val: string }]>((getVal) => {
-					const { val } = getVal();
-					return {
-						render: () => `<span class="text-muted-foreground">${val || '—'}</span>`,
-					};
-				});
-				return renderSnippet(s, { val: row.original.softQuota });
-			},
-		},
-		{
-			accessorKey: 'hashScheme',
-			header: 'Hash Scheme',
-			cell: ({ row }) => {
-				const scheme = row.original.hashScheme;
-				if (!scheme) {
-					const s = createRawSnippet(() => ({
-						render: () => `<span class="text-muted-foreground">—</span>`,
-					}));
-					return renderSnippet(s, undefined);
-				}
-				return renderComponent(Badge, {
-					variant: 'secondary',
-					children: createRawSnippet(() => ({ render: () => scheme })),
-				});
-			},
-		},
-		{
-			id: 'actions',
-			enableHiding: false,
-			cell: ({ row }) =>
-				renderComponent(DataTableActions, {
-					name: row.original.name,
-					ondelete: () => {
-						deleteTarget = row.original.name;
-						deleteDialogOpen = true;
-					},
-					onnavigate: () => goto(`/namespaces/${encodeURIComponent(row.original.name)}`),
-					onedittags: () => startEditTags(row.original.name),
-				}),
-		},
-	];
+	function toggleOne(name: string) {
+		if (selected.has(name)) {
+			selected.delete(name);
+		} else {
+			selected.add(name);
+		}
+	}
 
-	// ── Table state ────────────────────────────────────────────────
-	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
-	let sorting = $state<SortingState>([]);
-	let columnFilters = $state<ColumnFiltersState>([]);
-	let rowSelection = $state<RowSelectionState>({});
-	let columnVisibility = $state<VisibilityState>({});
-
-	const table = createSvelteTable({
-		get data() {
-			return data;
-		},
-		columns,
-		state: {
-			get pagination() {
-				return pagination;
-			},
-			get sorting() {
-				return sorting;
-			},
-			get columnFilters() {
-				return columnFilters;
-			},
-			get columnVisibility() {
-				return columnVisibility;
-			},
-			get rowSelection() {
-				return rowSelection;
-			},
-		},
-		getCoreRowModel: getCoreRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
-		getSortedRowModel: getSortedRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		onPaginationChange: (updater) => {
-			pagination = typeof updater === 'function' ? updater(pagination) : updater;
-		},
-		onSortingChange: (updater) => {
-			sorting = typeof updater === 'function' ? updater(sorting) : updater;
-		},
-		onColumnFiltersChange: (updater) => {
-			columnFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
-		},
-		onColumnVisibilityChange: (updater) => {
-			columnVisibility = typeof updater === 'function' ? updater(columnVisibility) : updater;
-		},
-		onRowSelectionChange: (updater) => {
-			rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
-		},
-	});
-
-	// ── Delete logic ───────────────────────────────────────────────
 	let deleteTarget = $state('');
 	let deleteDialogOpen = $state(false);
+	let bulkDeleteOpen = $state(false);
 	let deleting = $state(false);
 
 	async function confirmDelete() {
@@ -290,7 +76,7 @@
 	async function confirmBulkDelete() {
 		if (!tenant || !nsData) return;
 		deleting = true;
-		const names = table.getFilteredSelectedRowModel().rows.map((r) => r.original.name);
+		const names = [...selected];
 		let successCount = 0,
 			failCount = 0;
 		for (let i = 0; i < names.length; i++) {
@@ -310,14 +96,11 @@
 			toast.success(`Deleted ${successCount} namespace${successCount !== 1 ? 's' : ''}`);
 		if (failCount > 0)
 			toast.error(`Failed to delete ${failCount} namespace${failCount !== 1 ? 's' : ''}`);
-		rowSelection = {};
+		selected.clear();
 		deleting = false;
 		bulkDeleteOpen = false;
 	}
 
-	let bulkDeleteOpen = $state(false);
-
-	// ── Create logic ───────────────────────────────────────────────
 	let createOpen = $state(false);
 	let createError = $state('');
 	let creating = $state(false);
@@ -340,6 +123,55 @@
 		if (e.key === 'Enter') {
 			e.preventDefault();
 			addTag();
+		}
+	}
+
+	// Tag editing for existing namespaces
+	let editingTagsNs = $state('');
+	let editTags = $state<string[]>([]);
+	let editTagInput = $state('');
+	let savingTags = $state(false);
+
+	function startEditTags(ns: Namespace) {
+		editingTagsNs = ns.name;
+		editTags = [...(ns.tags?.tag ?? [])];
+		editTagInput = '';
+	}
+
+	function addEditTag() {
+		const t = editTagInput.trim();
+		if (t && !editTags.includes(t.toLowerCase())) {
+			editTags = [...editTags, t.toLowerCase()];
+		}
+		editTagInput = '';
+	}
+
+	function removeEditTag(t: string) {
+		editTags = editTags.filter((x) => x !== t);
+	}
+
+	function handleEditTagKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			addEditTag();
+		}
+	}
+
+	async function saveTags() {
+		if (!tenant || !nsData || !editingTagsNs) return;
+		savingTags = true;
+		try {
+			await update_namespace({
+				tenant,
+				name: editingTagsNs,
+				body: { tags: { tag: editTags } },
+			}).updates(nsData);
+			toast.success('Tags updated');
+			editingTagsNs = '';
+		} catch {
+			toast.error('Failed to update tags');
+		} finally {
+			savingTags = false;
 		}
 	}
 
@@ -381,15 +213,13 @@
 			creating = false;
 		}
 	}
-
-	let selectedCount = $derived(table.getFilteredSelectedRowModel().rows.length);
 </script>
 
 <svelte:head>
 	<title>Namespaces - HCP Admin Console</title>
 </svelte:head>
 
-<div class="space-y-4">
+<div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
 			<h2 class="text-2xl font-bold">Namespaces</h2>
@@ -403,7 +233,6 @@
 		{/if}
 	</div>
 
-	<!-- Create Dialog -->
 	<Dialog.Root bind:open={createOpen}>
 		<Dialog.Content class="sm:max-w-lg">
 			<Dialog.Header>
@@ -503,130 +332,184 @@
 
 	{#if tenant}
 		{#await nsData}
-			<TableSkeleton rows={5} columns={7} />
+			<TableSkeleton rows={5} columns={5} />
 		{:then _}
-			<!-- Toolbar -->
-			<div class="flex items-center gap-2">
-				<Input
-					placeholder="Filter namespaces..."
-					value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-					oninput={(e) => table.getColumn('name')?.setFilterValue(e.currentTarget.value)}
-					class="max-w-sm"
-				/>
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger>
-						{#snippet child({ props })}
-							<Button {...props} variant="outline" class="ml-auto">
-								Columns <ChevronDown class="ml-2 size-4" />
-							</Button>
-						{/snippet}
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end">
-						{#each table.getAllColumns().filter((col) => col.getCanHide()) as column (column.id)}
-							<DropdownMenu.CheckboxItem
-								class="capitalize"
-								checked={column.getIsVisible()}
-								onCheckedChange={(v) => column.toggleVisibility(!!v)}
-							>
-								{column.id}
-							</DropdownMenu.CheckboxItem>
-						{/each}
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
-			</div>
+			<SearchToolbar
+				bind:search
+				placeholder="Search namespaces..."
+				selectedCount={selected.size}
+				ondeleteselected={() => (bulkDeleteOpen = true)}
+				ondeselectall={() => selected.clear()}
+			/>
 
-			{#if selectedCount > 0}
-				<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-					<span class="text-sm font-medium">{selectedCount} selected</span>
-					<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}>
-						<Trash2 class="h-3.5 w-3.5" />Delete Selected
-					</Button>
-					<Button variant="ghost" size="sm" onclick={() => (rowSelection = {})}>Deselect All</Button
-					>
-				</div>
-			{/if}
-
-			<!-- Table -->
-			<div class="rounded-md border">
-				<Table.Root>
-					<Table.Header>
-						{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
-							<Table.Row>
-								{#each headerGroup.headers as header (header.id)}
-									<Table.Head class="[&:has([role=checkbox])]:ps-3">
-										{#if !header.isPlaceholder}
-											<FlexRender
-												content={header.column.columnDef.header}
-												context={header.getContext()}
-											/>
-										{/if}
-									</Table.Head>
-								{/each}
-							</Table.Row>
-						{/each}
-					</Table.Header>
-					<Table.Body>
-						{#each table.getRowModel().rows as row (row.id)}
-							<Table.Row
-								data-state={row.getIsSelected() && 'selected'}
-								class="cursor-pointer"
-								onclick={() => goto(`/namespaces/${encodeURIComponent(row.original.name)}`)}
+			<div class="overflow-x-auto rounded-lg border">
+				<table class="w-full text-left text-sm">
+					<thead class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+						<tr>
+							<th class="w-10 px-4 py-3"
+								><input
+									type="checkbox"
+									checked={allSelected}
+									onchange={toggleAll}
+									class="h-4 w-4 rounded border-input"
+									disabled={filteredNamespaces.length === 0}
+								/></th
 							>
-								{#each row.getVisibleCells() as cell (cell.id)}
-									<Table.Cell
-										class="[&:has([role=checkbox])]:ps-3 [&:has([role=menuitem])]:onclick-passthrough"
-										onclick={(e) => {
-											const target = e.target as HTMLElement;
-											if (
-												target.closest('[role=checkbox]') ||
-												target.closest('[role=menuitem]') ||
-												target.closest('button') ||
-												target.closest('a') ||
-												target.closest('input')
-											) {
-												e.stopPropagation();
-											}
-										}}
-									>
-										<FlexRender content={cell.column.columnDef.cell} context={cell.getContext()} />
-									</Table.Cell>
-								{/each}
-							</Table.Row>
+							<th class="px-4 py-3 font-medium">Name</th>
+							<th class="px-4 py-3 font-medium">Tags</th>
+							<th class="px-4 py-3 font-medium">Description</th>
+							<th class="px-4 py-3 font-medium">Hard Quota</th>
+							<th class="px-4 py-3 font-medium">Soft Quota</th>
+							<th class="px-4 py-3 font-medium">Hash Scheme</th>
+							<th class="w-16 px-4 py-3 font-medium"></th>
+						</tr>
+					</thead>
+					<tbody class="divide-y">
+						{#if namespaces.length === 0}
+							<tr
+								><td colspan="8" class="px-4 py-8 text-center text-muted-foreground"
+									>No namespaces found. Create one to get started.</td
+								></tr
+							>
+						{:else if filteredNamespaces.length === 0}
+							<tr
+								><td colspan="8" class="px-4 py-8 text-center text-muted-foreground"
+									>No results matching "{search}"</td
+								></tr
+							>
 						{:else}
-							<Table.Row>
-								<Table.Cell colspan={columns.length} class="h-24 text-center">
-									No namespaces found. Create one to get started.
-								</Table.Cell>
-							</Table.Row>
-						{/each}
-					</Table.Body>
-				</Table.Root>
-			</div>
-
-			<!-- Pagination -->
-			<div class="flex items-center justify-end space-x-2">
-				<div class="flex-1 text-sm text-muted-foreground">
-					{table.getFilteredSelectedRowModel().rows.length} of
-					{table.getFilteredRowModel().rows.length} namespace(s) selected.
-				</div>
-				<div class="space-x-2">
-					<Button
-						variant="outline"
-						size="sm"
-						onclick={() => table.previousPage()}
-						disabled={!table.getCanPreviousPage()}
-					>
-						Previous
-					</Button>
-					<Button
-						variant="outline"
-						size="sm"
-						onclick={() => table.nextPage()}
-						disabled={!table.getCanNextPage()}
-					>
-						Next
-					</Button>
-				</div>
+							{#each filteredNamespaces as ns (ns.name)}
+								<tr class="bg-card transition-colors hover:bg-accent/50">
+									<td
+										class="px-4 py-3"
+										onclick={(e) => e.stopPropagation()}
+										onkeydown={() => {}}
+										role="cell"
+									>
+										<input
+											type="checkbox"
+											checked={selected.has(ns.name)}
+											onchange={() => toggleOne(ns.name)}
+											class="h-4 w-4 rounded border-input"
+										/>
+									</td>
+									<td class="px-4 py-3 font-medium">
+										<a
+											href="/namespaces/{ns.name}"
+											class="text-primary underline-offset-4 hover:underline"
+											onclick={(e) => e.stopPropagation()}
+										>
+											{ns.name}
+										</a>
+									</td>
+									<td class="px-4 py-3">
+										{#if editingTagsNs === ns.name}
+											<div class="flex flex-col gap-1.5">
+												<div class="flex gap-1.5">
+													<input
+														class="h-7 w-28 rounded border border-input bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+														placeholder="Add tag..."
+														bind:value={editTagInput}
+														onkeydown={handleEditTagKeydown}
+													/>
+													<Button
+														variant="ghost"
+														size="icon"
+														class="h-7 w-7"
+														onclick={saveTags}
+														disabled={savingTags}
+													>
+														{#if savingTags}...{:else}Save{/if}
+													</Button>
+													<Button
+														variant="ghost"
+														size="icon"
+														class="h-7 w-7"
+														onclick={() => (editingTagsNs = '')}
+													>
+														<X class="h-3 w-3" />
+													</Button>
+												</div>
+												{#if editTags.length > 0}
+													<div class="flex flex-wrap gap-1">
+														{#each editTags as t (t)}
+															<span class="inline-flex items-center gap-0.5">
+																<ServiceTagBadge tag={t} />
+																<button
+																	type="button"
+																	class="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
+																	onclick={() => removeEditTag(t)}
+																>
+																	<X class="h-2.5 w-2.5" />
+																</button>
+															</span>
+														{/each}
+													</div>
+												{/if}
+											</div>
+										{:else}
+											<div class="group flex items-center gap-1">
+												{#if ns.tags?.tag?.length}
+													<div class="flex flex-wrap gap-1">
+														{#each ns.tags.tag as t (t)}
+															<ServiceTagBadge tag={t} />
+														{/each}
+													</div>
+												{:else}
+													<span class="text-muted-foreground">—</span>
+												{/if}
+												<button
+													type="button"
+													class="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+													onclick={() => startEditTags(ns)}
+												>
+													<Pencil class="h-3 w-3" />
+												</button>
+											</div>
+										{/if}
+									</td>
+									<td class="px-4 py-3 text-muted-foreground">{ns.description ?? '—'}</td>
+									<td class="px-4 py-3 text-muted-foreground">{ns.hardQuota ?? '—'}</td>
+									<td class="px-4 py-3 text-muted-foreground"
+										>{ns.softQuota != null ? `${ns.softQuota}%` : '—'}</td
+									>
+									<td class="px-4 py-3">
+										{#if ns.hashScheme}
+											<Badge variant="secondary">{ns.hashScheme}</Badge>
+										{:else}
+											<span class="text-muted-foreground">—</span>
+										{/if}
+									</td>
+									<td
+										class="px-4 py-3"
+										onclick={(e) => e.stopPropagation()}
+										onkeydown={() => {}}
+										role="cell"
+									>
+										<Tooltip.Root>
+											<Tooltip.Trigger>
+												{#snippet child({ props })}
+													<button
+														type="button"
+														onclick={() => {
+															deleteTarget = ns.name;
+															deleteDialogOpen = true;
+														}}
+														class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+														{...props}
+													>
+														<Trash2 class="h-4 w-4" />
+													</button>
+												{/snippet}
+											</Tooltip.Trigger>
+											<Tooltip.Content>Delete namespace</Tooltip.Content>
+										</Tooltip.Root>
+									</td>
+								</tr>
+							{/each}
+						{/if}
+					</tbody>
+				</table>
 			</div>
 		{/await}
 	{:else}
@@ -644,17 +527,10 @@
 	onconfirm={confirmDelete}
 />
 
-<Dialog.Root bind:open={bulkDeleteOpen}>
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>Delete {selectedCount} namespaces?</Dialog.Title>
-			<Dialog.Description>This action cannot be undone.</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
-			<Button variant="ghost" onclick={() => (bulkDeleteOpen = false)}>Cancel</Button>
-			<Button variant="destructive" onclick={confirmBulkDelete} disabled={deleting}>
-				{deleting ? 'Deleting...' : 'Delete All'}
-			</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+<BulkDeleteDialog
+	bind:open={bulkDeleteOpen}
+	count={selected.size}
+	itemType="namespace"
+	loading={deleting}
+	onconfirm={confirmBulkDelete}
+/>
