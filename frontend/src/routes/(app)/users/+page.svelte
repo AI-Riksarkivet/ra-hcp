@@ -303,14 +303,14 @@
 				<div class="flex flex-wrap gap-4">
 					{#each AVAILABLE_ROLES as role (role)}
 						<label class="flex items-center gap-2 text-sm">
-							<input type="checkbox" name="role-{role}" class="h-4 w-4 rounded border-input" />
+							<Checkbox name="role-{role}" />
 							{role}
 						</label>
 					{/each}
 				</div>
 			</div>
 			<label class="flex items-center gap-2 text-sm">
-				<input type="checkbox" name="enabled" checked class="h-4 w-4 rounded border-input" />
+				<Checkbox name="enabled" checked />
 				Enabled
 			</label>
 			<Dialog.Footer>
@@ -347,7 +347,7 @@
 				<div class="flex flex-wrap gap-4">
 					{#each AVAILABLE_ROLES as role (role)}
 						<label class="flex items-center gap-2 text-sm">
-							<input type="checkbox" name="role-{role}" class="h-4 w-4 rounded border-input" />
+							<Checkbox name="role-{role}" />
 							{role}
 						</label>
 					{/each}

@@ -5,6 +5,8 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Save, Loader2, Plus, HelpCircle, Terminal, Copy, Info, X, Pencil } from 'lucide-svelte';
@@ -632,11 +634,7 @@
 					<div class="rounded-lg border p-6">
 						<div class="flex flex-wrap gap-x-8 gap-y-4">
 							<label class="flex items-center gap-2 text-sm">
-								<input
-									type="checkbox"
-									bind:checked={localHttpEnabled}
-									class="h-4 w-4 rounded border-input"
-								/>
+								<Switch bind:checked={localHttpEnabled} />
 								HTTP
 								<Tooltip.Root>
 									<Tooltip.Trigger>
@@ -651,11 +649,7 @@
 								</Tooltip.Root>
 							</label>
 							<label class="flex items-center gap-2 text-sm">
-								<input
-									type="checkbox"
-									bind:checked={localHttpsEnabled}
-									class="h-4 w-4 rounded border-input"
-								/>
+								<Switch bind:checked={localHttpsEnabled} />
 								HTTPS
 								<Tooltip.Root>
 									<Tooltip.Trigger>
@@ -671,11 +665,7 @@
 								</Tooltip.Root>
 							</label>
 							<label class="flex items-center gap-2 text-sm">
-								<input
-									type="checkbox"
-									bind:checked={localCifsEnabled}
-									class="h-4 w-4 rounded border-input"
-								/>
+								<Switch bind:checked={localCifsEnabled} />
 								CIFS
 								<Tooltip.Root>
 									<Tooltip.Trigger>
@@ -690,11 +680,7 @@
 								</Tooltip.Root>
 							</label>
 							<label class="flex items-center gap-2 text-sm">
-								<input
-									type="checkbox"
-									bind:checked={localNfsEnabled}
-									class="h-4 w-4 rounded border-input"
-								/>
+								<Switch bind:checked={localNfsEnabled} />
 								NFS
 								<Tooltip.Root>
 									<Tooltip.Trigger>
@@ -708,11 +694,7 @@
 								</Tooltip.Root>
 							</label>
 							<label class="flex items-center gap-2 text-sm">
-								<input
-									type="checkbox"
-									bind:checked={localSmtpEnabled}
-									class="h-4 w-4 rounded border-input"
-								/>
+								<Switch bind:checked={localSmtpEnabled} />
 								SMTP
 								<Tooltip.Root>
 									<Tooltip.Trigger>
@@ -740,11 +722,7 @@
 				<div class="rounded-lg border p-6">
 					<div class="flex flex-wrap gap-x-8 gap-y-4">
 						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								bind:checked={localSearchEnabled}
-								class="h-4 w-4 rounded border-input"
-							/>
+							<Switch bind:checked={localSearchEnabled} />
 							Search
 							<Tooltip.Root>
 								<Tooltip.Trigger>
@@ -760,11 +738,7 @@
 							</Tooltip.Root>
 						</label>
 						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								bind:checked={localVersioningEnabled}
-								class="h-4 w-4 rounded border-input"
-							/>
+							<Switch bind:checked={localVersioningEnabled} />
 							Versioning
 							<Tooltip.Root>
 								<Tooltip.Trigger>
@@ -1078,11 +1052,9 @@
 				<div class="flex flex-wrap gap-4">
 					{#each PERMISSION_KEYS as perm (perm)}
 						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
+							<Checkbox
 								checked={grantPerms.has(perm)}
-								onchange={() => toggleGrantPerm(perm)}
-								class="h-4 w-4 rounded border-input"
+								onCheckedChange={() => toggleGrantPerm(perm)}
 							/>
 							{perm}
 							{#if PERMISSION_DESCRIPTIONS[perm]}

@@ -720,11 +720,9 @@
 								tabindex={0}
 							>
 								<td class="px-4 py-3" onclick={(e: MouseEvent) => e.stopPropagation()}>
-									{#if !folder}<input
-											type="checkbox"
+									{#if !folder}<Checkbox
 											checked={selected.has(obj.key)}
-											onchange={() => toggleOne(obj.key)}
-											class="h-4 w-4 rounded border-input"
+											onCheckedChange={() => toggleOne(obj.key)}
 										/>{/if}
 								</td>
 								<td class="px-4 py-3">

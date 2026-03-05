@@ -415,17 +415,10 @@
 														>
 													</Tooltip.Root>
 												</span>
-												<label class="relative inline-flex cursor-pointer items-center">
-													<input
-														type="checkbox"
-														checked={localPermissions[key] ?? false}
-														onchange={() => togglePermission(key)}
-														class="peer sr-only"
-													/>
-													<div
-														class="peer h-5 w-9 rounded-full bg-muted after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-focus-visible:ring-2 peer-focus-visible:ring-ring"
-													></div>
-												</label>
+												<Switch
+													checked={localPermissions[key] ?? false}
+													onCheckedChange={() => togglePermission(key)}
+												/>
 											</div>
 										{/each}
 									</div>

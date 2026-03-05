@@ -1,7 +1,7 @@
 [project]
 name = "hcp-s3-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "Unified API gateway for Hitachi Content Platform (MAPI, S3, Metadata Query)"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [

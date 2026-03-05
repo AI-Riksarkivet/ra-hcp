@@ -255,11 +255,7 @@
 							</div>
 							<div class="flex items-end pb-1">
 								<label class="flex items-center gap-2 text-sm">
-									<input
-										type="checkbox"
-										bind:checked={localEnabled}
-										class="h-4 w-4 rounded border-input"
-									/>
+									<Checkbox bind:checked={localEnabled} />
 									Enabled
 								</label>
 							</div>
@@ -272,11 +268,9 @@
 							<div class="mt-2 flex flex-wrap gap-x-6 gap-y-2">
 								{#each AVAILABLE_ROLES as role (role)}
 									<label class="flex items-center gap-1.5 text-sm">
-										<input
-											type="checkbox"
+										<Checkbox
 											checked={localRoles.includes(role)}
-											onchange={() => toggleRole(role)}
-											class="h-4 w-4 rounded border-input"
+											onCheckedChange={() => toggleRole(role)}
 										/>
 										{role}
 										<Tooltip.Root>
