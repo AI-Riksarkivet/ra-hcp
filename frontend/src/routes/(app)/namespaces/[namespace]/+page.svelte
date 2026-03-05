@@ -984,11 +984,9 @@
 									</td>
 									{#each PERMISSION_KEYS as perm (perm)}
 										<td class="px-3 py-3 text-center">
-											<input
-												type="checkbox"
+											<Checkbox
 												checked={entry?.permissions.has(perm) ?? false}
-												onchange={() => toggleUserPerm(username, perm)}
-												class="h-4 w-4 rounded border-input"
+												onCheckedChange={() => toggleUserPerm(username, perm)}
 												disabled={entry?.saving ?? false}
 											/>
 										</td>
