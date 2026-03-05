@@ -9,6 +9,7 @@
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import { Save, Loader2, Plus, HelpCircle, Terminal, Copy, Info, X, Pencil } from 'lucide-svelte';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 	import { toast } from 'svelte-sonner';
@@ -769,21 +770,17 @@
 				<div class="flex items-center gap-2">
 					<h3 class="text-lg font-semibold">Tags</h3>
 					{#if !editingTags}
-						<button
-							type="button"
-							class="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-							onclick={startEditTags}
-						>
+						<Button variant="ghost" size="icon" class="h-6 w-6" onclick={startEditTags}>
 							<Pencil class="h-3.5 w-3.5" />
-						</button>
+						</Button>
 					{/if}
 				</div>
 				<div class="rounded-lg border p-6">
 					{#if editingTags}
 						<div class="space-y-3">
 							<div class="flex gap-2">
-								<input
-									class="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+								<Input
+									class="h-8"
 									placeholder="Add tag..."
 									bind:value={editTagInput}
 									onkeydown={handleEditTagKeydown}
@@ -850,10 +847,11 @@
 							<pre class="overflow-x-auto rounded-md bg-muted p-3 text-sm"><code
 									>{nfsMountCommand}</code
 								></pre>
-							<button
-								type="button"
+							<Button
+								variant="ghost"
+								size="icon"
+								class="absolute right-2 top-2 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
 								onclick={copyNfsCommand}
-								class="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
 								title="Copy to clipboard"
 							>
 								{#if nfsCopied}
@@ -861,7 +859,7 @@
 								{:else}
 									<Copy class="h-4 w-4" />
 								{/if}
-							</button>
+							</Button>
 						</div>
 					</div>
 

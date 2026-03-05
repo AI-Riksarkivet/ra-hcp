@@ -517,8 +517,8 @@
 										{#if editingTagsNs === ns.name}
 											<div class="flex flex-col gap-1.5">
 												<div class="flex gap-1.5">
-													<input
-														class="h-7 w-28 rounded border border-input bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+													<Input
+														class="h-7 w-28 px-2 text-xs"
 														placeholder="Add tag..."
 														bind:value={editTagInput}
 														onkeydown={handleEditTagKeydown}

@@ -55,6 +55,7 @@
 	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import { cn } from '$lib/utils.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
@@ -476,9 +477,10 @@
 			<div
 				role="region"
 				aria-label="File drop zone"
-				class="rounded-lg border-2 border-dashed p-8 text-center transition-colors {dragover
-					? 'border-primary bg-primary/5'
-					: 'border-border'}"
+				class={cn(
+					'rounded-lg border-2 border-dashed p-8 text-center transition-colors',
+					dragover ? 'border-primary bg-primary/5' : 'border-border'
+				)}
 				ondragover={(e) => {
 					e.preventDefault();
 					dragover = true;
@@ -558,10 +560,12 @@
 										>{item.error}</Tooltip.Content
 									>
 								</Tooltip.Root>
-							{:else}<button
+							{:else}<Button
+									variant="ghost"
+									size="icon"
+									class="h-7 w-7 text-muted-foreground hover:text-destructive"
 									onclick={() => removeFile(i)}
-									class="rounded p-1 text-muted-foreground hover:text-destructive"
-									title="Remove"><X class="h-4 w-4" /></button
+									title="Remove"><X class="h-4 w-4" /></Button
 								>{/if}
 						</div>
 					{/each}

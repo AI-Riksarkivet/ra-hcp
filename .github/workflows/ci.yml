@@ -20,6 +20,7 @@ jobs:
         with:
           verb: call
           args: checks --source=.
+          version: "0.20.1"
 
   test:
     name: Unit Tests
@@ -32,6 +33,7 @@ jobs:
         with:
           verb: call
           args: test-coverage --source=.
+          version: "0.20.1"
 
   test-integration:
     name: Integration Tests
@@ -44,3 +46,4 @@ jobs:
         with:
           verb: call
           args: test-integration --source=.
+          version: "0.20.1"

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { X, Pencil } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 
 	let {
@@ -59,8 +60,8 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="flex flex-col gap-1.5" onclick={(e) => e.stopPropagation()}>
 		<div class="flex gap-1.5">
-			<input
-				class="h-7 w-28 rounded border border-input bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+			<Input
+				class="h-7 w-28 px-2 text-xs"
 				placeholder="Add tag..."
 				bind:value={editTagInput}
 				onkeydown={handleKeydown}

@@ -146,13 +146,34 @@
 
 	// Reset state and fetch text when url changes
 	$effect(() => {
-		// Track url to re-run on navigation
 		const currentUrl = url;
 		textContent = null;
 		error = null;
+		let cancelled = false;
+
 		if (open && category === 'text' && currentUrl) {
-			fetchText(currentUrl);
+			(async () => {
+				loading = true;
+				try {
+					const res = await fetch(currentUrl, { credentials: 'same-origin' });
+					if (cancelled) return;
+					if (!res.ok) throw new Error(`Failed to load file (HTTP ${res.status})`);
+					const text = await res.text();
+					if (cancelled) return;
+					textContent =
+						text.length > 512_000 ? text.slice(0, 512_000) + '\n\n... (truncated at 500KB)' : text;
+				} catch (e) {
+					if (cancelled) return;
+					error = e instanceof Error ? e.message : 'Failed to load file';
+				} finally {
+					if (!cancelled) loading = false;
+				}
+			})();
 		}
+
+		return () => {
+			cancelled = true;
+		};
 	});
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -233,24 +254,28 @@
 			<div class="relative flex min-w-0 flex-1">
 				<!-- Left arrow -->
 				{#if hasPrev && onprev}
-					<button
+					<Button
+						variant="secondary"
+						size="icon"
+						class="absolute left-2 top-1/2 z-10 h-10 w-10 -translate-y-1/2 rounded-full bg-background/80 shadow-md backdrop-blur-sm hover:bg-background"
 						onclick={onprev}
-						class="absolute left-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 shadow-md backdrop-blur-sm transition-opacity hover:bg-background"
 					>
 						<ChevronLeft class="h-5 w-5" />
 						<span class="sr-only">Previous file</span>
-					</button>
+					</Button>
 				{/if}
 
 				<!-- Right arrow -->
 				{#if hasNext && onnext}
-					<button
+					<Button
+						variant="secondary"
+						size="icon"
+						class="absolute right-2 top-1/2 z-10 h-10 w-10 -translate-y-1/2 rounded-full bg-background/80 shadow-md backdrop-blur-sm hover:bg-background"
 						onclick={onnext}
-						class="absolute right-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 shadow-md backdrop-blur-sm transition-opacity hover:bg-background"
 					>
 						<ChevronRight class="h-5 w-5" />
 						<span class="sr-only">Next file</span>
-					</button>
+					</Button>
 				{/if}
 
 				{#if category === 'image'}
