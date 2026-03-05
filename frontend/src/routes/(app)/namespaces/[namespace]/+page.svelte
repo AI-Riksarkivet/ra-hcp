@@ -266,7 +266,7 @@
 		originalPermissions: SvelteSet<string>;
 	}
 
-	let allUsers = $state<Array<{ username: string }>>([]);
+	let allUsers = $state.raw<Array<{ username: string }>>([]);
 	let userPermMap = $state<Record<string, UserPermState>>({});
 	let accessLoading = $state(true);
 	let accessVersion = $state(0);

@@ -43,7 +43,7 @@
 	let objectQuery = $state('');
 	let pageSize = 25;
 	let objectOffset = $state(0);
-	let objectResults = $state<ObjectQueryResponse | null>(null);
+	let objectResults = $state.raw<ObjectQueryResponse | null>(null);
 	let objectLoading = $state(false);
 	let objectError = $state('');
 	let objectSearched = $state(false);
@@ -67,7 +67,7 @@
 	// ── Operation search state ──
 	let opTransactions = $state<string[]>([]);
 	let opNamespace = $state('');
-	let opResults = $state<OperationQueryResponse | null>(null);
+	let opResults = $state.raw<OperationQueryResponse | null>(null);
 	let opLoading = $state(false);
 	let opError = $state('');
 	let opSearched = $state(false);
@@ -449,13 +449,15 @@
 						)} of {objectResults.status.totalResults.toLocaleString()} results
 					</span>
 					{#if hasActiveFilters}
-						<button
-							class="flex items-center gap-1 text-xs text-primary hover:underline"
+						<Button
+							variant="link"
+							size="sm"
+							class="h-auto gap-1 p-0 text-xs"
 							onclick={clearFilters}
 						>
 							<X class="h-3 w-3" />
 							Clear filters
-						</button>
+						</Button>
 					{/if}
 				</div>
 
@@ -507,28 +509,25 @@
 								<td class="px-4 py-1.5"></td>
 								<td class="px-4 py-1.5"></td>
 								<td class="px-4 py-1.5">
-									<input
-										type="text"
+									<Input
 										bind:value={filterNamespace}
 										placeholder="Filter..."
-										class="h-6 w-full rounded border border-input bg-background px-2 text-xs"
+										class="h-6 px-2 text-xs"
 									/>
 								</td>
 								<td class="px-4 py-1.5"></td>
 								<td class="px-4 py-1.5">
-									<input
-										type="text"
+									<Input
 										bind:value={filterContentType}
 										placeholder="Filter..."
-										class="h-6 w-full rounded border border-input bg-background px-2 text-xs"
+										class="h-6 px-2 text-xs"
 									/>
 								</td>
 								<td class="px-4 py-1.5">
-									<input
-										type="text"
+									<Input
 										bind:value={filterOwner}
 										placeholder="Filter..."
-										class="h-6 w-full rounded border border-input bg-background px-2 text-xs"
+										class="h-6 px-2 text-xs"
 									/>
 								</td>
 								<td class="px-4 py-1.5"></td>

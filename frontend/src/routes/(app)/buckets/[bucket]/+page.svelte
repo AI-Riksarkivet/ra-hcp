@@ -524,13 +524,12 @@
 								</div>{/if}
 							<div class="min-w-0 flex-1">
 								<p class="truncate text-sm font-medium">{item.file.name}</p>
-								{#if item.status === 'pending'}<input
-										type="text"
+								{#if item.status === 'pending'}<Input
 										value={item.key}
 										oninput={(e) => {
 											selectedFiles[i] = { ...selectedFiles[i], key: e.currentTarget.value };
 										}}
-										class="mt-1 w-full rounded border bg-background px-2 py-0.5 font-mono text-xs text-muted-foreground"
+										class="mt-1 h-auto px-2 py-0.5 font-mono text-xs text-muted-foreground"
 										placeholder="Object key"
 									/>
 								{:else}<p class="mt-0.5 truncate font-mono text-xs text-muted-foreground">
@@ -589,10 +588,11 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-	{#if prefix}<button
+	{#if prefix}<Button
+			variant="link"
+			class="h-auto gap-2 p-0 text-sm"
 			onclick={() => navigatePrefix(parentPrefix)}
-			class="flex items-center gap-2 text-sm text-primary hover:underline"
-			><Folder class="h-4 w-4" />.. (parent directory)</button
+			><Folder class="h-4 w-4" />.. (parent directory)</Button
 		>{/if}
 
 	{#await objectData}
@@ -601,12 +601,7 @@
 		<div class="space-y-2">
 			<div class="relative">
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-				<input
-					type="text"
-					bind:value={search}
-					placeholder="Search objects..."
-					class="w-full rounded-lg border bg-background py-2 pl-10 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-				/>
+				<Input bind:value={search} placeholder="Search objects..." class="pl-10" />
 			</div>
 			<div class="flex flex-wrap items-center gap-2">
 				{#if uniqueOwners.length > 0}

@@ -171,12 +171,7 @@
 		<div class="space-y-2">
 			<div class="relative">
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-				<input
-					type="text"
-					bind:value={search}
-					placeholder="Search buckets..."
-					class="w-full rounded-lg border bg-background py-2 pl-10 pr-3 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-				/>
+				<Input bind:value={search} placeholder="Search buckets..." class="pl-10" />
 			</div>
 			<div class="flex flex-wrap items-center gap-2">
 				{#if ownerName}
