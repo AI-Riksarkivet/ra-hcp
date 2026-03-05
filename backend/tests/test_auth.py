@@ -73,3 +73,39 @@ async def test_login_with_invalid_tenant_name(client: AsyncClient):
         data={"username": "admin", "password": "pass", "tenant": "-bad-name-"},
     )
     assert resp.status_code == 422
+
+
+async def test_login_with_tenant_in_username(client: AsyncClient):
+    """Swagger Authorize dialog: tenant/username format."""
+    import jwt
+
+    resp = await client.post(
+        "/api/v1/auth/token",
+        data={"username": "acc-ai/admin", "password": "pass"},
+    )
+    assert resp.status_code == 200
+    token = resp.json()["access_token"]
+    payload = jwt.decode(token, options={"verify_signature": False})
+    assert payload["sub"] == "admin"
+    assert payload["tenant"] == "acc-ai"
+
+
+async def test_login_tenant_field_takes_precedence_over_username_prefix(
+    client: AsyncClient,
+):
+    import jwt
+
+    resp = await client.post(
+        "/api/v1/auth/token",
+        data={
+            "username": "from-username/admin",
+            "password": "pass",
+            "tenant": "from-field",
+        },
+    )
+    assert resp.status_code == 200
+    token = resp.json()["access_token"]
+    payload = jwt.decode(token, options={"verify_signature": False})
+    assert payload["tenant"] == "from-field"
+    # Username should NOT be split when tenant field is provided
+    assert payload["sub"] == "from-username/admin"

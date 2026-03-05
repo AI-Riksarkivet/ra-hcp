@@ -267,6 +267,7 @@
 
 	// --- Presigned URL ---
 	const EXPIRY_PRESETS = [
+		{ label: '5 minutes', value: 300 },
 		{ label: '1 hour', value: 3600 },
 		{ label: '6 hours', value: 21600 },
 		{ label: '24 hours', value: 86400 },
@@ -348,6 +349,7 @@
 	}
 
 	let deleteTarget = $state<string | null>(null);
+	let deleteDialogOpen = $state(false);
 	let bulkDeleteOpen = $state(false);
 	let deleting = $state(false);
 
@@ -361,6 +363,7 @@
 			toast.error('Failed to delete object');
 		} finally {
 			deleting = false;
+			deleteDialogOpen = false;
 			deleteTarget = null;
 		}
 	}
@@ -685,7 +688,10 @@
 													>{#snippet child({ props })}<button
 															type="button"
 															{...props}
-															onclick={() => (deleteTarget = obj.key)}
+															onclick={() => {
+																deleteTarget = obj.key;
+																deleteDialogOpen = true;
+															}}
 															class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
 															><Trash2 class="h-4 w-4" /></button
 														>{/snippet}</Tooltip.Trigger
@@ -723,7 +729,7 @@
 </div>
 
 <AlertDialog.Root
-	open={deleteTarget !== null}
+	bind:open={deleteDialogOpen}
 	onOpenChange={(open) => {
 		if (!open) deleteTarget = null;
 	}}

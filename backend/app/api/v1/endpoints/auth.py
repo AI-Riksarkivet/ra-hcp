@@ -16,6 +16,19 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 _TENANT_RE = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$")
 
 
+def _parse_username(raw_username: str) -> tuple[str, str | None]:
+    """Parse ``tenant/username`` or plain ``username``.
+
+    The Swagger Authorize dialog only shows standard OAuth2 fields
+    (username, password).  To include a tenant, use the format
+    ``tenant/username`` in the username field.
+    """
+    if "/" in raw_username:
+        tenant, _, username = raw_username.partition("/")
+        return username, tenant.strip() or None
+    return raw_username, None
+
+
 @router.post("/token", response_model=TokenResponse)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -26,19 +39,24 @@ async def login(
     Credentials are stored in the JWT and passed through to HCP on every
     API call.  HCP validates them — login itself always succeeds.
 
-    Optionally provide a **tenant** name to scope requests to a specific
-    HCP tenant (virtual-hosted routing).  Omit for system-level access.
+    **Tenant** can be provided in three ways (first match wins):
 
-    Use the Authorize button (lock icon) in Swagger UI to log in.
+    1. **``tenant`` form field** — set it directly (used by the frontend).
+    2. **``tenant/username`` format** — enter ``acc-ai/my_user`` in the
+       username field.  Works in the Swagger **Authorize** dialog (lock icon).
+    3. **Omit** — for system-level access (no tenant routing).
     """
-    if tenant is not None:
-        tenant = tenant.strip()
-        if not tenant:
-            tenant = None
-        elif not _TENANT_RE.match(tenant):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail="Invalid tenant name",
-            )
-    token = create_access_token(form_data.username, form_data.password, tenant=tenant)
+    # Explicit tenant field takes priority
+    resolved_tenant = tenant.strip() if tenant and tenant.strip() else None
+
+    username = form_data.username
+    if resolved_tenant is None:
+        username, resolved_tenant = _parse_username(form_data.username)
+
+    if resolved_tenant is not None and not _TENANT_RE.match(resolved_tenant):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Invalid tenant name",
+        )
+    token = create_access_token(username, form_data.password, tenant=resolved_tenant)
     return {"access_token": token, "token_type": "bearer"}

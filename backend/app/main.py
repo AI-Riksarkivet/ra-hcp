@@ -145,7 +145,12 @@ OPENAPI_TAGS = [
     # ── Public ──
     {
         "name": "Authentication",
-        "description": "Login to obtain a JWT token.",
+        "description": (
+            "Login to obtain a JWT token.\n\n"
+            "Use the **Authorize** lock icon (top-right) to log in. "
+            "For tenant-scoped access, enter `tenant/username` in the username field "
+            "(e.g. `dev-ai/admin`)."
+        ),
     },
     {
         "name": "Health",

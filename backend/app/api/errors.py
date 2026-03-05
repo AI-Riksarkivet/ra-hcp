@@ -38,7 +38,7 @@ def raise_for_s3_error(exc: ClientError, resource: str = "resource") -> None:
 
 
 def raise_for_s3_transport_error(
-    exc: BotoCoreError, resource: str = "resource"
+    exc: BotoCoreError | Exception, resource: str = "resource"
 ) -> None:
     """Translate a botocore transport/connection error into an HTTPException."""
     logger.error("S3 transport error for %s: %s", resource, exc)

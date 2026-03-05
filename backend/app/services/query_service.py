@@ -109,7 +109,11 @@ class QueryService:
             detail = resp.text or f"HCP query returned {resp.status_code}"
             raise HTTPException(status_code=resp.status_code, detail=detail)
 
-        return resp.json()
+        data = resp.json()
+        # HCP wraps responses in {"queryResult": {...}} — unwrap it.
+        if "queryResult" in data:
+            data = data["queryResult"]
+        return data
 
     async def object_query(
         self,

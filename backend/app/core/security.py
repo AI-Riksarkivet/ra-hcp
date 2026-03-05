@@ -11,7 +11,17 @@ from fastapi.security import OAuth2PasswordBearer
 
 from app.core.config import AuthSettings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="api/v1/auth/token",
+    description=(
+        "Enter your HCP credentials.\n\n"
+        "**Username formats:**\n"
+        "- `username` — system-level access (no tenant)\n"
+        "- `tenant/username` — tenant-scoped access "
+        "(e.g. `dev-ai/admin`)\n\n"
+        "**Password:** your HCP password."
+    ),
+)
 
 
 class HcpCredentials(NamedTuple):

@@ -27,6 +27,18 @@ class S3Service:
         read_timeout=60,
     )
 
+    @staticmethod
+    def _disable_region_redirector(client: Any) -> None:
+        """Unregister boto3's S3 region redirect handler.
+
+        HCP is not AWS and returns non-standard responses that trigger
+        boto3's S3RegionRedirectorv2.  On list_buckets (which has no
+        bucket), the redirector calls head_bucket(Bucket=None) which
+        crashes with TypeError.  Disabling it is safe for any non-AWS
+        S3-compatible endpoint.
+        """
+        client.meta.events.unregister("needs-retry.s3")
+
     def __init__(self, settings: S3Settings):
         self.settings = settings
         self._client = boto3.client(
@@ -38,6 +50,7 @@ class S3Service:
             verify=settings.verify_ssl,
             config=self._BOTO_CONFIG,
         )
+        self._disable_region_redirector(self._client)
         self._transfer_config = TransferConfig(
             multipart_threshold=8 * 1024 * 1024,
             multipart_chunksize=8 * 1024 * 1024,
@@ -64,6 +77,7 @@ class S3Service:
             verify=settings.verify_ssl,
             config=cls._BOTO_CONFIG,
         )
+        cls._disable_region_redirector(instance._client)
         instance._transfer_config = TransferConfig(
             multipart_threshold=8 * 1024 * 1024,
             multipart_chunksize=8 * 1024 * 1024,

@@ -199,7 +199,7 @@
 	<title>{username} - User Settings - HCP Admin Console</title>
 </svelte:head>
 
-<div class="space-y-8">
+<div class="space-y-6">
 	<!-- Header -->
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-4">
@@ -243,41 +243,54 @@
 			<p class="text-muted-foreground">Log in with a tenant to view user details.</p>
 		</div>
 	{:else}
-		<!-- Section 1: General Information -->
-		<section class="space-y-4">
-			<h3 class="text-lg font-semibold">General Information</h3>
-			{#await userData}
-				<div class="rounded-lg border p-6">
-					<div class="grid gap-4 sm:grid-cols-2">
-						{#each Array(4) as _, i (i)}
-							<div class="space-y-1">
-								<div class="h-3 w-20 animate-pulse rounded bg-muted"></div>
-								<div class="h-9 w-full animate-pulse rounded bg-muted"></div>
-							</div>
-						{/each}
-					</div>
+		{#await userData}
+			<div class="rounded-lg border p-5">
+				<div class="grid gap-3 sm:grid-cols-2">
+					{#each Array(4) as _, i (i)}
+						<div class="space-y-1">
+							<div class="h-3 w-20 animate-pulse rounded bg-muted"></div>
+							<div class="h-8 w-full animate-pulse rounded bg-muted"></div>
+						</div>
+					{/each}
 				</div>
-			{:then _}
-				<div class="rounded-lg border p-6">
-					{#if user}
-						<div class="grid gap-4 sm:grid-cols-2">
-							<div class="space-y-2">
-								<Label>Username</Label>
+			</div>
+		{:then _}
+			{#if !user}
+				<div class="rounded-lg border border-dashed p-8 text-center">
+					<p class="text-muted-foreground">User not found or could not be loaded.</p>
+				</div>
+			{:else}
+				<!-- Top row: General + Roles | S3 Credentials -->
+				<div class="grid gap-6 xl:grid-cols-2">
+					<!-- Left: General Info + Roles -->
+					<div class="rounded-lg border p-5">
+						<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+							General
+						</h3>
+						<div class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+							<div class="space-y-1">
+								<Label class="text-xs">Username</Label>
 								<p class="text-sm font-medium">{user.username}</p>
 							</div>
-							<div class="space-y-2">
-								<Label for="user-fullname">Full Name</Label>
-								<Input id="user-fullname" bind:value={localFullName} placeholder="Full name" />
+							<div class="space-y-1">
+								<Label for="user-fullname" class="text-xs">Full Name</Label>
+								<Input
+									id="user-fullname"
+									bind:value={localFullName}
+									placeholder="Full name"
+									class="h-8 text-sm"
+								/>
 							</div>
-							<div class="space-y-2">
-								<Label for="user-description">Description</Label>
+							<div class="space-y-1">
+								<Label for="user-description" class="text-xs">Description</Label>
 								<Input
 									id="user-description"
 									bind:value={localDescription}
-									placeholder="Optional description"
+									placeholder="Optional"
+									class="h-8 text-sm"
 								/>
 							</div>
-							<div class="flex items-center gap-2 self-end">
+							<div class="flex items-end pb-1">
 								<label class="flex items-center gap-2 text-sm">
 									<input
 										type="checkbox"
@@ -288,263 +301,252 @@
 								</label>
 							</div>
 						</div>
-					{:else}
-						<p class="text-center text-sm text-muted-foreground">
-							User not found or could not be loaded.
-						</p>
-					{/if}
-				</div>
-			{/await}
-		</section>
 
-		<!-- Section 2: Roles -->
-		{#if user}
-			<section class="space-y-4">
-				<h3 class="text-lg font-semibold">Roles</h3>
-				<div class="rounded-lg border p-6">
-					<div class="flex flex-wrap gap-x-8 gap-y-4">
-						{#each AVAILABLE_ROLES as role (role)}
-							<label class="flex items-center gap-2 text-sm">
-								<input
-									type="checkbox"
-									checked={localRoles.includes(role)}
-									onchange={() => toggleRole(role)}
-									class="h-4 w-4 rounded border-input"
-								/>
-								{role}
-								<Tooltip.Root>
-									<Tooltip.Trigger>
-										{#snippet child({ props })}
-											<span {...props} class="inline-flex items-center gap-1">
-												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-											</span>
-										{/snippet}
-									</Tooltip.Trigger>
-									<Tooltip.Content>{ROLE_DESCRIPTIONS[role]}</Tooltip.Content>
-								</Tooltip.Root>
-							</label>
-						{/each}
-					</div>
-					<div class="mt-4 flex items-center gap-3">
-						<Button size="sm" disabled={!dirty || saving} onclick={saveUser}>
-							{#if saving}
-								<Loader2 class="h-4 w-4 animate-spin" />
-								Saving...
-							{:else}
-								<Save class="h-4 w-4" />
-								Save
-							{/if}
-						</Button>
-						{#if dirty}
-							<span class="text-xs text-muted-foreground">Unsaved changes</span>
-						{/if}
-					</div>
-				</div>
-			</section>
-
-			<!-- Section 3: Namespace Access -->
-			<section class="space-y-4">
-				<h3 class="text-lg font-semibold">Namespace Access</h3>
-				{#await permsData}
-					<div class="rounded-lg border p-6">
-						<div class="space-y-3">
-							{#each Array(3) as _, i (i)}
-								<div class="h-5 w-full animate-pulse rounded bg-muted"></div>
-							{/each}
-						</div>
-					</div>
-				{:then _}
-					{#if nsPermissions.length === 0}
-						<div class="rounded-lg border border-dashed p-8 text-center">
-							<p class="text-muted-foreground">This user has no namespace access.</p>
-						</div>
-					{:else}
-						<div class="overflow-x-auto rounded-lg border">
-							<table class="w-full text-left text-sm">
-								<thead
-									class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
-								>
-									<tr>
-										<th class="px-4 py-3 font-medium">Namespace</th>
-										<th class="px-4 py-3 font-medium">Permissions</th>
-									</tr>
-								</thead>
-								<tbody class="divide-y">
-									{#each nsPermissions as entry (entry.namespaceName)}
-										<tr class="bg-card transition-colors hover:bg-accent/50">
-											<td class="px-4 py-3 font-medium">
-												<a
-													href="/namespaces/{entry.namespaceName}"
-													class="text-primary underline-offset-4 hover:underline"
-												>
-													{entry.namespaceName}
-												</a>
-											</td>
-											<td class="px-4 py-3">
-												<div class="flex flex-wrap gap-1">
-													{#each entry.permissions?.permission ?? [] as perm (perm)}
-														<Tooltip.Root>
-															<Tooltip.Trigger>
-																{#snippet child({ props })}
-																	<span {...props}>
-																		<Badge variant="secondary">{perm}</Badge>
-																	</span>
-																{/snippet}
-															</Tooltip.Trigger>
-															<Tooltip.Content
-																>{PERMISSION_DESCRIPTIONS[perm] ?? perm}</Tooltip.Content
-															>
-														</Tooltip.Root>
-													{/each}
-												</div>
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-				{/await}
-			</section>
-
-			<!-- Section 4: S3 Credentials -->
-			<section class="space-y-4">
-				<div class="flex items-center gap-2">
-					<KeyRound class="h-5 w-5 text-muted-foreground" />
-					<h3 class="text-lg font-semibold">S3 Credentials</h3>
-				</div>
-				{#await credsData}
-					<div class="rounded-lg border p-6">
-						<div class="space-y-4">
-							{#each Array(3) as _, i (i)}
-								<div class="space-y-1">
-									<div class="h-3 w-20 animate-pulse rounded bg-muted"></div>
-									<div class="h-9 w-full animate-pulse rounded bg-muted"></div>
-								</div>
-							{/each}
-						</div>
-					</div>
-				{:then _}
-					<div class="rounded-lg border p-6">
-						{#if creds && creds.access_key_id}
-							<div class="space-y-4">
-								<div class="space-y-2">
-									<Label>Access Key ID</Label>
-									<div class="flex items-center gap-2">
-										<Input readonly value={creds.access_key_id} class="font-mono text-sm" />
-										<Tooltip.Root>
-											<Tooltip.Trigger>
-												{#snippet child({ props })}
-													<Button
-														variant="ghost"
-														size="icon"
-														onclick={() => copyToClipboard(creds!.access_key_id, 'access_key')}
-														{...props}
-													>
-														{#if copied === 'access_key'}
-															<Check class="h-4 w-4 text-emerald-500" />
-														{:else}
-															<Copy class="h-4 w-4" />
-														{/if}
-													</Button>
-												{/snippet}
-											</Tooltip.Trigger>
-											<Tooltip.Content
-												>{copied === 'access_key' ? 'Copied!' : 'Copy'}</Tooltip.Content
-											>
-										</Tooltip.Root>
-									</div>
-								</div>
-								<div class="space-y-2">
-									<Label>Secret Access Key</Label>
-									<div class="flex items-center gap-2">
-										<Input
-											readonly
-											type={showSecret ? 'text' : 'password'}
-											value={creds.secret_access_key}
-											class="font-mono text-sm"
+						<div class="mt-4 border-t pt-3">
+							<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+								Roles
+							</h3>
+							<div class="mt-2 flex flex-wrap gap-x-6 gap-y-2">
+								{#each AVAILABLE_ROLES as role (role)}
+									<label class="flex items-center gap-1.5 text-sm">
+										<input
+											type="checkbox"
+											checked={localRoles.includes(role)}
+											onchange={() => toggleRole(role)}
+											class="h-4 w-4 rounded border-input"
 										/>
+										{role}
 										<Tooltip.Root>
 											<Tooltip.Trigger>
 												{#snippet child({ props })}
-													<Button
-														variant="ghost"
-														size="icon"
-														onclick={() => (showSecret = !showSecret)}
-														{...props}
+													<span {...props}
+														><HelpCircle class="h-3 w-3 text-muted-foreground" /></span
 													>
-														{#if showSecret}
-															<EyeOff class="h-4 w-4" />
-														{:else}
-															<Eye class="h-4 w-4" />
-														{/if}
-													</Button>
 												{/snippet}
 											</Tooltip.Trigger>
-											<Tooltip.Content>{showSecret ? 'Hide' : 'Reveal'}</Tooltip.Content>
+											<Tooltip.Content>{ROLE_DESCRIPTIONS[role]}</Tooltip.Content>
 										</Tooltip.Root>
-										<Tooltip.Root>
-											<Tooltip.Trigger>
-												{#snippet child({ props })}
-													<Button
-														variant="ghost"
-														size="icon"
-														onclick={() => copyToClipboard(creds!.secret_access_key, 'secret_key')}
-														{...props}
-													>
-														{#if copied === 'secret_key'}
-															<Check class="h-4 w-4 text-emerald-500" />
-														{:else}
-															<Copy class="h-4 w-4" />
-														{/if}
-													</Button>
-												{/snippet}
-											</Tooltip.Trigger>
-											<Tooltip.Content
-												>{copied === 'secret_key' ? 'Copied!' : 'Copy'}</Tooltip.Content
-											>
-										</Tooltip.Root>
+									</label>
+								{/each}
+							</div>
+							<div class="mt-3 flex items-center gap-3">
+								<Button size="sm" disabled={!dirty || saving} onclick={saveUser}>
+									{#if saving}
+										<Loader2 class="h-4 w-4 animate-spin" />
+										Saving...
+									{:else}
+										<Save class="h-4 w-4" />
+										Save
+									{/if}
+								</Button>
+								{#if dirty}
+									<span class="text-xs text-muted-foreground">Unsaved changes</span>
+								{/if}
+							</div>
+						</div>
+					</div>
+
+					<!-- Right: S3 Credentials -->
+					<div class="rounded-lg border p-5">
+						<div class="flex items-center gap-2">
+							<KeyRound class="h-4 w-4 text-muted-foreground" />
+							<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+								S3 Credentials
+							</h3>
+						</div>
+						{#await credsData}
+							<div class="mt-3 space-y-3">
+								{#each Array(3) as _, i (i)}
+									<div class="space-y-1">
+										<div class="h-3 w-20 animate-pulse rounded bg-muted"></div>
+										<div class="h-8 w-full animate-pulse rounded bg-muted"></div>
 									</div>
-								</div>
-								{#if creds.endpoint_url}
-									<div class="space-y-2">
-										<Label>S3 Endpoint URL</Label>
-										<div class="flex items-center gap-2">
-											<Input readonly value={creds.endpoint_url} class="font-mono text-sm" />
+								{/each}
+							</div>
+						{:then _}
+							{#if creds && creds.access_key_id}
+								<div class="mt-3 space-y-3">
+									<div class="space-y-1">
+										<Label class="text-xs">Access Key ID</Label>
+										<div class="flex items-center gap-1">
+											<Input readonly value={creds.access_key_id} class="h-8 font-mono text-xs" />
 											<Tooltip.Root>
 												<Tooltip.Trigger>
 													{#snippet child({ props })}
 														<Button
 															variant="ghost"
 															size="icon"
-															onclick={() => copyToClipboard(creds!.endpoint_url, 'endpoint')}
+															class="h-8 w-8 shrink-0"
+															onclick={() => copyToClipboard(creds!.access_key_id, 'access_key')}
 															{...props}
 														>
-															{#if copied === 'endpoint'}
-																<Check class="h-4 w-4 text-emerald-500" />
-															{:else}
-																<Copy class="h-4 w-4" />
-															{/if}
+															{#if copied === 'access_key'}<Check
+																	class="h-3.5 w-3.5 text-emerald-500"
+																/>{:else}<Copy class="h-3.5 w-3.5" />{/if}
 														</Button>
 													{/snippet}
 												</Tooltip.Trigger>
 												<Tooltip.Content
-													>{copied === 'endpoint' ? 'Copied!' : 'Copy'}</Tooltip.Content
+													>{copied === 'access_key' ? 'Copied!' : 'Copy'}</Tooltip.Content
 												>
 											</Tooltip.Root>
 										</div>
 									</div>
-								{/if}
+									<div class="space-y-1">
+										<Label class="text-xs">Secret Access Key</Label>
+										<div class="flex items-center gap-1">
+											<Input
+												readonly
+												type={showSecret ? 'text' : 'password'}
+												value={creds.secret_access_key}
+												class="h-8 font-mono text-xs"
+											/>
+											<Tooltip.Root>
+												<Tooltip.Trigger>
+													{#snippet child({ props })}
+														<Button
+															variant="ghost"
+															size="icon"
+															class="h-8 w-8 shrink-0"
+															onclick={() => (showSecret = !showSecret)}
+															{...props}
+														>
+															{#if showSecret}<EyeOff class="h-3.5 w-3.5" />{:else}<Eye
+																	class="h-3.5 w-3.5"
+																/>{/if}
+														</Button>
+													{/snippet}
+												</Tooltip.Trigger>
+												<Tooltip.Content>{showSecret ? 'Hide' : 'Reveal'}</Tooltip.Content>
+											</Tooltip.Root>
+											<Tooltip.Root>
+												<Tooltip.Trigger>
+													{#snippet child({ props })}
+														<Button
+															variant="ghost"
+															size="icon"
+															class="h-8 w-8 shrink-0"
+															onclick={() =>
+																copyToClipboard(creds!.secret_access_key, 'secret_key')}
+															{...props}
+														>
+															{#if copied === 'secret_key'}<Check
+																	class="h-3.5 w-3.5 text-emerald-500"
+																/>{:else}<Copy class="h-3.5 w-3.5" />{/if}
+														</Button>
+													{/snippet}
+												</Tooltip.Trigger>
+												<Tooltip.Content
+													>{copied === 'secret_key' ? 'Copied!' : 'Copy'}</Tooltip.Content
+												>
+											</Tooltip.Root>
+										</div>
+									</div>
+									{#if creds.endpoint_url}
+										<div class="space-y-1">
+											<Label class="text-xs">S3 Endpoint URL</Label>
+											<div class="flex items-center gap-1">
+												<Input readonly value={creds.endpoint_url} class="h-8 font-mono text-xs" />
+												<Tooltip.Root>
+													<Tooltip.Trigger>
+														{#snippet child({ props })}
+															<Button
+																variant="ghost"
+																size="icon"
+																class="h-8 w-8 shrink-0"
+																onclick={() => copyToClipboard(creds!.endpoint_url, 'endpoint')}
+																{...props}
+															>
+																{#if copied === 'endpoint'}<Check
+																		class="h-3.5 w-3.5 text-emerald-500"
+																	/>{:else}<Copy class="h-3.5 w-3.5" />{/if}
+															</Button>
+														{/snippet}
+													</Tooltip.Trigger>
+													<Tooltip.Content
+														>{copied === 'endpoint' ? 'Copied!' : 'Copy'}</Tooltip.Content
+													>
+												</Tooltip.Root>
+											</div>
+										</div>
+									{/if}
+								</div>
+							{:else}
+								<p class="mt-3 text-center text-sm text-muted-foreground">
+									Could not load S3 credentials.
+								</p>
+							{/if}
+						{/await}
+					</div>
+				</div>
+
+				<!-- Namespace Access (full width) -->
+				<section class="space-y-3">
+					<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+						Namespace Access
+					</h3>
+					{#await permsData}
+						<div class="rounded-lg border p-5">
+							<div class="space-y-2">
+								{#each Array(3) as _, i (i)}
+									<div class="h-5 w-full animate-pulse rounded bg-muted"></div>
+								{/each}
+							</div>
+						</div>
+					{:then _}
+						{#if nsPermissions.length === 0}
+							<div class="rounded-lg border border-dashed p-6 text-center">
+								<p class="text-sm text-muted-foreground">This user has no namespace access.</p>
 							</div>
 						{:else}
-							<p class="text-center text-sm text-muted-foreground">
-								Could not load S3 credentials.
-							</p>
+							<div class="overflow-x-auto rounded-lg border">
+								<table class="w-full text-left text-sm">
+									<thead
+										class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
+									>
+										<tr>
+											<th class="px-4 py-2.5 font-medium">Namespace</th>
+											<th class="px-4 py-2.5 font-medium">Permissions</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y">
+										{#each nsPermissions as entry (entry.namespaceName)}
+											<tr class="bg-card transition-colors hover:bg-accent/50">
+												<td class="px-4 py-2.5 font-medium">
+													<a
+														href="/namespaces/{entry.namespaceName}"
+														class="text-primary underline-offset-4 hover:underline"
+													>
+														{entry.namespaceName}
+													</a>
+												</td>
+												<td class="px-4 py-2.5">
+													<div class="flex flex-wrap gap-1">
+														{#each entry.permissions?.permission ?? [] as perm (perm)}
+															<Tooltip.Root>
+																<Tooltip.Trigger>
+																	{#snippet child({ props })}
+																		<span {...props}><Badge variant="secondary">{perm}</Badge></span
+																		>
+																	{/snippet}
+																</Tooltip.Trigger>
+																<Tooltip.Content
+																	>{PERMISSION_DESCRIPTIONS[perm] ?? perm}</Tooltip.Content
+																>
+															</Tooltip.Root>
+														{/each}
+													</div>
+												</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
 						{/if}
-					</div>
-				{/await}
-			</section>
-		{/if}
+					{/await}
+				</section>
+			{/if}
+		{/await}
 	{/if}
 </div>
 

@@ -59,9 +59,19 @@ class AclsUsage(str, Enum):
 
 
 class DirectoryUsage(str, Enum):
+    """HCP returns mixed casing (``Balanced`` or ``BALANCED``)."""
+
     BALANCED = "Balanced"
     UNBALANCED = "Unbalanced"
     DEFAULT = "Default"
+
+    @classmethod
+    def _missing_(cls, value: object) -> DirectoryUsage | None:
+        if isinstance(value, str):
+            for member in cls:
+                if member.value.upper() == value.upper():
+                    return member
+        return None
 
 
 class RetentionType(str, Enum):

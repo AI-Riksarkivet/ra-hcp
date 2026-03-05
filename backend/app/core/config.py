@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic_settings import BaseSettings
 
@@ -13,11 +13,15 @@ _ENV_FILE = "../.env"
 
 
 class MapiSettings(BaseSettings):
-    """HCP Management API configuration (from environment / .env)."""
+    """HCP Management API configuration (from environment / .env).
+
+    When ``hcp_domain`` is set and ``hcp_host`` is empty, ``hcp_host``
+    is derived as ``admin.<domain>`` automatically.
+    """
 
     model_config = {"env_file": _ENV_FILE, "extra": "ignore"}
 
-    hcp_host: str = "admin.hcp.example.com"
+    hcp_host: str = ""
     hcp_domain: str = ""
     hcp_port: int = 9090
     hcp_username: str = ""
@@ -25,6 +29,10 @@ class MapiSettings(BaseSettings):
     hcp_auth_type: Literal["hcp", "ad"] = "hcp"
     hcp_verify_ssl: bool = False
     hcp_timeout: int = 60
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.hcp_host and self.hcp_domain:
+            self.hcp_host = f"admin.{self.hcp_domain}"
 
 
 class S3Settings(BaseSettings):
@@ -46,7 +54,7 @@ class S3Settings(BaseSettings):
 
     # S3-specific (S3_ prefix in env)
     s3_endpoint_url: str = "https://s3.hcp.example.com"
-    s3_region: str = "us-east-1"
+    s3_region: str = "us-east-1"  # boto3 requires a region; HCP ignores it
 
     @property
     def endpoint_url(self) -> str:

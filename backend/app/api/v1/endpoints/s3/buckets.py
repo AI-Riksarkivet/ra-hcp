@@ -31,7 +31,11 @@ async def list_buckets(s3: S3Service = Depends(get_s3_service)):
         result = await asyncio.to_thread(s3.list_buckets)
     except ClientError as exc:
         raise_for_s3_error(exc, "buckets")
-    except BotoCoreError as exc:
+    except (BotoCoreError, TypeError) as exc:
+        # TypeError: boto3 S3RegionRedirector passes bucket=None to
+        # head_bucket when HCP returns a redirect-like status on
+        # list_buckets (which has no bucket). This is a boto3/HCP
+        # compatibility issue.
         raise_for_s3_transport_error(exc, "buckets")
     buckets = [BucketInfo.model_validate(b) for b in result.get("Buckets", [])]
     return ListBucketsResponse(buckets=buckets)
