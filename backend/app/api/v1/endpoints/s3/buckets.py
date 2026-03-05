@@ -17,6 +17,7 @@ from app.schemas.s3 import (
     BucketVersioningResponse,
     CreateBucketRequest,
     ListBucketsResponse,
+    OwnerInfo,
     PutBucketVersioningRequest,
     VersioningMutationResponse,
 )
@@ -38,7 +39,8 @@ async def list_buckets(s3: S3Service = Depends(get_s3_service)):
         # compatibility issue.
         raise_for_s3_transport_error(exc, "buckets")
     buckets = [BucketInfo.model_validate(b) for b in result.get("Buckets", [])]
-    return ListBucketsResponse(buckets=buckets)
+    owner = OwnerInfo.model_validate(result["Owner"]) if "Owner" in result else None
+    return ListBucketsResponse(buckets=buckets, owner=owner)
 
 
 @router.post("", response_model=BucketMutationResponse, status_code=201)

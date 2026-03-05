@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -31,6 +30,8 @@
 	import { toast } from 'svelte-sonner';
 	import { SvelteSet } from 'svelte/reactivity';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
+	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import {
 		get_objects,
 		delete_object,
@@ -348,7 +349,7 @@
 		}
 	}
 
-	let deleteTarget = $state<string | null>(null);
+	let deleteTarget = $state('');
 	let deleteDialogOpen = $state(false);
 	let bulkDeleteOpen = $state(false);
 	let deleting = $state(false);
@@ -364,7 +365,7 @@
 		} finally {
 			deleting = false;
 			deleteDialogOpen = false;
-			deleteTarget = null;
+			deleteTarget = '';
 		}
 	}
 
@@ -728,29 +729,13 @@
 		/>{/if}
 </div>
 
-<AlertDialog.Root
+<DeleteConfirmDialog
 	bind:open={deleteDialogOpen}
-	onOpenChange={(open) => {
-		if (!open) deleteTarget = null;
-	}}
->
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>Delete Object</AlertDialog.Title>
-			<AlertDialog.Description
-				>Are you sure you want to delete "<strong
-					>{deleteTarget ? getDisplayName(deleteTarget) : ''}</strong
-				>"? This action cannot be undone.</AlertDialog.Description
-			>
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel disabled={deleting}>Cancel</AlertDialog.Cancel>
-			<Button variant="destructive" onclick={confirmDelete} disabled={deleting}
-				>{deleting ? 'Deleting...' : 'Delete'}</Button
-			>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+	name={deleteTarget ? getDisplayName(deleteTarget) : ''}
+	itemType="object"
+	loading={deleting}
+	onconfirm={confirmDelete}
+/>
 
 <Dialog.Root
 	open={shareTarget !== null}
@@ -850,24 +835,10 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<AlertDialog.Root bind:open={bulkDeleteOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title
-				>Delete {selected.size} Object{selected.size !== 1 ? 's' : ''}</AlertDialog.Title
-			>
-			<AlertDialog.Description
-				>Are you sure you want to delete {selected.size} object{selected.size !== 1 ? 's' : ''}?
-				This action cannot be undone.</AlertDialog.Description
-			>
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel disabled={deleting}>Cancel</AlertDialog.Cancel>
-			<Button variant="destructive" onclick={confirmBulkDelete} disabled={deleting}
-				>{deleting
-					? 'Deleting...'
-					: `Delete ${selected.size} Object${selected.size !== 1 ? 's' : ''}`}</Button
-			>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<BulkDeleteDialog
+	bind:open={bulkDeleteOpen}
+	count={selected.size}
+	itemType="object"
+	loading={deleting}
+	onconfirm={confirmBulkDelete}
+/>

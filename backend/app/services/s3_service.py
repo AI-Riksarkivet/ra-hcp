@@ -7,6 +7,7 @@ from typing import IO, Any, Optional, List
 import boto3
 from boto3.s3.transfer import TransferConfig
 from botocore.config import Config as BotoConfig
+from botocore.exceptions import ClientError
 from opentelemetry import trace
 
 from app.core.config import S3Settings
@@ -117,6 +118,7 @@ class S3Service:
         max_keys: int = 1000,
         continuation_token: Optional[str] = None,
         delimiter: Optional[str] = None,
+        fetch_owner: bool = True,
     ) -> dict:
         with tracer.start_as_current_span(
             "s3.list_objects",
@@ -129,6 +131,8 @@ class S3Service:
                 kwargs["ContinuationToken"] = continuation_token
             if delimiter:
                 kwargs["Delimiter"] = delimiter
+            if fetch_owner:
+                kwargs["FetchOwner"] = True
             return self._client.list_objects_v2(**kwargs)
 
     def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
@@ -187,15 +191,25 @@ class S3Service:
             )
 
     def delete_objects(self, bucket: str, keys: List[str]) -> dict:
+        """Delete multiple objects individually (HCP requires Content-MD5
+        for the multi-delete API but boto3 sends CRC32 instead)."""
         with tracer.start_as_current_span(
             "s3.delete_objects",
             attributes={"s3.bucket": bucket, "s3.key_count": len(keys)},
         ):
-            objects = [{"Key": k} for k in keys]
-            return self._client.delete_objects(
-                Bucket=bucket,
-                Delete={"Objects": objects, "Quiet": True},
-            )
+            errors: list[dict] = []
+            for key in keys:
+                try:
+                    self._client.delete_object(Bucket=bucket, Key=key)
+                except ClientError as exc:
+                    errors.append(
+                        {
+                            "Key": key,
+                            "Code": exc.response["Error"].get("Code", "Unknown"),
+                            "Message": exc.response["Error"].get("Message", ""),
+                        }
+                    )
+            return {"Errors": errors} if errors else {}
 
     # ── Bucket versioning ─────────────────────────────────────────────
 

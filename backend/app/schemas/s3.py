@@ -17,8 +17,16 @@ class BucketInfo(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class OwnerInfo(BaseModel):
+    display_name: Optional[str] = Field(None, alias="DisplayName")
+    id: Optional[str] = Field(None, alias="ID")
+
+    model_config = {"populate_by_name": True}
+
+
 class ListBucketsResponse(BaseModel):
     buckets: List[BucketInfo] = []
+    owner: Optional[OwnerInfo] = None
 
 
 class ObjectInfo(BaseModel):
@@ -27,6 +35,7 @@ class ObjectInfo(BaseModel):
     last_modified: Optional[datetime] = Field(None, alias="LastModified")
     etag: Optional[str] = Field(None, alias="ETag")
     storage_class: Optional[str] = Field(None, alias="StorageClass")
+    owner: Optional[OwnerInfo] = Field(None, alias="Owner")
 
     model_config = {"populate_by_name": True}
 

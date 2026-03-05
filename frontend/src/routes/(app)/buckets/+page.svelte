@@ -227,12 +227,12 @@
 											{#snippet child({ props })}
 												<button
 													type="button"
+													{...props}
 													onclick={() => {
 														deleteTarget = bucket.name;
 														deleteDialogOpen = true;
 													}}
 													class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-													{...props}
 												>
 													<Trash2 class="h-4 w-4" />
 												</button>
