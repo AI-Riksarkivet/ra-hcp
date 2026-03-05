@@ -40,19 +40,17 @@ class MapiService:
 
     def _get_auth_header(
         self,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str,
+        password: str,
         auth_type: Optional[str] = None,
     ) -> str:
         """Return the Authorization header value."""
-        u = username or self.settings.hcp_username
-        p = password or self.settings.hcp_password
         at = auth_type or self.settings.hcp_auth_type
 
         if at == "ad":
-            return f"AD {u}:{p}"
+            return f"AD {username}:{password}"
         else:
-            token = self._build_hcp_auth_token(u, p)
+            token = self._build_hcp_auth_token(username, password)
             return f"HCP {token}"
 
     # ── Client lifecycle ───────────────────────────────────────────────
@@ -99,8 +97,8 @@ class MapiService:
         query: Optional[Dict[str, Any]] = None,
         content_type: str = "application/json",
         accept: str = "application/json",
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str,
+        password: str,
         auth_type: Optional[str] = None,
         raw_body: Optional[bytes] = None,
     ) -> httpx.Response:

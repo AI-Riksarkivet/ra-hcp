@@ -119,8 +119,8 @@ class QueryService:
         tenant: str,
         query: ObjectQuery,
         *,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str,
+        password: str,
         auth_type: Optional[str] = None,
     ) -> ObjectQueryResponse:
         request_body = ObjectQueryRequest(object=query)
@@ -138,8 +138,8 @@ class QueryService:
         tenant: str,
         query: OperationQuery,
         *,
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str,
+        password: str,
         auth_type: Optional[str] = None,
     ) -> OperationQueryResponse:
         request_body = OperationQueryRequest(operation=query)
@@ -171,10 +171,8 @@ class AuthenticatedQueryService(QueryService):
         return await self._base._get_client()
 
     async def _post_query(self, tenant, body, **kwargs):
-        if not kwargs.get("username"):
-            kwargs["username"] = self._username
-        if not kwargs.get("password"):
-            kwargs["password"] = self._password
+        kwargs["username"] = self._username
+        kwargs["password"] = self._password
         return await self._base._post_query(tenant, body, **kwargs)
 
     async def close(self):

@@ -15,12 +15,31 @@
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import { get_buckets, create_bucket, delete_bucket } from '$lib/buckets.remote.js';
-	import { get_tenant_chargeback, type ChargebackEntry } from '$lib/tenant-info.remote.js';
+	import {
+		get_tenant,
+		get_tenant_statistics,
+		get_tenant_chargeback,
+		type ChargebackEntry,
+	} from '$lib/tenant-info.remote.js';
 	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
+	let tenantInfo = $derived(tenant ? get_tenant({ tenant }) : undefined);
+	let tenantStats = $derived(tenant ? get_tenant_statistics({ tenant }) : undefined);
 	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
 	let nsData = $derived(tenant ? get_namespaces({ tenant }) : undefined);
+
+	let tenantQuotaBytes = $derived.by(() => {
+		const info = tenantInfo?.current;
+		if (!info?.hardQuota) return null;
+		return parseQuotaBytes(info.hardQuota);
+	});
+
+	let tenantQuotaPercent = $derived.by(() => {
+		const stats = tenantStats?.current;
+		if (!tenantQuotaBytes || !stats?.storageCapacityUsed) return null;
+		return Math.min(100, (Number(stats.storageCapacityUsed) / tenantQuotaBytes) * 100);
+	});
 
 	let chargeback = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
 	let namespaces = $derived((nsData?.current ?? []) as Namespace[]);
@@ -239,9 +258,33 @@
 						Clear filters
 					</Button>
 				{/if}
-				<span class="ml-auto text-xs text-muted-foreground"
-					>{filteredBuckets.length} of {buckets.length} buckets</span
-				>
+				<span class="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+					{#if tenant}
+						{#await tenantStats then stats}
+							{#await tenantInfo then info}
+								{#if tenantQuotaPercent !== null}
+									<span class="flex items-center gap-1.5">
+										<span
+											>{formatBytes(Number(stats?.storageCapacityUsed ?? 0))} / {info?.hardQuota}</span
+										>
+										<span class="inline-block h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+											<span
+												class="block h-full rounded-full transition-all {tenantQuotaPercent > 90
+													? 'bg-destructive'
+													: tenantQuotaPercent > 70
+														? 'bg-yellow-500'
+														: 'bg-primary'}"
+												style="width: {tenantQuotaPercent}%"
+											></span>
+										</span>
+									</span>
+									<span class="text-border">|</span>
+								{/if}
+							{/await}
+						{/await}
+					{/if}
+					{filteredBuckets.length} of {buckets.length} buckets
+				</span>
 			</div>
 		</div>
 
