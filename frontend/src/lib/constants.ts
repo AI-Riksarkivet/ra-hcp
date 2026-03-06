@@ -37,6 +37,8 @@ export interface User {
   enabled?: boolean;
   localAuthentication?: boolean;
   roles?: { role?: string[] } | string[];
+  userGUID?: string;
+  userID?: number;
 }
 
 export function getUserRoles(user: User): string[] {

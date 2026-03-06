@@ -113,7 +113,7 @@
 
 	// TanStack Table state
 	let sorting = $state<SortingState>([]);
-	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 25 });
 	let rowSelection = $state<Record<string, boolean>>({});
 
 	let selectedKeys = $derived(
@@ -562,7 +562,7 @@
 					/>
 				{/await}
 
-				<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 delay-300">
+				<div class="animate-in fade-in slide-in-from-bottom-2 h-full duration-300 delay-300">
 					{#await usersData}
 						<CardSkeleton />
 					{:then}

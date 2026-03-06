@@ -6,7 +6,9 @@ export const get_users = query(
   z.object({ tenant: z.string() }),
   async ({ tenant }) => {
     try {
-      const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/userAccounts`);
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/userAccounts?verbose=true`,
+      );
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) return data;
@@ -138,7 +140,7 @@ export const get_user = query(
       const res = await apiFetch(
         `/api/v1/mapi/tenants/${tenant}/userAccounts/${
           encodeURIComponent(username)
-        }`,
+        }?verbose=true`,
       );
       if (res.ok) return await res.json();
     } catch (err) {

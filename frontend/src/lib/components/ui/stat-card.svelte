@@ -20,7 +20,7 @@
 	} = $props();
 </script>
 
-<div class="animate-in fade-in slide-in-from-bottom-2 duration-300 {delay}">
+<div class="animate-in fade-in slide-in-from-bottom-2 h-full duration-300 {delay}">
 	<Card.Root class="h-full">
 		<Card.Content class="pt-6">
 			<div class="flex items-center justify-between">

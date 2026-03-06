@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import type { Table } from '@tanstack/table-core';
 	import * as TablePrimitive from '$lib/components/ui/table/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { FlexRender } from '$lib/components/ui/data-table/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
@@ -22,9 +23,13 @@
 		footer?: Snippet;
 	} = $props();
 
+	const PAGE_SIZES = [25, 50, 100, 500];
+
 	let pageCount = $derived(table.getPageCount());
-	let showPagination = $derived(pageCount > 1);
 	let pageIndex = $derived(table.getState().pagination.pageIndex);
+	let pageSize = $derived(String(table.getState().pagination.pageSize));
+	let totalRows = $derived(table.getCoreRowModel().rows.length);
+	let showPagination = $derived(totalRows > PAGE_SIZES[0]);
 </script>
 
 <div class="overflow-x-auto rounded-lg border">
@@ -87,13 +92,30 @@
 
 {#if showPagination || footer}
 	<div class="flex items-center justify-between py-2">
-		<div class="text-sm text-muted-foreground">
+		<div class="flex items-center gap-4 text-sm text-muted-foreground">
 			{#if footer}
 				{@render footer()}
 			{/if}
 		</div>
 		{#if showPagination}
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-3">
+				<div class="flex items-center gap-1.5">
+					<span class="text-xs text-muted-foreground">Rows</span>
+					<Select.Root
+						type="single"
+						value={pageSize}
+						onValueChange={(val) => table.setPageSize(Number(val))}
+					>
+						<Select.Trigger class="h-7 w-auto min-w-[60px] px-2 text-xs">
+							{pageSize}
+						</Select.Trigger>
+						<Select.Content>
+							{#each PAGE_SIZES as size (size)}
+								<Select.Item value={String(size)}>{size}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</div>
 				<span class="text-xs text-muted-foreground">
 					Page {pageIndex + 1} of {pageCount}
 				</span>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus, Search } from 'lucide-svelte';
+	import { Plus, Search, Copy } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -32,6 +32,7 @@
 		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	type Group = { groupname?: string; name?: string; description?: string };
 
@@ -42,36 +43,24 @@
 	let users = $derived((usersData?.current ?? []) as User[]);
 	let groups = $derived((groupsData?.current ?? []) as Group[]);
 
-	// --- Namespace access per user (async derived — auto-cancels on dependency change) ---
-	async function loadUserNsAccess(
-		t: string | undefined,
-		u: User[]
-	): Promise<Record<string, string[]>> {
-		if (!t || u.length === 0) return {};
-		const results = await Promise.all(
-			u.map(async (user) => {
-				try {
-					const perms = (await get_user_permissions({
-						tenant: t,
-						username: user.username,
-					})) as DataAccessPermissions;
-					const namespaces = (perms.namespacePermission ?? [])
-						.filter(
-							(entry) => entry.permissions?.permission && entry.permissions.permission.length > 0
-						)
-						.map((entry) => entry.namespaceName);
-					return { username: user.username, namespaces };
-				} catch {
-					return { username: user.username, namespaces: [] as string[] };
-				}
-			})
-		);
-		const map: Record<string, string[]> = {};
-		for (const r of results) map[r.username] = r.namespaces;
+	// --- Namespace access per user (reactive queries) ---
+	let userPermsMap = $derived.by(() => {
+		const map = new SvelteMap<string, ReturnType<typeof get_user_permissions>>();
+		if (!tenant) return map;
+		for (const u of users) {
+			map.set(u.username, get_user_permissions({ tenant, username: u.username }));
+		}
 		return map;
-	}
+	});
 
-	let userNsAccess = $derived(await loadUserNsAccess(tenant, users));
+	function getUserNamespaces(username: string): string[] | undefined {
+		const query = userPermsMap.get(username);
+		if (!query?.current) return undefined;
+		const perms = query.current as DataAccessPermissions;
+		return (perms.namespacePermission ?? [])
+			.filter((entry) => entry.permissions?.permission && entry.permissions.permission.length > 0)
+			.map((entry) => entry.namespaceName);
+	}
 
 	// --- Search + filtered users ---
 	let userSearch = $state('');
@@ -85,11 +74,11 @@
 
 	// --- TanStack state for users table ---
 	let userSorting = $state<SortingState>([]);
-	let userPagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
+	let userPagination = $state<PaginationState>({ pageIndex: 0, pageSize: 25 });
 
 	// --- TanStack state for groups table ---
 	let groupSorting = $state<SortingState>([]);
-	let groupPagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
+	let groupPagination = $state<PaginationState>({ pageIndex: 0, pageSize: 25 });
 
 	// --- Groups TanStack Table ---
 	let groupColumns = $derived.by((): ColumnDef<Group>[] => [
@@ -150,6 +139,12 @@
 				}),
 			cell: ({ row }) => renderSnippet(usernameCell, row.original),
 			meta: { cellClass: 'px-4 py-3 font-medium' },
+		},
+		{
+			id: 'canonicalId',
+			header: 'Canonical ID',
+			cell: ({ row }) => renderSnippet(canonicalIdCell, row.original),
+			meta: { cellClass: 'px-4 py-3' },
 		},
 		{
 			accessorKey: 'fullName',
@@ -289,16 +284,52 @@
 {/snippet}
 
 {#snippet nsAccessCell(user: User)}
-	{#if userNsAccess[user.username] === undefined}
+	{@const namespaces = getUserNamespaces(user.username)}
+	{#if namespaces === undefined}
 		<div class="h-5 w-20 animate-pulse rounded bg-muted"></div>
-	{:else if userNsAccess[user.username].length > 0}
+	{:else if namespaces.length > 0}
 		<div class="flex flex-wrap gap-1">
-			{#each userNsAccess[user.username] as ns (ns)}
+			{#each namespaces as ns (ns)}
 				<a href="/namespaces/{ns}">
 					<Badge variant="outline" class="cursor-pointer hover:bg-accent">{ns}</Badge>
 				</a>
 			{/each}
 		</div>
+	{:else}
+		<span class="text-muted-foreground">—</span>
+	{/if}
+{/snippet}
+
+{#snippet canonicalIdCell(user: User)}
+	{#if user.userGUID}
+		<span class="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+			<span class="max-w-[120px] truncate">{user.userGUID}</span>
+			<button
+				class="shrink-0 rounded p-0.5 hover:bg-muted"
+				title="Copy canonical ID"
+				onclick={async (e) => {
+					e.stopPropagation();
+					e.preventDefault();
+					try {
+						await navigator.clipboard.writeText(user.userGUID!);
+						toast.success('Canonical ID copied');
+					} catch {
+						// Fallback for non-HTTPS contexts
+						const ta = document.createElement('textarea');
+						ta.value = user.userGUID!;
+						ta.style.position = 'fixed';
+						ta.style.opacity = '0';
+						document.body.appendChild(ta);
+						ta.select();
+						document.execCommand('copy');
+						document.body.removeChild(ta);
+						toast.success('Canonical ID copied');
+					}
+				}}
+			>
+				<Copy class="h-3 w-3" />
+			</button>
+		</span>
 	{:else}
 		<span class="text-muted-foreground">—</span>
 	{/if}

@@ -180,8 +180,19 @@
 	let showSecret = $state(false);
 	let copied = $state<string | null>(null);
 
-	function copyToClipboard(value: string, label: string) {
-		navigator.clipboard.writeText(value);
+	async function copyToClipboard(value: string, label: string) {
+		try {
+			await navigator.clipboard.writeText(value);
+		} catch {
+			const ta = document.createElement('textarea');
+			ta.value = value;
+			ta.style.position = 'fixed';
+			ta.style.opacity = '0';
+			document.body.appendChild(ta);
+			ta.select();
+			document.execCommand('copy');
+			document.body.removeChild(ta);
+		}
 		copied = label;
 		setTimeout(() => {
 			if (copied === label) copied = null;
@@ -287,10 +298,40 @@
 						<h3 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
 							General
 						</h3>
-						<div class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+						<div class="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
 							<div class="space-y-1">
 								<Label class="text-xs">Username</Label>
 								<p class="text-sm font-medium">{user.username}</p>
+							</div>
+							<div class="space-y-1">
+								<Label class="text-xs">Canonical ID (userGUID)</Label>
+								{#if user.userGUID}
+									<div class="flex items-center gap-1">
+										<p class="truncate font-mono text-xs text-muted-foreground">{user.userGUID}</p>
+										<Tooltip.Root>
+											<Tooltip.Trigger>
+												{#snippet child({ props })}
+													<Button
+														variant="ghost"
+														size="icon"
+														class="h-6 w-6 shrink-0"
+														onclick={() => copyToClipboard(user.userGUID!, 'guid')}
+														{...props}
+													>
+														{#if copied === 'guid'}<Check
+																class="h-3 w-3 text-emerald-500"
+															/>{:else}<Copy class="h-3 w-3" />{/if}
+													</Button>
+												{/snippet}
+											</Tooltip.Trigger>
+											<Tooltip.Content
+												>{copied === 'guid' ? 'Copied!' : 'Copy canonical ID'}</Tooltip.Content
+											>
+										</Tooltip.Root>
+									</div>
+								{:else}
+									<p class="text-xs text-muted-foreground">Not available</p>
+								{/if}
 							</div>
 							<div class="space-y-1">
 								<Label for="user-fullname" class="text-xs">Full Name</Label>

@@ -99,7 +99,7 @@
 
 	// --- TanStack Table state ---
 	let sorting = $state<SortingState>([]);
-	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 25 });
 	let rowSelection = $state<Record<string, boolean>>({});
 
 	let selectedKeys = $derived(
