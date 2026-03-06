@@ -60,6 +60,7 @@ def _crud(
     name: str | None,
     body: dict,
     name_field: str = "name",
+    verbose: bool = False,
 ) -> HttpxResponse:
     """Handle standard CRUD on a ``{name: data}`` dict.
 
@@ -72,6 +73,8 @@ def _crud(
     # ── Collection level ──
     if name is None:
         if method == "GET":
+            if verbose:
+                return _json(list(store.values()))
             return _json({name_field: list(store.keys())})
         if method == "PUT":
             item_name = body.get(name_field, "")
@@ -440,8 +443,11 @@ def _make_mapi_dispatcher(state: MockMapiState):
                     method,
                     body,
                 )
+            verbose = request.url.params.get("verbose", "false") == "true"
             return (
-                _crud(store, method, item, body, name_field) if n <= 4 else _not_found()
+                _crud(store, method, item, body, name_field, verbose=verbose)
+                if n <= 4
+                else _not_found()
             )
 
         # ── Namespaces (CRUD + deep sub-resources) ──

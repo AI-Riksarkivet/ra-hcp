@@ -225,11 +225,15 @@ export const get_groups = query(
   async ({ tenant }) => {
     try {
       const res = await apiFetch(
-        `/api/v1/mapi/tenants/${tenant}/groupAccounts`,
+        `/api/v1/mapi/tenants/${tenant}/groupAccounts?verbose=true`,
       );
       if (res.ok) {
         const data = await res.json();
-        return Array.isArray(data) ? data : (data.groupAccounts ?? []);
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data.groupname)) {
+          return data.groupname.map((g: string) => ({ groupname: g }));
+        }
+        return data.groupAccounts ?? [];
       }
     } catch (err) {
       console.error("[users.remote]", err);
