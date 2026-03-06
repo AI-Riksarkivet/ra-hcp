@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus, ChevronLeft, ChevronRight, Search } from 'lucide-svelte';
+	import { Plus, Search } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -341,31 +341,6 @@
 					</div>
 				</div>
 				<DataTable table={usersTable} noResultsMessage="No user accounts found." />
-				{#if usersTable.getPageCount() > 1}
-					<div class="flex items-center justify-end gap-2 py-2">
-						<span class="text-xs text-muted-foreground">
-							Page {userPagination.pageIndex + 1} of {usersTable.getPageCount()}
-						</span>
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => usersTable.previousPage()}
-							disabled={!usersTable.getCanPreviousPage()}
-						>
-							<ChevronLeft class="h-4 w-4" />
-						</Button>
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => usersTable.nextPage()}
-							disabled={!usersTable.getCanNextPage()}
-						>
-							<ChevronRight class="h-4 w-4" />
-						</Button>
-					</div>
-				{/if}
 			{/await}
 		</div>
 
@@ -390,31 +365,6 @@
 					</Button>
 				</div>
 				<DataTable table={groupsTable} noResultsMessage="No groups found." />
-				{#if groupsTable.getPageCount() > 1}
-					<div class="flex items-center justify-end gap-2 py-2">
-						<span class="text-xs text-muted-foreground">
-							Page {groupPagination.pageIndex + 1} of {groupsTable.getPageCount()}
-						</span>
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => groupsTable.previousPage()}
-							disabled={!groupsTable.getCanPreviousPage()}
-						>
-							<ChevronLeft class="h-4 w-4" />
-						</Button>
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => groupsTable.nextPage()}
-							disabled={!groupsTable.getCanNextPage()}
-						>
-							<ChevronRight class="h-4 w-4" />
-						</Button>
-					</div>
-				{/if}
 			{/await}
 		</div>
 	{:else}

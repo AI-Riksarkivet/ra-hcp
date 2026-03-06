@@ -16,15 +16,8 @@
 		FileCode,
 		Loader2,
 		Search,
-		ChevronLeft,
-		ChevronRight,
 	} from 'lucide-svelte';
-	import type {
-		ColumnDef,
-		SortingState,
-		PaginationState,
-		ColumnFiltersState,
-	} from '@tanstack/table-core';
+	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import FileViewer from '$lib/components/ui/FileViewer.svelte';
 	import {
 		formatBytes,
@@ -133,7 +126,9 @@
 	}
 
 	// --- Object list ---
-	let rawObjects = $derived((objectData.current?.objects ?? []) as S3Object[]);
+	let rawObjects = $derived(
+		((objectData.current?.objects ?? []) as S3Object[]).filter((o) => o.key !== prefix)
+	);
 	let commonPrefixes = $derived((objectData.current?.commonPrefixes ?? []) as string[]);
 	let folderEntries = $derived(
 		commonPrefixes.map(
@@ -337,8 +332,6 @@
 		})
 	);
 
-	let currentPage = $derived(pagination.pageIndex + 1);
-	let totalPages = $derived(objTable.getPageCount());
 	let serverPage = $derived(tokenHistory.length + 1);
 
 	// --- Delete ---
@@ -436,6 +429,19 @@
 		return parts.length > 0 ? parts.join('/') + '/' : '';
 	});
 
+	// Breadcrumb segments: [{label, prefix}]
+	let breadcrumbs = $derived.by(() => {
+		const crumbs: { label: string; prefix: string }[] = [{ label: bucket, prefix: '' }];
+		if (!prefix) return crumbs;
+		const parts = prefix.replace(/\/$/, '').split('/');
+		let accumulated = '';
+		for (const part of parts) {
+			accumulated += part + '/';
+			crumbs.push({ label: part, prefix: accumulated });
+		}
+		return crumbs;
+	});
+
 	function handleRowClick(obj: S3Object) {
 		if (isObjFolder(obj)) {
 			navigatePrefix(obj.key);
@@ -498,9 +504,6 @@
 			<BackButton href="/buckets" label="Back to buckets" />
 			<div>
 				<h2 class="text-2xl font-bold">{bucket}</h2>
-				{#if prefix}<p class="mt-1 text-sm text-muted-foreground">
-						<code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{prefix}</code>
-					</p>{/if}
 			</div>
 			{#await objectData then od}
 				<Badge variant="secondary">{od.keyCount} objects</Badge>
@@ -529,12 +532,25 @@
 		<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>
 	</div>
 
-	{#if prefix}<Button
-			variant="link"
-			class="h-auto gap-2 p-0 text-sm"
-			onclick={() => navigatePrefix(parentPrefix)}
-			><Folder class="h-4 w-4" />.. (parent directory)</Button
-		>{/if}
+	<!-- Breadcrumbs -->
+	<nav class="flex items-center gap-1 text-sm">
+		<Folder class="h-4 w-4 text-muted-foreground" />
+		{#each breadcrumbs as crumb, i (crumb.prefix)}
+			{#if i > 0}
+				<span class="text-muted-foreground">/</span>
+			{/if}
+			{#if i === breadcrumbs.length - 1}
+				<span class="font-medium">{crumb.label}</span>
+			{:else}
+				<button
+					class="text-primary underline-offset-4 hover:underline"
+					onclick={() => navigatePrefix(crumb.prefix)}
+				>
+					{crumb.label}
+				</button>
+			{/if}
+		{/each}
+	</nav>
 
 	<!-- Object Table -->
 	{#await objectData}
@@ -601,70 +617,38 @@
 			noResultsMessage={objects.length === 0
 				? 'No objects in this bucket'
 				: `No results matching "${search}"`}
-		/>
+		>
+			{#snippet footer()}
+				{#if selectedKeys.length > 0}
+					{selectedKeys.length} of {filteredObjects.length} row(s) selected.
+				{/if}
+			{/snippet}
+		</DataTable>
 
-		<!-- Pagination controls -->
-		<div class="flex items-center justify-between">
-			<div class="text-sm text-muted-foreground">
-				{#if objTable.getFilteredSelectedRowModel().rows.length > 0}
-					{objTable.getFilteredSelectedRowModel().rows.length} of{' '}
-					{objTable.getFilteredRowModel().rows.length} row(s) selected.
-				{/if}
+		<!-- Server-side batch pagination (load more from S3) -->
+		{#if isTruncated || tokenHistory.length > 0}
+			<div class="flex items-center justify-end gap-2">
+				<span class="text-xs text-muted-foreground">Batch {serverPage}</span>
+				<Button
+					variant="outline"
+					size="sm"
+					class="h-8"
+					onclick={loadPrevPage}
+					disabled={tokenHistory.length === 0}
+				>
+					Previous batch
+				</Button>
+				<Button
+					variant="outline"
+					size="sm"
+					class="h-8"
+					onclick={loadNextPage}
+					disabled={!isTruncated}
+				>
+					Next batch
+				</Button>
 			</div>
-			<div class="flex items-center gap-4">
-				<!-- Client-side pagination within loaded data -->
-				{#if totalPages > 1}
-					<div class="flex items-center gap-2">
-						<span class="text-xs text-muted-foreground">
-							Page {currentPage} of {totalPages}
-						</span>
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => objTable.previousPage()}
-							disabled={!objTable.getCanPreviousPage()}
-						>
-							<ChevronLeft class="h-4 w-4" />
-						</Button>
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => objTable.nextPage()}
-							disabled={!objTable.getCanNextPage()}
-						>
-							<ChevronRight class="h-4 w-4" />
-						</Button>
-					</div>
-				{/if}
-
-				<!-- Server-side pagination (load more from S3) -->
-				{#if isTruncated || tokenHistory.length > 0}
-					<div class="flex items-center gap-2 border-l pl-4">
-						<span class="text-xs text-muted-foreground">Batch {serverPage}</span>
-						<Button
-							variant="outline"
-							size="sm"
-							class="h-8"
-							onclick={loadPrevPage}
-							disabled={tokenHistory.length === 0}
-						>
-							Previous batch
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							class="h-8"
-							onclick={loadNextPage}
-							disabled={!isTruncated}
-						>
-							Next batch
-						</Button>
-					</div>
-				{/if}
-			</div>
-		</div>
+		{/if}
 	{/await}
 
 	<!-- Bucket ACL -->

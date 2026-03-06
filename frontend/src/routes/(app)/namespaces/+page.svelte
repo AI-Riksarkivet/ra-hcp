@@ -11,8 +11,6 @@
 		ChartPie,
 		Trash2,
 		Search,
-		ChevronLeft,
-		ChevronRight,
 	} from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -607,40 +605,13 @@
 				noResultsMessage={namespaces.length === 0
 					? 'No namespaces found. Create one to get started.'
 					: `No results matching "${search}"`}
-			/>
-
-			<div class="flex items-center justify-between py-2">
-				<div class="text-sm text-muted-foreground">
+			>
+				{#snippet footer()}
 					{#if selectedCount > 0}
 						{selectedCount} of {filteredNamespaces.length} row(s) selected.
 					{/if}
-				</div>
-				{#if nsTable.getPageCount() > 1}
-					<div class="flex items-center gap-2">
-						<span class="text-xs text-muted-foreground">
-							Page {pagination.pageIndex + 1} of {nsTable.getPageCount()}
-						</span>
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => nsTable.previousPage()}
-							disabled={!nsTable.getCanPreviousPage()}
-						>
-							<ChevronLeft class="h-4 w-4" />
-						</Button>
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => nsTable.nextPage()}
-							disabled={!nsTable.getCanNextPage()}
-						>
-							<ChevronRight class="h-4 w-4" />
-						</Button>
-					</div>
-				{/if}
-			</div>
+				{/snippet}
+			</DataTable>
 		{/await}
 	{:else}
 		<NoTenantPlaceholder message="Log in with a tenant to manage namespaces." />

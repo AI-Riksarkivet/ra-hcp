@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import { Plus, Trash2, Search } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -384,40 +384,13 @@
 			</div>
 		{/if}
 
-		<DataTable {table} onrowclick={(row) => goto(`/buckets/${row.name}`)} {noResultsMessage} />
-
-		<div class="flex items-center justify-between py-2">
-			<div class="text-sm text-muted-foreground">
+		<DataTable {table} onrowclick={(row) => goto(`/buckets/${row.name}`)} {noResultsMessage}>
+			{#snippet footer()}
 				{#if selectedCount > 0}
 					{selectedCount} of {filteredBuckets.length} row(s) selected.
 				{/if}
-			</div>
-			{#if table.getPageCount() > 1}
-				<div class="flex items-center gap-2">
-					<span class="text-xs text-muted-foreground">
-						Page {pagination.pageIndex + 1} of {table.getPageCount()}
-					</span>
-					<Button
-						variant="outline"
-						size="icon"
-						class="h-8 w-8"
-						onclick={() => table.previousPage()}
-						disabled={!table.getCanPreviousPage()}
-					>
-						<ChevronLeft class="h-4 w-4" />
-					</Button>
-					<Button
-						variant="outline"
-						size="icon"
-						class="h-8 w-8"
-						onclick={() => table.nextPage()}
-						disabled={!table.getCanNextPage()}
-					>
-						<ChevronRight class="h-4 w-4" />
-					</Button>
-				</div>
-			{/if}
-		</div>
+			{/snippet}
+		</DataTable>
 	{/await}
 </div>
 
