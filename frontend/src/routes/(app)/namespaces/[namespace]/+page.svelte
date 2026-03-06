@@ -41,7 +41,7 @@
 	{:else}
 		<NsGeneralInfo {tenant} {namespaceName} />
 
-		<div class="grid gap-6 lg:grid-cols-3">
+		<div class="grid items-stretch gap-6 lg:grid-cols-3">
 			<NsProtocols {tenant} {namespaceName} />
 			<NsFeatures {tenant} {namespaceName} />
 			<NsTags {tenant} {namespaceName} />
@@ -62,13 +62,13 @@
 			</div>
 
 			<Collapsible.Content class="space-y-6">
-				<div class="grid gap-6 lg:grid-cols-3">
+				<div class="grid items-stretch gap-6 lg:grid-cols-3">
 					<NsCompliance {tenant} {namespaceName} />
 					<NsReplicationCollision {tenant} {namespaceName} />
 					<NsRetentionClasses {tenant} {namespaceName} />
 				</div>
 
-				<div class="grid gap-6 lg:grid-cols-2">
+				<div class="grid items-stretch gap-6 lg:grid-cols-2">
 					<NsIndexing {tenant} {namespaceName} />
 					<NsCors {tenant} {namespaceName} />
 				</div>

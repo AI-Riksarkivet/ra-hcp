@@ -68,7 +68,7 @@
 	}
 </script>
 
-<Card.Root>
+<Card.Root class="flex h-full flex-col">
 	<Card.Header class="pb-3">
 		<Card.Title class="text-base">Tags</Card.Title>
 		<Card.Description>Classify and organize namespaces with custom labels.</Card.Description>

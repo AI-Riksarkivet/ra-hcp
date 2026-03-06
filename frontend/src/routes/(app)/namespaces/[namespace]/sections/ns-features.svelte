@@ -93,7 +93,7 @@
 	</div>
 {/snippet}
 
-<Card.Root>
+<Card.Root class="flex h-full flex-col">
 	<Card.Header class="pb-3">
 		<Card.Title class="text-base">Features</Card.Title>
 		<Card.Description>

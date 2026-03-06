@@ -149,8 +149,8 @@
 	</div>
 {/snippet}
 
-<div class="space-y-6">
-	<Card.Root>
+<div class="flex h-full flex-col space-y-6">
+	<Card.Root class="flex flex-1 flex-col">
 		<Card.Header class="pb-3">
 			<Card.Title class="text-base">Protocols</Card.Title>
 			<Card.Description>
