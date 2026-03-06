@@ -83,8 +83,8 @@ class CachedMapiService(MapiService):
         query: Optional[Dict[str, Any]] = None,
         content_type: str = "application/json",
         accept: str = "application/json",
-        username: Optional[str] = None,
-        password: Optional[str] = None,
+        username: str,
+        password: str,
         auth_type: Optional[str] = None,
         raw_body: Optional[bytes] = None,
     ) -> httpx.Response:

@@ -14,30 +14,57 @@ export interface QueryResultObject {
   operation: string;
   changeTimeMilliseconds?: string;
   changeTimeString?: string;
-  version?: string;
+  version?: number | string;
   namespace?: string;
   utf8Name?: string;
+  objectPath?: string;
   size?: number;
   contentType?: string;
   hold?: boolean;
-  retention?: string;
+  shred?: boolean;
+  dpl?: number;
+  retention?: number | string;
   retentionString?: string;
   retentionClass?: string;
+  hashScheme?: string;
   hash?: string;
   customMetadata?: boolean;
+  customMetadataAnnotation?: string;
+  acl?: boolean;
   replicated?: boolean;
+  replicationCollision?: boolean;
   index?: boolean;
+  ingestTime?: number;
   ingestTimeMilliseconds?: string;
+  ingestTimeString?: string;
+  updateTime?: number;
+  updateTimeString?: string;
+  accessTime?: number;
+  accessTimeString?: string;
+  uid?: number;
+  gid?: number;
+  permissions?: number | string;
   owner?: string;
   type?: string;
 }
 
+export interface ObjectQueryInfo {
+  expression?: string;
+}
+
+export interface OperationQueryInfo {
+  start?: number | string;
+  end?: number | string;
+}
+
 export interface ObjectQueryResponse {
+  query?: ObjectQueryInfo;
   status: QueryStatus;
   resultSet: QueryResultObject[];
 }
 
 export interface OperationQueryResponse {
+  query?: OperationQueryInfo;
   status: QueryStatus;
   resultSet: QueryResultObject[];
 }
