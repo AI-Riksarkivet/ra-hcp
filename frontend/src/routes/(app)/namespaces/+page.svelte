@@ -1,7 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Plus, X, FileBox, HardDrive, Boxes, Users, ChartPie } from 'lucide-svelte';
+	import {
+		Plus,
+		X,
+		FileBox,
+		HardDrive,
+		Boxes,
+		Users,
+		ChartPie,
+		Trash2,
+		Search,
+		ChevronLeft,
+		ChevronRight,
+	} from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -10,12 +22,10 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { toast } from 'svelte-sonner';
-	import { useSelection } from '$lib/utils/use-selection.svelte.js';
 	import { useDelete } from '$lib/utils/use-delete.svelte.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import StatCard from '$lib/components/ui/stat-card.svelte';
-	import SearchToolbar from '$lib/components/ui/search-toolbar.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import {
@@ -46,12 +56,15 @@
 	import {
 		DataTable,
 		DataTableCheckbox,
+		DataTableHeaderButton,
 		createSvelteTable,
 		getCoreRowModel,
+		getSortedRowModel,
+		getPaginationRowModel,
 		renderSnippet,
 		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
-	import type { ColumnDef } from '@tanstack/table-core';
+	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import DataTableActions from './data-table/data-table-actions.svelte';
 	import DataTableTagCell from './data-table/data-table-tag-cell.svelte';
 
@@ -68,7 +81,7 @@
 	let chargeback = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
 	let users = $derived((usersData?.current ?? []) as { username: string }[]);
 
-	// Map namespace name → storage used from chargeback
+	// Map namespace name -> storage used from chargeback
 	let nsStorageMap = $derived(buildStorageMap(chargeback));
 
 	let quotaPercent = $derived(
@@ -100,10 +113,18 @@
 		namespaces.filter((n) => n.name.toLowerCase().includes(search.toLowerCase()))
 	);
 
-	const { selected, allSelected, toggleAll, toggleOne } = useSelection(
-		() => filteredNamespaces,
-		(n) => n.name
+	// TanStack Table state
+	let sorting = $state<SortingState>([]);
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
+	let rowSelection = $state<Record<string, boolean>>({});
+
+	let selectedKeys = $derived(
+		Object.keys(rowSelection)
+			.filter((k) => rowSelection[k])
+			.map((k) => filteredNamespaces[Number(k)]?.name)
+			.filter(Boolean) as string[]
 	);
+	let selectedCount = $derived(selectedKeys.length);
 
 	const del = useDelete({ entityName: 'namespace' });
 
@@ -115,12 +136,12 @@
 
 	function onConfirmBulkDelete() {
 		del.confirmBulkDelete(
-			[...selected],
+			selectedKeys,
 			(name, isLast) => {
 				const call = delete_namespace({ tenant: tenant!, name });
 				return isLast ? call.updates(nsData!) : call;
 			},
-			() => selected.clear()
+			() => (rowSelection = {})
 		);
 	}
 
@@ -215,22 +236,25 @@
 	let nsColumns = $derived.by((): ColumnDef<Namespace>[] => [
 		{
 			id: 'select',
-			header: () =>
+			header: ({ table }) =>
 				renderComponent(DataTableCheckbox, {
-					checked: allSelected,
-					onCheckedChange: toggleAll,
-					disabled: filteredNamespaces.length === 0,
+					checked: table.getIsAllPageRowsSelected(),
+					onCheckedChange: (val: boolean) => table.toggleAllPageRowsSelected(!!val),
 				}),
 			cell: ({ row }) =>
 				renderComponent(DataTableCheckbox, {
-					checked: selected.has(row.original.name),
-					onCheckedChange: () => toggleOne(row.original.name),
+					checked: row.getIsSelected(),
+					onCheckedChange: (val: boolean) => row.toggleSelected(!!val),
 				}),
 			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
 		},
 		{
 			accessorKey: 'name',
-			header: 'Name',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Name',
+					onclick: column.getToggleSortingHandler(),
+				}),
 			cell: ({ row }) => renderSnippet(nameCellSnippet, row.original),
 			meta: { cellClass: 'px-4 py-3 font-medium' },
 		},
@@ -254,13 +278,21 @@
 		},
 		{
 			accessorKey: 'description',
-			header: 'Description',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Description',
+					onclick: column.getToggleSortingHandler(),
+				}),
 			cell: ({ row }) => (row.original.description ?? '—') as string,
 			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
 		},
 		{
 			accessorKey: 'hardQuota',
-			header: 'Hard Quota',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Hard Quota',
+					onclick: column.getToggleSortingHandler(),
+				}),
 			cell: ({ row }) => (row.original.hardQuota ?? '—') as string,
 			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
 		},
@@ -298,7 +330,30 @@
 			get columns() {
 				return nsColumns;
 			},
+			state: {
+				get sorting() {
+					return sorting;
+				},
+				get pagination() {
+					return pagination;
+				},
+				get rowSelection() {
+					return rowSelection;
+				},
+			},
+			onSortingChange: (updater) => {
+				sorting = typeof updater === 'function' ? updater(sorting) : updater;
+			},
+			onPaginationChange: (updater) => {
+				pagination = typeof updater === 'function' ? updater(pagination) : updater;
+			},
+			onRowSelectionChange: (updater) => {
+				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+			},
 			getCoreRowModel: getCoreRowModel(),
+			getSortedRowModel: getSortedRowModel(),
+			getPaginationRowModel: getPaginationRowModel(),
+			enableRowSelection: true,
 		})
 	);
 </script>
@@ -528,13 +583,24 @@
 		{#await nsData}
 			<TableSkeleton rows={5} columns={5} />
 		{:then}
-			<SearchToolbar
-				bind:search
-				placeholder="Search namespaces..."
-				selectedCount={selected.size}
-				ondeleteselected={() => del.requestBulkDelete()}
-				ondeselectall={() => selected.clear()}
-			/>
+			<div class="space-y-2">
+				<div class="relative">
+					<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input bind:value={search} placeholder="Search namespaces..." class="pl-10" />
+				</div>
+			</div>
+
+			{#if selectedCount > 0}
+				<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
+					<span class="text-sm font-medium">{selectedCount} selected</span>
+					<Button variant="destructive" size="sm" onclick={() => del.requestBulkDelete()}>
+						<Trash2 class="h-3.5 w-3.5" />Delete Selected
+					</Button>
+					<Button variant="ghost" size="sm" onclick={() => (rowSelection = {})}>
+						Deselect All
+					</Button>
+				</div>
+			{/if}
 
 			<DataTable
 				table={nsTable}
@@ -542,6 +608,39 @@
 					? 'No namespaces found. Create one to get started.'
 					: `No results matching "${search}"`}
 			/>
+
+			<div class="flex items-center justify-between py-2">
+				<div class="text-sm text-muted-foreground">
+					{#if selectedCount > 0}
+						{selectedCount} of {filteredNamespaces.length} row(s) selected.
+					{/if}
+				</div>
+				{#if nsTable.getPageCount() > 1}
+					<div class="flex items-center gap-2">
+						<span class="text-xs text-muted-foreground">
+							Page {pagination.pageIndex + 1} of {nsTable.getPageCount()}
+						</span>
+						<Button
+							variant="outline"
+							size="icon"
+							class="h-8 w-8"
+							onclick={() => nsTable.previousPage()}
+							disabled={!nsTable.getCanPreviousPage()}
+						>
+							<ChevronLeft class="h-4 w-4" />
+						</Button>
+						<Button
+							variant="outline"
+							size="icon"
+							class="h-8 w-8"
+							onclick={() => nsTable.nextPage()}
+							disabled={!nsTable.getCanNextPage()}
+						>
+							<ChevronRight class="h-4 w-4" />
+						</Button>
+					</div>
+				{/if}
+			</div>
 		{/await}
 	{:else}
 		<NoTenantPlaceholder message="Log in with a tenant to manage namespaces." />
@@ -558,7 +657,7 @@
 
 <BulkDeleteDialog
 	bind:open={del.bulkDeleteOpen}
-	count={selected.size}
+	count={selectedCount}
 	itemType="namespace"
 	loading={del.deleting}
 	onconfirm={onConfirmBulkDelete}

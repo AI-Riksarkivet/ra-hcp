@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus, Trash2, Search } from 'lucide-svelte';
+	import { Plus, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -17,7 +17,6 @@
 	} from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { useSelection } from '$lib/utils/use-selection.svelte.js';
 	import { useDelete } from '$lib/utils/use-delete.svelte.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
@@ -35,12 +34,15 @@
 	import {
 		DataTable,
 		DataTableCheckbox,
+		DataTableHeaderButton,
 		createSvelteTable,
 		getCoreRowModel,
+		getSortedRowModel,
+		getPaginationRowModel,
 		renderSnippet,
 		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
-	import type { ColumnDef } from '@tanstack/table-core';
+	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import DataTableActions from './data-table/data-table-actions.svelte';
 
 	type BucketRow = { name: string; creation_date: string };
@@ -95,10 +97,18 @@
 		})
 	);
 
-	const { selected, allSelected, toggleAll, toggleOne } = useSelection(
-		() => filteredBuckets,
-		(b) => b.name
+	// --- TanStack Table state ---
+	let sorting = $state<SortingState>([]);
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
+	let rowSelection = $state<Record<string, boolean>>({});
+
+	let selectedKeys = $derived(
+		Object.keys(rowSelection)
+			.filter((k) => rowSelection[k])
+			.map((k) => filteredBuckets[Number(k)]?.name)
+			.filter(Boolean) as string[]
 	);
+	let selectedCount = $derived(selectedKeys.length);
 
 	const del = useDelete({ entityName: 'bucket' });
 
@@ -108,12 +118,14 @@
 
 	function onConfirmBulkDelete() {
 		del.confirmBulkDelete(
-			[...selected],
+			selectedKeys,
 			(name, isLast) => {
 				const call = delete_bucket({ bucket: name });
 				return isLast ? call.updates(bucketData) : call;
 			},
-			() => selected.clear()
+			() => {
+				rowSelection = {};
+			}
 		);
 	}
 
@@ -122,22 +134,25 @@
 		const cols: ColumnDef<BucketRow>[] = [
 			{
 				id: 'select',
-				header: () =>
+				header: ({ table }) =>
 					renderComponent(DataTableCheckbox, {
-						checked: allSelected,
-						onCheckedChange: toggleAll,
-						disabled: filteredBuckets.length === 0,
+						checked: table.getIsAllPageRowsSelected(),
+						onCheckedChange: (val: boolean) => table.toggleAllPageRowsSelected(!!val),
 					}),
 				cell: ({ row }) =>
 					renderComponent(DataTableCheckbox, {
-						checked: selected.has(row.original.name),
-						onCheckedChange: () => toggleOne(row.original.name),
+						checked: row.getIsSelected(),
+						onCheckedChange: (val: boolean) => row.toggleSelected(!!val),
 					}),
 				meta: { headerClass: 'w-10', cellClass: 'px-4 py-3' },
 			},
 			{
 				accessorKey: 'name',
-				header: 'Name',
+				header: ({ column }) =>
+					renderComponent(DataTableHeaderButton, {
+						label: 'Name',
+						onclick: column.getToggleSortingHandler(),
+					}),
 				meta: { cellClass: 'px-4 py-3 font-medium' },
 			},
 		];
@@ -160,7 +175,12 @@
 			},
 			{
 				id: 'created',
-				header: 'Created',
+				accessorFn: (row) => row.creation_date,
+				header: ({ column }) =>
+					renderComponent(DataTableHeaderButton, {
+						label: 'Created',
+						onclick: column.getToggleSortingHandler(),
+					}),
 				cell: ({ row }) => formatDate(row.original.creation_date) as string,
 				meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
 			},
@@ -188,7 +208,30 @@
 			get columns() {
 				return columns;
 			},
+			state: {
+				get sorting() {
+					return sorting;
+				},
+				get pagination() {
+					return pagination;
+				},
+				get rowSelection() {
+					return rowSelection;
+				},
+			},
+			onSortingChange: (updater) => {
+				sorting = typeof updater === 'function' ? updater(sorting) : updater;
+			},
+			onPaginationChange: (updater) => {
+				pagination = typeof updater === 'function' ? updater(pagination) : updater;
+			},
+			onRowSelectionChange: (updater) => {
+				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+			},
 			getCoreRowModel: getCoreRowModel(),
+			getSortedRowModel: getSortedRowModel(),
+			getPaginationRowModel: getPaginationRowModel(),
+			enableRowSelection: true,
 		})
 	);
 
@@ -331,17 +374,50 @@
 			</div>
 		</div>
 
-		{#if selected.size > 0}
+		{#if selectedCount > 0}
 			<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-				<span class="text-sm font-medium">{selected.size} selected</span>
+				<span class="text-sm font-medium">{selectedCount} selected</span>
 				<Button variant="destructive" size="sm" onclick={() => del.requestBulkDelete()}>
 					<Trash2 class="h-3.5 w-3.5" />Delete Selected
 				</Button>
-				<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Deselect All</Button>
+				<Button variant="ghost" size="sm" onclick={() => (rowSelection = {})}>Deselect All</Button>
 			</div>
 		{/if}
 
 		<DataTable {table} onrowclick={(row) => goto(`/buckets/${row.name}`)} {noResultsMessage} />
+
+		<div class="flex items-center justify-between py-2">
+			<div class="text-sm text-muted-foreground">
+				{#if selectedCount > 0}
+					{selectedCount} of {filteredBuckets.length} row(s) selected.
+				{/if}
+			</div>
+			{#if table.getPageCount() > 1}
+				<div class="flex items-center gap-2">
+					<span class="text-xs text-muted-foreground">
+						Page {pagination.pageIndex + 1} of {table.getPageCount()}
+					</span>
+					<Button
+						variant="outline"
+						size="icon"
+						class="h-8 w-8"
+						onclick={() => table.previousPage()}
+						disabled={!table.getCanPreviousPage()}
+					>
+						<ChevronLeft class="h-4 w-4" />
+					</Button>
+					<Button
+						variant="outline"
+						size="icon"
+						class="h-8 w-8"
+						onclick={() => table.nextPage()}
+						disabled={!table.getCanNextPage()}
+					>
+						<ChevronRight class="h-4 w-4" />
+					</Button>
+				</div>
+			{/if}
+		</div>
 	{/await}
 </div>
 
@@ -355,7 +431,7 @@
 
 <BulkDeleteDialog
 	bind:open={del.bulkDeleteOpen}
-	count={selected.size}
+	count={selectedCount}
 	itemType="bucket"
 	loading={del.deleting}
 	onconfirm={onConfirmBulkDelete}

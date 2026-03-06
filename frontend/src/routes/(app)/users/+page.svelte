@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus } from 'lucide-svelte';
+	import { Plus, ChevronLeft, ChevronRight, Search } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -23,11 +23,15 @@
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 	import {
 		DataTable,
+		DataTableHeaderButton,
 		createSvelteTable,
 		getCoreRowModel,
+		getSortedRowModel,
+		getPaginationRowModel,
 		renderSnippet,
+		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
-	import type { ColumnDef } from '@tanstack/table-core';
+	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 
 	type Group = { groupname?: string; name?: string; description?: string };
 
@@ -69,27 +73,69 @@
 
 	let userNsAccess = $derived(await loadUserNsAccess(tenant, users));
 
+	// --- Search + filtered users ---
+	let userSearch = $state('');
+	let filteredUsers = $derived(
+		users.filter((u) => {
+			const q = userSearch.toLowerCase();
+			if (!q) return true;
+			return u.username.toLowerCase().includes(q) || (u.fullName ?? '').toLowerCase().includes(q);
+		})
+	);
+
+	// --- TanStack state for users table ---
+	let userSorting = $state<SortingState>([]);
+	let userPagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
+
+	// --- TanStack state for groups table ---
+	let groupSorting = $state<SortingState>([]);
+	let groupPagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
+
 	// --- Groups TanStack Table ---
-	const groupColumns: ColumnDef<Group>[] = [
+	let groupColumns = $derived.by((): ColumnDef<Group>[] => [
 		{
+			id: 'groupName',
 			accessorFn: (row) => row.groupname ?? row.name ?? '—',
-			header: 'Group Name',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Group Name',
+					onclick: column.getToggleSortingHandler(),
+				}),
 			meta: { cellClass: 'px-4 py-3 font-medium' },
 		},
 		{
+			id: 'description',
 			accessorFn: (row) => row.description || '—',
 			header: 'Description',
 			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
 		},
-	];
+	]);
 
 	let groupsTable = $derived(
 		createSvelteTable({
 			get data() {
 				return groups;
 			},
-			columns: groupColumns,
+			get columns() {
+				return groupColumns;
+			},
+			state: {
+				get sorting() {
+					return groupSorting;
+				},
+				get pagination() {
+					return groupPagination;
+				},
+			},
+			onSortingChange: (updater) => {
+				groupSorting = typeof updater === 'function' ? updater(groupSorting) : updater;
+			},
+			onPaginationChange: (updater) => {
+				groupPagination = typeof updater === 'function' ? updater(groupPagination) : updater;
+			},
 			getCoreRowModel: getCoreRowModel(),
+			getSortedRowModel: getSortedRowModel(),
+			getPaginationRowModel: getPaginationRowModel(),
 		})
 	);
 
@@ -97,13 +143,21 @@
 	let userColumns = $derived.by((): ColumnDef<User>[] => [
 		{
 			accessorKey: 'username',
-			header: 'Username',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Username',
+					onclick: column.getToggleSortingHandler(),
+				}),
 			cell: ({ row }) => renderSnippet(usernameCell, row.original),
 			meta: { cellClass: 'px-4 py-3 font-medium' },
 		},
 		{
 			accessorKey: 'fullName',
-			header: 'Full Name',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Full Name',
+					onclick: column.getToggleSortingHandler(),
+				}),
 			cell: ({ row }) => (row.original.fullName || '—') as string,
 			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
 		},
@@ -127,12 +181,28 @@
 	let usersTable = $derived(
 		createSvelteTable({
 			get data() {
-				return users;
+				return filteredUsers;
 			},
 			get columns() {
 				return userColumns;
 			},
+			state: {
+				get sorting() {
+					return userSorting;
+				},
+				get pagination() {
+					return userPagination;
+				},
+			},
+			onSortingChange: (updater) => {
+				userSorting = typeof updater === 'function' ? updater(userSorting) : updater;
+			},
+			onPaginationChange: (updater) => {
+				userPagination = typeof updater === 'function' ? updater(userPagination) : updater;
+			},
 			getCoreRowModel: getCoreRowModel(),
+			getSortedRowModel: getSortedRowModel(),
+			getPaginationRowModel: getPaginationRowModel(),
 		})
 	);
 
@@ -262,7 +332,40 @@
 						Create User
 					</Button>
 				</div>
+				<div class="mb-4">
+					<div class="relative">
+						<Search
+							class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+						/>
+						<Input bind:value={userSearch} placeholder="Search users..." class="pl-10" />
+					</div>
+				</div>
 				<DataTable table={usersTable} noResultsMessage="No user accounts found." />
+				{#if usersTable.getPageCount() > 1}
+					<div class="flex items-center justify-end gap-2 py-2">
+						<span class="text-xs text-muted-foreground">
+							Page {userPagination.pageIndex + 1} of {usersTable.getPageCount()}
+						</span>
+						<Button
+							variant="outline"
+							size="icon"
+							class="h-8 w-8"
+							onclick={() => usersTable.previousPage()}
+							disabled={!usersTable.getCanPreviousPage()}
+						>
+							<ChevronLeft class="h-4 w-4" />
+						</Button>
+						<Button
+							variant="outline"
+							size="icon"
+							class="h-8 w-8"
+							onclick={() => usersTable.nextPage()}
+							disabled={!usersTable.getCanNextPage()}
+						>
+							<ChevronRight class="h-4 w-4" />
+						</Button>
+					</div>
+				{/if}
 			{/await}
 		</div>
 
@@ -287,6 +390,31 @@
 					</Button>
 				</div>
 				<DataTable table={groupsTable} noResultsMessage="No groups found." />
+				{#if groupsTable.getPageCount() > 1}
+					<div class="flex items-center justify-end gap-2 py-2">
+						<span class="text-xs text-muted-foreground">
+							Page {groupPagination.pageIndex + 1} of {groupsTable.getPageCount()}
+						</span>
+						<Button
+							variant="outline"
+							size="icon"
+							class="h-8 w-8"
+							onclick={() => groupsTable.previousPage()}
+							disabled={!groupsTable.getCanPreviousPage()}
+						>
+							<ChevronLeft class="h-4 w-4" />
+						</Button>
+						<Button
+							variant="outline"
+							size="icon"
+							class="h-8 w-8"
+							onclick={() => groupsTable.nextPage()}
+							disabled={!groupsTable.getCanNextPage()}
+						>
+							<ChevronRight class="h-4 w-4" />
+						</Button>
+					</div>
+				{/if}
 			{/await}
 		</div>
 	{:else}
