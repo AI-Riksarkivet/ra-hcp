@@ -13,6 +13,8 @@
 		FileCode,
 		Loader2,
 		Search,
+		ListTree,
+		FolderTree,
 	} from 'lucide-svelte';
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import FileViewer from '$lib/components/ui/FileViewer.svelte';
@@ -55,11 +57,16 @@
 		onnavigate: (prefix: string) => void;
 	} = $props();
 
+	// --- Flat mode (recursive listing for search across all objects) ---
+	let flat = $state(false);
+
 	// --- Server-side pagination with continuation tokens ---
 	let continuationToken = $state<string | undefined>(undefined);
 	let tokenHistory = $state<string[]>([]);
 
-	let objectData = $derived(get_objects({ bucket, prefix, continuation_token: continuationToken }));
+	let objectData = $derived(
+		get_objects({ bucket, prefix, continuation_token: continuationToken, flat })
+	);
 
 	let isTruncated = $derived(objectData.current?.isTruncated ?? false);
 	let nextToken = $derived(objectData.current?.nextToken ?? null);
@@ -77,9 +84,10 @@
 		continuationToken = prev || undefined;
 	}
 
-	// Reset server pagination when prefix changes
+	// Reset server pagination when prefix or flat mode changes
 	$effect(() => {
 		void prefix;
+		void flat;
 		continuationToken = undefined;
 		tokenHistory = [];
 	});
@@ -121,6 +129,9 @@
 		return `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${encodeURIComponent(key)}`;
 	}
 	function getDisplayName(key: string): string {
+		if (flat && prefix && key.startsWith(prefix)) {
+			return key.slice(prefix.length) || key;
+		}
 		return key.split('/').filter(Boolean).pop() ?? key;
 	}
 	function isObjFolder(obj: S3Object): boolean {
@@ -449,9 +460,45 @@
 	<TableSkeleton rows={5} columns={7} />
 {:then}
 	<div class="space-y-2">
-		<div class="relative">
-			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-			<Input bind:value={search} placeholder="Search objects..." class="pl-10" />
+		<div class="flex items-center gap-2">
+			<div class="relative flex-1">
+				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+				<Input
+					bind:value={search}
+					placeholder={flat
+						? 'Search all objects recursively...'
+						: 'Search objects in current folder...'}
+					class="pl-10"
+				/>
+			</div>
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<Button
+							{...props}
+							variant={flat ? 'default' : 'outline'}
+							size="icon"
+							class="h-9 w-9 shrink-0"
+							onclick={() => (flat = !flat)}
+						>
+							{#if flat}
+								<ListTree class="h-4 w-4" />
+							{:else}
+								<FolderTree class="h-4 w-4" />
+							{/if}
+						</Button>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content side="bottom" class="max-w-xs">
+					{#if flat}
+						<strong>Flat view</strong> — showing all objects recursively. Search works across all files.
+						Click to switch back to folder view.
+					{:else}
+						<strong>Folder view</strong> — showing current folder only. Click to flatten and search across
+						all objects recursively.
+					{/if}
+				</Tooltip.Content>
+			</Tooltip.Root>
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
 			{#if uniqueOwners.length > 0}

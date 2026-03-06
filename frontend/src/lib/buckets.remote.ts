@@ -29,13 +29,14 @@ export const get_objects = query(
     bucket: z.string(),
     prefix: z.string(),
     continuation_token: z.string().optional(),
+    flat: z.boolean().optional(),
   }),
-  async ({ bucket, prefix, continuation_token }) => {
+  async ({ bucket, prefix, continuation_token, flat }) => {
     try {
       const params = new URLSearchParams({
-        max_keys: "200",
-        delimiter: "/",
+        max_keys: flat ? "1000" : "200",
       });
+      if (!flat) params.set("delimiter", "/");
       if (prefix) params.set("prefix", prefix);
       if (continuation_token) {
         params.set("continuation_token", continuation_token);
