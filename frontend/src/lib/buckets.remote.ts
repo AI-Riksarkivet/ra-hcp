@@ -25,14 +25,21 @@ export const get_buckets = query(async () => {
 });
 
 export const get_objects = query(
-  z.object({ bucket: z.string(), prefix: z.string() }),
-  async ({ bucket, prefix }) => {
+  z.object({
+    bucket: z.string(),
+    prefix: z.string(),
+    continuation_token: z.string().optional(),
+  }),
+  async ({ bucket, prefix, continuation_token }) => {
     try {
       const params = new URLSearchParams({
-        max_keys: "100",
+        max_keys: "200",
         delimiter: "/",
       });
       if (prefix) params.set("prefix", prefix);
+      if (continuation_token) {
+        params.set("continuation_token", continuation_token);
+      }
       const res = await apiFetch(
         `/api/v1/buckets/${encodeURIComponent(bucket)}/objects?${params}`,
       );
@@ -243,5 +250,230 @@ export const generate_presigned_url = command(
       expires_in: data.expires_in as number,
       method: data.method as string,
     };
+  },
+);
+
+// ── Head Object ─────────────────────────────────────────────────────
+
+export const head_object = query(
+  z.object({ bucket: z.string(), key: z.string() }),
+  async ({ bucket, key }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${
+          encodeURIComponent(key)
+        }`,
+        { method: "HEAD" },
+      );
+      if (res.ok) {
+        return {
+          content_length: Number(res.headers.get("content-length") ?? 0),
+          content_type: res.headers.get("content-type") ?? "",
+          etag: res.headers.get("etag") ?? "",
+          last_modified: res.headers.get("last-modified") ?? "",
+        };
+      }
+    } catch (err) {
+      console.error("[buckets.remote] head_object", err);
+    }
+    return null;
+  },
+);
+
+// ── Copy Object ─────────────────────────────────────────────────────
+
+export const copy_object = command(
+  z.object({
+    bucket: z.string(),
+    key: z.string(),
+    source_bucket: z.string(),
+    source_key: z.string(),
+  }),
+  async ({ bucket, key, source_bucket, source_key }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${
+        encodeURIComponent(key)
+      }/copy`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source_bucket, source_key }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to copy object",
+      }));
+      throw new Error(err.detail);
+    }
+    return await res.json();
+  },
+);
+
+// ── Bucket Versioning ───────────────────────────────────────────────
+
+export type BucketVersioning = {
+  status: string | null;
+  mfa_delete: string | null;
+};
+
+export const get_bucket_versioning = query(
+  z.object({ bucket: z.string() }),
+  async ({ bucket }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/versioning`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          status: (data.status ?? null) as string | null,
+          mfa_delete: (data.mfa_delete ?? null) as string | null,
+        };
+      }
+    } catch (err) {
+      console.error("[buckets.remote] get_bucket_versioning", err);
+    }
+    return { status: null, mfa_delete: null } as BucketVersioning;
+  },
+);
+
+export const set_bucket_versioning = command(
+  z.object({
+    bucket: z.string(),
+    status: z.enum(["Enabled", "Suspended"]),
+  }),
+  async ({ bucket, status }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/versioning`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update versioning",
+      }));
+      throw new Error(err.detail);
+    }
+    return await res.json();
+  },
+);
+
+// ── Bucket ACL ──────────────────────────────────────────────────────
+
+export type AclOwner = {
+  ID?: string;
+  DisplayName?: string;
+};
+
+export type AclGrant = {
+  Grantee?: Record<string, unknown>;
+  Permission?: string;
+};
+
+export type AclData = {
+  owner: AclOwner | null;
+  grants: AclGrant[];
+};
+
+export const get_bucket_acl = query(
+  z.object({ bucket: z.string() }),
+  async ({ bucket }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/acl`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          owner: (data.owner ?? null) as AclOwner | null,
+          grants: (data.grants ?? []) as AclGrant[],
+        };
+      }
+    } catch (err) {
+      console.error("[buckets.remote] get_bucket_acl", err);
+    }
+    return { owner: null, grants: [] } as AclData;
+  },
+);
+
+export const put_bucket_acl = command(
+  z.object({
+    bucket: z.string(),
+    owner: z.record(z.string(), z.unknown()).optional(),
+    grants: z.array(z.record(z.string(), z.unknown())),
+  }),
+  async ({ bucket, owner, grants }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/acl`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ Owner: owner, Grants: grants }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update bucket ACL",
+      }));
+      throw new Error(err.detail);
+    }
+    return await res.json();
+  },
+);
+
+// ── Object ACL ──────────────────────────────────────────────────────
+
+export const get_object_acl = query(
+  z.object({ bucket: z.string(), key: z.string() }),
+  async ({ bucket, key }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${
+          encodeURIComponent(key)
+        }/acl`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          owner: (data.owner ?? null) as AclOwner | null,
+          grants: (data.grants ?? []) as AclGrant[],
+        };
+      }
+    } catch (err) {
+      console.error("[buckets.remote] get_object_acl", err);
+    }
+    return { owner: null, grants: [] } as AclData;
+  },
+);
+
+export const put_object_acl = command(
+  z.object({
+    bucket: z.string(),
+    key: z.string(),
+    owner: z.record(z.string(), z.unknown()).optional(),
+    grants: z.array(z.record(z.string(), z.unknown())),
+  }),
+  async ({ bucket, key, owner, grants }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${
+        encodeURIComponent(key)
+      }/acl`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ Owner: owner, Grants: grants }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update object ACL",
+      }));
+      throw new Error(err.detail);
+    }
+    return await res.json();
   },
 );

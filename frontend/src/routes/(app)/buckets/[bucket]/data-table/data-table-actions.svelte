@@ -9,12 +9,14 @@
 		ondelete,
 		onshare,
 		onview,
+		oncopy,
 	}: {
 		objectKey: string;
 		downloadUrl: string;
 		ondelete: () => void;
 		onshare: () => void;
 		onview: () => void;
+		oncopy: () => void;
 	} = $props();
 </script>
 
@@ -40,6 +42,7 @@
 			<a href={downloadUrl} download class="flex w-full">Download</a>
 		</DropdownMenu.Item>
 		<DropdownMenu.Item onclick={onshare}>Generate share link</DropdownMenu.Item>
+		<DropdownMenu.Item onclick={oncopy}>Copy to...</DropdownMenu.Item>
 		<DropdownMenu.Separator />
 		<DropdownMenu.Item class="text-destructive" onclick={ondelete}>Delete object</DropdownMenu.Item>
 	</DropdownMenu.Content>

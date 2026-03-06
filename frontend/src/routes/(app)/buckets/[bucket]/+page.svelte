@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import { Progress } from '$lib/components/ui/progress/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import {
 		Upload,
 		Trash2,
@@ -15,14 +14,17 @@
 		Image,
 		FileArchive,
 		FileCode,
-		X,
-		CheckCircle,
-		AlertCircle,
 		Loader2,
 		Search,
-		Copy,
-		Check,
+		ChevronLeft,
+		ChevronRight,
 	} from 'lucide-svelte';
+	import type {
+		ColumnDef,
+		SortingState,
+		PaginationState,
+		ColumnFiltersState,
+	} from '@tanstack/table-core';
 	import FileViewer from '$lib/components/ui/FileViewer.svelte';
 	import {
 		formatBytes,
@@ -30,13 +32,10 @@
 		parseQuotaBytes,
 		getStorageUsed,
 		calcQuotaPercent,
-		matchesDateFilter,
 	} from '$lib/utils/format.js';
 	import type { ChargebackEntry } from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { useSelection } from '$lib/utils/use-selection.svelte.js';
-	import { useDelete } from '$lib/utils/use-delete.svelte.js';
 	import BackButton from '$lib/components/ui/back-button.svelte';
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
@@ -47,23 +46,26 @@
 		delete_object,
 		bulk_delete_objects,
 		bulk_presign,
-		generate_presigned_url,
 	} from '$lib/buckets.remote.js';
 	import { get_tenant_chargeback } from '$lib/tenant-info.remote.js';
 	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { cn } from '$lib/utils.js';
 	import {
 		DataTable,
 		DataTableCheckbox,
+		DataTableHeaderButton,
 		createSvelteTable,
 		getCoreRowModel,
+		getSortedRowModel,
+		getPaginationRowModel,
 		renderSnippet,
 		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
-	import type { ColumnDef } from '@tanstack/table-core';
 	import DataTableActions from './data-table/data-table-actions.svelte';
+	import BucketUploadDialog from './sections/bucket-upload-dialog.svelte';
+	import BucketShareDialog from './sections/bucket-share-dialog.svelte';
+	import BucketCopyDialog from './sections/bucket-copy-dialog.svelte';
+	import BucketVersioning from './sections/bucket-versioning.svelte';
+	import BucketAcl from './sections/bucket-acl.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
@@ -71,37 +73,52 @@
 
 	let bucket = $derived(page.params.bucket ?? '');
 
-	// Bucket-specific storage from chargeback (bucket name = namespace name in HCP)
 	let bucketStorageUsed = $derived(
 		getStorageUsed((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[], bucket)
 	);
-
-	// Bucket-specific quota from namespace info
 	let bucketQuotaStr = $derived.by(() => {
 		const nsList = (nsData?.current ?? []) as Namespace[];
 		const ns = nsList.find((n) => n.name === bucket);
 		return ns?.hardQuota ?? null;
 	});
-
 	let bucketQuotaBytes = $derived(bucketQuotaStr ? parseQuotaBytes(bucketQuotaStr) : null);
 	let bucketQuotaPercent = $derived(calcQuotaPercent(bucketStorageUsed, bucketQuotaStr));
-	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
-	let objectData = $derived(get_objects({ bucket, prefix }));
 
-	interface FileUpload {
-		file: File;
-		key: string;
-		preview: string | null;
-		status: 'pending' | 'uploading' | 'done' | 'error';
-		progress: number;
-		error?: string;
+	// --- Server-side pagination with continuation tokens ---
+	let prefix = $derived(page.url.searchParams.get('prefix') ?? '');
+	let continuationToken = $state<string | undefined>(undefined);
+	let tokenHistory = $state<string[]>([]);
+
+	let objectData = $derived(get_objects({ bucket, prefix, continuation_token: continuationToken }));
+
+	let isTruncated = $derived(objectData.current?.isTruncated ?? false);
+	let nextToken = $derived(objectData.current?.nextToken ?? null);
+
+	function loadNextPage() {
+		if (!nextToken) return;
+		tokenHistory = [...tokenHistory, continuationToken ?? ''];
+		continuationToken = nextToken;
 	}
 
-	let uploadOpen = $state(false);
-	let selectedFiles = $state<FileUpload[]>([]);
-	let uploading = $state(false);
-	let dragover = $state(false);
+	function loadPrevPage() {
+		if (tokenHistory.length === 0) return;
+		const prev = tokenHistory[tokenHistory.length - 1];
+		tokenHistory = tokenHistory.slice(0, -1);
+		continuationToken = prev || undefined;
+	}
 
+	function resetPagination() {
+		continuationToken = undefined;
+		tokenHistory = [];
+	}
+
+	// Reset server pagination when prefix changes
+	$effect(() => {
+		void prefix;
+		resetPagination();
+	});
+
+	// --- S3 Object type ---
 	interface S3Object {
 		key: string;
 		size: number;
@@ -115,6 +132,7 @@
 		return obj.owner?.display_name ?? obj.owner?.DisplayName ?? '';
 	}
 
+	// --- Object list ---
 	let rawObjects = $derived((objectData.current?.objects ?? []) as S3Object[]);
 	let commonPrefixes = $derived((objectData.current?.commonPrefixes ?? []) as string[]);
 	let folderEntries = $derived(
@@ -130,7 +148,6 @@
 		)
 	);
 	let objects = $derived([...folderEntries, ...rawObjects]);
-	let keyCount = $derived(objectData.current?.keyCount ?? 0);
 
 	function navigatePrefix(p: string) {
 		goto(`/buckets/${bucket}?prefix=${encodeURIComponent(p)}`);
@@ -154,116 +171,10 @@
 		return FileText;
 	}
 
-	function isImageFile(file: File): boolean {
-		return file.type.startsWith('image/');
-	}
-
-	function addFiles(files: FileList | null) {
-		if (!files) return;
-		for (const file of files) {
-			const preview = isImageFile(file) ? URL.createObjectURL(file) : null;
-			const key = (prefix || '') + file.name;
-			selectedFiles = [...selectedFiles, { file, key, preview, status: 'pending', progress: 0 }];
-		}
-	}
-
-	function removeFile(index: number) {
-		const removed = selectedFiles[index];
-		if (removed.preview) URL.revokeObjectURL(removed.preview);
-		selectedFiles = selectedFiles.filter((_, i) => i !== index);
-	}
-
-	function handleDrop(e: DragEvent) {
-		e.preventDefault();
-		dragover = false;
-		addFiles(e.dataTransfer?.files ?? null);
-	}
-
-	function uploadFile(index: number): Promise<void> {
-		return new Promise((resolve) => {
-			const item = selectedFiles[index];
-			const formData = new FormData();
-			formData.append('file', item.file);
-			const xhr = new XMLHttpRequest();
-			xhr.open(
-				'POST',
-				`/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${encodeURIComponent(item.key)}`
-			);
-			xhr.upload.onprogress = (e) => {
-				if (e.lengthComputable) {
-					selectedFiles[index] = {
-						...selectedFiles[index],
-						progress: Math.round((e.loaded / e.total) * 100),
-					};
-				}
-			};
-			xhr.onload = () => {
-				if (xhr.status >= 200 && xhr.status < 300) {
-					selectedFiles[index] = { ...selectedFiles[index], status: 'done', progress: 100 };
-				} else {
-					const err = (() => {
-						try {
-							return JSON.parse(xhr.responseText);
-						} catch {
-							return { detail: 'Upload failed' };
-						}
-					})();
-					selectedFiles[index] = { ...selectedFiles[index], status: 'error', error: err.detail };
-				}
-				resolve();
-			};
-			xhr.onerror = () => {
-				selectedFiles[index] = { ...selectedFiles[index], status: 'error', error: 'Network error' };
-				resolve();
-			};
-			selectedFiles[index] = { ...selectedFiles[index], status: 'uploading', progress: 0 };
-			xhr.send(formData);
-		});
-	}
-
-	async function uploadAll() {
-		if (selectedFiles.length === 0) return;
-		uploading = true;
-		for (let i = 0; i < selectedFiles.length; i++) {
-			if (selectedFiles[i].status === 'pending') {
-				await uploadFile(i);
-			}
-		}
-		uploading = false;
-		const doneCount = selectedFiles.filter((f) => f.status === 'done').length;
-		const errCount = selectedFiles.filter((f) => f.status === 'error').length;
-		if (doneCount > 0)
-			toast.success(`Uploaded ${doneCount} file${doneCount !== 1 ? 's' : ''} successfully`);
-		if (errCount > 0) toast.error(`${errCount} file${errCount !== 1 ? 's' : ''} failed to upload`);
-		await objectData.refresh();
-	}
-
-	function closeUpload() {
-		for (const f of selectedFiles) {
-			if (f.preview) URL.revokeObjectURL(f.preview);
-		}
-		selectedFiles = [];
-		uploadOpen = false;
-	}
-
-	let allDone = $derived(
-		selectedFiles.length > 0 && selectedFiles.every((f) => f.status === 'done')
-	);
-	let totalProgress = $derived.by(() => {
-		if (selectedFiles.length === 0) return 0;
-		return Math.round(selectedFiles.reduce((sum, f) => sum + f.progress, 0) / selectedFiles.length);
-	});
-	let parentPrefix = $derived.by(() => {
-		if (!prefix) return '';
-		const parts = prefix.replace(/\/$/, '').split('/');
-		parts.pop();
-		return parts.length > 0 ? parts.join('/') + '/' : '';
-	});
-
+	// --- Filters (client-side within the loaded page) ---
 	let search = $state('');
 	let ownerFilter = $state('');
 	let sizeFilter = $state('');
-	let dateFilter = $state('');
 
 	let uniqueOwners = $derived([...new Set(rawObjects.map(getOwnerName).filter(Boolean))]);
 
@@ -285,26 +196,222 @@
 				if (sizeFilter === '1MB-100MB' && (s < 1048576 || s >= 104857600)) return false;
 				if (sizeFilter === '>100MB' && s < 104857600) return false;
 			}
-			if (dateFilter && obj.last_modified) {
-				if (!matchesDateFilter(obj.last_modified, dateFilter)) return false;
-			}
 			return true;
 		})
 	);
 
-	let hasActiveFilters = $derived(!!ownerFilter || !!sizeFilter || !!dateFilter);
+	let hasActiveFilters = $derived(!!ownerFilter || !!sizeFilter);
 	function clearFilters() {
 		ownerFilter = '';
 		sizeFilter = '';
-		dateFilter = '';
 	}
+
+	// --- TanStack Table with sorting + client pagination ---
+	let sorting = $state<SortingState>([]);
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 50 });
 
 	let selectableObjects = $derived(filteredObjects.filter((obj) => !isObjFolder(obj)));
 
-	const { selected, allSelected, toggleAll, toggleOne } = useSelection(
-		() => selectableObjects,
-		(o) => o.key
+	// Row selection via TanStack
+	let rowSelection = $state<Record<string, boolean>>({});
+
+	let selectedKeys = $derived(
+		Object.entries(rowSelection)
+			.filter(([, v]) => v)
+			.map(([idx]) => {
+				const row = objTable.getRowModel().rows[Number(idx)];
+				return row?.original.key;
+			})
+			.filter((k): k is string => !!k && !k.endsWith('/'))
 	);
+
+	let objColumns = $derived.by((): ColumnDef<S3Object>[] => [
+		{
+			id: 'select',
+			header: ({ table }) =>
+				renderComponent(DataTableCheckbox, {
+					checked: table.getIsAllPageRowsSelected(),
+					indeterminate: table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected(),
+					onCheckedChange: (value: boolean) => table.toggleAllPageRowsSelected(!!value),
+				}),
+			cell: ({ row }) =>
+				isObjFolder(row.original)
+					? ('' as string)
+					: renderComponent(DataTableCheckbox, {
+							checked: row.getIsSelected(),
+							onCheckedChange: (value: boolean) => row.toggleSelected(!!value),
+						}),
+			enableSorting: false,
+			enableHiding: false,
+			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
+		},
+		{
+			id: 'name',
+			accessorFn: (row) => getDisplayName(row.key),
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Name',
+					onclick: column.getToggleSortingHandler(),
+				}),
+			cell: ({ row }) => renderSnippet(nameCellSnippet, row.original),
+		},
+		{
+			id: 'key',
+			header: 'Key',
+			cell: ({ row }) => renderSnippet(keyCellSnippet, row.original),
+			enableSorting: false,
+		},
+		{
+			id: 'owner',
+			accessorFn: (row) => getOwnerName(row),
+			header: 'Owner',
+			cell: ({ row }) =>
+				(isObjFolder(row.original) ? '-' : getOwnerName(row.original) || '-') as string,
+			meta: { headerClass: 'w-32 px-4 py-3', cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'size',
+			accessorFn: (row) => row.size,
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Size',
+					onclick: column.getToggleSortingHandler(),
+				}),
+			cell: ({ row }) =>
+				(isObjFolder(row.original) ? '-' : formatBytes(row.original.size)) as string,
+			meta: { headerClass: 'w-32 px-4 py-3', cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'lastModified',
+			accessorFn: (row) => row.last_modified,
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Modified',
+					onclick: column.getToggleSortingHandler(),
+				}),
+			cell: ({ row }) =>
+				(row.original.last_modified ? formatDate(row.original.last_modified) : '-') as string,
+			meta: { headerClass: 'w-48 px-4 py-3', cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'actions',
+			header: '',
+			cell: ({ row }) => renderSnippet(actionsCellSnippet, row.original),
+			enableSorting: false,
+			meta: { headerClass: 'w-16 px-4 py-3', cellClass: 'px-4 py-3' },
+		},
+	]);
+
+	let objTable = $derived(
+		createSvelteTable({
+			get data() {
+				return filteredObjects;
+			},
+			get columns() {
+				return objColumns;
+			},
+			state: {
+				get sorting() {
+					return sorting;
+				},
+				get pagination() {
+					return pagination;
+				},
+				get rowSelection() {
+					return rowSelection;
+				},
+			},
+			onSortingChange: (updater) => {
+				sorting = typeof updater === 'function' ? updater(sorting) : updater;
+			},
+			onPaginationChange: (updater) => {
+				pagination = typeof updater === 'function' ? updater(pagination) : updater;
+			},
+			onRowSelectionChange: (updater) => {
+				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+			},
+			getCoreRowModel: getCoreRowModel(),
+			getSortedRowModel: getSortedRowModel(),
+			getPaginationRowModel: getPaginationRowModel(),
+			enableRowSelection: (row) => !isObjFolder(row.original),
+		})
+	);
+
+	let currentPage = $derived(pagination.pageIndex + 1);
+	let totalPages = $derived(objTable.getPageCount());
+	let serverPage = $derived(tokenHistory.length + 1);
+
+	// --- Delete ---
+	let deleteDialogOpen = $state(false);
+	let deleteTarget = $state('');
+	let deleting = $state(false);
+	let bulkDeleteOpen = $state(false);
+
+	function requestDelete(key: string) {
+		deleteTarget = key;
+		deleteDialogOpen = true;
+	}
+
+	async function handleConfirmDelete() {
+		deleting = true;
+		try {
+			await delete_object({ bucket, key: deleteTarget }).updates(objectData);
+			deleteDialogOpen = false;
+			toast.success('Object deleted');
+		} catch {
+			toast.error('Failed to delete object');
+		} finally {
+			deleting = false;
+		}
+	}
+
+	async function handleConfirmBulkDelete() {
+		const keys = selectedKeys;
+		if (keys.length === 0) return;
+		deleting = true;
+		try {
+			await bulk_delete_objects({ bucket, keys }).updates(objectData);
+			rowSelection = {};
+			bulkDeleteOpen = false;
+			toast.success(`Deleted ${keys.length} object${keys.length !== 1 ? 's' : ''}`);
+		} catch {
+			toast.error('Failed to delete objects');
+		} finally {
+			deleting = false;
+		}
+	}
+
+	// --- Dialogs ---
+	let uploadOpen = $state(false);
+	let shareTarget = $state<string | null>(null);
+	let copyTarget = $state<string | null>(null);
+	let downloading = $state(false);
+
+	async function bulkDownload() {
+		const keys = selectedKeys;
+		if (keys.length === 0) return;
+		downloading = true;
+		try {
+			const result = await bulk_presign({ bucket, keys, expires_in: 3600 });
+			for (const item of result.urls) {
+				const a = document.createElement('a');
+				a.href = item.url;
+				a.download = item.key.split('/').pop() ?? item.key;
+				a.style.display = 'none';
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				await new Promise((r) => setTimeout(r, 150));
+			}
+			toast.success(
+				`Started downloading ${result.urls.length} file${result.urls.length !== 1 ? 's' : ''}`
+			);
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to download objects');
+		} finally {
+			downloading = false;
+		}
+	}
 
 	// --- File Viewer ---
 	let viewerOpen = $state(false);
@@ -322,115 +429,13 @@
 		viewerOpen = true;
 	}
 
-	function viewerPrev() {
-		if (viewerHasPrev) viewerIndex--;
-	}
-	function viewerNext() {
-		if (viewerHasNext) viewerIndex++;
-	}
+	let parentPrefix = $derived.by(() => {
+		if (!prefix) return '';
+		const parts = prefix.replace(/\/$/, '').split('/');
+		parts.pop();
+		return parts.length > 0 ? parts.join('/') + '/' : '';
+	});
 
-	// --- Presigned URL ---
-	const EXPIRY_PRESETS = [
-		{ label: '5 minutes', value: 300 },
-		{ label: '1 hour', value: 3600 },
-		{ label: '6 hours', value: 21600 },
-		{ label: '24 hours', value: 86400 },
-		{ label: '7 days', value: 604800 },
-	];
-
-	let shareTarget = $state<string | null>(null);
-	let shareMethod = $state<'get_object' | 'put_object'>('get_object');
-	let shareExpiry = $state(3600);
-	let shareGenerating = $state(false);
-	let shareUrl = $state('');
-	let shareCopied = $state(false);
-
-	function openShare(key: string) {
-		shareTarget = key;
-		shareMethod = 'get_object';
-		shareExpiry = 3600;
-		shareUrl = '';
-		shareCopied = false;
-	}
-
-	function closeShare() {
-		shareTarget = null;
-		shareUrl = '';
-	}
-
-	async function handleGenerateUrl() {
-		if (!shareTarget) return;
-		shareGenerating = true;
-		shareUrl = '';
-		try {
-			const result = await generate_presigned_url({
-				bucket,
-				key: shareTarget,
-				expires_in: shareExpiry,
-				method: shareMethod,
-			});
-			shareUrl = result.url;
-		} catch {
-			toast.error('Failed to generate presigned URL');
-		} finally {
-			shareGenerating = false;
-		}
-	}
-
-	function copyShareUrl() {
-		navigator.clipboard.writeText(shareUrl);
-		shareCopied = true;
-		setTimeout(() => (shareCopied = false), 2000);
-	}
-
-	let downloading = $state(false);
-
-	async function bulkDownload() {
-		const keys = [...selected].filter((k) => !k.endsWith('/'));
-		if (keys.length === 0) return;
-		downloading = true;
-		try {
-			const result = await bulk_presign({ bucket, keys, expires_in: 3600 });
-			for (const item of result.urls) {
-				const a = document.createElement('a');
-				a.href = item.url;
-				a.download = item.key.split('/').pop() ?? item.key;
-				a.style.display = 'none';
-				document.body.appendChild(a);
-				a.click();
-				document.body.removeChild(a);
-				// Small delay to avoid browser blocking multiple downloads
-				await new Promise((r) => setTimeout(r, 150));
-			}
-			toast.success(
-				`Started downloading ${result.urls.length} file${result.urls.length !== 1 ? 's' : ''}`
-			);
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to download objects');
-		} finally {
-			downloading = false;
-		}
-	}
-
-	const del = useDelete({ entityName: 'object' });
-
-	function handleConfirmDelete() {
-		del.confirmDelete(() => delete_object({ bucket, key: del.deleteTarget }).updates(objectData));
-	}
-
-	async function handleConfirmBulkDelete() {
-		const keys = [...selected];
-		del.confirmBulkDelete(
-			keys,
-			async (_key, isLast) => {
-				if (!isLast) return; // batch call on last item only
-				await bulk_delete_objects({ bucket, keys }).updates(objectData);
-			},
-			() => selected.clear()
-		);
-	}
-
-	// --- TanStack Table ---
 	function handleRowClick(obj: S3Object) {
 		if (isObjFolder(obj)) {
 			navigatePrefix(obj.key);
@@ -438,74 +443,6 @@
 			openViewer(obj);
 		}
 	}
-
-	let objColumns = $derived.by((): ColumnDef<S3Object>[] => [
-		{
-			id: 'select',
-			header: () =>
-				renderComponent(DataTableCheckbox, {
-					checked: allSelected,
-					onCheckedChange: toggleAll,
-					disabled: selectableObjects.length === 0,
-				}),
-			cell: ({ row }) =>
-				renderComponent(DataTableCheckbox, {
-					checked: selected.has(row.original.key),
-					onCheckedChange: () => toggleOne(row.original.key),
-					hidden: isObjFolder(row.original),
-				}),
-			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
-		},
-		{
-			id: 'name',
-			header: 'Name',
-			cell: ({ row }) => renderSnippet(nameCellSnippet, row.original),
-		},
-		{
-			id: 'key',
-			header: 'Key',
-			cell: ({ row }) => renderSnippet(keyCellSnippet, row.original),
-		},
-		{
-			id: 'owner',
-			header: 'Owner',
-			cell: ({ row }) =>
-				(isObjFolder(row.original) ? '-' : getOwnerName(row.original) || '-') as string,
-			meta: { headerClass: 'w-32 px-4 py-3', cellClass: 'px-4 py-3 text-muted-foreground' },
-		},
-		{
-			id: 'size',
-			header: 'Size',
-			cell: ({ row }) =>
-				(isObjFolder(row.original) ? '-' : formatBytes(row.original.size)) as string,
-			meta: { headerClass: 'w-32 px-4 py-3', cellClass: 'px-4 py-3 text-muted-foreground' },
-		},
-		{
-			id: 'lastModified',
-			header: 'Last Modified',
-			cell: ({ row }) =>
-				(row.original.last_modified ? formatDate(row.original.last_modified) : '-') as string,
-			meta: { headerClass: 'w-48 px-4 py-3', cellClass: 'px-4 py-3 text-muted-foreground' },
-		},
-		{
-			id: 'actions',
-			header: 'Actions',
-			cell: ({ row }) => renderSnippet(actionsCellSnippet, row.original),
-			meta: { headerClass: 'w-24 px-4 py-3', cellClass: 'px-4 py-3' },
-		},
-	]);
-
-	let objTable = $derived(
-		createSvelteTable({
-			get data() {
-				return filteredObjects;
-			},
-			get columns() {
-				return objColumns;
-			},
-			getCoreRowModel: getCoreRowModel(),
-		})
-	);
 </script>
 
 {#snippet nameCellSnippet(obj: S3Object)}
@@ -543,9 +480,10 @@
 			<DataTableActions
 				objectKey={obj.key}
 				downloadUrl={downloadUrl(obj.key)}
-				ondelete={() => del.requestDelete(obj.key)}
-				onshare={() => openShare(obj.key)}
+				ondelete={() => requestDelete(obj.key)}
+				onshare={() => (shareTarget = obj.key)}
 				onview={() => openViewer(obj)}
+				oncopy={() => (copyTarget = obj.key)}
 			/>
 		{/if}
 	</span>
@@ -554,6 +492,7 @@
 <svelte:head><title>{bucket} - HCP Admin Console</title></svelte:head>
 
 <div class="space-y-6">
+	<!-- Header -->
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-4">
 			<BackButton href="/buckets" label="Back to buckets" />
@@ -585,140 +524,10 @@
 					<Tooltip.Content>Bucket storage usage</Tooltip.Content>
 				</Tooltip.Root>
 			{/if}
+			<BucketVersioning {bucket} />
 		</div>
 		<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>
 	</div>
-
-	<!-- Upload Modal -->
-	<Dialog.Root
-		bind:open={uploadOpen}
-		onOpenChange={(open) => {
-			if (!open) closeUpload();
-		}}
-	>
-		<Dialog.Content class="sm:max-w-lg">
-			<Dialog.Header><Dialog.Title>Upload Files to {bucket}</Dialog.Title></Dialog.Header>
-			{#if prefix}<p class="text-sm text-muted-foreground">
-					Prefix: <code class="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{prefix}</code>
-				</p>{/if}
-
-			<div
-				role="region"
-				aria-label="File drop zone"
-				class={cn(
-					'rounded-lg border-2 border-dashed p-8 text-center transition-colors',
-					dragover ? 'border-primary bg-primary/5' : 'border-border'
-				)}
-				ondragover={(e) => {
-					e.preventDefault();
-					dragover = true;
-				}}
-				ondragleave={() => (dragover = false)}
-				ondrop={handleDrop}
-			>
-				<Upload class="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-				<p class="text-sm text-muted-foreground">
-					Drag & drop files here, or <label
-						class="cursor-pointer font-medium text-primary hover:underline"
-						>browse<input
-							type="file"
-							multiple
-							class="hidden"
-							onchange={(e) => addFiles(e.currentTarget.files)}
-						/></label
-					>
-				</p>
-			</div>
-
-			{#if uploading}
-				<div>
-					<div class="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-						<span>Uploading...</span><span>{totalProgress}%</span>
-					</div>
-					<Progress value={totalProgress} max={100} class="h-2" />
-				</div>
-			{/if}
-
-			{#if selectedFiles.length > 0}
-				<div class="max-h-64 space-y-2 overflow-y-auto">
-					{#each selectedFiles as item, i (item.key)}
-						<div class="flex items-center gap-3 rounded-lg border p-2">
-							{#if item.preview}<img
-									src={item.preview}
-									alt={item.file.name}
-									class="h-12 w-12 rounded object-cover"
-								/>
-							{:else}{@const Icon = getFileIcon(item.file.name)}
-								<div class="flex h-12 w-12 items-center justify-center rounded bg-muted">
-									<Icon class="h-6 w-6 text-muted-foreground" />
-								</div>{/if}
-							<div class="min-w-0 flex-1">
-								<p class="truncate text-sm font-medium">{item.file.name}</p>
-								{#if item.status === 'pending'}<Input
-										value={item.key}
-										oninput={(e) => {
-											selectedFiles[i] = { ...selectedFiles[i], key: e.currentTarget.value };
-										}}
-										class="mt-1 h-auto px-2 py-0.5 font-mono text-xs text-muted-foreground"
-										placeholder="Object key"
-									/>
-								{:else}<p class="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-										{item.key}
-									</p>{/if}
-								<p class="text-xs text-muted-foreground">{formatBytes(item.file.size)}</p>
-								{#if item.status === 'uploading'}<Progress
-										value={item.progress}
-										max={100}
-										class="mt-1 h-1.5"
-									/>{/if}
-							</div>
-							{#if item.status === 'uploading'}<span class="text-xs font-medium text-primary"
-									>{item.progress}%</span
-								>
-							{:else if item.status === 'done'}<CheckCircle class="h-5 w-5 text-emerald-500" />
-							{:else if item.status === 'error'}
-								<Tooltip.Root>
-									<Tooltip.Trigger
-										>{#snippet child({ props })}<span {...props}
-												><AlertCircle class="h-5 w-5 text-destructive" /></span
-											>{/snippet}</Tooltip.Trigger
-									>
-									<Tooltip.Content
-										class="max-w-xs border-destructive/20 bg-destructive/10 text-destructive"
-										>{item.error}</Tooltip.Content
-									>
-								</Tooltip.Root>
-							{:else}<Button
-									variant="ghost"
-									size="icon"
-									class="h-7 w-7 text-muted-foreground hover:text-destructive"
-									onclick={() => removeFile(i)}
-									title="Remove"><X class="h-4 w-4" /></Button
-								>{/if}
-						</div>
-					{/each}
-				</div>
-			{/if}
-
-			<Dialog.Footer>
-				<Button variant="ghost" onclick={closeUpload} disabled={uploading}
-					>{allDone ? 'Close' : 'Cancel'}</Button
-				>
-				{#if !allDone}<Button
-						onclick={uploadAll}
-						disabled={uploading ||
-							selectedFiles.length === 0 ||
-							selectedFiles.every((f) => f.status !== 'pending')}
-					>
-						{#if uploading}Uploading...{:else}Upload {selectedFiles.filter(
-								(f) => f.status === 'pending'
-							).length} file{selectedFiles.filter((f) => f.status === 'pending').length !== 1
-								? 's'
-								: ''}{/if}
-					</Button>{/if}
-			</Dialog.Footer>
-		</Dialog.Content>
-	</Dialog.Root>
 
 	{#if prefix}<Button
 			variant="link"
@@ -727,6 +536,7 @@
 			><Folder class="h-4 w-4" />.. (parent directory)</Button
 		>{/if}
 
+	<!-- Object Table -->
 	{#await objectData}
 		<TableSkeleton rows={5} columns={7} />
 	{:then}
@@ -759,46 +569,29 @@
 						<Select.Item value=">100MB">&gt; 100 MB</Select.Item>
 					</Select.Content>
 				</Select.Root>
-				<Select.Root type="single" bind:value={dateFilter}>
-					<Select.Trigger class="h-8 w-auto min-w-[100px] px-2 text-xs">
-						{dateFilter === '24h'
-							? 'Last 24 hours'
-							: dateFilter === '7d'
-								? 'Last 7 days'
-								: dateFilter === '30d'
-									? 'Last 30 days'
-									: 'All dates'}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Item value="">All dates</Select.Item>
-						<Select.Item value="24h">Last 24 hours</Select.Item>
-						<Select.Item value="7d">Last 7 days</Select.Item>
-						<Select.Item value="30d">Last 30 days</Select.Item>
-					</Select.Content>
-				</Select.Root>
 				{#if hasActiveFilters}
 					<Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={clearFilters}>
 						Clear filters
 					</Button>
 				{/if}
 				<span class="ml-auto text-xs text-muted-foreground"
-					>{filteredObjects.length} of {objects.length} items</span
+					>{filteredObjects.length} items{isTruncated ? ' (more available)' : ''}</span
 				>
 			</div>
 		</div>
 
-		{#if selected.size > 0}
+		{#if selectedKeys.length > 0}
 			<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-				<span class="text-sm font-medium">{selected.size} selected</span>
+				<span class="text-sm font-medium">{selectedKeys.length} selected</span>
 				<Button size="sm" onclick={bulkDownload} disabled={downloading}
 					>{#if downloading}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Download
 							class="h-3.5 w-3.5"
 						/>{/if}Download Selected</Button
 				>
-				<Button variant="destructive" size="sm" onclick={() => del.requestBulkDelete()}
+				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}
 					><Trash2 class="h-3.5 w-3.5" />Delete Selected</Button
 				>
-				<Button variant="ghost" size="sm" onclick={() => selected.clear()}>Deselect All</Button>
+				<Button variant="ghost" size="sm" onclick={() => (rowSelection = {})}>Deselect All</Button>
 			</div>
 		{/if}
 
@@ -809,137 +602,121 @@
 				? 'No objects in this bucket'
 				: `No results matching "${search}"`}
 		/>
+
+		<!-- Pagination controls -->
+		<div class="flex items-center justify-between">
+			<div class="text-sm text-muted-foreground">
+				{#if objTable.getFilteredSelectedRowModel().rows.length > 0}
+					{objTable.getFilteredSelectedRowModel().rows.length} of{' '}
+					{objTable.getFilteredRowModel().rows.length} row(s) selected.
+				{/if}
+			</div>
+			<div class="flex items-center gap-4">
+				<!-- Client-side pagination within loaded data -->
+				{#if totalPages > 1}
+					<div class="flex items-center gap-2">
+						<span class="text-xs text-muted-foreground">
+							Page {currentPage} of {totalPages}
+						</span>
+						<Button
+							variant="outline"
+							size="icon"
+							class="h-8 w-8"
+							onclick={() => objTable.previousPage()}
+							disabled={!objTable.getCanPreviousPage()}
+						>
+							<ChevronLeft class="h-4 w-4" />
+						</Button>
+						<Button
+							variant="outline"
+							size="icon"
+							class="h-8 w-8"
+							onclick={() => objTable.nextPage()}
+							disabled={!objTable.getCanNextPage()}
+						>
+							<ChevronRight class="h-4 w-4" />
+						</Button>
+					</div>
+				{/if}
+
+				<!-- Server-side pagination (load more from S3) -->
+				{#if isTruncated || tokenHistory.length > 0}
+					<div class="flex items-center gap-2 border-l pl-4">
+						<span class="text-xs text-muted-foreground">Batch {serverPage}</span>
+						<Button
+							variant="outline"
+							size="sm"
+							class="h-8"
+							onclick={loadPrevPage}
+							disabled={tokenHistory.length === 0}
+						>
+							Previous batch
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							class="h-8"
+							onclick={loadNextPage}
+							disabled={!isTruncated}
+						>
+							Next batch
+						</Button>
+					</div>
+				{/if}
+			</div>
+		</div>
 	{/await}
 
-	{#if viewerOpen}<FileViewer
-			bind:open={viewerOpen}
-			url={viewerUrl}
-			filename={viewerFilename}
-			size={viewerSize}
-			objectKey={viewerObject?.key}
-			lastModified={viewerObject?.last_modified}
-			etag={viewerObject?.etag}
-			storageClass={viewerObject?.storage_class}
-			hasPrev={viewerHasPrev}
-			hasNext={viewerHasNext}
-			onprev={viewerPrev}
-			onnext={viewerNext}
-			currentIndex={viewerIndex}
-			totalCount={selectableObjects.length}
-			onclose={() => (viewerOpen = false)}
-		/>{/if}
+	<!-- Bucket ACL -->
+	<BucketAcl {bucket} />
 </div>
 
+<!-- Dialogs -->
+<BucketUploadDialog
+	bind:open={uploadOpen}
+	{bucket}
+	{prefix}
+	onuploaded={() => objectData.refresh()}
+/>
+
+<BucketShareDialog {bucket} bind:target={shareTarget} />
+
+<BucketCopyDialog {bucket} bind:target={copyTarget} oncopied={() => objectData.refresh()} />
+
+{#if viewerOpen}<FileViewer
+		bind:open={viewerOpen}
+		url={viewerUrl}
+		filename={viewerFilename}
+		size={viewerSize}
+		objectKey={viewerObject?.key}
+		lastModified={viewerObject?.last_modified}
+		etag={viewerObject?.etag}
+		storageClass={viewerObject?.storage_class}
+		hasPrev={viewerHasPrev}
+		hasNext={viewerHasNext}
+		onprev={() => {
+			if (viewerHasPrev) viewerIndex--;
+		}}
+		onnext={() => {
+			if (viewerHasNext) viewerIndex++;
+		}}
+		currentIndex={viewerIndex}
+		totalCount={selectableObjects.length}
+		onclose={() => (viewerOpen = false)}
+	/>{/if}
+
 <DeleteConfirmDialog
-	bind:open={del.deleteDialogOpen}
-	name={del.deleteTarget ? getDisplayName(del.deleteTarget) : ''}
+	bind:open={deleteDialogOpen}
+	name={deleteTarget ? getDisplayName(deleteTarget) : ''}
 	itemType="object"
-	loading={del.deleting}
+	loading={deleting}
 	onconfirm={handleConfirmDelete}
 />
 
-<Dialog.Root
-	open={shareTarget !== null}
-	onOpenChange={(open) => {
-		if (!open) closeShare();
-	}}
->
-	<Dialog.Content class="sm:max-w-lg">
-		<Dialog.Header>
-			<Dialog.Title>Generate Presigned URL</Dialog.Title>
-			<Dialog.Description>
-				Create a temporary URL for accessing this object without credentials.
-			</Dialog.Description>
-		</Dialog.Header>
-		<div class="space-y-4">
-			<div class="rounded-lg bg-muted/50 p-3">
-				<div class="grid gap-1 text-sm">
-					<span class="text-muted-foreground">Bucket</span>
-					<span class="font-mono font-medium">{bucket}</span>
-					<span class="mt-1 text-muted-foreground">Key</span>
-					<span class="break-all font-mono font-medium"
-						>{shareTarget ? getDisplayName(shareTarget) : ''}</span
-					>
-				</div>
-			</div>
-
-			<div class="space-y-2">
-				<Label>Method</Label>
-				<div class="flex gap-2">
-					<Button
-						variant={shareMethod === 'get_object' ? 'default' : 'outline'}
-						size="sm"
-						onclick={() => (shareMethod = 'get_object')}
-					>
-						Download
-					</Button>
-					<Button
-						variant={shareMethod === 'put_object' ? 'default' : 'outline'}
-						size="sm"
-						onclick={() => (shareMethod = 'put_object')}
-					>
-						Upload
-					</Button>
-				</div>
-			</div>
-
-			<div class="space-y-2">
-				<Label for="share-expiry">Expiry</Label>
-				<div class="flex flex-wrap gap-2">
-					{#each EXPIRY_PRESETS as preset (preset.value)}
-						<Button
-							variant={shareExpiry === preset.value ? 'default' : 'outline'}
-							size="sm"
-							onclick={() => (shareExpiry = preset.value)}
-						>
-							{preset.label}
-						</Button>
-					{/each}
-				</div>
-			</div>
-
-			{#if !shareUrl}
-				<Button onclick={handleGenerateUrl} disabled={shareGenerating} class="w-full">
-					{#if shareGenerating}
-						<Loader2 class="h-4 w-4 animate-spin" />
-						Generating...
-					{:else}
-						Generate URL
-					{/if}
-				</Button>
-			{:else}
-				<div class="space-y-2">
-					<Label>Presigned URL</Label>
-					<div class="flex items-center gap-2">
-						<Input readonly value={shareUrl} class="font-mono text-xs" />
-						<Tooltip.Root>
-							<Tooltip.Trigger>
-								{#snippet child({ props })}
-									<Button {...props} variant="ghost" size="icon" onclick={copyShareUrl}>
-										{#if shareCopied}
-											<Check class="h-4 w-4 text-emerald-500" />
-										{:else}
-											<Copy class="h-4 w-4" />
-										{/if}
-									</Button>
-								{/snippet}
-							</Tooltip.Trigger>
-							<Tooltip.Content>{shareCopied ? 'Copied!' : 'Copy'}</Tooltip.Content>
-						</Tooltip.Root>
-					</div>
-				</div>
-			{/if}
-		</div>
-		<Dialog.Footer>
-			<Button variant="ghost" onclick={closeShare}>Close</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
-
 <BulkDeleteDialog
-	bind:open={del.bulkDeleteOpen}
-	count={selected.size}
+	bind:open={bulkDeleteOpen}
+	count={selectedKeys.length}
 	itemType="object"
-	loading={del.deleting}
+	loading={deleting}
 	onconfirm={handleConfirmBulkDelete}
 />
