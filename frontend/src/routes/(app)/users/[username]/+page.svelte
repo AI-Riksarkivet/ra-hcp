@@ -40,6 +40,13 @@
 	import BackButton from '$lib/components/ui/back-button.svelte';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import {
+		DataTable,
+		createSvelteTable,
+		getCoreRowModel,
+		renderSnippet,
+	} from '$lib/components/ui/data-table/index.js';
+	import type { ColumnDef } from '@tanstack/table-core';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let username = $derived(page.params.username ?? '');
@@ -137,6 +144,32 @@
 		)
 	);
 
+	type NsPermEntry = { namespaceName: string; permissions?: { permission?: string[] } };
+
+	const nsPermColumns: ColumnDef<NsPermEntry>[] = [
+		{
+			accessorKey: 'namespaceName',
+			header: 'Namespace',
+			cell: ({ row }) => renderSnippet(nsNameCell, row.original),
+			meta: { cellClass: 'px-4 py-3 font-medium' },
+		},
+		{
+			id: 'permissions',
+			header: 'Permissions',
+			cell: ({ row }) => renderSnippet(nsPermsCell, row.original),
+		},
+	];
+
+	let nsPermTable = $derived(
+		createSvelteTable({
+			get data() {
+				return nsPermissions;
+			},
+			columns: nsPermColumns,
+			getCoreRowModel: getCoreRowModel(),
+		})
+	);
+
 	// --- S3 Credentials ---
 	let credsData = $derived(tenant ? get_s3_credentials() : undefined);
 	let creds = $derived(
@@ -172,6 +205,30 @@
 		}
 	}
 </script>
+
+{#snippet nsNameCell(entry: NsPermEntry)}
+	<a
+		href="/namespaces/{entry.namespaceName}"
+		class="text-primary underline-offset-4 hover:underline"
+	>
+		{entry.namespaceName}
+	</a>
+{/snippet}
+
+{#snippet nsPermsCell(entry: NsPermEntry)}
+	<div class="flex flex-wrap gap-1">
+		{#each entry.permissions?.permission ?? [] as perm (perm)}
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<span {...props}><Badge variant="secondary">{perm}</Badge></span>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content>{PERMISSION_DESCRIPTIONS[perm] ?? perm}</Tooltip.Content>
+			</Tooltip.Root>
+		{/each}
+	</div>
+{/snippet}
 
 <svelte:head>
 	<title>{username} - User Settings - HCP Admin Console</title>
@@ -438,55 +495,7 @@
 							</div>
 						</div>
 					{:then}
-						{#if nsPermissions.length === 0}
-							<div class="rounded-lg border border-dashed p-6 text-center">
-								<p class="text-sm text-muted-foreground">This user has no namespace access.</p>
-							</div>
-						{:else}
-							<div class="overflow-x-auto rounded-lg border">
-								<table class="w-full text-left text-sm">
-									<thead
-										class="border-b bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground"
-									>
-										<tr>
-											<th class="px-4 py-2.5 font-medium">Namespace</th>
-											<th class="px-4 py-2.5 font-medium">Permissions</th>
-										</tr>
-									</thead>
-									<tbody class="divide-y">
-										{#each nsPermissions as entry (entry.namespaceName)}
-											<tr class="bg-card transition-colors hover:bg-accent/50">
-												<td class="px-4 py-2.5 font-medium">
-													<a
-														href="/namespaces/{entry.namespaceName}"
-														class="text-primary underline-offset-4 hover:underline"
-													>
-														{entry.namespaceName}
-													</a>
-												</td>
-												<td class="px-4 py-2.5">
-													<div class="flex flex-wrap gap-1">
-														{#each entry.permissions?.permission ?? [] as perm (perm)}
-															<Tooltip.Root>
-																<Tooltip.Trigger>
-																	{#snippet child({ props })}
-																		<span {...props}><Badge variant="secondary">{perm}</Badge></span
-																		>
-																	{/snippet}
-																</Tooltip.Trigger>
-																<Tooltip.Content
-																	>{PERMISSION_DESCRIPTIONS[perm] ?? perm}</Tooltip.Content
-																>
-															</Tooltip.Root>
-														{/each}
-													</div>
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							</div>
-						{/if}
+						<DataTable table={nsPermTable} noResultsMessage="This user has no namespace access." />
 					{/await}
 				</section>
 			{/if}

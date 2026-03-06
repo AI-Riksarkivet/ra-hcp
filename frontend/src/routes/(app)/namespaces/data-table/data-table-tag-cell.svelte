@@ -56,9 +56,12 @@
 </script>
 
 {#if editing}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="flex flex-col gap-1.5" onclick={(e) => e.stopPropagation()}>
+	<div
+		class="flex flex-col gap-1.5"
+		onclick={(e: MouseEvent) => e.stopPropagation()}
+		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
+		role="presentation"
+	>
 		<div class="flex gap-1.5">
 			<Input
 				class="h-7 w-28 px-2 text-xs"
@@ -78,13 +81,14 @@
 				{#each editTags as t (t)}
 					<span class="inline-flex items-center gap-0.5">
 						<ServiceTagBadge tag={t} />
-						<button
-							type="button"
-							class="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
+						<Button
+							variant="ghost"
+							size="icon"
+							class="h-5 w-5 rounded-full text-muted-foreground hover:text-destructive"
 							onclick={() => removeEditTag(t)}
 						>
 							<X class="h-2.5 w-2.5" />
-						</button>
+						</Button>
 					</span>
 				{/each}
 			</div>
@@ -101,15 +105,16 @@
 		{:else}
 			<span class="text-muted-foreground">—</span>
 		{/if}
-		<button
-			type="button"
-			class="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+		<Button
+			variant="ghost"
+			size="icon"
+			class="h-6 w-6 rounded text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
 			onclick={(e) => {
 				e.stopPropagation();
 				onstartedit();
 			}}
 		>
 			<Pencil class="h-3 w-3" />
-		</button>
+		</Button>
 	</div>
 {/if}

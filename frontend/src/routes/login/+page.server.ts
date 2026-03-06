@@ -1,10 +1,12 @@
-import { fail } from "@sveltejs/kit";
+import { fail, redirect } from "@sveltejs/kit";
 import { loginSchema } from "$lib/api/schemas.js";
 import type { Actions, PageServerLoad } from "./$types.js";
 import { BACKEND_URL, COOKIE_SECURE } from "$lib/server/env.js";
 
 export const load: PageServerLoad = ({ locals }) => {
-  return { hasToken: !!locals.token };
+  if (locals.token) {
+    redirect(302, "/namespaces");
+  }
 };
 
 export const actions = {
@@ -63,6 +65,6 @@ export const actions = {
       });
     }
 
-    return { success: true };
+    redirect(303, "/namespaces");
   },
 } satisfies Actions;

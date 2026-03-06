@@ -11,7 +11,7 @@ from app.schemas.query import (
     OperationQuery,
     OperationQueryResponse,
 )
-from app.services.query_service import QueryService
+from app.services.query_service import AuthenticatedQueryService
 
 router = APIRouter(prefix="/tenants", tags=["Metadata Query"])
 
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/tenants", tags=["Metadata Query"])
 async def query_objects(
     tenant_name: str,
     body: ObjectQuery,
-    svc: QueryService = Depends(get_query_service),
+    svc: AuthenticatedQueryService = Depends(get_query_service),
 ):
     """Search objects by metadata, paths, size, retention, and custom metadata."""
     return await svc.object_query(tenant_name, body)
@@ -40,7 +40,7 @@ async def query_objects(
 async def query_operations(
     tenant_name: str,
     body: OperationQuery,
-    svc: QueryService = Depends(get_query_service),
+    svc: AuthenticatedQueryService = Depends(get_query_service),
 ):
     """Audit trail of create/delete/purge events."""
     return await svc.operation_query(tenant_name, body)

@@ -27,6 +27,7 @@
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import {
 		DataTable,
+		DataTableCheckbox,
 		createSvelteTable,
 		getCoreRowModel,
 		getSortedRowModel,
@@ -290,11 +291,16 @@
 		{
 			id: 'select',
 			header: () =>
-				renderSnippet(selectAllCheckbox, {
+				renderComponent(DataTableCheckbox, {
 					checked: allSelected,
+					onCheckedChange: toggleAll,
 					disabled: filteredResults.length === 0,
 				}),
-			cell: ({ row }) => renderSnippet(selectRowCheckbox, row.original),
+			cell: ({ row }) =>
+				renderComponent(DataTableCheckbox, {
+					checked: selected.has(itemKey(row.original)),
+					onCheckedChange: () => toggleOne(itemKey(row.original)),
+				}),
 			meta: { headerClass: 'w-10', cellClass: 'px-4 py-3' },
 		},
 		{
@@ -438,7 +444,11 @@
 	sorted: false | 'asc' | 'desc';
 	onclick: () => void;
 })}
-	<button class="inline-flex items-center gap-1 hover:text-foreground" onclick={props.onclick}>
+	<Button
+		variant="ghost"
+		class="h-auto gap-1 p-0 hover:bg-transparent hover:text-foreground"
+		onclick={props.onclick}
+	>
 		{props.label}
 		{#if props.sorted === 'asc'}
 			<ArrowUp class="h-3 w-3" />
@@ -447,18 +457,7 @@
 		{:else}
 			<ArrowUpDown class="h-3 w-3 opacity-30" />
 		{/if}
-	</button>
-{/snippet}
-
-{#snippet selectAllCheckbox(props: { checked: boolean; disabled: boolean })}
-	<Checkbox checked={props.checked} onCheckedChange={toggleAll} disabled={props.disabled} />
-{/snippet}
-
-{#snippet selectRowCheckbox(item: QueryResultObject)}
-	<Checkbox
-		checked={selected.has(itemKey(item))}
-		onCheckedChange={() => toggleOne(itemKey(item))}
-	/>
+	</Button>
 {/snippet}
 
 {#snippet pathCell(item: QueryResultObject)}

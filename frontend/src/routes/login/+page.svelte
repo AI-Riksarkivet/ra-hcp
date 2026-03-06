@@ -1,33 +1,12 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
 	import { Server } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 
-	interface Props {
-		data: { hasToken: boolean };
-		form: { error?: string; success?: boolean } | null;
-	}
-
-	let { data, form }: Props = $props();
+	let { form }: { form: { error?: string } | null } = $props();
 	let loading = $state(false);
-
-	// Redirect if already logged in
-	onMount(() => {
-		if (data.hasToken) {
-			goto('/namespaces', { replaceState: true });
-		}
-	});
-
-	// Redirect on successful login
-	$effect(() => {
-		if (form?.success) {
-			goto('/namespaces', { replaceState: true });
-		}
-	});
 </script>
 
 <svelte:head>

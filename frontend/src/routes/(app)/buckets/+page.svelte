@@ -4,7 +4,6 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -35,6 +34,7 @@
 	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
 	import {
 		DataTable,
+		DataTableCheckbox,
 		createSvelteTable,
 		getCoreRowModel,
 		renderSnippet,
@@ -122,8 +122,17 @@
 		const cols: ColumnDef<BucketRow>[] = [
 			{
 				id: 'select',
-				header: () => renderSnippet(checkboxHeader, undefined),
-				cell: ({ row }) => renderSnippet(checkboxCell, row.original),
+				header: () =>
+					renderComponent(DataTableCheckbox, {
+						checked: allSelected,
+						onCheckedChange: toggleAll,
+						disabled: filteredBuckets.length === 0,
+					}),
+				cell: ({ row }) =>
+					renderComponent(DataTableCheckbox, {
+						checked: selected.has(row.original.name),
+						onCheckedChange: () => toggleOne(row.original.name),
+					}),
 				meta: { headerClass: 'w-10', cellClass: 'px-4 py-3' },
 			},
 			{
@@ -213,30 +222,6 @@
 		}
 	}
 </script>
-
-{#snippet checkboxHeader(_: undefined)}
-	<span
-		onclick={(e: MouseEvent) => e.stopPropagation()}
-		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
-		role="presentation"
-	>
-		<Checkbox
-			checked={allSelected}
-			onCheckedChange={toggleAll}
-			disabled={filteredBuckets.length === 0}
-		/>
-	</span>
-{/snippet}
-
-{#snippet checkboxCell(bucket: BucketRow)}
-	<span
-		onclick={(e: MouseEvent) => e.stopPropagation()}
-		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
-		role="presentation"
-	>
-		<Checkbox checked={selected.has(bucket.name)} onCheckedChange={() => toggleOne(bucket.name)} />
-	</span>
-{/snippet}
 
 {#snippet storageCell(bucket: BucketRow)}
 	{@const used = bucketStorageMap.get(bucket.name) ?? 0}

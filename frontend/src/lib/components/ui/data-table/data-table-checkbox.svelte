@@ -1,19 +1,25 @@
 <script lang="ts">
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import type { ComponentProps } from 'svelte';
 
 	let {
-		checked = $bindable(false),
-		indeterminate = $bindable(false),
+		checked = false,
 		onCheckedChange,
-		...restProps
-	}: ComponentProps<typeof Checkbox> & {
+		disabled = false,
+		hidden = false,
+	}: {
+		checked?: boolean;
 		onCheckedChange?: (value: boolean) => void;
+		disabled?: boolean;
+		hidden?: boolean;
 	} = $props();
 </script>
 
-<Checkbox
-	bind:checked={() => checked, (v) => onCheckedChange?.(!!v)}
-	bind:indeterminate
-	{...restProps}
-/>
+{#if !hidden}
+	<span
+		onclick={(e: MouseEvent) => e.stopPropagation()}
+		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
+		role="presentation"
+	>
+		<Checkbox {checked} onCheckedChange={(v) => onCheckedChange?.(!!v)} {disabled} />
+	</span>
+{/if}

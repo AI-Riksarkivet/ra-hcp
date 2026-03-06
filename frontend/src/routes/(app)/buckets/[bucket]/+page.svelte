@@ -4,7 +4,6 @@
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
 	import {
@@ -57,6 +56,7 @@
 	import { cn } from '$lib/utils.js';
 	import {
 		DataTable,
+		DataTableCheckbox,
 		createSvelteTable,
 		getCoreRowModel,
 		renderSnippet,
@@ -443,12 +443,17 @@
 		{
 			id: 'select',
 			header: () =>
-				renderSnippet(checkboxHeaderSnippet, {
-					all: allSelected,
-					toggle: toggleAll,
+				renderComponent(DataTableCheckbox, {
+					checked: allSelected,
+					onCheckedChange: toggleAll,
 					disabled: selectableObjects.length === 0,
 				}),
-			cell: ({ row }) => renderSnippet(checkboxCellSnippet, row.original),
+			cell: ({ row }) =>
+				renderComponent(DataTableCheckbox, {
+					checked: selected.has(row.original.key),
+					onCheckedChange: () => toggleOne(row.original.key),
+					hidden: isObjFolder(row.original),
+				}),
 			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
 		},
 		{
@@ -502,26 +507,6 @@
 		})
 	);
 </script>
-
-{#snippet checkboxHeaderSnippet(props: {
-	all: boolean;
-	toggle: (checked: boolean) => void;
-	disabled: boolean;
-})}
-	<Checkbox checked={props.all} onCheckedChange={props.toggle} disabled={props.disabled} />
-{/snippet}
-
-{#snippet checkboxCellSnippet(obj: S3Object)}
-	<span
-		onclick={(e: MouseEvent) => e.stopPropagation()}
-		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
-		role="presentation"
-	>
-		{#if !isObjFolder(obj)}
-			<Checkbox checked={selected.has(obj.key)} onCheckedChange={() => toggleOne(obj.key)} />
-		{/if}
-	</span>
-{/snippet}
 
 {#snippet nameCellSnippet(obj: S3Object)}
 	<span class="flex items-center gap-2">

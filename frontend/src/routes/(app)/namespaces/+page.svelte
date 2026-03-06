@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Plus, X, Pencil, FileBox, HardDrive, Boxes, Users, ChartPie } from 'lucide-svelte';
+	import { Plus, X, FileBox, HardDrive, Boxes, Users, ChartPie } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -45,6 +45,7 @@
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 	import {
 		DataTable,
+		DataTableCheckbox,
 		createSvelteTable,
 		getCoreRowModel,
 		renderSnippet,
@@ -52,6 +53,7 @@
 	} from '$lib/components/ui/data-table/index.js';
 	import type { ColumnDef } from '@tanstack/table-core';
 	import DataTableActions from './data-table/data-table-actions.svelte';
+	import DataTableTagCell from './data-table/data-table-tag-cell.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 
@@ -150,50 +152,23 @@
 
 	// Tag editing for existing namespaces
 	let editingTagsNs = $state('');
-	let editTags = $state<string[]>([]);
-	let editTagInput = $state('');
-	let savingTags = $state(false);
 
 	function startEditTags(ns: Namespace) {
 		editingTagsNs = ns.name;
-		editTags = [...(ns.tags?.tag ?? [])];
-		editTagInput = '';
 	}
 
-	function addEditTag() {
-		const t = editTagInput.trim();
-		if (t && !editTags.includes(t.toLowerCase())) {
-			editTags = [...editTags, t.toLowerCase()];
-		}
-		editTagInput = '';
-	}
-
-	function removeEditTag(t: string) {
-		editTags = editTags.filter((x) => x !== t);
-	}
-
-	function handleEditTagKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter') {
-			e.preventDefault();
-			addEditTag();
-		}
-	}
-
-	async function saveTags() {
-		if (!tenant || !nsData || !editingTagsNs) return;
-		savingTags = true;
+	async function handleSaveTags(nsName: string, tags: string[]) {
+		if (!tenant || !nsData) return;
 		try {
 			await update_namespace({
 				tenant,
-				name: editingTagsNs,
-				body: { tags: { tag: editTags } },
+				name: nsName,
+				body: { tags: { tag: tags } },
 			}).updates(nsData);
 			toast.success('Tags updated');
 			editingTagsNs = '';
 		} catch {
 			toast.error('Failed to update tags');
-		} finally {
-			savingTags = false;
 		}
 	}
 
@@ -241,12 +216,16 @@
 		{
 			id: 'select',
 			header: () =>
-				renderSnippet(checkboxHeaderSnippet, {
-					all: allSelected,
-					toggle: toggleAll,
+				renderComponent(DataTableCheckbox, {
+					checked: allSelected,
+					onCheckedChange: toggleAll,
 					disabled: filteredNamespaces.length === 0,
 				}),
-			cell: ({ row }) => renderSnippet(checkboxCellSnippet, row.original),
+			cell: ({ row }) =>
+				renderComponent(DataTableCheckbox, {
+					checked: selected.has(row.original.name),
+					onCheckedChange: () => toggleOne(row.original.name),
+				}),
 			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
 		},
 		{
@@ -264,7 +243,14 @@
 		{
 			id: 'tags',
 			header: 'Tags',
-			cell: ({ row }) => renderSnippet(tagsCellSnippet, row.original),
+			cell: ({ row }) =>
+				renderComponent(DataTableTagCell, {
+					tags: row.original.tags?.tag ?? [],
+					editing: editingTagsNs === row.original.name,
+					onsave: (tags: string[]) => handleSaveTags(row.original.name, tags),
+					onstartedit: () => startEditTags(row.original),
+					oncanceledit: () => (editingTagsNs = ''),
+				}),
 		},
 		{
 			accessorKey: 'description',
@@ -317,24 +303,6 @@
 	);
 </script>
 
-{#snippet checkboxHeaderSnippet(props: {
-	all: boolean;
-	toggle: (checked: boolean) => void;
-	disabled: boolean;
-})}
-	<Checkbox checked={props.all} onCheckedChange={props.toggle} disabled={props.disabled} />
-{/snippet}
-
-{#snippet checkboxCellSnippet(ns: Namespace)}
-	<span
-		onclick={(e: MouseEvent) => e.stopPropagation()}
-		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
-		role="presentation"
-	>
-		<Checkbox checked={selected.has(ns.name)} onCheckedChange={() => toggleOne(ns.name)} />
-	</span>
-{/snippet}
-
 {#snippet nameCellSnippet(ns: Namespace)}
 	<a
 		href="/namespaces/{ns.name}"
@@ -358,76 +326,6 @@
 		</div>
 	{:else}
 		—
-	{/if}
-{/snippet}
-
-{#snippet tagsCellSnippet(ns: Namespace)}
-	{#if editingTagsNs === ns.name}
-		<div
-			class="flex flex-col gap-1.5"
-			onclick={(e: MouseEvent) => e.stopPropagation()}
-			onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
-			role="presentation"
-		>
-			<div class="flex gap-1.5">
-				<Input
-					class="h-7 w-28 px-2 text-xs"
-					placeholder="Add tag..."
-					bind:value={editTagInput}
-					onkeydown={handleEditTagKeydown}
-				/>
-				<Button
-					variant="ghost"
-					size="icon"
-					class="h-7 w-7"
-					onclick={saveTags}
-					disabled={savingTags}
-				>
-					{#if savingTags}...{:else}Save{/if}
-				</Button>
-				<Button variant="ghost" size="icon" class="h-7 w-7" onclick={() => (editingTagsNs = '')}>
-					<X class="h-3 w-3" />
-				</Button>
-			</div>
-			{#if editTags.length > 0}
-				<div class="flex flex-wrap gap-1">
-					{#each editTags as t (t)}
-						<span class="inline-flex items-center gap-0.5">
-							<ServiceTagBadge tag={t} />
-							<button
-								type="button"
-								class="rounded-full p-0.5 text-muted-foreground hover:text-destructive"
-								onclick={() => removeEditTag(t)}
-							>
-								<X class="h-2.5 w-2.5" />
-							</button>
-						</span>
-					{/each}
-				</div>
-			{/if}
-		</div>
-	{:else}
-		<div class="group flex items-center gap-1">
-			{#if ns.tags?.tag?.length}
-				<div class="flex flex-wrap gap-1">
-					{#each ns.tags.tag as t (t)}
-						<ServiceTagBadge tag={t} />
-					{/each}
-				</div>
-			{:else}
-				<span class="text-muted-foreground">—</span>
-			{/if}
-			<button
-				type="button"
-				class="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-				onclick={(e: MouseEvent) => {
-					e.stopPropagation();
-					startEditTags(ns);
-				}}
-			>
-				<Pencil class="h-3 w-3" />
-			</button>
-		</div>
 	{/if}
 {/snippet}
 
