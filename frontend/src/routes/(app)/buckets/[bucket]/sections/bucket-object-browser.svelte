@@ -108,9 +108,13 @@
 
 	// --- Object list ---
 	let rawObjects = $derived(
-		((objectData.current?.objects ?? []) as S3Object[]).filter((o) => o.key !== prefix)
+		((objectData.current?.objects ?? []) as S3Object[]).filter(
+			(o) => o.key !== prefix && !(flat && o.key.endsWith('/'))
+		)
 	);
-	let commonPrefixes = $derived((objectData.current?.commonPrefixes ?? []) as string[]);
+	let commonPrefixes = $derived(
+		flat ? [] : ((objectData.current?.commonPrefixes ?? []) as string[])
+	);
 	let folderEntries = $derived(
 		commonPrefixes.map(
 			(p): S3Object => ({
