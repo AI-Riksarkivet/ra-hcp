@@ -3,7 +3,6 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -113,17 +112,17 @@
 				</div>
 			</div>
 			<div class="space-y-1.5">
-				<Label>Custom Metadata Changes</Label>
-				<Select.Root type="single" bind:value={localCustomMetadataChanges}>
-					<Select.Trigger class="w-full">
-						{localCustomMetadataChanges || 'Select...'}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Item value="allowed">allowed</Select.Item>
-						<Select.Item value="notAllowed">notAllowed</Select.Item>
-						<Select.Item value="creationOnly">creationOnly</Select.Item>
-					</Select.Content>
-				</Select.Root>
+				<Label for="custom-metadata-changes">Custom Metadata Changes</Label>
+				<select
+					id="custom-metadata-changes"
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+					bind:value={localCustomMetadataChanges}
+				>
+					<option value="" disabled>Select...</option>
+					<option value="allowed">Allowed</option>
+					<option value="notAllowed">Not Allowed</option>
+					<option value="creationOnly">Creation Only</option>
+				</select>
 			</div>
 			<div class="flex flex-wrap gap-x-6 gap-y-3">
 				<div class="flex items-center gap-2">

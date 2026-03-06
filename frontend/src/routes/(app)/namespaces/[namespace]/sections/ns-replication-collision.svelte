@@ -3,7 +3,6 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -85,16 +84,15 @@
 	{:then}
 		<Card.Content class="flex-1 space-y-4">
 			<div class="space-y-1.5">
-				<Label>Collision Action</Label>
-				<Select.Root type="single" bind:value={localAction}>
-					<Select.Trigger class="w-full">
-						{localAction || 'Select...'}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Item value="MOVE">MOVE</Select.Item>
-						<Select.Item value="RENAME">RENAME</Select.Item>
-					</Select.Content>
-				</Select.Root>
+				<Label for="collision-action">Collision Action</Label>
+				<select
+					id="collision-action"
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+					bind:value={localAction}
+				>
+					<option value="MOVE">Move</option>
+					<option value="RENAME">Rename</option>
+				</select>
 				<p class="text-xs text-muted-foreground">
 					Move to .lost+found or rename with .collision suffix.
 				</p>
