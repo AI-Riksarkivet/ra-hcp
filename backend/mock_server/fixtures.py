@@ -221,15 +221,83 @@ CONTENT_CLASSES: dict[str, dict[str, dict]] = {
     "default": {
         "document": {
             "name": "document",
-            "description": "General documents",
             "contentProperties": [],
         },
     },
     "research": {
         "dataset": {
             "name": "dataset",
-            "description": "Research datasets",
             "contentProperties": [],
+        },
+    },
+    "mock": {
+        "document-metadata": {
+            "name": "document-metadata",
+            "contentProperties": [
+                {
+                    "name": "title",
+                    "expression": "//title",
+                    "type": "STRING",
+                    "multivalued": False,
+                },
+                {
+                    "name": "author",
+                    "expression": "//author",
+                    "type": "STRING",
+                    "multivalued": True,
+                },
+                {
+                    "name": "created",
+                    "expression": "//created",
+                    "type": "DATETIME",
+                    "multivalued": False,
+                    "format": "yyyy-MM-dd",
+                },
+            ],
+            "namespaces": ["documents"],
+        },
+        "image-metadata": {
+            "name": "image-metadata",
+            "contentProperties": [
+                {
+                    "name": "width",
+                    "expression": "$.width",
+                    "type": "INTEGER",
+                    "multivalued": False,
+                },
+                {
+                    "name": "height",
+                    "expression": "$.height",
+                    "type": "INTEGER",
+                    "multivalued": False,
+                },
+                {
+                    "name": "tags",
+                    "expression": "$.tags[*]",
+                    "type": "STRING",
+                    "multivalued": True,
+                },
+            ],
+            "namespaces": ["archives"],
+        },
+        "audit-log": {
+            "name": "audit-log",
+            "contentProperties": [
+                {
+                    "name": "action",
+                    "expression": "$.action",
+                    "type": "STRING",
+                    "multivalued": False,
+                },
+                {
+                    "name": "timestamp",
+                    "expression": "$.timestamp",
+                    "type": "DATETIME",
+                    "multivalued": False,
+                    "format": "epoch",
+                },
+            ],
+            "namespaces": [],
         },
     },
 }

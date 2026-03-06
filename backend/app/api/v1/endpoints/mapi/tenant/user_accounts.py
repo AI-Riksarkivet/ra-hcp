@@ -20,7 +20,7 @@ router = APIRouter(tags=["Tenant Admin: Identity"])
 T_PREFIX = "/tenants/{tenant_name}/userAccounts"
 
 
-@router.get(T_PREFIX, response_model=UserAccountList)
+@router.get(T_PREFIX, response_model=UserAccountList | list[UserAccountResponse])
 async def list_user_accounts(
     tenant_name: str,
     qp: ListQueryParams = Depends(),

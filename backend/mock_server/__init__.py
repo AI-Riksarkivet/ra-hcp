@@ -63,9 +63,13 @@ HCP_BASE = f"https://{MOCK_MAPI_SETTINGS.hcp_host}:{MOCK_MAPI_SETTINGS.hcp_port}
 async def _mock_lifespan(app_instance):
     """Wrap the FastAPI app with mocked services for development."""
     mock_s3 = MockS3Service()
-    seed_s3(mock_s3)
-
     state = MockMapiState()
+
+    # Cross-link so namespace ↔ bucket stay in sync
+    mock_s3._mapi_state = state
+    state._s3_service = mock_s3
+
+    seed_s3(mock_s3)
     seed_mapi_state(state)
 
     mapi_svc = MapiService(MOCK_MAPI_SETTINGS)

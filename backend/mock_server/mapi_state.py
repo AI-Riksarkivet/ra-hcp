@@ -204,6 +204,8 @@ class MockMapiState:
         self.tenant_settings: dict[str, dict[str, dict]] = {}
         self.ns_settings: dict[tuple, dict[str, dict]] = {}
         self.data_access_perms: dict[tuple, dict] = {}
+        # Cross-reference to S3 service for namespace ↔ bucket sync
+        self._s3_service: Any = None
 
     # ── Lazy initialisation ────────────────────────────────────
 
@@ -258,6 +260,8 @@ class MockMapiState:
         ns_map[name] = body
         self.retention_classes.setdefault((tenant, name), {})
         self.ns_settings.setdefault((tenant, name), default_ns_settings())
+        # Sync: also create as S3 bucket
+        self._sync_create_bucket(name)
         return _empty()
 
     def delete_namespace(self, tenant: str, name: str) -> HttpxResponse:
@@ -267,7 +271,32 @@ class MockMapiState:
         del ns_map[name]
         self.retention_classes.pop((tenant, name), None)
         self.ns_settings.pop((tenant, name), None)
+        # Sync: also remove S3 bucket
+        self._sync_delete_bucket(name)
         return _empty()
+
+    # ── Namespace ↔ bucket sync helpers ─────────────────────────────────
+
+    def _sync_create_bucket(self, name: str) -> None:
+        """Create an S3 bucket when a namespace is created via MAPI."""
+        s3 = self._s3_service
+        if s3 is None:
+            return
+        if name not in s3._buckets:
+            from datetime import datetime, timezone
+
+            s3._buckets[name] = {"CreationDate": datetime.now(timezone.utc).isoformat()}
+            s3._objects[name] = {}
+
+    def _sync_delete_bucket(self, name: str) -> None:
+        """Remove the S3 bucket when a namespace is deleted via MAPI."""
+        s3 = self._s3_service
+        if s3 is None:
+            return
+        s3._buckets.pop(name, None)
+        s3._objects.pop(name, None)
+        s3._versioning.pop(name, None)
+        s3._bucket_acls.pop(name, None)
 
 
 # ── Seed ─────────────────────────────────────────────────────────────
@@ -286,6 +315,11 @@ def seed_mapi_state(state: MockMapiState) -> None:
     for tenant, ns_map in NAMESPACES.items():
         for ns in ns_map:
             state.ns_settings[(tenant, ns)] = default_ns_settings()
+    # Sync: ensure every MAPI namespace also exists as an S3 bucket
+    if state._s3_service is not None:
+        for ns_map in state.namespaces.values():
+            for ns_name in ns_map:
+                state._sync_create_bucket(ns_name)
 
 
 # ── Sub-resource handlers ────────────────────────────────────────────

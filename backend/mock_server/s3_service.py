@@ -36,6 +36,8 @@ class MockS3Service:
         self._bucket_acls: Dict[str, Dict[str, Any]] = {}
         # (bucket, key) -> ACL dict
         self._object_acls: Dict[tuple, Dict[str, Any]] = {}
+        # Cross-reference to MAPI state for namespace ↔ bucket sync
+        self._mapi_state: Any = None
 
     def _require_bucket(self, name: str) -> None:
         if name not in self._buckets:
@@ -70,6 +72,37 @@ class MockS3Service:
             )
         return obj
 
+    # ── Namespace ↔ bucket sync helpers ─────────────────────────────────
+
+    def _sync_create_namespace(self, name: str) -> None:
+        """Create a MAPI namespace when a bucket is created via S3."""
+        state = self._mapi_state
+        if state is None:
+            return
+        # Use the first tenant (default)
+        tenant = next(iter(state.namespaces), None)
+        if tenant is None:
+            return
+        ns_map = state.namespaces[tenant]
+        if name not in ns_map:
+            from .fixtures import default_ns_settings
+
+            ns_map[name] = {"name": name}
+            state.retention_classes.setdefault((tenant, name), {})
+            state.ns_settings.setdefault((tenant, name), default_ns_settings())
+
+    def _sync_delete_namespace(self, name: str) -> None:
+        """Remove the MAPI namespace when a bucket is deleted via S3."""
+        state = self._mapi_state
+        if state is None:
+            return
+        for tenant, ns_map in state.namespaces.items():
+            if name in ns_map:
+                del ns_map[name]
+                state.retention_classes.pop((tenant, name), None)
+                state.ns_settings.pop((tenant, name), None)
+                break
+
     # ── Bucket operations ─────────────────────────────────────────────
 
     def list_buckets(self) -> dict:
@@ -97,6 +130,8 @@ class MockS3Service:
             )
         self._buckets[name] = {"CreationDate": datetime.now(timezone.utc).isoformat()}
         self._objects[name] = {}
+        # Sync: also create as MAPI namespace
+        self._sync_create_namespace(name)
         return {}
 
     def head_bucket(self, name: str) -> dict:
@@ -124,6 +159,8 @@ class MockS3Service:
         self._objects.pop(name, None)
         self._versioning.pop(name, None)
         self._bucket_acls.pop(name, None)
+        # Sync: also remove MAPI namespace
+        self._sync_delete_namespace(name)
         return {}
 
     # ── Object operations ─────────────────────────────────────────────
@@ -363,3 +400,7 @@ def seed_s3(s3: MockS3Service) -> None:
         b"2024-01-01 INFO  Server started\n2024-01-01 INFO  Ready\n",
         "text/plain",
     )
+
+    # Sync: ensure every S3 bucket also exists as a MAPI namespace
+    for bucket_name in s3._buckets:
+        s3._sync_create_namespace(bucket_name)

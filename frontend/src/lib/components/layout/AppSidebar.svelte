@@ -1,13 +1,26 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Database, Users, Server, Boxes, Settings, Search, Shield } from 'lucide-svelte';
+	import {
+		Database,
+		Users,
+		Server,
+		Boxes,
+		Settings,
+		Search,
+		Shield,
+		FileType,
+	} from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
 	const tenantItems = [
 		{ href: '/namespaces', label: 'Namespaces', icon: Boxes },
 		{ href: '/users', label: 'Users & Groups', icon: Users },
 		{ href: '/settings', label: 'Settings', icon: Settings },
+	] as const;
+
+	const searchItems = [
 		{ href: '/search', label: 'Search', icon: Search },
+		{ href: '/content-classes', label: 'Content Classes', icon: FileType },
 	] as const;
 
 	const storageItems = [
@@ -36,6 +49,27 @@
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each tenantItems as item (item.href)}
+						{@const active = page.url.pathname.startsWith(item.href)}
+						<Sidebar.MenuItem>
+							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
+								{#snippet child({ props })}
+									<a href={item.href} {...props}>
+										<item.icon class="h-5 w-5 shrink-0" />
+										<span>{item.label}</span>
+									</a>
+								{/snippet}
+							</Sidebar.MenuButton>
+						</Sidebar.MenuItem>
+					{/each}
+				</Sidebar.Menu>
+			</Sidebar.GroupContent>
+		</Sidebar.Group>
+
+		<Sidebar.Group>
+			<Sidebar.GroupLabel>Search & Indexing</Sidebar.GroupLabel>
+			<Sidebar.GroupContent>
+				<Sidebar.Menu>
+					{#each searchItems as item (item.href)}
 						{@const active = page.url.pathname.startsWith(item.href)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
