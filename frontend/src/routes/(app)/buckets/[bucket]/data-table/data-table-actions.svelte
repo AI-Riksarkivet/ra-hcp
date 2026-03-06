@@ -18,6 +18,17 @@
 		onview: () => void;
 		oncopy: () => void;
 	} = $props();
+
+	function handleDownload(e: MouseEvent) {
+		e.preventDefault();
+		const a = document.createElement('a');
+		a.href = downloadUrl;
+		a.download = objectKey.split('/').pop() ?? objectKey;
+		a.style.display = 'none';
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+	}
 </script>
 
 <DropdownMenu.Root>
@@ -38,9 +49,7 @@
 		</DropdownMenu.Group>
 		<DropdownMenu.Separator />
 		<DropdownMenu.Item onclick={onview}>View details</DropdownMenu.Item>
-		<DropdownMenu.Item>
-			<a href={downloadUrl} download class="flex w-full">Download</a>
-		</DropdownMenu.Item>
+		<DropdownMenu.Item onclick={handleDownload}>Download</DropdownMenu.Item>
 		<DropdownMenu.Item onclick={onshare}>Generate share link</DropdownMenu.Item>
 		<DropdownMenu.Item onclick={oncopy}>Copy to...</DropdownMenu.Item>
 		<DropdownMenu.Separator />
