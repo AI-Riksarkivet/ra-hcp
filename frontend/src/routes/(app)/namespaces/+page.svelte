@@ -119,7 +119,7 @@
 	let selectedKeys = $derived(
 		Object.keys(rowSelection)
 			.filter((k) => rowSelection[k])
-			.map((k) => filteredNamespaces[Number(k)]?.name)
+			.map((k) => nsTable.getCoreRowModel().rows[Number(k)]?.original.name)
 			.filter(Boolean) as string[]
 	);
 	let selectedCount = $derived(selectedKeys.length);

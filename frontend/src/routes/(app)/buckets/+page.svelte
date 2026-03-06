@@ -105,7 +105,7 @@
 	let selectedKeys = $derived(
 		Object.keys(rowSelection)
 			.filter((k) => rowSelection[k])
-			.map((k) => filteredBuckets[Number(k)]?.name)
+			.map((k) => table.getCoreRowModel().rows[Number(k)]?.original.name)
 			.filter(Boolean) as string[]
 	);
 	let selectedCount = $derived(selectedKeys.length);

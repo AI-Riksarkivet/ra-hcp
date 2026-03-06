@@ -184,7 +184,7 @@
 		Object.entries(rowSelection)
 			.filter(([, v]) => v)
 			.map(([idx]) => {
-				const row = objTable.getRowModel().rows[Number(idx)];
+				const row = objTable.getCoreRowModel().rows[Number(idx)];
 				return row?.original.key;
 			})
 			.filter((k): k is string => !!k && !k.endsWith('/'))
