@@ -11,7 +11,7 @@ import (
 
 const (
 	uvPythonImage = "ghcr.io/astral-sh/uv:0.10.7-python3.14-alpine"
-	denoImage     = "denoland/deno:2.1.4"
+	denoImage     = "denoland/deno:2.7.1"
 	redisImage    = "redis:8.0.1-alpine"
 	backendDir    = "backend"
 	frontendDir   = "frontend"

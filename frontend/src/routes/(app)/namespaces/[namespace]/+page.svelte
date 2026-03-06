@@ -4,13 +4,27 @@
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { Save, Loader2, Plus, HelpCircle, Terminal, Copy, Info, X, Pencil } from 'lucide-svelte';
+	import {
+		Save,
+		Loader2,
+		Plus,
+		HelpCircle,
+		Terminal,
+		Copy,
+		Info,
+		X,
+		Pencil,
+		ChevronsUpDown,
+		Settings2,
+	} from 'lucide-svelte';
 	import {
 		DataTable,
 		createSvelteTable,
@@ -32,12 +46,19 @@
 	import {
 		get_namespace,
 		get_ns_protocols,
+		get_ns_statistics,
 		update_ns_protocol,
 		update_namespace,
 		update_versioning,
 		type Namespace,
 		type NsProtocols,
+		type NsStatistics,
 	} from '$lib/namespaces.remote.js';
+	import NsCompliance from './sections/ns-compliance.svelte';
+	import NsRetentionClasses from './sections/ns-retention-classes.svelte';
+	import NsIndexing from './sections/ns-indexing.svelte';
+	import NsCors from './sections/ns-cors.svelte';
+	import NsReplicationCollision from './sections/ns-replication-collision.svelte';
 	import {
 		get_users,
 		get_user_permissions,
@@ -65,6 +86,12 @@
 			namespaceName
 		)
 	);
+
+	// --- Statistics ---
+	let statsData = $derived(
+		tenant && namespaceName ? get_ns_statistics({ tenant, name: namespaceName }) : undefined
+	);
+	let stats = $derived((statsData?.current ?? null) as NsStatistics | null);
 
 	// --- NFS connection info ---
 	let nfsDomain = $derived(hcpDomain ? `nfs.${hcpDomain}` : 'nfs.<hcp-domain>');
@@ -279,7 +306,6 @@
 	let accessLoading = $state(true);
 	let accessVersion = $state(0);
 
-	// Users who have at least one permission OR had permissions originally (unsaved removal)
 	let usersWithAccess = $derived(
 		Object.entries(userPermMap)
 			.filter(
@@ -289,7 +315,6 @@
 			.map(([username]) => username)
 	);
 
-	// Users who don't have access yet (for the Grant Access dropdown)
 	let usersWithoutAccess = $derived(
 		allUsers.filter(
 			(u) =>
@@ -300,7 +325,6 @@
 		)
 	);
 
-	// Load all users and their permissions, filter to those with access
 	$effect(() => {
 		const currentTenant = tenant;
 		const currentNs = namespaceName;
@@ -478,7 +502,6 @@
 
 			toast.success(`Access granted to ${grantUser}`);
 			grantOpen = false;
-			// Reload access data
 			accessVersion++;
 		} catch (err) {
 			grantError = err instanceof Error ? err.message : 'Failed to grant access';
@@ -495,27 +518,30 @@
 		}
 	}
 
+	// --- Advanced Settings collapsible ---
+	let advancedOpen = $state(false);
+
 	// --- Permissions TanStack Table ---
 	let permColumns = $derived.by((): ColumnDef<string>[] => [
 		{
 			id: 'username',
 			header: 'Username',
 			cell: ({ row }) => renderSnippet(permUserCell, row.original),
-			meta: { cellClass: 'px-4 py-3 font-medium' },
+			meta: { cellClass: 'px-4 py-2 font-medium' },
 		},
 		...PERMISSION_KEYS.map(
 			(perm): ColumnDef<string> => ({
 				id: perm,
 				header: () => renderSnippet(permHeaderCell, perm),
 				cell: ({ row }) => renderSnippet(permCheckCell, { username: row.original, perm }),
-				meta: { headerClass: 'px-3 py-3 text-center', cellClass: 'px-3 py-3 text-center' },
+				meta: { headerClass: 'px-2 py-2 text-center', cellClass: 'px-2 py-2 text-center' },
 			})
 		),
 		{
 			id: 'actions',
-			header: 'Actions',
+			header: '',
 			cell: ({ row }) => renderSnippet(permSaveCell, row.original),
-			meta: { headerClass: 'w-24 px-3 py-3 text-center', cellClass: 'px-3 py-3 text-center' },
+			meta: { headerClass: 'w-16 px-2 py-2', cellClass: 'px-2 py-2 text-center' },
 		},
 	]);
 
@@ -540,13 +566,13 @@
 
 {#snippet permHeaderCell(perm: string)}
 	<div class="flex items-center justify-center gap-1">
-		{perm}
+		<span class="text-xs">{perm}</span>
 		{#if PERMISSION_DESCRIPTIONS[perm]}
 			<Tooltip.Root>
 				<Tooltip.Trigger>
 					{#snippet child({ props })}
 						<span {...props}>
-							<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+							<HelpCircle class="h-3 w-3 text-muted-foreground" />
 						</span>
 					{/snippet}
 				</Tooltip.Trigger>
@@ -581,11 +607,34 @@
 	</Button>
 {/snippet}
 
+{#snippet protoSwitch(
+	id: string,
+	label: string,
+	checked: boolean,
+	onChange: (v: boolean) => void,
+	desc: string
+)}
+	<div class="flex items-center gap-2 text-sm">
+		<Switch {id} {checked} onCheckedChange={onChange} />
+		<Label for={id}>{label}</Label>
+		<Tooltip.Root>
+			<Tooltip.Trigger>
+				{#snippet child({ props })}
+					<span {...props}>
+						<HelpCircle class="h-3 w-3 text-muted-foreground" />
+					</span>
+				{/snippet}
+			</Tooltip.Trigger>
+			<Tooltip.Content side="right">{desc}</Tooltip.Content>
+		</Tooltip.Root>
+	</div>
+{/snippet}
+
 <svelte:head>
 	<title>{namespaceName} - Namespace Settings - HCP Admin Console</title>
 </svelte:head>
 
-<div class="space-y-8">
+<div class="space-y-6">
 	<!-- Header -->
 	<div class="flex items-center gap-4">
 		<BackButton href="/namespaces" label="Back to namespaces" />
@@ -598,55 +647,42 @@
 	{#if !tenant}
 		<NoTenantPlaceholder message="Log in with a tenant to view namespace details." />
 	{:else}
-		<!-- Section 1: General Info -->
-		<section class="space-y-4">
-			<h3 class="text-lg font-semibold">General Information</h3>
-			{#await nsData}
-				<div class="rounded-lg border p-6">
-					<div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
-						{#each Array(7) as _, i (i)}
+		<!-- General Information Card (with inline statistics) -->
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>General Information</Card.Title>
+				<Card.Description>Namespace configuration and storage metrics</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				{#await nsData}
+					<div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+						{#each Array(8) as _, i (i)}
 							<div class="space-y-1">
 								<div class="h-3 w-20 animate-pulse rounded bg-muted"></div>
 								<div class="h-4 w-28 animate-pulse rounded bg-muted"></div>
 							</div>
 						{/each}
 					</div>
-				</div>
-			{:then}
-				<div class="rounded-lg border p-6">
+				{:then}
 					{#if ns}
-						<div class="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-3">
-							<div>
-								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-									Name
-								</p>
-								<p class="mt-1 text-sm font-medium">{ns.name}</p>
-							</div>
+						<div class="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4">
 							<div>
 								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
 									Description
 								</p>
-								<p class="mt-1 text-sm">{ns.description || '—'}</p>
+								<p class="mt-0.5 text-sm">{ns.description || '—'}</p>
 							</div>
 							<div>
 								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-									Hard Quota
+									Owner
 								</p>
-								<p class="mt-1 text-sm">{ns.hardQuota || '—'}</p>
-							</div>
-							<div>
-								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-									Soft Quota
-								</p>
-								<p class="mt-1 text-sm">
-									{ns.softQuota != null ? `${ns.softQuota}%` : '—'}
-								</p>
+								<p class="mt-0.5 text-sm">{ns.owner || '—'}</p>
 							</div>
 							<div>
 								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
 									Hash Scheme
 								</p>
-								<p class="mt-1 text-sm">
+								<p class="mt-0.5 text-sm">
 									{#if ns.hashScheme}
 										<Badge variant="secondary">{ns.hashScheme}</Badge>
 									{:else}
@@ -656,35 +692,9 @@
 							</div>
 							<div>
 								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-									Search
-								</p>
-								<p class="mt-1 text-sm">
-									<Badge variant={ns.searchEnabled ? 'default' : 'outline'}>
-										{ns.searchEnabled ? 'Enabled' : 'Disabled'}
-									</Badge>
-								</p>
-							</div>
-							<div>
-								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-									Versioning
-								</p>
-								<p class="mt-1 text-sm">
-									<Badge variant={ns.versioningSettings?.enabled ? 'default' : 'outline'}>
-										{ns.versioningSettings?.enabled ? 'Enabled' : 'Disabled'}
-									</Badge>
-								</p>
-							</div>
-							<div>
-								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-									Owner
-								</p>
-								<p class="mt-1 text-sm">{ns.owner || '—'}</p>
-							</div>
-							<div>
-								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
 									Created
 								</p>
-								<p class="mt-1 text-sm">{ns.creationTime ? formatDate(ns.creationTime) : '—'}</p>
+								<p class="mt-0.5 text-sm">{ns.creationTime ? formatDate(ns.creationTime) : '—'}</p>
 							</div>
 							<div>
 								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -692,7 +702,7 @@
 								</p>
 								{#if ns.hardQuota}
 									{@const quota = parseQuotaBytes(ns.hardQuota)}
-									<p class="mt-1 text-sm">
+									<p class="mt-0.5 text-sm">
 										{formatBytes(nsStorageUsed)} / {ns.hardQuota}
 									</p>
 									{#if quota}
@@ -700,146 +710,168 @@
 										<StorageProgressBar percent={pct} class="mt-1 max-w-32" />
 									{/if}
 								{:else}
-									<p class="mt-1 text-sm">{formatBytes(nsStorageUsed)}</p>
+									<p class="mt-0.5 text-sm">{formatBytes(nsStorageUsed)}</p>
 								{/if}
 							</div>
+							<div>
+								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+									Hard Quota
+								</p>
+								<p class="mt-0.5 text-sm">{ns.hardQuota || '—'}</p>
+							</div>
+							<div>
+								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+									Soft Quota
+								</p>
+								<p class="mt-0.5 text-sm">
+									{ns.softQuota != null ? `${ns.softQuota}%` : '—'}
+								</p>
+							</div>
+							<div>
+								<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+									Objects
+								</p>
+								<p class="mt-0.5 text-sm font-medium">
+									{stats ? (stats.objectCount ?? 0).toLocaleString() : '—'}
+								</p>
+							</div>
+						</div>
+
+						<!-- Inline stats row -->
+						{#if stats}
+							<div class="mt-4 flex flex-wrap gap-x-8 gap-y-2 border-t pt-3">
+								<div class="text-sm">
+									<span class="text-muted-foreground">Ingested:</span>
+									<span class="font-medium">{formatBytes(Number(stats.ingestedVolume ?? 0))}</span>
+								</div>
+								<div class="text-sm">
+									<span class="text-muted-foreground">Custom Metadata:</span>
+									<span class="font-medium"
+										>{(stats.customMetadataCount ?? 0).toLocaleString()}</span
+									>
+									<span class="text-xs text-muted-foreground">
+										({formatBytes(Number(stats.customMetadataSize ?? 0))})
+									</span>
+								</div>
+								<div class="text-sm">
+									<span class="text-muted-foreground">Shredded:</span>
+									<span class="font-medium">{(stats.shredCount ?? 0).toLocaleString()}</span>
+									<span class="text-xs text-muted-foreground">
+										({formatBytes(Number(stats.shredSize ?? 0))})
+									</span>
+								</div>
+							</div>
+						{/if}
+
+						<!-- Feature badges -->
+						<div class="mt-3 flex flex-wrap gap-2">
+							<Badge variant={ns.searchEnabled ? 'default' : 'outline'}>
+								{ns.searchEnabled ? 'Search Enabled' : 'Search Disabled'}
+							</Badge>
+							<Badge variant={ns.versioningSettings?.enabled ? 'default' : 'outline'}>
+								{ns.versioningSettings?.enabled ? 'Versioning Enabled' : 'Versioning Disabled'}
+							</Badge>
 						</div>
 					{:else}
 						<p class="text-center text-sm text-muted-foreground">
 							Namespace not found or could not be loaded.
 						</p>
 					{/if}
-				</div>
-			{/await}
-		</section>
+				{/await}
+			</Card.Content>
+		</Card.Root>
 
-		<!-- Section 2: Protocols, Features & Tags -->
+		<!-- Protocols, Features & Tags row -->
 		<div class="grid gap-6 lg:grid-cols-3">
-			<section class="space-y-4">
-				<h3 class="text-lg font-semibold">Protocols</h3>
+			<!-- Protocols -->
+			<Card.Root>
+				<Card.Header class="pb-3">
+					<Card.Title class="text-base">Protocols</Card.Title>
+				</Card.Header>
 				{#await protocolsData}
-					<div class="rounded-lg border p-6">
-						<div class="flex flex-wrap gap-6">
+					<Card.Content>
+						<div class="flex flex-wrap gap-4">
 							{#each Array(5) as _, i (i)}
-								<div class="h-5 w-28 animate-pulse rounded bg-muted"></div>
+								<div class="h-5 w-20 animate-pulse rounded bg-muted"></div>
 							{/each}
 						</div>
-					</div>
+					</Card.Content>
 				{:then}
-					<div class="rounded-lg border p-6">
-						<div class="flex flex-wrap gap-x-8 gap-y-4">
-							<label class="flex items-center gap-2 text-sm">
-								<Switch bind:checked={localHttpEnabled} />
-								HTTP
-								<Tooltip.Root>
-									<Tooltip.Trigger>
-										{#snippet child({ props })}
-											<span {...props}>
-												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-											</span>
-										{/snippet}
-									</Tooltip.Trigger>
-									<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.httpEnabled}</Tooltip.Content
-									>
-								</Tooltip.Root>
-							</label>
-							<label class="flex items-center gap-2 text-sm">
-								<Switch bind:checked={localHttpsEnabled} />
-								HTTPS
-								<Tooltip.Root>
-									<Tooltip.Trigger>
-										{#snippet child({ props })}
-											<span {...props}>
-												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-											</span>
-										{/snippet}
-									</Tooltip.Trigger>
-									<Tooltip.Content side="right"
-										>{PROTOCOL_DESCRIPTIONS.httpsEnabled}</Tooltip.Content
-									>
-								</Tooltip.Root>
-							</label>
-							<label class="flex items-center gap-2 text-sm">
-								<Switch bind:checked={localCifsEnabled} />
-								CIFS
-								<Tooltip.Root>
-									<Tooltip.Trigger>
-										{#snippet child({ props })}
-											<span {...props}>
-												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-											</span>
-										{/snippet}
-									</Tooltip.Trigger>
-									<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.cifsEnabled}</Tooltip.Content
-									>
-								</Tooltip.Root>
-							</label>
-							<label class="flex items-center gap-2 text-sm">
-								<Switch bind:checked={localNfsEnabled} />
-								NFS
-								<Tooltip.Root>
-									<Tooltip.Trigger>
-										{#snippet child({ props })}
-											<span {...props}>
-												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-											</span>
-										{/snippet}
-									</Tooltip.Trigger>
-									<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.nfsEnabled}</Tooltip.Content>
-								</Tooltip.Root>
-							</label>
-							<label class="flex items-center gap-2 text-sm">
-								<Switch bind:checked={localSmtpEnabled} />
-								SMTP
-								<Tooltip.Root>
-									<Tooltip.Trigger>
-										{#snippet child({ props })}
-											<span {...props}>
-												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
-											</span>
-										{/snippet}
-									</Tooltip.Trigger>
-									<Tooltip.Content side="right">{PROTOCOL_DESCRIPTIONS.smtpEnabled}</Tooltip.Content
-									>
-								</Tooltip.Root>
-							</label>
+					<Card.Content>
+						<div class="flex flex-wrap gap-x-6 gap-y-3">
+							{@render protoSwitch(
+								'proto-http',
+								'HTTP',
+								localHttpEnabled,
+								(v) => (localHttpEnabled = v),
+								PROTOCOL_DESCRIPTIONS.httpEnabled
+							)}
+							{@render protoSwitch(
+								'proto-https',
+								'HTTPS',
+								localHttpsEnabled,
+								(v) => (localHttpsEnabled = v),
+								PROTOCOL_DESCRIPTIONS.httpsEnabled
+							)}
+							{@render protoSwitch(
+								'proto-cifs',
+								'CIFS',
+								localCifsEnabled,
+								(v) => (localCifsEnabled = v),
+								PROTOCOL_DESCRIPTIONS.cifsEnabled
+							)}
+							{@render protoSwitch(
+								'proto-nfs',
+								'NFS',
+								localNfsEnabled,
+								(v) => (localNfsEnabled = v),
+								PROTOCOL_DESCRIPTIONS.nfsEnabled
+							)}
+							{@render protoSwitch(
+								'proto-smtp',
+								'SMTP',
+								localSmtpEnabled,
+								(v) => (localSmtpEnabled = v),
+								PROTOCOL_DESCRIPTIONS.smtpEnabled
+							)}
 						</div>
-						<div class="mt-4">
-							<SaveButton dirty={protocolsDirty} saving={savingProtocols} onclick={saveProtocols} />
-						</div>
-					</div>
+					</Card.Content>
+					<Card.Footer>
+						<SaveButton dirty={protocolsDirty} saving={savingProtocols} onclick={saveProtocols} />
+					</Card.Footer>
 				{/await}
-			</section>
+			</Card.Root>
 
-			<!-- Section 3: Features -->
-			<section class="space-y-4">
-				<h3 class="text-lg font-semibold">Features</h3>
-				<div class="rounded-lg border p-6">
-					<div class="flex flex-wrap gap-x-8 gap-y-4">
-						<label class="flex items-center gap-2 text-sm">
-							<Switch bind:checked={localSearchEnabled} />
-							Search
+			<!-- Features -->
+			<Card.Root>
+				<Card.Header class="pb-3">
+					<Card.Title class="text-base">Features</Card.Title>
+				</Card.Header>
+				<Card.Content>
+					<div class="flex flex-wrap gap-x-6 gap-y-3">
+						<div class="flex items-center gap-2 text-sm">
+							<Switch id="feat-search" bind:checked={localSearchEnabled} />
+							<Label for="feat-search">Search</Label>
 							<Tooltip.Root>
 								<Tooltip.Trigger>
 									{#snippet child({ props })}
 										<span {...props}>
-											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+											<HelpCircle class="h-3 w-3 text-muted-foreground" />
 										</span>
 									{/snippet}
 								</Tooltip.Trigger>
-								<Tooltip.Content side="right"
-									>Enable metadata query engine indexing for this namespace</Tooltip.Content
+								<Tooltip.Content side="right">Enable metadata query engine indexing</Tooltip.Content
 								>
 							</Tooltip.Root>
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<Switch bind:checked={localVersioningEnabled} />
-							Versioning
+						</div>
+						<div class="flex items-center gap-2 text-sm">
+							<Switch id="feat-versioning" bind:checked={localVersioningEnabled} />
+							<Label for="feat-versioning">Versioning</Label>
 							<Tooltip.Root>
 								<Tooltip.Trigger>
 									{#snippet child({ props })}
 										<span {...props}>
-											<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+											<HelpCircle class="h-3 w-3 text-muted-foreground" />
 										</span>
 									{/snippet}
 								</Tooltip.Trigger>
@@ -847,29 +879,27 @@
 									>Keep previous versions of objects on update or delete</Tooltip.Content
 								>
 							</Tooltip.Root>
-						</label>
+						</div>
 					</div>
-					<div class="mt-4">
-						<SaveButton
-							dirty={nsSettingsDirty}
-							saving={savingNsSettings}
-							onclick={saveNsSettings}
-						/>
-					</div>
-				</div>
-			</section>
+				</Card.Content>
+				<Card.Footer>
+					<SaveButton dirty={nsSettingsDirty} saving={savingNsSettings} onclick={saveNsSettings} />
+				</Card.Footer>
+			</Card.Root>
 
 			<!-- Tags -->
-			<section class="space-y-4">
-				<div class="flex items-center gap-2">
-					<h3 class="text-lg font-semibold">Tags</h3>
+			<Card.Root>
+				<Card.Header class="pb-3">
+					<Card.Title class="text-base">Tags</Card.Title>
 					{#if !editingTags}
-						<Button variant="ghost" size="icon" class="h-6 w-6" onclick={startEditTags}>
-							<Pencil class="h-3.5 w-3.5" />
-						</Button>
+						<Card.Action>
+							<Button variant="ghost" size="icon" class="h-6 w-6" onclick={startEditTags}>
+								<Pencil class="h-3.5 w-3.5" />
+							</Button>
+						</Card.Action>
 					{/if}
-				</div>
-				<div class="rounded-lg border p-6">
+				</Card.Header>
+				<Card.Content>
 					{#if editingTags}
 						<div class="space-y-3">
 							<div class="flex gap-2">
@@ -899,12 +929,6 @@
 							{:else}
 								<p class="text-sm text-muted-foreground">No tags yet</p>
 							{/if}
-							<div class="flex items-center gap-3">
-								<SaveButton dirty={true} saving={savingTags} onclick={saveTags} />
-								<Button variant="ghost" size="sm" onclick={() => (editingTags = false)}>
-									Cancel
-								</Button>
-							</div>
 						</div>
 					{:else if ns?.tags?.tag?.length}
 						<div class="flex flex-wrap gap-1.5">
@@ -915,23 +939,30 @@
 					{:else}
 						<p class="text-sm text-muted-foreground">No tags</p>
 					{/if}
-				</div>
-			</section>
+				</Card.Content>
+				{#if editingTags}
+					<Card.Footer class="gap-3">
+						<SaveButton dirty={true} saving={savingTags} onclick={saveTags} />
+						<Button variant="ghost" size="sm" onclick={() => (editingTags = false)}>Cancel</Button>
+					</Card.Footer>
+				{/if}
+			</Card.Root>
 		</div>
 
 		<!-- NFS Connection Instructions (shown when NFS is enabled) -->
 		{#if localNfsEnabled}
-			<section class="space-y-4">
-				<h3 class="text-lg font-semibold">NFS Connection</h3>
-				<div class="rounded-lg border p-6 space-y-4">
+			<Card.Root>
+				<Card.Header class="pb-3">
+					<Card.Title class="text-base">NFS Connection</Card.Title>
+				</Card.Header>
+				<Card.Content class="space-y-4">
 					<div
 						class="flex items-start gap-3 rounded-md bg-blue-500/10 p-3 text-sm text-blue-700 dark:text-blue-300"
 					>
 						<Info class="mt-0.5 h-4 w-4 shrink-0" />
 						<p>
-							NFS uses <strong>IP-based access control</strong> — no username or password is needed to
-							mount. Access is restricted by the IP settings configured in the NFS protocol section. Make
-							sure your client's IP is allowed before attempting to mount.
+							NFS uses <strong>IP-based access control</strong> — no username or password is needed. Make
+							sure your client's IP is allowed.
 						</p>
 					</div>
 
@@ -1004,11 +1035,11 @@
 							</div>
 						</div>
 					</details>
-				</div>
-			</section>
+				</Card.Content>
+			</Card.Root>
 		{/if}
 
-		<!-- Section 3: User Access -->
+		<!-- User Access -->
 		<section class="space-y-4">
 			<div class="flex items-center justify-between">
 				<h3 class="text-lg font-semibold">User Access</h3>
@@ -1023,17 +1054,47 @@
 				</div>
 			</div>
 			{#if accessLoading}
-				<TableSkeleton rows={4} columns={8} />
+				<TableSkeleton rows={3} columns={8} />
 			{:else if usersWithAccess.length === 0}
-				<div class="rounded-lg border border-dashed p-8 text-center">
-					<p class="text-muted-foreground">
-						No users have access to this namespace. Click "Grant Access" to add users.
+				<div class="rounded-lg border border-dashed p-6 text-center">
+					<p class="text-sm text-muted-foreground">
+						No users have access. Click "Grant Access" to add users.
 					</p>
 				</div>
 			{:else}
 				<DataTable table={permTable} noResultsMessage="No users have access." />
 			{/if}
 		</section>
+
+		<!-- Advanced Settings (Collapsible) -->
+		{#if tenant && namespaceName}
+			<Collapsible.Root bind:open={advancedOpen} class="space-y-4">
+				<div class="flex items-center gap-3">
+					<Settings2 class="h-5 w-5 text-muted-foreground" />
+					<h3 class="text-lg font-semibold">Advanced Settings</h3>
+					<Collapsible.Trigger
+						class={buttonVariants({ variant: 'ghost', size: 'sm', class: 'h-7 w-7 p-0' })}
+					>
+						<ChevronsUpDown class="h-4 w-4" />
+						<span class="sr-only">Toggle advanced settings</span>
+					</Collapsible.Trigger>
+				</div>
+
+				<Collapsible.Content class="space-y-6">
+					<div class="grid gap-6 lg:grid-cols-2">
+						<NsCompliance {tenant} {namespaceName} />
+						<NsReplicationCollision {tenant} {namespaceName} />
+					</div>
+
+					<NsRetentionClasses {tenant} {namespaceName} />
+
+					<div class="grid gap-6 lg:grid-cols-2">
+						<NsIndexing {tenant} {namespaceName} />
+						<NsCors {tenant} {namespaceName} />
+					</div>
+				</Collapsible.Content>
+			</Collapsible.Root>
+		{/if}
 	{/if}
 </div>
 
@@ -1071,25 +1132,26 @@
 				<Label>Permissions</Label>
 				<div class="flex flex-wrap gap-4">
 					{#each PERMISSION_KEYS as perm (perm)}
-						<label class="flex items-center gap-2 text-sm">
+						<div class="flex items-center gap-2 text-sm">
 							<Checkbox
+								id="grant-{perm}"
 								checked={grantPerms.has(perm)}
 								onCheckedChange={() => toggleGrantPerm(perm)}
 							/>
-							{perm}
+							<Label for="grant-{perm}">{perm}</Label>
 							{#if PERMISSION_DESCRIPTIONS[perm]}
 								<Tooltip.Root>
 									<Tooltip.Trigger>
 										{#snippet child({ props })}
 											<span {...props}>
-												<HelpCircle class="h-3.5 w-3.5 text-muted-foreground" />
+												<HelpCircle class="h-3 w-3 text-muted-foreground" />
 											</span>
 										{/snippet}
 									</Tooltip.Trigger>
 									<Tooltip.Content side="right">{PERMISSION_DESCRIPTIONS[perm]}</Tooltip.Content>
 								</Tooltip.Root>
 							{/if}
-						</label>
+						</div>
 					{/each}
 				</div>
 			</div>

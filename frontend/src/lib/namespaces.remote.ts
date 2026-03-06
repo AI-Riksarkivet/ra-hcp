@@ -255,6 +255,385 @@ export const update_versioning = command(
   },
 );
 
+// ── Namespace Statistics ──────────────────────────────────────────────
+
+export interface NsStatistics {
+  objectCount?: number;
+  storageCapacityUsed?: number;
+  ingestedVolume?: number;
+  customMetadataCount?: number;
+  customMetadataSize?: number;
+  shredCount?: number;
+  shredSize?: number;
+}
+
+export const get_ns_statistics = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/statistics`,
+      );
+      if (res.ok) return (await res.json()) as NsStatistics;
+    } catch (err) {
+      console.error("[namespaces.remote]", err);
+    }
+    return null;
+  },
+);
+
+// ── Compliance Settings ──────────────────────────────────────────────
+
+export interface ComplianceSettings {
+  retentionDefault?: string;
+  minimumRetentionAfterInitialUnspecified?: string;
+  shreddingDefault?: boolean;
+  customMetadataChanges?: string;
+  dispositionEnabled?: boolean;
+}
+
+export const get_ns_compliance = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/complianceSettings`,
+      );
+      if (res.ok) return (await res.json()) as ComplianceSettings;
+    } catch (err) {
+      console.error("[namespaces.remote]", err);
+    }
+    return {} as ComplianceSettings;
+  },
+);
+
+export const update_ns_compliance = command(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, name, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/complianceSettings`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update compliance settings",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── Retention Classes ────────────────────────────────────────────────
+
+export interface RetentionClass {
+  name?: string;
+  value?: string;
+  description?: string;
+  allowDisposition?: boolean;
+}
+
+export const get_retention_classes = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const listRes = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/retentionClasses`,
+      );
+      if (!listRes.ok) return [] as RetentionClass[];
+      const list = await listRes.json();
+      const names: string[] = list.name ?? [];
+      if (names.length === 0) return [] as RetentionClass[];
+
+      const details = await Promise.all(
+        names.map(async (rcName) => {
+          try {
+            const r = await apiFetch(
+              `/api/v1/mapi/tenants/${tenant}/namespaces/${
+                encodeURIComponent(name)
+              }/retentionClasses/${encodeURIComponent(rcName)}`,
+            );
+            if (r.ok) return (await r.json()) as RetentionClass;
+          } catch {
+            // ignore individual failures
+          }
+          return { name: rcName } as RetentionClass;
+        }),
+      );
+      return details;
+    } catch (err) {
+      console.error("[namespaces.remote]", err);
+    }
+    return [] as RetentionClass[];
+  },
+);
+
+export const create_retention_class = command(
+  z.object({
+    tenant: z.string(),
+    namespace: z.string(),
+    body: z.object({
+      name: z.string(),
+      value: z.string(),
+      description: z.string().optional(),
+      allowDisposition: z.boolean().optional(),
+    }),
+  }),
+  async ({ tenant, namespace: ns, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(ns)
+      }/retentionClasses`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to create retention class",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const update_retention_class = command(
+  z.object({
+    tenant: z.string(),
+    namespace: z.string(),
+    className: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, namespace: ns, className, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(ns)
+      }/retentionClasses/${encodeURIComponent(className)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update retention class",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const delete_retention_class = command(
+  z.object({
+    tenant: z.string(),
+    namespace: z.string(),
+    className: z.string(),
+  }),
+  async ({ tenant, namespace: ns, className }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(ns)
+      }/retentionClasses/${encodeURIComponent(className)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to delete retention class",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── Custom Metadata Indexing ─────────────────────────────────────────
+
+export interface IndexingSettings {
+  contentClasses?: string[];
+  fullIndexingEnabled?: boolean;
+  excludedAnnotations?: string;
+}
+
+export const get_ns_indexing = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/customMetadataIndexingSettings`,
+      );
+      if (res.ok) return (await res.json()) as IndexingSettings;
+    } catch (err) {
+      console.error("[namespaces.remote]", err);
+    }
+    return {} as IndexingSettings;
+  },
+);
+
+export const update_ns_indexing = command(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, name, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/customMetadataIndexingSettings`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update indexing settings",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── CORS Configuration ───────────────────────────────────────────────
+
+export interface CorsConfig {
+  cors?: string;
+}
+
+export const get_ns_cors = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/cors`,
+      );
+      if (res.ok) return (await res.json()) as CorsConfig;
+    } catch (err) {
+      console.error("[namespaces.remote]", err);
+    }
+    return {} as CorsConfig;
+  },
+);
+
+export const set_ns_cors = command(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    body: z.object({ cors: z.string() }),
+  }),
+  async ({ tenant, name, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/cors`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to set CORS configuration",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const delete_ns_cors = command(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/cors`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to delete CORS configuration",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── Replication Collision Settings ───────────────────────────────────
+
+export interface ReplicationCollision {
+  action?: string;
+  deleteDays?: number;
+  deleteEnabled?: boolean;
+}
+
+export const get_repl_collision = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/replicationCollisionSettings`,
+      );
+      if (res.ok) return (await res.json()) as ReplicationCollision;
+    } catch (err) {
+      console.error("[namespaces.remote]", err);
+    }
+    return {} as ReplicationCollision;
+  },
+);
+
+export const update_repl_collision = command(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, name, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/replicationCollisionSettings`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update replication collision settings",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── Delete Namespace ─────────────────────────────────────────────────
+
 export const delete_namespace = command(
   z.object({ tenant: z.string(), name: z.string() }),
   async ({ tenant, name }) => {
