@@ -237,3 +237,107 @@ export const get_groups = query(
     return [];
   },
 );
+
+export const get_group = query(
+  z.object({ tenant: z.string(), groupname: z.string() }),
+  async ({ tenant, groupname }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/groupAccounts/${
+          encodeURIComponent(groupname)
+        }`,
+      );
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.error("[users.remote]", err);
+    }
+    return null;
+  },
+);
+
+export const update_group = command(
+  z.object({
+    tenant: z.string(),
+    groupname: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, groupname, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/groupAccounts/${
+        encodeURIComponent(groupname)
+      }`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update group",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const delete_group = command(
+  z.object({ tenant: z.string(), groupname: z.string() }),
+  async ({ tenant, groupname }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/groupAccounts/${
+        encodeURIComponent(groupname)
+      }`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to delete group",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const get_group_permissions = query(
+  z.object({ tenant: z.string(), groupname: z.string() }),
+  async ({ tenant, groupname }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/groupAccounts/${
+          encodeURIComponent(groupname)
+        }/dataAccessPermissions`,
+      );
+      if (res.ok) return (await res.json()) as DataAccessPermissions;
+    } catch (err) {
+      console.error("[users.remote]", err);
+    }
+    return {} as DataAccessPermissions;
+  },
+);
+
+export const set_group_permissions = command(
+  z.object({
+    tenant: z.string(),
+    groupname: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, groupname, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/groupAccounts/${
+        encodeURIComponent(groupname)
+      }/dataAccessPermissions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update group permissions",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);

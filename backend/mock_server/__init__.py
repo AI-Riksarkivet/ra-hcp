@@ -27,7 +27,7 @@ from app.api.dependencies import (
 )
 from app.core.config import AuthSettings, MapiSettings
 from app.main import app
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.query_service import QueryService
 
 from .mapi_state import MockMapiState, seed_mapi_state, setup_mapi_routes
@@ -69,13 +69,18 @@ async def _mock_lifespan(app_instance):
     seed_mapi_state(state)
 
     mapi_svc = MapiService(MOCK_MAPI_SETTINGS)
+    auth_mapi_svc = AuthenticatedMapiService(
+        mapi_svc,
+        MOCK_MAPI_SETTINGS.hcp_username,
+        MOCK_MAPI_SETTINGS.hcp_password,
+    )
     query_svc = QueryService(MOCK_MAPI_SETTINGS)
 
     async def _override_s3():
         yield mock_s3
 
     async def _override_mapi():
-        yield mapi_svc
+        yield auth_mapi_svc
 
     async def _override_query():
         yield query_svc

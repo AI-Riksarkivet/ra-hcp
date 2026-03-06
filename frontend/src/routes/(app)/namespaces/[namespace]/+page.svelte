@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
-	import { buttonVariants } from '$lib/components/ui/button/index.js';
-	import { ChevronsUpDown, Settings2 } from 'lucide-svelte';
+	import * as Tabs from '$lib/components/ui/tabs/index.js';
+	import { Database, Settings2 } from 'lucide-svelte';
 	import BackButton from '$lib/components/ui/back-button.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 	import NsGeneralInfo from './sections/ns-general-info.svelte';
@@ -19,7 +18,7 @@
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let namespaceName = $derived(page.params.namespace ?? '');
 
-	let advancedOpen = $state(false);
+	let activeTab = $state('namespace');
 </script>
 
 <svelte:head>
@@ -39,29 +38,31 @@
 	{#if !tenant}
 		<NoTenantPlaceholder message="Log in with a tenant to view namespace details." />
 	{:else}
-		<NsGeneralInfo {tenant} {namespaceName} />
+		<Tabs.Root bind:value={activeTab}>
+			<Tabs.List>
+				<Tabs.Trigger value="namespace">
+					<Database class="mr-1.5 h-4 w-4" />
+					Namespace
+				</Tabs.Trigger>
+				<Tabs.Trigger value="advanced">
+					<Settings2 class="mr-1.5 h-4 w-4" />
+					Advanced Settings
+				</Tabs.Trigger>
+			</Tabs.List>
 
-		<div class="grid items-stretch gap-6 lg:grid-cols-3">
-			<NsProtocols {tenant} {namespaceName} />
-			<NsFeatures {tenant} {namespaceName} />
-			<NsTags {tenant} {namespaceName} />
-		</div>
+			<Tabs.Content value="namespace" class="space-y-6">
+				<NsGeneralInfo {tenant} {namespaceName} />
 
-		<NsUserAccess {tenant} {namespaceName} />
+				<div class="grid items-stretch gap-6 lg:grid-cols-3">
+					<NsProtocols {tenant} {namespaceName} />
+					<NsFeatures {tenant} {namespaceName} />
+					<NsTags {tenant} {namespaceName} />
+				</div>
 
-		<Collapsible.Root bind:open={advancedOpen} class="space-y-4">
-			<div class="flex items-center gap-3">
-				<Settings2 class="h-5 w-5 text-muted-foreground" />
-				<h3 class="text-lg font-semibold">Advanced Settings</h3>
-				<Collapsible.Trigger
-					class={buttonVariants({ variant: 'ghost', size: 'sm', class: 'h-7 w-7 p-0' })}
-				>
-					<ChevronsUpDown class="h-4 w-4" />
-					<span class="sr-only">Toggle advanced settings</span>
-				</Collapsible.Trigger>
-			</div>
+				<NsUserAccess {tenant} {namespaceName} />
+			</Tabs.Content>
 
-			<Collapsible.Content class="space-y-6">
+			<Tabs.Content value="advanced" class="space-y-6">
 				<div class="grid items-stretch gap-6 lg:grid-cols-3">
 					<NsCompliance {tenant} {namespaceName} />
 					<NsReplicationCollision {tenant} {namespaceName} />
@@ -72,7 +73,7 @@
 					<NsIndexing {tenant} {namespaceName} />
 					<NsCors {tenant} {namespaceName} />
 				</div>
-			</Collapsible.Content>
-		</Collapsible.Root>
+			</Tabs.Content>
+		</Tabs.Root>
 	{/if}
 </div>

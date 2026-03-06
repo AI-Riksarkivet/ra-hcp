@@ -46,3 +46,32 @@ export function getUserRoles(user: User): string[] {
   if (Array.isArray(user.roles)) return user.roles;
   return user.roles.role ?? [];
 }
+
+// ── Group Accounts ──────────────────────────────────────────────────
+
+export const GROUP_ROLES = [
+  "ADMINISTRATOR",
+  "SECURITY",
+  "MONITOR",
+  "COMPLIANCE",
+  "SERVICE",
+  "SEARCH",
+] as const;
+
+export interface GroupAccount {
+  groupname?: string;
+  name?: string;
+  description?: string;
+  roles?: { role?: string[] } | string[];
+  allowNamespaceManagement?: boolean;
+}
+
+export function getGroupName(group: GroupAccount): string {
+  return group.groupname ?? group.name ?? "";
+}
+
+export function getGroupRoles(group: GroupAccount): string[] {
+  if (!group.roles) return [];
+  if (Array.isArray(group.roles)) return group.roles;
+  return group.roles.role ?? [];
+}

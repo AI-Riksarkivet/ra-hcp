@@ -175,3 +175,265 @@ export const update_permissions = command(
     }
   },
 );
+
+// ── Console Security ─────────────────────────────────────────────────
+
+export interface IpSettings {
+  allowAddresses?: string[];
+  denyAddresses?: string[];
+  allowIfInBothLists?: boolean;
+}
+
+export interface ConsoleSecurity {
+  minimumPasswordLength?: number;
+  lowerCaseLetterCount?: number;
+  upperCaseLetterCount?: number;
+  numericCharacterCount?: number;
+  specialCharacterCount?: number;
+  passwordCombination?: boolean;
+  passwordContainsUsername?: boolean;
+  passwordReuseDepth?: number;
+  blockCommonPassword?: boolean;
+  blockPasswordReUse?: boolean;
+  forcePasswordChangeDays?: number;
+  disableAfterAttempts?: number;
+  coolDownPeriodSettings?: boolean;
+  coolDownPeriodDuration?: number;
+  automaticUserAccountUnlockSetting?: boolean;
+  automaticUserAccoutUnlockDuration?: number;
+  disableAfterInactiveDays?: number;
+  logoutOnInactive?: number;
+  loginMessage?: string;
+  ipSettings?: IpSettings;
+}
+
+export const get_console_security = query(
+  z.object({ tenant: z.string() }),
+  async ({ tenant }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/consoleSecurity`,
+      );
+      if (res.ok) return (await res.json()) as ConsoleSecurity;
+    } catch (err) {
+      console.error("[tenant-info.remote]", err);
+    }
+    return {} as ConsoleSecurity;
+  },
+);
+
+export const update_console_security = command(
+  z.object({ tenant: z.string(), body: z.record(z.string(), z.unknown()) }),
+  async ({ tenant, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/consoleSecurity`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update console security",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── Email Notifications ──────────────────────────────────────────────
+
+export interface EmailTemplate {
+  from?: string;
+  subject?: string;
+  body?: string;
+}
+
+export interface Recipient {
+  address: string;
+  importance?: string;
+  severity?: string;
+  type?: string;
+}
+
+export interface EmailNotification {
+  enabled?: boolean;
+  emailTemplate?: EmailTemplate;
+  recipients?: Recipient[];
+}
+
+export const get_email_notification = query(
+  z.object({ tenant: z.string() }),
+  async ({ tenant }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/emailNotification`,
+      );
+      if (res.ok) return (await res.json()) as EmailNotification;
+    } catch (err) {
+      console.error("[tenant-info.remote]", err);
+    }
+    return {} as EmailNotification;
+  },
+);
+
+export const update_email_notification = command(
+  z.object({ tenant: z.string(), body: z.record(z.string(), z.unknown()) }),
+  async ({ tenant, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/emailNotification`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update email notification",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── Search Security ──────────────────────────────────────────────────
+
+export interface SearchSecurity {
+  ipSettings?: IpSettings;
+}
+
+export const get_search_security = query(
+  z.object({ tenant: z.string() }),
+  async ({ tenant }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/searchSecurity`,
+      );
+      if (res.ok) return (await res.json()) as SearchSecurity;
+    } catch (err) {
+      console.error("[tenant-info.remote]", err);
+    }
+    return {} as SearchSecurity;
+  },
+);
+
+export const update_search_security = command(
+  z.object({ tenant: z.string(), body: z.record(z.string(), z.unknown()) }),
+  async ({ tenant, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/searchSecurity`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update search security",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── Tenant CORS ──────────────────────────────────────────────────────
+
+export interface TenantCors {
+  cors?: string;
+}
+
+export const get_tenant_cors = query(
+  z.object({ tenant: z.string() }),
+  async ({ tenant }) => {
+    try {
+      const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/cors`);
+      if (res.ok) return (await res.json()) as TenantCors;
+    } catch (err) {
+      console.error("[tenant-info.remote]", err);
+    }
+    return {} as TenantCors;
+  },
+);
+
+export const set_tenant_cors = command(
+  z.object({
+    tenant: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, body }) => {
+    const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/cors`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update CORS configuration",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+export const delete_tenant_cors = command(
+  z.object({ tenant: z.string() }),
+  async ({ tenant }) => {
+    const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/cors`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to delete CORS configuration",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── Available Service Plans ──────────────────────────────────────────
+
+export interface ServicePlanList {
+  name?: string[];
+}
+
+export interface ServicePlan {
+  name?: string;
+  description?: string;
+}
+
+export const get_service_plans = query(
+  z.object({ tenant: z.string() }),
+  async ({ tenant }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/availableServicePlans`,
+      );
+      if (res.ok) {
+        const data = (await res.json()) as ServicePlanList;
+        const names = data.name ?? [];
+        const plans = await Promise.all(
+          names.map(async (n) => {
+            try {
+              const r = await apiFetch(
+                `/api/v1/mapi/tenants/${tenant}/availableServicePlans/${
+                  encodeURIComponent(n)
+                }`,
+              );
+              if (r.ok) return (await r.json()) as ServicePlan;
+            } catch {
+              // ignore
+            }
+            return { name: n } as ServicePlan;
+          }),
+        );
+        return plans;
+      }
+    } catch (err) {
+      console.error("[tenant-info.remote]", err);
+    }
+    return [] as ServicePlan[];
+  },
+);

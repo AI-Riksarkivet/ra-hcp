@@ -15,7 +15,6 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -441,16 +440,17 @@
 				</div>
 				<div class="space-y-2">
 					<Label for="ns-hash">Hash Scheme</Label>
-					<Select.Root type="single" bind:value={createHashScheme}>
-						<Select.Trigger class="h-9 w-full">{createHashScheme}</Select.Trigger>
-						<Select.Content>
-							<Select.Item value="SHA-256">SHA-256</Select.Item>
-							<Select.Item value="SHA-512">SHA-512</Select.Item>
-							<Select.Item value="SHA-384">SHA-384</Select.Item>
-							<Select.Item value="SHA-1">SHA-1</Select.Item>
-							<Select.Item value="MD5">MD5</Select.Item>
-						</Select.Content>
-					</Select.Root>
+					<select
+						id="ns-hash"
+						class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+						bind:value={createHashScheme}
+					>
+						<option value="SHA-256">SHA-256</option>
+						<option value="SHA-512">SHA-512</option>
+						<option value="SHA-384">SHA-384</option>
+						<option value="SHA-1">SHA-1</option>
+						<option value="MD5">MD5</option>
+					</select>
 					<input type="hidden" name="hashScheme" value={createHashScheme} />
 				</div>
 				<div class="space-y-2">

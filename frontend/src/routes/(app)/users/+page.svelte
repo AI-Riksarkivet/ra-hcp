@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus, Search, Copy } from 'lucide-svelte';
+	import { Plus, Search, Copy, Users, UsersRound } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -17,7 +18,15 @@
 		create_group,
 		type DataAccessPermissions,
 	} from '$lib/users.remote.js';
-	import { AVAILABLE_ROLES, type User, getUserRoles } from '$lib/constants.js';
+	import {
+		AVAILABLE_ROLES,
+		GROUP_ROLES,
+		type User,
+		type GroupAccount,
+		getUserRoles,
+		getGroupName,
+		getGroupRoles,
+	} from '$lib/constants.js';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
@@ -34,14 +43,14 @@
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import { SvelteMap } from 'svelte/reactivity';
 
-	type Group = { groupname?: string; name?: string; description?: string };
-
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let usersData = $derived(tenant ? get_users({ tenant }) : undefined);
 	let groupsData = $derived(tenant ? get_groups({ tenant }) : undefined);
 
 	let users = $derived((usersData?.current ?? []) as User[]);
-	let groups = $derived((groupsData?.current ?? []) as Group[]);
+	let groups = $derived((groupsData?.current ?? []) as GroupAccount[]);
+
+	let activeTab = $state('users');
 
 	// --- Namespace access per user (reactive queries) ---
 	let userPermsMap = $derived.by(() => {
@@ -81,15 +90,16 @@
 	let groupPagination = $state<PaginationState>({ pageIndex: 0, pageSize: 25 });
 
 	// --- Groups TanStack Table ---
-	let groupColumns = $derived.by((): ColumnDef<Group>[] => [
+	let groupColumns = $derived.by((): ColumnDef<GroupAccount>[] => [
 		{
 			id: 'groupName',
-			accessorFn: (row) => row.groupname ?? row.name ?? '—',
+			accessorFn: (row) => getGroupName(row),
 			header: ({ column }) =>
 				renderComponent(DataTableHeaderButton, {
 					label: 'Group Name',
 					onclick: column.getToggleSortingHandler(),
 				}),
+			cell: ({ row }) => renderSnippet(groupNameCell, row.original),
 			meta: { cellClass: 'px-4 py-3 font-medium' },
 		},
 		{
@@ -97,6 +107,12 @@
 			accessorFn: (row) => row.description || '—',
 			header: 'Description',
 			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
+		},
+		{
+			id: 'roles',
+			header: 'Roles',
+			cell: ({ row }) => renderSnippet(groupRolesCell, row.original),
+			meta: { cellClass: 'px-4 py-3' },
 		},
 	]);
 
@@ -249,7 +265,7 @@
 		createGroupError = '';
 		try {
 			const description = (fd.get('description') as string) || undefined;
-			const roles = AVAILABLE_ROLES.filter((r) => fd.has(`role-${r}`));
+			const roles = GROUP_ROLES.filter((r) => fd.has(`role-${r}`));
 			await create_group({ tenant, groupname, description, roles }).updates(groupsData);
 			toast.success(`Group "${groupname}" created`);
 			createGroupOpen = false;
@@ -314,7 +330,6 @@
 						await navigator.clipboard.writeText(user.userGUID!);
 						toast.success('Canonical ID copied');
 					} catch {
-						// Fallback for non-HTTPS contexts
 						const ta = document.createElement('textarea');
 						ta.value = user.userGUID!;
 						ta.style.position = 'fixed';
@@ -335,69 +350,84 @@
 	{/if}
 {/snippet}
 
+{#snippet groupNameCell(group: GroupAccount)}
+	<a
+		href="/users/groups/{getGroupName(group)}"
+		class="text-primary underline-offset-4 hover:underline"
+	>
+		{getGroupName(group)}
+	</a>
+{/snippet}
+
+{#snippet groupRolesCell(group: GroupAccount)}
+	{#each getGroupRoles(group) as role (role)}
+		<Badge variant="secondary" class="mr-1">{role}</Badge>
+	{/each}
+	{#if getGroupRoles(group).length === 0}
+		<span class="text-muted-foreground">—</span>
+	{/if}
+{/snippet}
+
 <svelte:head>
-	<title>Users - HCP Admin Console</title>
+	<title>Users & Groups - HCP Admin Console</title>
 </svelte:head>
 
-<div class="space-y-8">
+<div class="space-y-6">
 	<PageHeader title="Users & Groups" description="Manage user accounts and groups" />
 
 	{#if tenant}
-		<!-- User Accounts -->
-		<div>
-			{#await usersData}
-				<div class="mb-4 flex items-center justify-between">
-					<div class="flex items-center gap-3">
-						<h3 class="text-lg font-semibold">User Accounts</h3>
-					</div>
-				</div>
-				<TableSkeleton rows={5} columns={6} />
-			{:then}
-				<div class="mb-4 flex items-center justify-between">
-					<div class="flex items-center gap-3">
-						<h3 class="text-lg font-semibold">User Accounts</h3>
-						<Badge variant="secondary">{users.length}</Badge>
-					</div>
-					<Button size="sm" onclick={() => (createUserOpen = true)}>
-						<Plus class="h-4 w-4" />
-						Create User
-					</Button>
-				</div>
-				<div class="mb-4">
-					<div class="relative">
-						<Search
-							class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-						/>
-						<Input bind:value={userSearch} placeholder="Search users..." class="pl-10" />
-					</div>
-				</div>
-				<DataTable table={usersTable} noResultsMessage="No user accounts found." />
-			{/await}
-		</div>
+		<Tabs.Root bind:value={activeTab}>
+			<Tabs.List>
+				<Tabs.Trigger value="users">
+					<Users class="mr-1.5 h-4 w-4" />
+					Users
+					{#if users.length > 0}
+						<Badge variant="secondary" class="ml-1.5">{users.length}</Badge>
+					{/if}
+				</Tabs.Trigger>
+				<Tabs.Trigger value="groups">
+					<UsersRound class="mr-1.5 h-4 w-4" />
+					Groups
+					{#if groups.length > 0}
+						<Badge variant="secondary" class="ml-1.5">{groups.length}</Badge>
+					{/if}
+				</Tabs.Trigger>
+			</Tabs.List>
 
-		<!-- Groups -->
-		<div>
-			{#await groupsData}
-				<div class="mb-4 flex items-center justify-between">
-					<div class="flex items-center gap-3">
-						<h3 class="text-lg font-semibold">Groups</h3>
+			<Tabs.Content value="users" class="space-y-4">
+				{#await usersData}
+					<TableSkeleton rows={5} columns={6} />
+				{:then}
+					<div class="flex items-center justify-between">
+						<div class="relative flex-1">
+							<Search
+								class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+							/>
+							<Input bind:value={userSearch} placeholder="Search users..." class="pl-10" />
+						</div>
+						<Button size="sm" class="ml-4" onclick={() => (createUserOpen = true)}>
+							<Plus class="h-4 w-4" />
+							Create User
+						</Button>
 					</div>
-				</div>
-				<TableSkeleton rows={3} columns={2} />
-			{:then}
-				<div class="mb-4 flex items-center justify-between">
-					<div class="flex items-center gap-3">
-						<h3 class="text-lg font-semibold">Groups</h3>
-						<Badge variant="secondary">{groups.length}</Badge>
+					<DataTable table={usersTable} noResultsMessage="No user accounts found." />
+				{/await}
+			</Tabs.Content>
+
+			<Tabs.Content value="groups" class="space-y-4">
+				{#await groupsData}
+					<TableSkeleton rows={3} columns={3} />
+				{:then}
+					<div class="flex items-center justify-end">
+						<Button size="sm" onclick={() => (createGroupOpen = true)}>
+							<Plus class="h-4 w-4" />
+							Create Group
+						</Button>
 					</div>
-					<Button size="sm" onclick={() => (createGroupOpen = true)}>
-						<Plus class="h-4 w-4" />
-						Create Group
-					</Button>
-				</div>
-				<DataTable table={groupsTable} noResultsMessage="No groups found." />
-			{/await}
-		</div>
+					<DataTable table={groupsTable} noResultsMessage="No groups found." />
+				{/await}
+			</Tabs.Content>
+		</Tabs.Root>
 	{:else}
 		<NoTenantPlaceholder message="Log in with a tenant to manage users and groups." />
 	{/if}
@@ -471,7 +501,7 @@
 			<div class="space-y-2">
 				<Label>Roles</Label>
 				<div class="flex flex-wrap gap-4">
-					{#each AVAILABLE_ROLES as role (role)}
+					{#each GROUP_ROLES as role (role)}
 						<label class="flex items-center gap-2 text-sm">
 							<Checkbox name="role-{role}" />
 							{role}

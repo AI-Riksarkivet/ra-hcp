@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import {
@@ -487,28 +486,24 @@
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
 			{#if uniqueOwners.length > 0}
-				<Select.Root type="single" bind:value={ownerFilter}>
-					<Select.Trigger class="h-8 w-auto min-w-[120px] px-2 text-xs">
-						{ownerFilter || 'All owners'}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Item value="">All owners</Select.Item>
-						{#each uniqueOwners as o (o)}<Select.Item value={o}>{o}</Select.Item>{/each}
-					</Select.Content>
-				</Select.Root>
+				<select
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-auto min-w-[120px] items-center rounded-md border px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+					bind:value={ownerFilter}
+				>
+					<option value="">All owners</option>
+					{#each uniqueOwners as o (o)}<option value={o}>{o}</option>{/each}
+				</select>
 			{/if}
-			<Select.Root type="single" bind:value={sizeFilter}>
-				<Select.Trigger class="h-8 w-auto min-w-[120px] px-2 text-xs">
-					{sizeFilter || 'All sizes'}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Item value="">All sizes</Select.Item>
-					<Select.Item value="<1KB">&lt; 1 KB</Select.Item>
-					<Select.Item value="1KB-1MB">1 KB - 1 MB</Select.Item>
-					<Select.Item value="1MB-100MB">1 MB - 100 MB</Select.Item>
-					<Select.Item value=">100MB">&gt; 100 MB</Select.Item>
-				</Select.Content>
-			</Select.Root>
+			<select
+				class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-auto min-w-[120px] items-center rounded-md border px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+				bind:value={sizeFilter}
+			>
+				<option value="">All sizes</option>
+				<option value="<1KB">&lt; 1 KB</option>
+				<option value="1KB-1MB">1 KB - 1 MB</option>
+				<option value="1MB-100MB">1 MB - 100 MB</option>
+				<option value=">100MB">&gt; 100 MB</option>
+			</select>
 			{#if hasActiveFilters}
 				<Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={clearFilters}>
 					Clear filters

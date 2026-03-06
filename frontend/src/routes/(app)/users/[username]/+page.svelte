@@ -384,7 +384,9 @@
 									</label>
 								{/each}
 							</div>
-							<SaveButton {dirty} {saving} onclick={saveUser} />
+							<div class="pt-4">
+								<SaveButton {dirty} {saving} onclick={saveUser} />
+							</div>
 						</div>
 					</div>
 

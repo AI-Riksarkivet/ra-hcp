@@ -4,7 +4,6 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import {
@@ -326,23 +325,15 @@
 				{#if ownerName}
 					<Badge variant="outline">Owner: {ownerName}</Badge>
 				{/if}
-				<Select.Root type="single" bind:value={dateFilter}>
-					<Select.Trigger class="h-8 w-auto min-w-[120px] px-2 text-xs">
-						{dateFilter === '24h'
-							? 'Last 24 hours'
-							: dateFilter === '7d'
-								? 'Last 7 days'
-								: dateFilter === '30d'
-									? 'Last 30 days'
-									: 'All dates'}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Item value="">All dates</Select.Item>
-						<Select.Item value="24h">Last 24 hours</Select.Item>
-						<Select.Item value="7d">Last 7 days</Select.Item>
-						<Select.Item value="30d">Last 30 days</Select.Item>
-					</Select.Content>
-				</Select.Root>
+				<select
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-auto min-w-[120px] items-center rounded-md border px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+					bind:value={dateFilter}
+				>
+					<option value="">All dates</option>
+					<option value="24h">Last 24 hours</option>
+					<option value="7d">Last 7 days</option>
+					<option value="30d">Last 30 days</option>
+				</select>
 				{#if dateFilter}
 					<Button
 						variant="ghost"

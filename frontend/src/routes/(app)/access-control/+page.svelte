@@ -7,7 +7,6 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import { toast } from 'svelte-sonner';
@@ -439,16 +438,15 @@
 
 			<!-- Grantee Type -->
 			<div class="space-y-2">
-				<Label>Grantee Type</Label>
-				<Select.Root type="single" bind:value={granteeType}>
-					<Select.Trigger>
-						{granteeType === 'CanonicalUser' ? 'User (Canonical ID)' : 'Group (URI)'}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Item value="CanonicalUser">User (Canonical ID)</Select.Item>
-						<Select.Item value="Group">Group (URI)</Select.Item>
-					</Select.Content>
-				</Select.Root>
+				<Label for="grantee-type">Grantee Type</Label>
+				<select
+					id="grantee-type"
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+					bind:value={granteeType}
+				>
+					<option value="CanonicalUser">User (Canonical ID)</option>
+					<option value="Group">Group (URI)</option>
+				</select>
 			</div>
 
 			<!-- Grantee ID -->
@@ -476,21 +474,16 @@
 
 			<!-- Permission -->
 			<div class="space-y-2">
-				<Label>Permission</Label>
-				<Select.Root type="single" bind:value={grantPermission}>
-					<Select.Trigger>
-						<Badge variant={permissionColor(grantPermission)} class="pointer-events-none">
-							{permissionLabel(grantPermission)}
-						</Badge>
-					</Select.Trigger>
-					<Select.Content>
-						{#each PERMISSIONS as p (p.value)}
-							<Select.Item value={p.value}>
-								<Badge variant={permissionColor(p.value)}>{p.label}</Badge>
-							</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
+				<Label for="grant-permission">Permission</Label>
+				<select
+					id="grant-permission"
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+					bind:value={grantPermission}
+				>
+					{#each PERMISSIONS as p (p.value)}
+						<option value={p.value}>{p.label}</option>
+					{/each}
+				</select>
 			</div>
 		</div>
 

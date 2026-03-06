@@ -2,7 +2,6 @@
 	import type { Snippet } from 'svelte';
 	import type { Table } from '@tanstack/table-core';
 	import * as TablePrimitive from '$lib/components/ui/table/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { FlexRender } from '$lib/components/ui/data-table/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
@@ -101,20 +100,15 @@
 			<div class="flex items-center gap-3">
 				<div class="flex items-center gap-1.5">
 					<span class="text-xs text-muted-foreground">Rows</span>
-					<Select.Root
-						type="single"
+					<select
+						class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-7 w-auto min-w-[60px] items-center rounded-md border px-2 py-0.5 text-xs shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
 						value={pageSize}
-						onValueChange={(val) => table.setPageSize(Number(val))}
+						onchange={(e) => table.setPageSize(Number(e.currentTarget.value))}
 					>
-						<Select.Trigger class="h-7 w-auto min-w-[60px] px-2 text-xs">
-							{pageSize}
-						</Select.Trigger>
-						<Select.Content>
-							{#each PAGE_SIZES as size (size)}
-								<Select.Item value={String(size)}>{size}</Select.Item>
-							{/each}
-						</Select.Content>
-					</Select.Root>
+						{#each PAGE_SIZES as size (size)}
+							<option value={String(size)}>{size}</option>
+						{/each}
+					</select>
 				</div>
 				<span class="text-xs text-muted-foreground">
 					Page {pageIndex + 1} of {pageCount}
