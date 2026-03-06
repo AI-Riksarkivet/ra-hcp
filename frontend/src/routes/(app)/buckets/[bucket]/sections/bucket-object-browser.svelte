@@ -236,12 +236,6 @@
 			cell: ({ row }) => renderSnippet(nameCellSnippet, row.original),
 		},
 		{
-			id: 'key',
-			header: 'Key',
-			cell: ({ row }) => renderSnippet(keyCellSnippet, row.original),
-			enableSorting: false,
-		},
-		{
 			id: 'owner',
 			accessorFn: (row) => getOwnerName(row),
 			header: 'Owner',
@@ -425,19 +419,6 @@
 		{/if}
 		<span class="font-medium">{getDisplayName(obj.key)}</span>
 	</span>
-{/snippet}
-
-{#snippet keyCellSnippet(obj: S3Object)}
-	<Tooltip.Root>
-		<Tooltip.Trigger>
-			{#snippet child({ props })}
-				<span class="block max-w-xs truncate font-mono text-xs text-muted-foreground" {...props}
-					>{obj.key}</span
-				>
-			{/snippet}
-		</Tooltip.Trigger>
-		<Tooltip.Content class="max-w-lg break-all font-mono text-xs">{obj.key}</Tooltip.Content>
-	</Tooltip.Root>
 {/snippet}
 
 {#snippet actionsCellSnippet(obj: S3Object)}

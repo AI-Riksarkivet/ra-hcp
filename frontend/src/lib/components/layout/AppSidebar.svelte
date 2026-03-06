@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Database, Users, Server, Boxes, Settings, Search } from 'lucide-svelte';
+	import { Database, Users, Server, Boxes, Settings, Search, Shield } from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 
 	const tenantItems = [
@@ -10,7 +10,10 @@
 		{ href: '/search', label: 'Search', icon: Search },
 	] as const;
 
-	const storageItems = [{ href: '/buckets', label: 'Buckets', icon: Database }] as const;
+	const storageItems = [
+		{ href: '/buckets', label: 'Buckets', icon: Database },
+		{ href: '/access-control', label: 'Access Control', icon: Shield },
+	] as const;
 </script>
 
 <Sidebar.Root collapsible="icon">

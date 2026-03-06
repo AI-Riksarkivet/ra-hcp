@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Upload, Folder } from 'lucide-svelte';
+	import { Upload, Folder, FolderOpen, Shield } from 'lucide-svelte';
 	import {
 		formatBytes,
 		parseQuotaBytes,
@@ -57,6 +58,9 @@
 		return crumbs;
 	});
 
+	// --- Active tab ---
+	let activeTab = $state('objects');
+
 	// --- Upload dialog (controlled from header, rendered inside object browser) ---
 	let uploadOpen = $state(false);
 </script>
@@ -92,32 +96,51 @@
 			{/if}
 			<BucketVersioning {bucket} />
 		</div>
-		<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>
+		{#if activeTab === 'objects'}
+			<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>
+		{/if}
 	</div>
 
-	<!-- Breadcrumbs -->
-	<nav class="flex items-center gap-1 text-sm">
-		<Folder class="h-4 w-4 text-muted-foreground" />
-		{#each breadcrumbs as crumb, i (crumb.prefix)}
-			{#if i > 0}
-				<span class="text-muted-foreground">/</span>
-			{/if}
-			{#if i === breadcrumbs.length - 1}
-				<span class="font-medium">{crumb.label}</span>
-			{:else}
-				<button
-					class="text-primary underline-offset-4 hover:underline"
-					onclick={() => navigatePrefix(crumb.prefix)}
-				>
-					{crumb.label}
-				</button>
-			{/if}
-		{/each}
-	</nav>
+	<!-- Tabs -->
+	<Tabs.Root bind:value={activeTab}>
+		<Tabs.List>
+			<Tabs.Trigger value="objects">
+				<FolderOpen class="mr-1.5 h-4 w-4" />
+				Objects
+			</Tabs.Trigger>
+			<Tabs.Trigger value="acl">
+				<Shield class="mr-1.5 h-4 w-4" />
+				Access Control
+			</Tabs.Trigger>
+		</Tabs.List>
 
-	<!-- Object Browser -->
-	<BucketObjectBrowser {bucket} {prefix} bind:uploadOpen onnavigate={navigatePrefix} />
+		<Tabs.Content value="objects" class="space-y-6">
+			<!-- Breadcrumbs -->
+			<nav class="flex items-center gap-1 text-sm">
+				<Folder class="h-4 w-4 text-muted-foreground" />
+				{#each breadcrumbs as crumb, i (crumb.prefix)}
+					{#if i > 0}
+						<span class="text-muted-foreground">/</span>
+					{/if}
+					{#if i === breadcrumbs.length - 1}
+						<span class="font-medium">{crumb.label}</span>
+					{:else}
+						<button
+							class="text-primary underline-offset-4 hover:underline"
+							onclick={() => navigatePrefix(crumb.prefix)}
+						>
+							{crumb.label}
+						</button>
+					{/if}
+				{/each}
+			</nav>
 
-	<!-- Bucket ACL -->
-	<BucketAcl {bucket} />
+			<!-- Object Browser -->
+			<BucketObjectBrowser {bucket} {prefix} bind:uploadOpen onnavigate={navigatePrefix} />
+		</Tabs.Content>
+
+		<Tabs.Content value="acl">
+			<BucketAcl {bucket} />
+		</Tabs.Content>
+	</Tabs.Root>
 </div>
