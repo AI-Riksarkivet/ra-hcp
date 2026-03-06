@@ -19,7 +19,7 @@ router = APIRouter(tags=["Tenant Admin: Identity"])
 T_PREFIX = "/tenants/{tenant_name}/groupAccounts"
 
 
-@router.get(T_PREFIX, response_model=GroupAccountList)
+@router.get(T_PREFIX, response_model=GroupAccountList | list[GroupAccountResponse])
 async def list_group_accounts(
     tenant_name: str,
     verbose: bool = False,

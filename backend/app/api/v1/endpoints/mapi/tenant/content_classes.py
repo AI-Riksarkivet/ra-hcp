@@ -19,7 +19,7 @@ router = APIRouter(tags=["Tenant Admin: Content Classes"])
 PREFIX = "/tenants/{tenant_name}/contentClasses"
 
 
-@router.get(PREFIX, response_model=ContentClassList)
+@router.get(PREFIX, response_model=ContentClassList | list[ContentClassResponse])
 async def list_content_classes(
     tenant_name: str,
     verbose: bool = False,
