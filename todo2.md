@@ -7,3 +7,4 @@
 - fix sections for all views.
 - fix so no duplicate fetching and data and reuse componetns
 - fix so grant access in access control page the dropdown works..
+- improve docs about advanced settings and what they mean and give voncrete examples with skteches, aswell + lost found data? (should it be in the docs?)
