@@ -67,6 +67,7 @@ async def _mock_lifespan(app_instance):
 
     # Cross-link so namespace ↔ bucket stay in sync
     mock_s3._mapi_state = state
+    mock_s3._default_tenant = "mock"
     state._s3_service = mock_s3
 
     seed_s3(mock_s3)

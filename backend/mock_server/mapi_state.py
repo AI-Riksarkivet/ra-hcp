@@ -275,6 +275,30 @@ class MockMapiState:
         self._sync_delete_bucket(name)
         return _empty()
 
+    # ── Auto-grant helpers ─────────────────────────────────────────────
+
+    _ALL_PERMS = ["BROWSE", "READ", "READ_ACL", "WRITE", "WRITE_ACL", "DELETE"]
+
+    def _grant_user_ns_access(self, tenant: str, username: str, ns_name: str) -> None:
+        """Grant a single user full data access to a namespace.
+
+        Per HCP S3 docs, creating a bucket grants the *creator* browse,
+        read, readACL, write, writeACL, and delete permissions.
+        """
+        key = (tenant, "user", username)
+        perms = self.data_access_perms.get(key, {})
+        ns_perms = perms.get("namespacePermission", [])
+        if any(p.get("namespaceName") == ns_name for p in ns_perms):
+            return
+        ns_perms.append(
+            {
+                "namespaceName": ns_name,
+                "permissions": {"permission": list(self._ALL_PERMS)},
+            }
+        )
+        perms["namespacePermission"] = ns_perms
+        self.data_access_perms[key] = perms
+
     # ── Namespace ↔ bucket sync helpers ─────────────────────────────────
 
     def _sync_create_bucket(self, name: str) -> None:
@@ -315,6 +339,13 @@ def seed_mapi_state(state: MockMapiState) -> None:
     for tenant, ns_map in NAMESPACES.items():
         for ns in ns_map:
             state.ns_settings[(tenant, ns)] = default_ns_settings()
+    # Seed: grant all users access to all namespaces for dev convenience
+    for tenant_name in state.namespaces:
+        users = state.user_accounts.get(tenant_name, {})
+        for ns_name in state.namespaces[tenant_name]:
+            for username in users:
+                state._grant_user_ns_access(tenant_name, username, ns_name)
+
     # Sync: ensure every MAPI namespace also exists as an S3 bucket
     if state._s3_service is not None:
         for ns_map in state.namespaces.values():

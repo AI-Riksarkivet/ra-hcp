@@ -38,6 +38,8 @@ class MockS3Service:
         self._object_acls: Dict[tuple, Dict[str, Any]] = {}
         # Cross-reference to MAPI state for namespace ↔ bucket sync
         self._mapi_state: Any = None
+        # Default tenant for namespace sync (set during init)
+        self._default_tenant: Optional[str] = None
 
     def _require_bucket(self, name: str) -> None:
         if name not in self._buckets:
@@ -79,9 +81,8 @@ class MockS3Service:
         state = self._mapi_state
         if state is None:
             return
-        # Use the first tenant (default)
-        tenant = next(iter(state.namespaces), None)
-        if tenant is None:
+        tenant = self._default_tenant
+        if tenant is None or tenant not in state.namespaces:
             return
         ns_map = state.namespaces[tenant]
         if name not in ns_map:
@@ -90,26 +91,47 @@ class MockS3Service:
             ns_map[name] = {"name": name}
             state.retention_classes.setdefault((tenant, name), {})
             state.ns_settings.setdefault((tenant, name), default_ns_settings())
+            # Per HCP S3 docs: bucket creator gets full data access
+            state._grant_user_ns_access(tenant, "admin", name)
 
     def _sync_delete_namespace(self, name: str) -> None:
         """Remove the MAPI namespace when a bucket is deleted via S3."""
         state = self._mapi_state
         if state is None:
             return
-        for tenant, ns_map in state.namespaces.items():
-            if name in ns_map:
-                del ns_map[name]
-                state.retention_classes.pop((tenant, name), None)
-                state.ns_settings.pop((tenant, name), None)
-                break
+        tenant = self._default_tenant
+        if tenant is None:
+            return
+        ns_map = state.namespaces.get(tenant)
+        if ns_map and name in ns_map:
+            del ns_map[name]
+            state.retention_classes.pop((tenant, name), None)
+            state.ns_settings.pop((tenant, name), None)
 
     # ── Bucket operations ─────────────────────────────────────────────
 
+    def _accessible_buckets(self) -> set[str]:
+        """Return bucket names the mock user has data access permissions for."""
+        state = self._mapi_state
+        tenant = self._default_tenant
+        if state is None or tenant is None:
+            return set(self._buckets)
+        # Mock server always authenticates as "admin"
+        key = (tenant, "user", "admin")
+        perms = state.data_access_perms.get(key, {})
+        return {
+            p["namespaceName"]
+            for p in perms.get("namespacePermission", [])
+            if p.get("permissions", {}).get("permission")
+        }
+
     def list_buckets(self) -> dict:
         self._logger.info("list_buckets")
+        allowed = self._accessible_buckets()
         buckets = [
             {"Name": name, "CreationDate": meta.get("CreationDate", "")}
             for name, meta in self._buckets.items()
+            if name in allowed
         ]
         return {"Buckets": buckets}
 
@@ -313,16 +335,7 @@ class MockS3Service:
 
     _DEFAULT_ACL = {
         "Owner": {"DisplayName": "admin", "ID": "admin"},
-        "Grants": [
-            {
-                "Grantee": {
-                    "DisplayName": "admin",
-                    "ID": "admin",
-                    "Type": "CanonicalUser",
-                },
-                "Permission": "FULL_CONTROL",
-            }
-        ],
+        "Grants": [],
     }
 
     def get_bucket_acl(self, bucket: str) -> dict:
