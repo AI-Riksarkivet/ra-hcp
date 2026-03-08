@@ -64,11 +64,7 @@
 	let sortAsc = $state(true);
 
 	// TanStack sorting integration
-	let sorting = $state<SortingState>([]);
-
-	$effect(() => {
-		sorting = sortField ? [{ id: sortField, desc: !sortAsc }] : [];
-	});
+	let sorting = $derived<SortingState>(sortField ? [{ id: sortField, desc: !sortAsc }] : []);
 
 	const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
 		const next = typeof updater === 'function' ? updater(sorting) : updater;

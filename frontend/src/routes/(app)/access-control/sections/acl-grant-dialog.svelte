@@ -15,14 +15,7 @@
 	import { get_users, get_groups } from '$lib/users.remote.js';
 	import type { User, GroupAccount } from '$lib/constants.js';
 	import { SvelteMap } from 'svelte/reactivity';
-
-	const PERMISSIONS: { value: string; label: string }[] = [
-		{ value: 'FULL_CONTROL', label: 'Full Control' },
-		{ value: 'READ', label: 'Read' },
-		{ value: 'WRITE', label: 'Write' },
-		{ value: 'READ_ACP', label: 'Read ACP' },
-		{ value: 'WRITE_ACP', label: 'Write ACP' },
-	];
+	import { ACL_PERMISSIONS, permissionLabel } from '../acl-constants.js';
 
 	interface Props {
 		tenant?: string;
@@ -93,10 +86,6 @@
 			}
 		}
 		grantBucketSelection = next;
-	}
-
-	function permissionLabel(p: string): string {
-		return PERMISSIONS.find((x) => x.value === p)?.label ?? p;
 	}
 
 	async function handleGrant() {
@@ -263,7 +252,7 @@
 					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
 					bind:value={grantPermission}
 				>
-					{#each PERMISSIONS as p (p.value)}
+					{#each ACL_PERMISSIONS as p (p.value)}
 						<option value={p.value}>{p.label}</option>
 					{/each}
 				</select>

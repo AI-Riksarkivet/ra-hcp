@@ -1,10 +1,3 @@
-- assing read  or any rights to user dont make so that user gets access to a bucket or can see tht bucket in /buckets.
-- can we add feature to faster grants all does right in /namespaces faster? with selected multi namesapces and have a button thats appees (simlair to deleted namespaces) and pops up a these grant and make fast assign to user and groups faster.. or should this be done in users & groups? or should also be able to edit namespacess access in /users/<user..>
---> like grant access action beside delected seelcted dsecelt all..
-- grant access in /namespaces/namespace does not work in diaglog (the dropdown to grant)
-- remake acess control
-- fix access control weird edit and layout and make more intitue what stuff means
-- fix sections for all views.
+
 - fix so no duplicate fetching and data and reuse componetns
-- fix so grant access in access control page the dropdown works..
 - improve docs about advanced settings and what they mean and give voncrete examples with skteches, aswell + lost found data? (should it be in the docs?)

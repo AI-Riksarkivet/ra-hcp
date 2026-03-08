@@ -15,6 +15,12 @@
 	} from '$lib/buckets.remote.js';
 	import { get_users, get_groups } from '$lib/users.remote.js';
 	import type { User, GroupAccount } from '$lib/constants.js';
+	import {
+		ACL_PERMISSIONS,
+		PERMISSION_MAP,
+		permissionColor,
+		permissionLabel,
+	} from '../../../access-control/acl-constants.js';
 
 	let {
 		bucket,
@@ -23,37 +29,6 @@
 		bucket: string;
 		tenant?: string;
 	} = $props();
-
-	const PERMISSIONS: { value: string; label: string; description: string }[] = [
-		{
-			value: 'FULL_CONTROL',
-			label: 'Full Control',
-			description:
-				'Grants READ, WRITE, READ_ACP, and WRITE_ACP — the grantee can read/write objects and manage ACLs.',
-		},
-		{
-			value: 'READ',
-			label: 'Read',
-			description: 'List objects in the bucket and read their contents.',
-		},
-		{
-			value: 'WRITE',
-			label: 'Write',
-			description: 'Create, overwrite, and delete objects in the bucket.',
-		},
-		{
-			value: 'READ_ACP',
-			label: 'Read ACP',
-			description: 'Read the bucket access control policy (ACL).',
-		},
-		{
-			value: 'WRITE_ACP',
-			label: 'Write ACP',
-			description: 'Modify the bucket access control policy (ACL).',
-		},
-	];
-
-	const PERMISSION_MAP = new Map(PERMISSIONS.map((p) => [p.value, p]));
 
 	let aclData = $derived(get_bucket_acl({ bucket }));
 	let acl = $derived((aclData?.current ?? { owner: null, grants: [] }) as AclData);
@@ -133,16 +108,6 @@
 		if (!g) return '';
 		if (g.URI) return 'Group';
 		return 'User';
-	}
-
-	function permissionColor(p: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-		if (p === 'FULL_CONTROL') return 'destructive';
-		if (p === 'WRITE' || p === 'WRITE_ACP') return 'default';
-		return 'secondary';
-	}
-
-	function permissionLabel(p: string): string {
-		return PERMISSION_MAP.get(p)?.label ?? p;
 	}
 
 	async function addGrant() {
@@ -248,7 +213,7 @@
 						a <strong class="text-foreground">permission</strong>. The bucket owner always retains
 						full control.
 					</p>
-					{#each PERMISSIONS as p (p.value)}
+					{#each ACL_PERMISSIONS as p (p.value)}
 						<p><strong class="text-foreground">{p.label}</strong> — {p.description}</p>
 					{/each}
 				</div>
@@ -315,7 +280,7 @@
 						class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-36 rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
 						bind:value={grantPermission}
 					>
-						{#each PERMISSIONS as p (p.value)}
+						{#each ACL_PERMISSIONS as p (p.value)}
 							<option value={p.value}>{p.label}</option>
 						{/each}
 					</select>

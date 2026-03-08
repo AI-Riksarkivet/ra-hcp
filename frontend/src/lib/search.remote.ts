@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { command, query } from "$app/server";
+import { command } from "$app/server";
 import { apiFetch } from "$lib/server/api.js";
 
 export interface QueryStatus {
@@ -183,27 +183,6 @@ export const search_operations = command(
         );
       }
       throw new Error(detail || `Operation query failed (HTTP ${res.status})`);
-    }
-    return (await res.json()) as OperationQueryResponse;
-  },
-);
-
-export const get_recent_operations = query(
-  z.object({ tenant: z.string(), count: z.number().default(10) }),
-  async ({ tenant, count }) => {
-    const res = await apiFetch(
-      `/api/v1/query/tenants/${encodeURIComponent(tenant)}/operations`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ count, verbose: true }),
-      },
-    );
-    if (!res.ok) {
-      return {
-        status: { totalResults: 0, results: 0, code: "ERROR" },
-        resultSet: [],
-      } as OperationQueryResponse;
     }
     return (await res.json()) as OperationQueryResponse;
   },

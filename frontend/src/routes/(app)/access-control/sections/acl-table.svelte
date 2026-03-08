@@ -27,6 +27,7 @@
 	} from '$lib/components/ui/data-table/index.js';
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import { SvelteMap } from 'svelte/reactivity';
+	import { PERMISSION_MAP, permissionColor, permissionLabel } from '../acl-constants.js';
 
 	interface Props {
 		tenant?: string;
@@ -42,23 +43,6 @@
 		granteeType: string;
 		granteeId: string;
 		permissions: { value: string; grantIndex: number }[];
-	};
-
-	const PERMISSION_LABELS: Record<string, string> = {
-		FULL_CONTROL: 'Full Control',
-		READ: 'Read',
-		WRITE: 'Write',
-		READ_ACP: 'Read ACP',
-		WRITE_ACP: 'Write ACP',
-	};
-
-	const PERMISSION_DESCRIPTIONS: Record<string, string> = {
-		FULL_CONTROL:
-			'Grants READ, WRITE, READ_ACP, and WRITE_ACP — the grantee can read/write objects and manage ACLs.',
-		READ: 'List objects in the bucket and read their contents.',
-		WRITE: 'Create, overwrite, and delete objects in the bucket.',
-		READ_ACP: 'Read the bucket access control policy (ACL).',
-		WRITE_ACP: 'Modify the bucket access control policy (ACL).',
 	};
 
 	// Data fetching
@@ -166,17 +150,6 @@
 		[...new Set(rows.flatMap((r) => r.permissions.map((p) => p.value)).filter(Boolean))].sort()
 	);
 	let allTypes = $derived([...new Set(rows.map((r) => r.granteeType).filter(Boolean))].sort());
-
-	// Permission helpers
-	function permissionColor(p: string): 'default' | 'secondary' | 'destructive' | 'outline' {
-		if (p === 'FULL_CONTROL') return 'destructive';
-		if (p === 'WRITE' || p === 'WRITE_ACP') return 'default';
-		return 'secondary';
-	}
-
-	function permissionLabel(p: string): string {
-		return PERMISSION_LABELS[p] ?? p;
-	}
 
 	// Revoke handler - revokes a single permission from a grantee on a bucket
 	let revoking = $state<string | null>(null);
@@ -341,7 +314,7 @@
 					{/snippet}
 				</Tooltip.Trigger>
 				<Tooltip.Content side="top" class="max-w-xs">
-					{PERMISSION_DESCRIPTIONS[perm.value] ?? perm.value}
+					{PERMISSION_MAP.get(perm.value)?.description ?? perm.value}
 				</Tooltip.Content>
 			</Tooltip.Root>
 		{/each}
