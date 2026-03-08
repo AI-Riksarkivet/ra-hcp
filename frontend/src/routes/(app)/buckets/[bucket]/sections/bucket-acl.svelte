@@ -4,7 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Loader2, Shield, HelpCircle, Info, X, Plus } from 'lucide-svelte';
+	import { Loader2, Shield, HelpCircle, X, Plus } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { SvelteMap } from 'svelte/reactivity';
 	import {
@@ -216,7 +216,7 @@
 			</div>
 		</Card.Content>
 	{:then}
-		<Card.Content class="space-y-5">
+		<Card.Content class="space-y-4">
 			{#if acl.owner}
 				<div class="flex items-center gap-1.5 text-sm text-muted-foreground">
 					<span>Owner:</span>
@@ -238,170 +238,132 @@
 				</div>
 			{/if}
 
-			<!-- Top row: Add Grant form + How ACLs work -->
-			<div class="grid gap-4 md:grid-cols-[1fr,1fr]">
-				<!-- Left: Add grant form -->
-				<div class="space-y-3 rounded-lg border bg-muted/30 p-4">
-					<h3 class="flex items-center gap-1.5 text-sm font-medium">
-						<Plus class="h-3.5 w-3.5" /> Add Grant
-					</h3>
+			<!-- Compact add grant row -->
+			<div class="flex flex-wrap items-end gap-2 rounded-md border bg-muted/30 p-3">
+				<div class="space-y-1">
+					<Label class="text-xs text-muted-foreground">Type</Label>
+					<select
+						class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-28 rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+						bind:value={granteeType}
+						onchange={() => {
+							granteeId = '';
+						}}
+					>
+						<option value="CanonicalUser">User</option>
+						<option value="Group">Group</option>
+					</select>
+				</div>
 
-					<div class="space-y-1">
-						<Label class="text-xs">Grantee Type</Label>
+				<div class="min-w-0 flex-1 space-y-1">
+					<Label class="text-xs text-muted-foreground">
+						{granteeType === 'CanonicalUser' ? 'User' : 'Group'}
+					</Label>
+					{#if tenant && granteeType === 'CanonicalUser' && users.length > 0}
 						<select
 							class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
-							bind:value={granteeType}
-							onchange={() => {
-								granteeId = '';
-							}}
+							bind:value={granteeId}
 						>
-							<option value="CanonicalUser">User</option>
-							<option value="Group">Group</option>
-						</select>
-					</div>
-
-					<div class="space-y-1">
-						<Label class="text-xs">
-							{granteeType === 'CanonicalUser' ? 'User' : 'Group'}
-						</Label>
-						{#if tenant && granteeType === 'CanonicalUser' && users.length > 0}
-							<select
-								class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
-								bind:value={granteeId}
-							>
-								<option value="">Select a user…</option>
-								{#each users as u (u.username)}
-									<option value={u.userGUID ?? u.username}>
-										{u.username}{u.fullName ? ` — ${u.fullName}` : ''}
-									</option>
-								{/each}
-							</select>
-							{#if granteeId}
-								<p class="truncate font-mono text-[11px] text-muted-foreground">
-									ID: {granteeId}
-								</p>
-							{/if}
-						{:else if tenant && granteeType === 'Group' && groups.length > 0}
-							<select
-								class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
-								bind:value={granteeId}
-							>
-								<option value="">Select a group…</option>
-								{#each groups as g (g.groupname ?? g.name)}
-									<option value={g.groupname ?? g.name ?? ''}>
-										{g.groupname ?? g.name}{g.description ? ` — ${g.description}` : ''}
-									</option>
-								{/each}
-							</select>
-						{:else}
-							<input
-								class="border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
-								bind:value={granteeId}
-								placeholder={granteeType === 'CanonicalUser'
-									? 'User canonical ID'
-									: 'Group name or URI'}
-							/>
-						{/if}
-					</div>
-
-					<div class="space-y-1">
-						<Label class="text-xs">Permission</Label>
-						<select
-							class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
-							bind:value={grantPermission}
-						>
-							{#each PERMISSIONS as p (p.value)}
-								<option value={p.value}>{p.label}</option>
+							<option value="">Select a user…</option>
+							{#each users as u (u.username)}
+								<option value={u.userGUID ?? u.username}>
+									{u.username}{u.fullName ? ` — ${u.fullName}` : ''}
+								</option>
 							{/each}
 						</select>
-					</div>
-
-					<Button class="w-full" size="sm" disabled={granting || !granteeId} onclick={addGrant}>
-						{#if granting}
-							<Loader2 class="h-3.5 w-3.5 animate-spin" />
-							Adding…
-						{:else}
-							<Plus class="h-3.5 w-3.5" /> Add Grant
-						{/if}
-					</Button>
-				</div>
-
-				<!-- Right: How ACLs work -->
-				<div class="space-y-2 rounded-lg border bg-muted/30 p-4 text-xs text-muted-foreground">
-					<h3 class="flex items-center gap-1.5 text-sm font-medium text-foreground">
-						<Info class="h-3.5 w-3.5" /> How ACLs work
-					</h3>
-					<p>
-						An <strong class="text-foreground">Access Control List</strong> is a set of grants that define
-						who can access this bucket. Each grant pairs a grantee (user or group) with a permission.
-					</p>
-					<div class="space-y-1">
-						<p class="font-medium text-foreground">Permission levels:</p>
-						{#each PERMISSIONS as p (p.value)}
-							<p><strong class="text-foreground">{p.label}</strong> — {p.description}</p>
-						{/each}
-					</div>
-				</div>
-			</div>
-
-			<!-- Current grants list below -->
-			<div class="space-y-2">
-				<h3 class="text-sm font-medium">
-					Current Grants
-					{#if groupedGrants.length > 0}
-						<span class="font-normal text-muted-foreground">({groupedGrants.length})</span>
+					{:else if tenant && granteeType === 'Group' && groups.length > 0}
+						<select
+							class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+							bind:value={granteeId}
+						>
+							<option value="">Select a group…</option>
+							{#each groups as g (g.groupname ?? g.name)}
+								<option value={g.groupname ?? g.name ?? ''}>
+									{g.groupname ?? g.name}{g.description ? ` — ${g.description}` : ''}
+								</option>
+							{/each}
+						</select>
+					{:else}
+						<input
+							class="border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+							bind:value={granteeId}
+							placeholder={granteeType === 'CanonicalUser'
+								? 'User canonical ID'
+								: 'Group name or URI'}
+						/>
 					{/if}
-				</h3>
-				{#if groupedGrants.length > 0}
-					<div class="space-y-2">
-						{#each groupedGrants as grantee (grantee.id)}
-							<div class="rounded-md border px-3 py-2.5 text-sm">
-								<div class="mb-1.5 flex items-center gap-1.5">
-									<span class="font-medium">{grantee.display}</span>
-									<Badge variant="outline" class="text-[10px]">{grantee.type}</Badge>
-								</div>
-								<div class="flex flex-wrap gap-1.5">
-									{#each grantee.permissions as perm (perm.value)}
-										{@const key = grantee.id + ':' + perm.value}
-										<Tooltip.Root>
-											<Tooltip.Trigger>
-												{#snippet child({ props })}
-													<span {...props} class="inline-flex items-center gap-0.5">
-														<Badge variant={permissionColor(perm.value)} class="pr-1">
-															{permissionLabel(perm.value)}
-															<button
-																class="ml-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full hover:bg-black/20 dark:hover:bg-white/20"
-																disabled={revoking === key}
-																onclick={() => revokePermission(perm.grantIndex)}
-																title="Revoke"
-															>
-																{#if revoking === key}
-																	<Loader2 class="h-2.5 w-2.5 animate-spin" />
-																{:else}
-																	<X class="h-2.5 w-2.5" />
-																{/if}
-															</button>
-														</Badge>
-													</span>
-												{/snippet}
-											</Tooltip.Trigger>
-											<Tooltip.Content side="top" class="max-w-xs">
-												{PERMISSION_MAP.get(perm.value)?.description ?? perm.value}
-											</Tooltip.Content>
-										</Tooltip.Root>
-									{/each}
-								</div>
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<p
-						class="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground"
+				</div>
+
+				<div class="space-y-1">
+					<Label class="text-xs text-muted-foreground">Permission</Label>
+					<select
+						class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-36 rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+						bind:value={grantPermission}
 					>
-						No ACL grants configured. Only the bucket owner has access.
-					</p>
-				{/if}
+						{#each PERMISSIONS as p (p.value)}
+							<option value={p.value}>{p.label}</option>
+						{/each}
+					</select>
+				</div>
+
+				<Button size="sm" class="h-8" disabled={granting || !granteeId} onclick={addGrant}>
+					{#if granting}
+						<Loader2 class="h-3.5 w-3.5 animate-spin" />
+					{:else}
+						<Plus class="h-3.5 w-3.5" /> Add
+					{/if}
+				</Button>
 			</div>
+
+			<!-- Current grants list -->
+			{#if groupedGrants.length > 0}
+				<div class="space-y-2">
+					{#each groupedGrants as grantee (grantee.id)}
+						<div class="rounded-md border px-3 py-2.5 text-sm">
+							<div class="mb-1.5 flex items-center gap-1.5">
+								<span class="font-medium">{grantee.display}</span>
+								<Badge variant="outline" class="text-[10px]">{grantee.type}</Badge>
+							</div>
+							<div class="flex flex-wrap gap-1.5">
+								{#each grantee.permissions as perm (perm.value)}
+									{@const key = grantee.id + ':' + perm.value}
+									<Tooltip.Root>
+										<Tooltip.Trigger>
+											{#snippet child({ props })}
+												<span {...props} class="inline-flex items-center gap-0.5">
+													<Badge variant={permissionColor(perm.value)} class="pr-1">
+														{permissionLabel(perm.value)}
+														<button
+															class="ml-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full hover:bg-black/20 dark:hover:bg-white/20"
+															disabled={revoking === key}
+															onclick={() => revokePermission(perm.grantIndex)}
+															title="Revoke"
+														>
+															{#if revoking === key}
+																<Loader2 class="h-2.5 w-2.5 animate-spin" />
+															{:else}
+																<X class="h-2.5 w-2.5" />
+															{/if}
+														</button>
+													</Badge>
+												</span>
+											{/snippet}
+										</Tooltip.Trigger>
+										<Tooltip.Content side="top" class="max-w-xs">
+											{PERMISSION_MAP.get(perm.value)?.description ?? perm.value}
+										</Tooltip.Content>
+									</Tooltip.Root>
+								{/each}
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:else}
+				<p
+					class="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground"
+				>
+					No ACL grants configured. Only the bucket owner has access.
+				</p>
+			{/if}
 		</Card.Content>
 	{/await}
 </Card.Root>
