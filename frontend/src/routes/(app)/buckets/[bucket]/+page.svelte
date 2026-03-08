@@ -140,7 +140,7 @@
 		</Tabs.Content>
 
 		<Tabs.Content value="acl">
-			<BucketAcl {bucket} />
+			<BucketAcl {bucket} {tenant} />
 		</Tabs.Content>
 	</Tabs.Root>
 </div>

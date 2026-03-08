@@ -1,24 +1,27 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Plus, Trash2, Loader2, Shield, HelpCircle, Info } from 'lucide-svelte';
+	import { Loader2, Shield, HelpCircle, Info, Trash2, Plus } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import { SvelteMap } from 'svelte/reactivity';
 	import {
 		get_bucket_acl,
 		put_bucket_acl,
 		type AclGrant,
 		type AclData,
 	} from '$lib/buckets.remote.js';
+	import { get_users, get_groups } from '$lib/users.remote.js';
+	import type { User, GroupAccount } from '$lib/constants.js';
 
 	let {
 		bucket,
+		tenant,
 	}: {
 		bucket: string;
+		tenant?: string;
 	} = $props();
 
 	const PERMISSIONS: { value: string; label: string; description: string }[] = [
@@ -55,15 +58,39 @@
 	let aclData = $derived(get_bucket_acl({ bucket }));
 	let acl = $derived((aclData?.current ?? { owner: null, grants: [] }) as AclData);
 
-	let editOpen = $state(false);
-	let editGrants = $state<{ id: string; type: string; permission: string }[]>([]);
-	let saving = $state(false);
+	// Fetch users/groups when tenant is available
+	let usersData = $derived(tenant ? get_users({ tenant }) : null);
+	let groupsData = $derived(tenant ? get_groups({ tenant }) : null);
+	let users = $derived((usersData?.current ?? []) as User[]);
+	let groups = $derived((groupsData?.current ?? []) as GroupAccount[]);
+
+	// Build a lookup map: userGUID -> username for display
+	let userNameMap = $derived.by(() => {
+		const map = new SvelteMap<string, string>();
+		for (const u of users) {
+			if (u.userGUID) map.set(u.userGUID, u.username);
+			map.set(u.username, u.username);
+		}
+		return map;
+	});
+
+	// Add grant form state
+	let granteeType = $state<'CanonicalUser' | 'Group'>('CanonicalUser');
+	let granteeId = $state('');
+	let grantPermission = $state('READ');
+	let granting = $state(false);
+	let revoking = $state('');
 
 	function getGranteeName(grant: AclGrant): string {
 		const g = grant.Grantee;
 		if (!g) return 'Unknown';
+		// Try resolving via user lookup
+		if (g.ID) {
+			const resolved = userNameMap.get(g.ID as string);
+			if (resolved) return resolved;
+		}
 		if (g.DisplayName) return g.DisplayName as string;
-		if (g.ID) return (g.ID as string).slice(0, 16) + '...';
+		if (g.ID) return (g.ID as string).slice(0, 16) + '…';
 		if (g.URI) return (g.URI as string).split('/').pop() ?? (g.URI as string);
 		return 'Unknown';
 	}
@@ -81,48 +108,6 @@
 		return 'User';
 	}
 
-	function startEdit() {
-		editGrants = acl.grants.map((g) => ({
-			id: getGranteeId(g),
-			type: (g.Grantee?.Type as string) ?? 'CanonicalUser',
-			permission: g.Permission ?? 'READ',
-		}));
-		editOpen = true;
-	}
-
-	function addGrant() {
-		editGrants = [...editGrants, { id: '', type: 'CanonicalUser', permission: 'READ' }];
-	}
-
-	function removeGrant(index: number) {
-		editGrants = editGrants.filter((_, i) => i !== index);
-	}
-
-	async function saveAcl() {
-		if (!aclData) return;
-		saving = true;
-		try {
-			const grants = editGrants.map((g) => ({
-				Grantee: {
-					Type: g.type,
-					...(g.type === 'CanonicalUser' ? { ID: g.id } : { URI: g.id }),
-				},
-				Permission: g.permission,
-			}));
-			await put_bucket_acl({
-				bucket,
-				owner: acl.owner ? { ID: acl.owner.ID, DisplayName: acl.owner.DisplayName } : undefined,
-				grants,
-			}).updates(aclData);
-			toast.success('Bucket ACL updated');
-			editOpen = false;
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to update ACL');
-		} finally {
-			saving = false;
-		}
-	}
-
 	function permissionColor(p: string): 'default' | 'secondary' | 'destructive' | 'outline' {
 		if (p === 'FULL_CONTROL') return 'destructive';
 		if (p === 'WRITE' || p === 'WRITE_ACP') return 'default';
@@ -131,6 +116,57 @@
 
 	function permissionLabel(p: string): string {
 		return PERMISSION_MAP.get(p)?.label ?? p;
+	}
+
+	async function addGrant() {
+		if (!aclData || !granteeId) return;
+		granting = true;
+		try {
+			const newGrant = {
+				Grantee: {
+					Type: granteeType,
+					...(granteeType === 'CanonicalUser' ? { ID: granteeId } : { URI: granteeId }),
+				},
+				Permission: grantPermission,
+			};
+			await put_bucket_acl({
+				bucket,
+				owner: acl.owner ? { ID: acl.owner.ID, DisplayName: acl.owner.DisplayName } : undefined,
+				grants: [
+					...acl.grants.map((g) => ({ Grantee: g.Grantee, Permission: g.Permission })),
+					newGrant,
+				],
+			}).updates(aclData);
+			toast.success(`Granted ${permissionLabel(grantPermission)} access`);
+			granteeId = '';
+			grantPermission = 'READ';
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to add grant');
+		} finally {
+			granting = false;
+		}
+	}
+
+	async function revokeGrant(index: number) {
+		if (!aclData) return;
+		const grant = acl.grants[index];
+		const key = getGranteeId(grant) + grant.Permission;
+		revoking = key;
+		try {
+			const remaining = acl.grants
+				.filter((_, i) => i !== index)
+				.map((g) => ({ Grantee: g.Grantee, Permission: g.Permission }));
+			await put_bucket_acl({
+				bucket,
+				owner: acl.owner ? { ID: acl.owner.ID, DisplayName: acl.owner.DisplayName } : undefined,
+				grants: remaining,
+			}).updates(aclData);
+			toast.success('Grant revoked');
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to revoke grant');
+		} finally {
+			revoking = '';
+		}
 	}
 </script>
 
@@ -143,9 +179,6 @@
 		<Card.Description>
 			S3 Access Control List — controls who can access this bucket and what they can do with it.
 		</Card.Description>
-		<Card.Action>
-			<Button variant="ghost" size="sm" class="h-7" onclick={startEdit}>Edit</Button>
-		</Card.Action>
 	</Card.Header>
 	{#await aclData}
 		<Card.Content>
@@ -180,8 +213,7 @@
 					</div>
 					<p class="mt-1">
 						The <strong class="text-foreground">bucket owner</strong> always retains full control regardless
-						of what grants are defined. Individual objects can also have their own ACLs that override
-						the bucket-level settings.
+						of what grants are defined.
 					</p>
 				</div>
 			</details>
@@ -206,164 +238,173 @@
 					</Tooltip.Root>
 				</div>
 			{/if}
-			{#if acl.grants.length > 0}
+
+			<!-- 2-column layout: grants list + add form -->
+			<div class="grid gap-6 lg:grid-cols-[1fr,320px]">
+				<!-- Left: Current grants -->
 				<div class="space-y-2">
-					{#each acl.grants as grant (getGranteeId(grant) + grant.Permission)}
-						<div class="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-							<div class="min-w-0">
-								<span class="font-medium">{getGranteeName(grant)}</span>
-								<span class="ml-1.5 text-xs text-muted-foreground">({getGranteeType(grant)})</span>
-							</div>
+					<h3 class="text-sm font-medium">Current Grants</h3>
+					{#if acl.grants.length > 0}
+						<div class="space-y-1.5">
+							{#each acl.grants as grant, i (getGranteeId(grant) + grant.Permission + i)}
+								{@const key = getGranteeId(grant) + grant.Permission}
+								<div class="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+									<div class="flex min-w-0 items-center gap-2">
+										<div class="min-w-0">
+											<span class="font-medium">{getGranteeName(grant)}</span>
+											<span class="ml-1 text-xs text-muted-foreground"
+												>({getGranteeType(grant)})</span
+											>
+										</div>
+										<Tooltip.Root>
+											<Tooltip.Trigger>
+												{#snippet child({ props })}
+													<span {...props}>
+														<Badge variant={permissionColor(grant.Permission ?? '')}>
+															{permissionLabel(grant.Permission ?? '')}
+														</Badge>
+													</span>
+												{/snippet}
+											</Tooltip.Trigger>
+											<Tooltip.Content side="top" class="max-w-xs">
+												{PERMISSION_MAP.get(grant.Permission ?? '')?.description ??
+													grant.Permission}
+											</Tooltip.Content>
+										</Tooltip.Root>
+									</div>
+									<Button
+										variant="ghost"
+										size="icon"
+										class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+										disabled={revoking === key}
+										onclick={() => revokeGrant(i)}
+										title="Revoke this grant"
+									>
+										{#if revoking === key}
+											<Loader2 class="h-3.5 w-3.5 animate-spin" />
+										{:else}
+											<Trash2 class="h-3.5 w-3.5" />
+										{/if}
+									</Button>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p
+							class="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground"
+						>
+							No ACL grants configured. Only the bucket owner has access.
+						</p>
+					{/if}
+				</div>
+
+				<!-- Right: Add grant form -->
+				<div class="space-y-3 rounded-lg border bg-muted/30 p-4">
+					<h3 class="flex items-center gap-1.5 text-sm font-medium">
+						<Plus class="h-3.5 w-3.5" /> Add Grant
+					</h3>
+
+					<!-- Grantee Type -->
+					<div class="space-y-1">
+						<Label class="text-xs">Grantee Type</Label>
+						<select
+							class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+							bind:value={granteeType}
+							onchange={() => {
+								granteeId = '';
+							}}
+						>
+							<option value="CanonicalUser">User</option>
+							<option value="Group">Group</option>
+						</select>
+					</div>
+
+					<!-- Grantee selector -->
+					<div class="space-y-1">
+						<Label class="text-xs">
+							{granteeType === 'CanonicalUser' ? 'User' : 'Group'}
+						</Label>
+						{#if tenant && granteeType === 'CanonicalUser' && users.length > 0}
+							<select
+								class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+								bind:value={granteeId}
+							>
+								<option value="">Select a user…</option>
+								{#each users as u (u.username)}
+									<option value={u.userGUID ?? u.username}>
+										{u.username}{u.fullName ? ` — ${u.fullName}` : ''}
+									</option>
+								{/each}
+							</select>
+							{#if granteeId}
+								<p class="truncate font-mono text-[11px] text-muted-foreground">
+									ID: {granteeId}
+								</p>
+							{/if}
+						{:else if tenant && granteeType === 'Group' && groups.length > 0}
+							<select
+								class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+								bind:value={granteeId}
+							>
+								<option value="">Select a group…</option>
+								{#each groups as g (g.groupname ?? g.name)}
+									<option value={g.groupname ?? g.name ?? ''}>
+										{g.groupname ?? g.name}{g.description ? ` — ${g.description}` : ''}
+									</option>
+								{/each}
+							</select>
+						{:else}
+							<input
+								class="border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+								bind:value={granteeId}
+								placeholder={granteeType === 'CanonicalUser'
+									? 'User canonical ID'
+									: 'Group name or URI'}
+							/>
+						{/if}
+					</div>
+
+					<!-- Permission -->
+					<div class="space-y-1">
+						<div class="flex items-center gap-1">
+							<Label class="text-xs">Permission</Label>
 							<Tooltip.Root>
 								<Tooltip.Trigger>
 									{#snippet child({ props })}
 										<span {...props}>
-											<Badge variant={permissionColor(grant.Permission ?? '')}>
-												{permissionLabel(grant.Permission ?? '')}
-											</Badge>
+											<HelpCircle class="h-3 w-3 text-muted-foreground" />
 										</span>
 									{/snippet}
 								</Tooltip.Trigger>
-								<Tooltip.Content side="left" class="max-w-xs">
-									{PERMISSION_MAP.get(grant.Permission ?? '')?.description ?? grant.Permission}
+								<Tooltip.Content side="top" class="max-w-xs">
+									<ul class="space-y-1 text-xs">
+										{#each PERMISSIONS as p (p.value)}
+											<li><strong>{p.label}</strong> — {p.description}</li>
+										{/each}
+									</ul>
 								</Tooltip.Content>
 							</Tooltip.Root>
 						</div>
-					{/each}
+						<select
+							class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+							bind:value={grantPermission}
+						>
+							{#each PERMISSIONS as p (p.value)}
+								<option value={p.value}>{p.label}</option>
+							{/each}
+						</select>
+					</div>
+
+					<Button class="w-full" size="sm" disabled={granting || !granteeId} onclick={addGrant}>
+						{#if granting}
+							<Loader2 class="h-3.5 w-3.5 animate-spin" />
+							Adding…
+						{:else}
+							<Plus class="h-3.5 w-3.5" /> Add Grant
+						{/if}
+					</Button>
 				</div>
-			{:else}
-				<p class="text-sm text-muted-foreground">
-					No ACL grants configured. Only the bucket owner has access.
-				</p>
-			{/if}
+			</div>
 		</Card.Content>
 	{/await}
 </Card.Root>
-
-<Dialog.Root bind:open={editOpen}>
-	<Dialog.Content class="sm:max-w-lg">
-		<Dialog.Header>
-			<Dialog.Title>Edit Bucket ACL</Dialog.Title>
-			<Dialog.Description>
-				Each grant gives a specific user or group a permission on this bucket.
-			</Dialog.Description>
-		</Dialog.Header>
-
-		<div
-			class="flex items-start gap-3 rounded-md bg-blue-500/10 p-3 text-sm text-blue-700 dark:text-blue-300"
-		>
-			<Info class="mt-0.5 h-4 w-4 shrink-0" />
-			<div class="space-y-1">
-				<p>
-					<strong>User (Canonical ID)</strong> — the unique identifier for an HCP user account. Find
-					it in the user's profile or via
-					<code class="rounded bg-muted px-1 text-xs">GET /userAccounts</code>.
-				</p>
-				<p>
-					<strong>Group (URI)</strong> — a predefined group such as
-					<code class="rounded bg-muted px-1 text-xs">AllUsers</code> or
-					<code class="rounded bg-muted px-1 text-xs">AuthenticatedUsers</code>.
-				</p>
-			</div>
-		</div>
-
-		<div class="max-h-80 space-y-3 overflow-y-auto">
-			{#each editGrants as grant, i (i)}
-				<div class="flex items-end gap-2 rounded-md border p-3">
-					<div class="min-w-0 flex-1 space-y-2">
-						<div class="grid gap-2 sm:grid-cols-2">
-							<div class="space-y-1">
-								<Label class="text-xs">Grantee Type</Label>
-								<select
-									class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-xs shadow-sm focus:outline-none focus:ring-1"
-									bind:value={editGrants[i].type}
-								>
-									<option value="CanonicalUser">User (Canonical ID)</option>
-									<option value="Group">Group (URI)</option>
-								</select>
-							</div>
-							<div class="space-y-1">
-								<div class="flex items-center gap-1">
-									<Label class="text-xs">Permission</Label>
-									<Tooltip.Root>
-										<Tooltip.Trigger>
-											{#snippet child({ props })}
-												<span {...props}>
-													<HelpCircle class="h-3 w-3 text-muted-foreground" />
-												</span>
-											{/snippet}
-										</Tooltip.Trigger>
-										<Tooltip.Content side="top" class="max-w-xs">
-											<ul class="space-y-1 text-xs">
-												{#each PERMISSIONS as p (p.value)}
-													<li><strong>{p.label}</strong> — {p.description}</li>
-												{/each}
-											</ul>
-										</Tooltip.Content>
-									</Tooltip.Root>
-								</div>
-								<select
-									class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-xs shadow-sm focus:outline-none focus:ring-1"
-									bind:value={editGrants[i].permission}
-								>
-									{#each PERMISSIONS as p (p.value)}
-										<option value={p.value}>{p.label}</option>
-									{/each}
-								</select>
-							</div>
-						</div>
-						<div class="space-y-1">
-							<Label class="text-xs">
-								{#if grant.type === 'CanonicalUser'}
-									User Canonical ID
-								{:else}
-									Group URI
-								{/if}
-							</Label>
-							<Input
-								class="h-8 font-mono text-xs"
-								bind:value={editGrants[i].id}
-								placeholder={grant.type === 'CanonicalUser'
-									? 'HCP user canonical ID (from user profile)'
-									: 'e.g. http://acs.amazonaws.com/groups/global/AllUsers'}
-							/>
-							{#if grant.type === 'CanonicalUser'}
-								<p class="text-xs text-muted-foreground">
-									The unique ID assigned to each HCP user account.
-								</p>
-							{:else}
-								<p class="text-xs text-muted-foreground">
-									Common groups: <code class="rounded bg-muted px-1">AllUsers</code> (public),
-									<code class="rounded bg-muted px-1">AuthenticatedUsers</code> (any logged-in user).
-								</p>
-							{/if}
-						</div>
-					</div>
-					<Button
-						variant="ghost"
-						size="icon"
-						class="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-						onclick={() => removeGrant(i)}
-						title="Remove this grant"
-					>
-						<Trash2 class="h-3.5 w-3.5" />
-					</Button>
-				</div>
-			{/each}
-		</div>
-		<Button variant="outline" size="sm" onclick={addGrant}>
-			<Plus class="h-3.5 w-3.5" />Add Grant
-		</Button>
-		<Dialog.Footer>
-			<Button variant="ghost" onclick={() => (editOpen = false)} disabled={saving}>Cancel</Button>
-			<Button onclick={saveAcl} disabled={saving}>
-				{#if saving}
-					<Loader2 class="h-4 w-4 animate-spin" />
-					Saving...
-				{:else}
-					Save ACL
-				{/if}
-			</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
