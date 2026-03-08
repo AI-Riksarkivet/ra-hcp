@@ -4,7 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Loader2, Shield, HelpCircle, X, Plus } from 'lucide-svelte';
+	import { Loader2, Shield, HelpCircle, Info, X, Plus } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { SvelteMap } from 'svelte/reactivity';
 	import {
@@ -237,6 +237,22 @@
 					</Tooltip.Root>
 				</div>
 			{/if}
+
+			<details class="text-sm">
+				<summary class="cursor-pointer font-medium text-muted-foreground hover:text-foreground">
+					<Info class="mr-1 inline h-3.5 w-3.5" /> How ACLs work
+				</summary>
+				<div class="mt-2 space-y-1 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+					<p>
+						Each grant pairs a <strong class="text-foreground">grantee</strong> (user or group) with
+						a <strong class="text-foreground">permission</strong>. The bucket owner always retains
+						full control.
+					</p>
+					{#each PERMISSIONS as p (p.value)}
+						<p><strong class="text-foreground">{p.label}</strong> — {p.description}</p>
+					{/each}
+				</div>
+			</details>
 
 			<!-- Compact add grant row -->
 			<div class="flex flex-wrap items-end gap-2 rounded-md border bg-muted/30 p-3">
