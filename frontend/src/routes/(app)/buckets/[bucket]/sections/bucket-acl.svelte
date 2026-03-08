@@ -4,7 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Loader2, Shield, HelpCircle, Info, Trash2, Plus } from 'lucide-svelte';
+	import { Loader2, Shield, HelpCircle, Info, X, Plus } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { SvelteMap } from 'svelte/reactivity';
 	import {
@@ -81,10 +81,37 @@
 	let granting = $state(false);
 	let revoking = $state('');
 
+	// Grouped grants: merge permissions per grantee
+	type GroupedGrant = {
+		display: string;
+		type: string;
+		id: string;
+		permissions: { value: string; grantIndex: number }[];
+	};
+
+	let groupedGrants = $derived.by((): GroupedGrant[] => {
+		const map = new Map<string, GroupedGrant>();
+		for (let i = 0; i < acl.grants.length; i++) {
+			const grant = acl.grants[i];
+			const id = getGranteeId(grant);
+			let group = map.get(id);
+			if (!group) {
+				group = {
+					display: getGranteeName(grant),
+					type: getGranteeType(grant),
+					id,
+					permissions: [],
+				};
+				map.set(id, group);
+			}
+			group.permissions.push({ value: grant.Permission ?? '', grantIndex: i });
+		}
+		return [...map.values()];
+	});
+
 	function getGranteeName(grant: AclGrant): string {
 		const g = grant.Grantee;
 		if (!g) return 'Unknown';
-		// Try resolving via user lookup
 		if (g.ID) {
 			const resolved = userNameMap.get(g.ID as string);
 			if (resolved) return resolved;
@@ -147,23 +174,23 @@
 		}
 	}
 
-	async function revokeGrant(index: number) {
+	async function revokePermission(grantIndex: number) {
 		if (!aclData) return;
-		const grant = acl.grants[index];
-		const key = getGranteeId(grant) + grant.Permission;
+		const grant = acl.grants[grantIndex];
+		const key = getGranteeId(grant) + ':' + grant.Permission;
 		revoking = key;
 		try {
 			const remaining = acl.grants
-				.filter((_, i) => i !== index)
+				.filter((_, i) => i !== grantIndex)
 				.map((g) => ({ Grantee: g.Grantee, Permission: g.Permission }));
 			await put_bucket_acl({
 				bucket,
 				owner: acl.owner ? { ID: acl.owner.ID, DisplayName: acl.owner.DisplayName } : undefined,
 				grants: remaining,
 			}).updates(aclData);
-			toast.success('Grant revoked');
+			toast.success('Permission revoked');
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to revoke grant');
+			toast.error(err instanceof Error ? err.message : 'Failed to revoke');
 		} finally {
 			revoking = '';
 		}
@@ -197,13 +224,7 @@
 				<div class="mt-2 space-y-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
 					<p>
 						An <strong class="text-foreground">Access Control List (ACL)</strong> is a set of grants that
-						define who can access this bucket and what operations they can perform. Each bucket has exactly
-						one ACL.
-					</p>
-					<p>
-						Each <strong class="text-foreground">grant</strong> pairs a
-						<strong class="text-foreground">grantee</strong> (a user or predefined group) with a
-						<strong class="text-foreground">permission</strong> (what they can do).
+						define who can access this bucket and what operations they can perform.
 					</p>
 					<div class="mt-1 space-y-1">
 						<p class="font-medium text-foreground">Permission levels:</p>
@@ -211,10 +232,6 @@
 							<p><strong class="text-foreground">{p.label}</strong> — {p.description}</p>
 						{/each}
 					</div>
-					<p class="mt-1">
-						The <strong class="text-foreground">bucket owner</strong> always retains full control regardless
-						of what grants are defined.
-					</p>
 				</div>
 			</details>
 
@@ -240,52 +257,49 @@
 			{/if}
 
 			<!-- 2-column layout: grants list + add form -->
-			<div class="grid gap-6 lg:grid-cols-[1fr,320px]">
-				<!-- Left: Current grants -->
+			<div class="grid gap-6 md:grid-cols-[1fr,300px]">
+				<!-- Left: Current grants grouped by grantee -->
 				<div class="space-y-2">
 					<h3 class="text-sm font-medium">Current Grants</h3>
-					{#if acl.grants.length > 0}
-						<div class="space-y-1.5">
-							{#each acl.grants as grant, i (getGranteeId(grant) + grant.Permission + i)}
-								{@const key = getGranteeId(grant) + grant.Permission}
-								<div class="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-									<div class="flex min-w-0 items-center gap-2">
-										<div class="min-w-0">
-											<span class="font-medium">{getGranteeName(grant)}</span>
-											<span class="ml-1 text-xs text-muted-foreground"
-												>({getGranteeType(grant)})</span
-											>
-										</div>
-										<Tooltip.Root>
-											<Tooltip.Trigger>
-												{#snippet child({ props })}
-													<span {...props}>
-														<Badge variant={permissionColor(grant.Permission ?? '')}>
-															{permissionLabel(grant.Permission ?? '')}
-														</Badge>
-													</span>
-												{/snippet}
-											</Tooltip.Trigger>
-											<Tooltip.Content side="top" class="max-w-xs">
-												{PERMISSION_MAP.get(grant.Permission ?? '')?.description ??
-													grant.Permission}
-											</Tooltip.Content>
-										</Tooltip.Root>
+					{#if groupedGrants.length > 0}
+						<div class="space-y-2">
+							{#each groupedGrants as grantee (grantee.id)}
+								<div class="rounded-md border px-3 py-2.5 text-sm">
+									<div class="mb-1.5 flex items-center gap-1.5">
+										<span class="font-medium">{grantee.display}</span>
+										<Badge variant="outline" class="text-[10px]">{grantee.type}</Badge>
 									</div>
-									<Button
-										variant="ghost"
-										size="icon"
-										class="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-										disabled={revoking === key}
-										onclick={() => revokeGrant(i)}
-										title="Revoke this grant"
-									>
-										{#if revoking === key}
-											<Loader2 class="h-3.5 w-3.5 animate-spin" />
-										{:else}
-											<Trash2 class="h-3.5 w-3.5" />
-										{/if}
-									</Button>
+									<div class="flex flex-wrap gap-1.5">
+										{#each grantee.permissions as perm (perm.value)}
+											{@const key = grantee.id + ':' + perm.value}
+											<Tooltip.Root>
+												<Tooltip.Trigger>
+													{#snippet child({ props })}
+														<span {...props} class="inline-flex items-center gap-0.5">
+															<Badge variant={permissionColor(perm.value)} class="pr-1">
+																{permissionLabel(perm.value)}
+																<button
+																	class="ml-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full hover:bg-black/20 dark:hover:bg-white/20"
+																	disabled={revoking === key}
+																	onclick={() => revokePermission(perm.grantIndex)}
+																	title="Revoke"
+																>
+																	{#if revoking === key}
+																		<Loader2 class="h-2.5 w-2.5 animate-spin" />
+																	{:else}
+																		<X class="h-2.5 w-2.5" />
+																	{/if}
+																</button>
+															</Badge>
+														</span>
+													{/snippet}
+												</Tooltip.Trigger>
+												<Tooltip.Content side="top" class="max-w-xs">
+													{PERMISSION_MAP.get(perm.value)?.description ?? perm.value}
+												</Tooltip.Content>
+											</Tooltip.Root>
+										{/each}
+									</div>
 								</div>
 							{/each}
 						</div>
@@ -304,7 +318,6 @@
 						<Plus class="h-3.5 w-3.5" /> Add Grant
 					</h3>
 
-					<!-- Grantee Type -->
 					<div class="space-y-1">
 						<Label class="text-xs">Grantee Type</Label>
 						<select
@@ -319,7 +332,6 @@
 						</select>
 					</div>
 
-					<!-- Grantee selector -->
 					<div class="space-y-1">
 						<Label class="text-xs">
 							{granteeType === 'CanonicalUser' ? 'User' : 'Group'}
@@ -364,7 +376,6 @@
 						{/if}
 					</div>
 
-					<!-- Permission -->
 					<div class="space-y-1">
 						<div class="flex items-center gap-1">
 							<Label class="text-xs">Permission</Label>

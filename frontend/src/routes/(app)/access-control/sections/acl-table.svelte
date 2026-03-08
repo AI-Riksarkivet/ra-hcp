@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { Search, Trash2 } from 'lucide-svelte';
+	import { Search, X, Loader2 } from 'lucide-svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -33,13 +34,31 @@
 
 	let { tenant }: Props = $props();
 
-	type FlatGrantRow = {
+	// Grouped row: one row per (bucket + grantee), with all permissions merged
+	type GroupedGrantRow = {
 		bucket: string;
 		owner: string;
 		granteeDisplay: string;
 		granteeType: string;
 		granteeId: string;
-		permission: string;
+		permissions: { value: string; grantIndex: number }[];
+	};
+
+	const PERMISSION_LABELS: Record<string, string> = {
+		FULL_CONTROL: 'Full Control',
+		READ: 'Read',
+		WRITE: 'Write',
+		READ_ACP: 'Read ACP',
+		WRITE_ACP: 'Write ACP',
+	};
+
+	const PERMISSION_DESCRIPTIONS: Record<string, string> = {
+		FULL_CONTROL:
+			'Grants READ, WRITE, READ_ACP, and WRITE_ACP — the grantee can read/write objects and manage ACLs.',
+		READ: 'List objects in the bucket and read their contents.',
+		WRITE: 'Create, overwrite, and delete objects in the bucket.',
+		READ_ACP: 'Read the bucket access control policy (ACL).',
+		WRITE_ACP: 'Modify the bucket access control policy (ACL).',
 	};
 
 	// Data fetching
@@ -61,8 +80,8 @@
 	let usersData = $derived(tenant ? get_users({ tenant }) : null);
 	let guidToUsername = $derived.by(() => {
 		const map = new SvelteMap<string, string>();
-		const users = (usersData?.current ?? []) as User[];
-		for (const u of users) {
+		const userList = (usersData?.current ?? []) as User[];
+		for (const u of userList) {
 			if (u.userGUID) {
 				map.set(u.userGUID, u.username);
 			}
@@ -84,32 +103,42 @@
 		}
 		const id = (g.ID as string) || '';
 		const displayName = (g.DisplayName as string) || '';
-		// Try to resolve the canonical ID to a username
 		const username = guidToUsername.get(id);
 		if (username) {
-			return { display: username, type: 'CanonicalUser', id };
+			return { display: username, type: 'User', id };
 		}
-		return { display: displayName || id || 'Unknown', type: 'CanonicalUser', id };
+		return { display: displayName || id || 'Unknown', type: 'User', id };
 	}
 
-	// Derive flat grant rows
-	let rows = $derived.by((): FlatGrantRow[] => {
-		const result: FlatGrantRow[] = [];
+	// Derive grouped rows: one row per (bucket + grantee)
+	let rows = $derived.by((): GroupedGrantRow[] => {
+		const result: GroupedGrantRow[] = [];
 		for (const b of buckets) {
 			const aclQuery = bucketAcls.get(b.name);
 			const acl = (aclQuery?.current ?? { owner: null, grants: [] }) as AclData;
 			const owner = acl.owner?.DisplayName || acl.owner?.ID || '';
-			for (const grant of acl.grants ?? []) {
+			const grants = acl.grants ?? [];
+
+			// Group grants by grantee ID within this bucket
+			const granteeMap = new Map<string, GroupedGrantRow>();
+			for (let i = 0; i < grants.length; i++) {
+				const grant = grants[i];
 				const { display, type, id } = resolveGrantee(grant);
-				result.push({
-					bucket: b.name,
-					owner,
-					granteeDisplay: display,
-					granteeType: type,
-					granteeId: id,
-					permission: grant.Permission ?? '',
-				});
+				let group = granteeMap.get(id);
+				if (!group) {
+					group = {
+						bucket: b.name,
+						owner,
+						granteeDisplay: display,
+						granteeType: type,
+						granteeId: id,
+						permissions: [],
+					};
+					granteeMap.set(id, group);
+				}
+				group.permissions.push({ value: grant.Permission ?? '', grantIndex: i });
 			}
+			result.push(...granteeMap.values());
 		}
 		return result;
 	});
@@ -118,6 +147,7 @@
 	let searchBucket = $state('');
 	let searchGrantee = $state('');
 	let filterPermission = $state('');
+	let filterType = $state('');
 
 	let filteredRows = $derived(
 		rows.filter((r) => {
@@ -125,12 +155,17 @@
 				return false;
 			if (searchGrantee && !r.granteeDisplay.toLowerCase().includes(searchGrantee.toLowerCase()))
 				return false;
-			if (filterPermission && r.permission !== filterPermission) return false;
+			if (filterPermission && !r.permissions.some((p) => p.value === filterPermission))
+				return false;
+			if (filterType && r.granteeType !== filterType) return false;
 			return true;
 		})
 	);
 
-	let allPermissions = $derived([...new Set(rows.map((r) => r.permission).filter(Boolean))].sort());
+	let allPermissions = $derived(
+		[...new Set(rows.flatMap((r) => r.permissions.map((p) => p.value)).filter(Boolean))].sort()
+	);
+	let allTypes = $derived([...new Set(rows.map((r) => r.granteeType).filter(Boolean))].sort());
 
 	// Permission helpers
 	function permissionColor(p: string): 'default' | 'secondary' | 'destructive' | 'outline' {
@@ -140,60 +175,38 @@
 	}
 
 	function permissionLabel(p: string): string {
-		const labels: Record<string, string> = {
-			FULL_CONTROL: 'Full Control',
-			READ: 'Read',
-			WRITE: 'Write',
-			READ_ACP: 'Read ACP',
-			WRITE_ACP: 'Write ACP',
-		};
-		return labels[p] ?? p;
+		return PERMISSION_LABELS[p] ?? p;
 	}
 
-	function granteeTypeLabel(t: string): string {
-		return t === 'Group' ? 'Group' : 'User';
-	}
-
-	// Revoke handler
+	// Revoke handler - revokes a single permission from a grantee on a bucket
 	let revoking = $state<string | null>(null);
 
-	function revokeKey(row: FlatGrantRow): string {
-		return `${row.bucket}:${row.granteeId}:${row.permission}`;
+	function revokeKey(bucketName: string, granteeId: string, permission: string): string {
+		return `${bucketName}:${granteeId}:${permission}`;
 	}
 
-	async function handleRevoke(row: FlatGrantRow) {
-		const key = revokeKey(row);
+	async function handleRevoke(row: GroupedGrantRow, permValue: string, grantIndex: number) {
+		const key = revokeKey(row.bucket, row.granteeId, permValue);
 		revoking = key;
 		try {
 			const aclQuery = bucketAcls.get(row.bucket);
 			const currentAcl = (aclQuery?.current ?? { owner: null, grants: [] }) as AclData;
 
-			// Filter out the matching grant
-			let removed = false;
-			const remainingGrants = currentAcl.grants.filter((g) => {
-				if (removed) return true;
-				const { id } = resolveGrantee(g);
-				if (id === row.granteeId && g.Permission === row.permission) {
-					removed = true;
-					return false;
-				}
-				return true;
-			});
+			const remainingGrants = currentAcl.grants
+				.filter((_, i) => i !== grantIndex)
+				.map((g) => ({ Grantee: g.Grantee, Permission: g.Permission }));
 
 			const result = put_bucket_acl({
 				bucket: row.bucket,
 				owner: currentAcl.owner
 					? { ID: currentAcl.owner.ID, DisplayName: currentAcl.owner.DisplayName }
 					: undefined,
-				grants: remainingGrants.map((g) => ({
-					Grantee: g.Grantee,
-					Permission: g.Permission,
-				})),
+				grants: remainingGrants,
 			});
 			if (aclQuery) await result.updates(aclQuery);
 			else await result;
 
-			toast.success(`Revoked ${permissionLabel(row.permission)} on ${row.bucket}`);
+			toast.success(`Revoked ${permissionLabel(permValue)} on ${row.bucket}`);
 		} catch (err) {
 			toast.error(err instanceof Error ? err.message : 'Failed to revoke grant');
 		} finally {
@@ -205,7 +218,7 @@
 	let sorting = $state<SortingState>([]);
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 25 });
 
-	let columns = $derived.by((): ColumnDef<FlatGrantRow>[] => [
+	let columns = $derived.by((): ColumnDef<GroupedGrantRow>[] => [
 		{
 			accessorKey: 'bucket',
 			header: ({ column }) =>
@@ -233,20 +246,10 @@
 			meta: { cellClass: 'px-4 py-3' },
 		},
 		{
-			accessorKey: 'permission',
-			header: ({ column }) =>
-				renderComponent(DataTableHeaderButton, {
-					label: 'Permission',
-					onclick: column.getToggleSortingHandler(),
-				}),
-			cell: ({ row }) => renderSnippet(permissionCell, row.original),
+			id: 'permissions',
+			header: 'Permissions',
+			cell: ({ row }) => renderSnippet(permissionsCell, row.original),
 			meta: { cellClass: 'px-4 py-3' },
-		},
-		{
-			id: 'actions',
-			header: '',
-			cell: ({ row }) => renderSnippet(actionsCell, row.original),
-			meta: { headerClass: 'w-28', cellClass: 'px-4 py-3' },
 		},
 	]);
 
@@ -283,7 +286,7 @@
 	);
 </script>
 
-{#snippet bucketNameCell(row: FlatGrantRow)}
+{#snippet bucketNameCell(row: GroupedGrantRow)}
 	<a
 		href="/buckets/{row.bucket}"
 		class="text-primary underline-offset-4 hover:underline"
@@ -293,7 +296,7 @@
 	</a>
 {/snippet}
 
-{#snippet granteeCell(row: FlatGrantRow)}
+{#snippet granteeCell(row: GroupedGrantRow)}
 	<div class="flex flex-col gap-0.5">
 		<span>{row.granteeDisplay}</span>
 		{#if row.granteeId && row.granteeDisplay !== row.granteeId}
@@ -304,35 +307,52 @@
 	</div>
 {/snippet}
 
-{#snippet typeCell(row: FlatGrantRow)}
-	<Badge variant="outline">{granteeTypeLabel(row.granteeType)}</Badge>
+{#snippet typeCell(row: GroupedGrantRow)}
+	<Badge variant="outline">{row.granteeType}</Badge>
 {/snippet}
 
-{#snippet permissionCell(row: FlatGrantRow)}
-	<Badge variant={permissionColor(row.permission)}>{permissionLabel(row.permission)}</Badge>
-{/snippet}
-
-{#snippet actionsCell(row: FlatGrantRow)}
-	<Button
-		variant="ghost"
-		size="sm"
-		class="text-destructive hover:text-destructive"
-		onclick={(e) => {
-			e.stopPropagation();
-			handleRevoke(row);
-		}}
-		disabled={revoking === revokeKey(row)}
-	>
-		<Trash2 class="h-3.5 w-3.5" />
-		{revoking === revokeKey(row) ? 'Revoking...' : 'Revoke'}
-	</Button>
+{#snippet permissionsCell(row: GroupedGrantRow)}
+	<div class="flex flex-wrap gap-1.5">
+		{#each row.permissions as perm (perm.value)}
+			{@const key = revokeKey(row.bucket, row.granteeId, perm.value)}
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<span {...props} class="inline-flex items-center gap-0.5">
+							<Badge variant={permissionColor(perm.value)} class="pr-1">
+								{permissionLabel(perm.value)}
+								<button
+									class="ml-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full hover:bg-black/20 dark:hover:bg-white/20"
+									disabled={revoking === key}
+									onclick={(e) => {
+										e.stopPropagation();
+										handleRevoke(row, perm.value, perm.grantIndex);
+									}}
+									title="Revoke"
+								>
+									{#if revoking === key}
+										<Loader2 class="h-2.5 w-2.5 animate-spin" />
+									{:else}
+										<X class="h-2.5 w-2.5" />
+									{/if}
+								</button>
+							</Badge>
+						</span>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content side="top" class="max-w-xs">
+					{PERMISSION_DESCRIPTIONS[perm.value] ?? perm.value}
+				</Tooltip.Content>
+			</Tooltip.Root>
+		{/each}
+	</div>
 {/snippet}
 
 {#await bucketData}
-	<TableSkeleton rows={5} columns={5} />
+	<TableSkeleton rows={5} columns={4} />
 {:then}
 	<div class="space-y-2">
-		<div class="flex items-center gap-3">
+		<div class="flex flex-wrap items-center gap-3">
 			<div class="relative max-w-md">
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 				<Input bind:value={searchBucket} placeholder="Filter by bucket..." class="pl-10" />
@@ -341,26 +361,41 @@
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 				<Input bind:value={searchGrantee} placeholder="Filter by grantee..." class="pl-10" />
 			</div>
-			<select
-				class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-48 items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
-				bind:value={filterPermission}
-			>
-				<option value="">All permissions</option>
-				{#each allPermissions as p (p)}
-					<option value={p}>{permissionLabel(p)}</option>
-				{/each}
-			</select>
+			{#if allTypes.length > 1}
+				<select
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-36 items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+					bind:value={filterType}
+				>
+					<option value="">All types</option>
+					{#each allTypes as t (t)}
+						<option value={t}>{t}</option>
+					{/each}
+				</select>
+			{/if}
+			{#if allPermissions.length > 1}
+				<select
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-48 items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+					bind:value={filterPermission}
+				>
+					<option value="">All permissions</option>
+					{#each allPermissions as p (p)}
+						<option value={p}>{permissionLabel(p)}</option>
+					{/each}
+				</select>
+			{/if}
 		</div>
 		<div class="flex items-center">
 			<span class="ml-auto text-xs text-muted-foreground">
-				{filteredRows.length} of {rows.length} grants
+				{filteredRows.length} of {rows.length} grantees across {new Set(rows.map((r) => r.bucket))
+					.size}
+				buckets
 			</span>
 		</div>
 	</div>
 
 	<DataTable {table} {noResultsMessage}>
 		{#snippet footer()}
-			{filteredRows.length} grant(s) across {new Set(rows.map((r) => r.bucket)).size} buckets
+			{filteredRows.length} grantee(s) across {new Set(rows.map((r) => r.bucket)).size} buckets
 		{/snippet}
 	</DataTable>
 {/await}
