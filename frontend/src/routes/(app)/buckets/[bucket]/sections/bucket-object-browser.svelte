@@ -154,8 +154,77 @@
 	let search = $state('');
 	let ownerFilter = $state('');
 	let sizeFilter = $state('');
+	let typeFilter = $state('');
+	let storageClassFilter = $state('');
+	let dateFilter = $state('');
 
 	let uniqueOwners = $derived([...new Set(rawObjects.map(getOwnerName).filter(Boolean))]);
+	let uniqueStorageClasses = $derived(
+		[...new Set(rawObjects.map((o) => o.storage_class).filter(Boolean))].sort()
+	);
+
+	function getFileType(key: string): string {
+		const ext = key.split('.').pop()?.toLowerCase() ?? '';
+		if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext)) return 'Images';
+		if (
+			[
+				'pdf',
+				'doc',
+				'docx',
+				'xls',
+				'xlsx',
+				'ppt',
+				'pptx',
+				'odt',
+				'ods',
+				'txt',
+				'rtf',
+				'csv',
+			].includes(ext)
+		)
+			return 'Documents';
+		if (['zip', 'tar', 'gz', 'rar', '7z', 'bz2', 'xz'].includes(ext)) return 'Archives';
+		if (
+			[
+				'js',
+				'ts',
+				'py',
+				'json',
+				'html',
+				'css',
+				'xml',
+				'yaml',
+				'yml',
+				'toml',
+				'sh',
+				'java',
+				'c',
+				'cpp',
+				'go',
+				'rs',
+			].includes(ext)
+		)
+			return 'Code';
+		if (['mp4', 'mov', 'avi', 'mkv', 'mp3', 'wav', 'flac', 'ogg'].includes(ext)) return 'Media';
+		if (['log', 'bak', 'tmp'].includes(ext)) return 'Logs/Temp';
+		return 'Other';
+	}
+
+	let uniqueFileTypes = $derived.by(() => {
+		const types = new Set<string>();
+		for (const o of rawObjects) types.add(getFileType(o.key));
+		return [...types].sort();
+	});
+
+	function matchesDateFilter(dateStr: string, filter: string): boolean {
+		if (!dateStr || !filter) return true;
+		const d = new Date(dateStr);
+		const now = new Date();
+		if (filter === '24h') return now.getTime() - d.getTime() < 86400000;
+		if (filter === '7d') return now.getTime() - d.getTime() < 604800000;
+		if (filter === '30d') return now.getTime() - d.getTime() < 2592000000;
+		return true;
+	}
 
 	let filteredObjects = $derived(
 		objects.filter((obj) => {
@@ -175,14 +244,24 @@
 				if (sizeFilter === '1MB-100MB' && (s < 1048576 || s >= 104857600)) return false;
 				if (sizeFilter === '>100MB' && s < 104857600) return false;
 			}
+			if (typeFilter && !isObjFolder(obj) && getFileType(obj.key) !== typeFilter) return false;
+			if (storageClassFilter && !isObjFolder(obj) && obj.storage_class !== storageClassFilter)
+				return false;
+			if (dateFilter && !isObjFolder(obj) && !matchesDateFilter(obj.last_modified, dateFilter))
+				return false;
 			return true;
 		})
 	);
 
-	let hasActiveFilters = $derived(!!ownerFilter || !!sizeFilter);
+	let hasActiveFilters = $derived(
+		!!ownerFilter || !!sizeFilter || !!typeFilter || !!storageClassFilter || !!dateFilter
+	);
 	function clearFilters() {
 		ownerFilter = '';
 		sizeFilter = '';
+		typeFilter = '';
+		storageClassFilter = '';
+		dateFilter = '';
 	}
 
 	// --- TanStack Table with sorting + client pagination ---
@@ -503,6 +582,33 @@
 				<option value="1KB-1MB">1 KB - 1 MB</option>
 				<option value="1MB-100MB">1 MB - 100 MB</option>
 				<option value=">100MB">&gt; 100 MB</option>
+			</select>
+			{#if uniqueFileTypes.length > 1}
+				<select
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-auto min-w-[120px] items-center rounded-md border px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+					bind:value={typeFilter}
+				>
+					<option value="">All types</option>
+					{#each uniqueFileTypes as t (t)}<option value={t}>{t}</option>{/each}
+				</select>
+			{/if}
+			{#if uniqueStorageClasses.length > 1}
+				<select
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-auto min-w-[120px] items-center rounded-md border px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+					bind:value={storageClassFilter}
+				>
+					<option value="">All storage classes</option>
+					{#each uniqueStorageClasses as sc (sc)}<option value={sc}>{sc}</option>{/each}
+				</select>
+			{/if}
+			<select
+				class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-auto min-w-[120px] items-center rounded-md border px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+				bind:value={dateFilter}
+			>
+				<option value="">All dates</option>
+				<option value="24h">Last 24 hours</option>
+				<option value="7d">Last 7 days</option>
+				<option value="30d">Last 30 days</option>
 			</select>
 			{#if hasActiveFilters}
 				<Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={clearFilters}>
