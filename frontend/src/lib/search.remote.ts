@@ -94,10 +94,26 @@ export const search_objects = command(
       },
     );
     if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Object query failed",
-      }));
-      throw new Error(err.detail);
+      const err = await res.json().catch(() => ({ detail: "" }));
+      const detail = err.detail || "";
+      if (res.status === 403) {
+        throw new Error(
+          detail ||
+            "Access denied. Ensure the user has SEARCH permission and that namespaces have search enabled.",
+        );
+      }
+      if (res.status === 400) {
+        throw new Error(
+          detail || "Invalid query syntax. Check your query expression.",
+        );
+      }
+      if (res.status === 502 || res.status === 504) {
+        throw new Error(
+          detail ||
+            "Could not reach the HCP query engine. Verify that the HCP system is reachable and search is enabled.",
+        );
+      }
+      throw new Error(detail || `Object query failed (HTTP ${res.status})`);
     }
     return (await res.json()) as ObjectQueryResponse;
   },
@@ -149,10 +165,24 @@ export const search_operations = command(
       },
     );
     if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Operation query failed",
-      }));
-      throw new Error(err.detail);
+      const err = await res.json().catch(() => ({ detail: "" }));
+      const detail = err.detail || "";
+      if (res.status === 403) {
+        throw new Error(
+          detail ||
+            "Access denied. Ensure the user has SEARCH permission on the target namespaces.",
+        );
+      }
+      if (res.status === 400) {
+        throw new Error(detail || "Invalid query parameters.");
+      }
+      if (res.status === 502 || res.status === 504) {
+        throw new Error(
+          detail ||
+            "Could not reach the HCP query engine. Verify that the HCP system is reachable.",
+        );
+      }
+      throw new Error(detail || `Operation query failed (HTTP ${res.status})`);
     }
     return (await res.json()) as OperationQueryResponse;
   },

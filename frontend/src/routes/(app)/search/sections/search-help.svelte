@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
+	import Info from 'lucide-svelte/icons/info';
 
 	let {
 		mode,
@@ -10,6 +11,30 @@
 
 <Card.Root>
 	<Card.Content class="py-4">
+		<div
+			class="mb-3 flex gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50"
+		>
+			<Info class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+			<div class="text-xs text-blue-800 dark:text-blue-300">
+				<p class="mb-1 font-medium">Prerequisites</p>
+				<ul class="list-inside list-disc space-y-0.5">
+					<li>
+						<strong>Search enabled on namespace</strong> — Each namespace must have
+						<code class="rounded bg-blue-100 px-1 dark:bg-blue-900/50">searchEnabled</code> set to
+						<code class="rounded bg-blue-100 px-1 dark:bg-blue-900/50">true</code> in its configuration
+					</li>
+					<li>
+						<strong>User permissions</strong> — The user account must have
+						<code class="rounded bg-blue-100 px-1 dark:bg-blue-900/50">SEARCH</code> permission on the
+						target namespaces
+					</li>
+					<li>
+						<strong>Indexing active</strong> — HCP's indexing engine must have indexed the objects (new
+						objects may take time to appear)
+					</li>
+				</ul>
+			</div>
+		</div>
 		{#if mode === 'objects'}
 			<div class="space-y-3 text-sm">
 				<p class="text-foreground">

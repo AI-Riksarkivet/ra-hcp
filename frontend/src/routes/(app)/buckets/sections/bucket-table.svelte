@@ -256,7 +256,7 @@
 	<TableSkeleton rows={5} columns={5} />
 {:then}
 	<div class="space-y-2">
-		<div class="relative">
+		<div class="relative max-w-md">
 			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input bind:value={search} placeholder="Search buckets..." class="pl-10" />
 		</div>

@@ -216,7 +216,7 @@
 	<TableSkeleton rows={5} columns={6} />
 {:then}
 	<div class="flex items-center justify-between">
-		<div class="relative flex-1">
+		<div class="relative max-w-md">
 			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 			<Input bind:value={userSearch} placeholder="Search users..." class="pl-10" />
 		</div>
