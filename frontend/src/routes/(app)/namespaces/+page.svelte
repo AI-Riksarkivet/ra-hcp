@@ -7,10 +7,18 @@
 	import NamespaceStats from './sections/namespace-stats.svelte';
 	import NamespaceTable from './sections/namespace-table.svelte';
 	import NamespaceCreateDialog from './sections/namespace-create-dialog.svelte';
+	import NsGrantDialog from './sections/ns-grant-dialog.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 
 	let createOpen = $state(false);
+	let grantOpen = $state(false);
+	let grantNamespaces = $state<string[]>([]);
+
+	function handleGrantAccess(namespaceNames: string[]) {
+		grantNamespaces = namespaceNames;
+		grantOpen = true;
+	}
 </script>
 
 <svelte:head>
@@ -31,8 +39,9 @@
 
 	{#if tenant}
 		<NamespaceStats {tenant} />
-		<NamespaceTable {tenant} />
+		<NamespaceTable {tenant} ongrantaccess={handleGrantAccess} />
 		<NamespaceCreateDialog {tenant} bind:open={createOpen} />
+		<NsGrantDialog {tenant} namespaceNames={grantNamespaces} bind:open={grantOpen} />
 	{:else}
 		<NoTenantPlaceholder message="Log in with a tenant to manage namespaces." />
 	{/if}

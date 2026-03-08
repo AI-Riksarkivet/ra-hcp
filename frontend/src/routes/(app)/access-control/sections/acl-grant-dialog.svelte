@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Loader2 } from 'lucide-svelte';
+	import { Loader2, Search } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -24,10 +24,8 @@
 
 	let {
 		open = $bindable(false),
-		preselectedBuckets = [],
 	}: {
 		open: boolean;
-		preselectedBuckets?: string[];
 	} = $props();
 
 	let bucketData = get_buckets();
@@ -49,21 +47,22 @@
 	let grantPermission = $state('READ');
 	let granting = $state(false);
 	let grantBucketSelection = $state<Record<string, boolean>>({});
+	let bucketSearch = $state('');
 
-	// Initialize bucket selection when dialog opens
+	// Reset state when dialog opens
 	$effect(() => {
 		if (open) {
 			grantBucketSelection = {};
-			if (preselectedBuckets.length > 0) {
-				for (const name of preselectedBuckets) {
-					grantBucketSelection[name] = true;
-				}
-			}
 			granteeType = 'CanonicalUser';
 			granteeId = '';
 			grantPermission = 'READ';
+			bucketSearch = '';
 		}
 	});
+
+	let filteredBuckets = $derived(
+		buckets.filter((b) => b.name.toLowerCase().includes(bucketSearch.toLowerCase()))
+	);
 
 	let grantBuckets = $derived(
 		Object.entries(grantBucketSelection)
@@ -71,15 +70,17 @@
 			.map(([name]) => name)
 	);
 
-	let allGrantBucketsSelected = $derived(
-		buckets.length > 0 && buckets.every((b) => grantBucketSelection[b.name])
+	let allFilteredSelected = $derived(
+		filteredBuckets.length > 0 && filteredBuckets.every((b) => grantBucketSelection[b.name])
 	);
 
-	function toggleAllGrantBuckets(checked: boolean) {
-		const next: Record<string, boolean> = {};
-		if (checked) {
-			for (const b of buckets) {
+	function toggleAllFiltered(checked: boolean) {
+		const next = { ...grantBucketSelection };
+		for (const b of filteredBuckets) {
+			if (checked) {
 				next[b.name] = true;
+			} else {
+				delete next[b.name];
 			}
 		}
 		grantBucketSelection = next;
@@ -142,18 +143,26 @@
 		</Dialog.Header>
 
 		<div class="space-y-4">
-			<!-- Bucket selection -->
+			<!-- Bucket selection with search -->
 			<div class="space-y-2">
 				<Label>Buckets</Label>
-				<div class="max-h-40 space-y-1 overflow-y-auto rounded-md border p-3">
+				<div class="relative">
+					<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input bind:value={bucketSearch} placeholder="Search buckets..." class="pl-10" />
+				</div>
+				<div class="max-h-60 space-y-1 overflow-y-auto rounded-md border p-3">
 					<div class="mb-1 flex items-center gap-2 border-b pb-2">
 						<Checkbox
-							checked={allGrantBucketsSelected}
-							onCheckedChange={(val) => toggleAllGrantBuckets(!!val)}
+							checked={allFilteredSelected}
+							onCheckedChange={(val) => toggleAllFiltered(!!val)}
 						/>
-						<span class="text-sm font-medium">Select all ({buckets.length})</span>
+						<span class="text-sm font-medium">
+							Select all{bucketSearch
+								? ` matching (${filteredBuckets.length})`
+								: ` (${buckets.length})`}
+						</span>
 					</div>
-					{#each buckets as b (b.name)}
+					{#each filteredBuckets as b (b.name)}
 						<div class="flex items-center gap-2">
 							<Checkbox
 								checked={grantBucketSelection[b.name] ?? false}
@@ -164,6 +173,9 @@
 							<span class="text-sm">{b.name}</span>
 						</div>
 					{/each}
+					{#if filteredBuckets.length === 0}
+						<p class="py-2 text-center text-sm text-muted-foreground">No buckets match</p>
+					{/if}
 				</div>
 				{#if grantBuckets.length > 0}
 					<p class="text-xs text-muted-foreground">

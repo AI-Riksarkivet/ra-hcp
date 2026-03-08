@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Search, Trash2 } from 'lucide-svelte';
+	import { Search, Trash2, Shield } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -41,8 +41,10 @@
 
 	let {
 		tenant,
+		ongrantaccess,
 	}: {
 		tenant: string;
+		ongrantaccess?: (namespaceNames: string[]) => void;
 	} = $props();
 
 	let nsData = $derived(get_namespaces({ tenant }));
@@ -284,6 +286,9 @@
 			<span class="text-sm font-medium">{selectedCount} selected</span>
 			<Button variant="destructive" size="sm" onclick={() => del.requestBulkDelete()}>
 				<Trash2 class="h-3.5 w-3.5" />Delete Selected
+			</Button>
+			<Button variant="outline" size="sm" onclick={() => ongrantaccess?.(selectedKeys)}>
+				<Shield class="h-3.5 w-3.5" />Grant Access
 			</Button>
 			<Button variant="ghost" size="sm" onclick={() => (rowSelection = {})}>Deselect All</Button>
 		</div>

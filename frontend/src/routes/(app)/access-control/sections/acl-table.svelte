@@ -1,15 +1,19 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { Search } from 'lucide-svelte';
+	import { Search, Trash2 } from 'lucide-svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { Plus } from 'lucide-svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import { get_buckets, get_bucket_acl, type AclGrant, type AclData } from '$lib/buckets.remote.js';
+	import { toast } from 'svelte-sonner';
+	import {
+		get_buckets,
+		get_bucket_acl,
+		put_bucket_acl,
+		type AclGrant,
+		type AclData,
+	} from '$lib/buckets.remote.js';
 	import {
 		DataTable,
-		DataTableCheckbox,
 		DataTableHeaderButton,
 		createSvelteTable,
 		getCoreRowModel,
@@ -21,19 +25,14 @@
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import { SvelteMap } from 'svelte/reactivity';
 
-	type BucketAclRow = {
-		name: string;
+	type FlatGrantRow = {
+		bucket: string;
 		owner: string;
-		grants: AclGrant[];
-		grantCount: number;
-		permissions: string[];
+		granteeDisplay: string;
+		granteeType: string;
+		granteeId: string;
+		permission: string;
 	};
-
-	let {
-		ongrant,
-	}: {
-		ongrant: () => void;
-	} = $props();
 
 	// Data fetching
 	let bucketData = get_buckets();
@@ -50,33 +49,62 @@
 		return map;
 	});
 
-	// Derive table rows from fetched ACLs
-	let rows = $derived.by((): BucketAclRow[] => {
-		const result: BucketAclRow[] = [];
+	function resolveGrantee(grant: AclGrant): {
+		display: string;
+		type: string;
+		id: string;
+	} {
+		const g = grant.Grantee ?? {};
+		const type = (g.Type as string) ?? 'CanonicalUser';
+		if (type === 'Group') {
+			const uri = (g.URI as string) ?? '';
+			const label = uri.split('/').pop() || uri || 'Unknown';
+			return { display: label, type: 'Group', id: uri };
+		}
+		const display = (g.DisplayName as string) || (g.ID as string) || 'Unknown';
+		const id = (g.ID as string) || '';
+		return { display, type: 'CanonicalUser', id };
+	}
+
+	// Derive flat grant rows
+	let rows = $derived.by((): FlatGrantRow[] => {
+		const result: FlatGrantRow[] = [];
 		for (const b of buckets) {
 			const aclQuery = bucketAcls.get(b.name);
 			const acl = (aclQuery?.current ?? { owner: null, grants: [] }) as AclData;
-			const grants = acl.grants ?? [];
-			const permissions = [...new Set(grants.map((g) => g.Permission ?? '').filter(Boolean))];
-			result.push({
-				name: b.name,
-				owner: acl.owner?.DisplayName || acl.owner?.ID || '',
-				grants,
-				grantCount: grants.length,
-				permissions,
-			});
+			const owner = acl.owner?.DisplayName || acl.owner?.ID || '';
+			for (const grant of acl.grants ?? []) {
+				const { display, type, id } = resolveGrantee(grant);
+				result.push({
+					bucket: b.name,
+					owner,
+					granteeDisplay: display,
+					granteeType: type,
+					granteeId: id,
+					permission: grant.Permission ?? '',
+				});
+			}
 		}
 		return result;
 	});
 
-	// Search filter
-	let search = $state('');
+	// Filters
+	let searchBucket = $state('');
+	let searchGrantee = $state('');
+	let filterPermission = $state('');
+
 	let filteredRows = $derived(
 		rows.filter((r) => {
-			if (search && !r.name.toLowerCase().includes(search.toLowerCase())) return false;
+			if (searchBucket && !r.bucket.toLowerCase().includes(searchBucket.toLowerCase()))
+				return false;
+			if (searchGrantee && !r.granteeDisplay.toLowerCase().includes(searchGrantee.toLowerCase()))
+				return false;
+			if (filterPermission && r.permission !== filterPermission) return false;
 			return true;
 		})
 	);
+
+	let allPermissions = $derived([...new Set(rows.map((r) => r.permission).filter(Boolean))].sort());
 
 	// Permission helpers
 	function permissionColor(p: string): 'default' | 'secondary' | 'destructive' | 'outline' {
@@ -96,43 +124,62 @@
 		return labels[p] ?? p;
 	}
 
+	function granteeTypeLabel(t: string): string {
+		return t === 'Group' ? 'Group' : 'User';
+	}
+
+	// Revoke handler
+	let revoking = $state<string | null>(null);
+
+	function revokeKey(row: FlatGrantRow): string {
+		return `${row.bucket}:${row.granteeId}:${row.permission}`;
+	}
+
+	async function handleRevoke(row: FlatGrantRow) {
+		const key = revokeKey(row);
+		revoking = key;
+		try {
+			const aclQuery = bucketAcls.get(row.bucket);
+			const currentAcl = (aclQuery?.current ?? { owner: null, grants: [] }) as AclData;
+
+			// Filter out the matching grant
+			let removed = false;
+			const remainingGrants = currentAcl.grants.filter((g) => {
+				if (removed) return true;
+				const { id } = resolveGrantee(g);
+				if (id === row.granteeId && g.Permission === row.permission) {
+					removed = true;
+					return false;
+				}
+				return true;
+			});
+
+			await put_bucket_acl({
+				bucket: row.bucket,
+				owner: currentAcl.owner
+					? { ID: currentAcl.owner.ID, DisplayName: currentAcl.owner.DisplayName }
+					: undefined,
+				grants: remainingGrants.map((g) => ({
+					Grantee: g.Grantee,
+					Permission: g.Permission,
+				})),
+			});
+
+			toast.success(`Revoked ${permissionLabel(row.permission)} on ${row.bucket}`);
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to revoke grant');
+		} finally {
+			revoking = null;
+		}
+	}
+
 	// TanStack Table state
 	let sorting = $state<SortingState>([]);
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 25 });
-	let rowSelection = $state<Record<string, boolean>>({});
 
-	let selectedCount = $derived(Object.values(rowSelection).filter(Boolean).length);
-
-	// Expose selected rows for grant dialog
-	export function getSelectedBucketNames(): string[] {
-		return Object.entries(rowSelection)
-			.filter(([, v]) => v)
-			.map(([idx]) => table.getCoreRowModel().rows[Number(idx)]?.original.name)
-			.filter(Boolean) as string[];
-	}
-
-	export function clearSelection() {
-		rowSelection = {};
-	}
-
-	// TanStack Table columns
-	let columns = $derived.by((): ColumnDef<BucketAclRow>[] => [
+	let columns = $derived.by((): ColumnDef<FlatGrantRow>[] => [
 		{
-			id: 'select',
-			header: ({ table: tbl }) =>
-				renderComponent(DataTableCheckbox, {
-					checked: tbl.getIsAllPageRowsSelected(),
-					onCheckedChange: (val: boolean) => tbl.toggleAllPageRowsSelected(!!val),
-				}),
-			cell: ({ row }) =>
-				renderComponent(DataTableCheckbox, {
-					checked: row.getIsSelected(),
-					onCheckedChange: (val: boolean) => row.toggleSelected(!!val),
-				}),
-			meta: { headerClass: 'w-10', cellClass: 'px-4 py-3' },
-		},
-		{
-			accessorKey: 'name',
+			accessorKey: 'bucket',
 			header: ({ column }) =>
 				renderComponent(DataTableHeaderButton, {
 					label: 'Bucket',
@@ -142,25 +189,29 @@
 			meta: { cellClass: 'px-4 py-3 font-medium' },
 		},
 		{
-			accessorKey: 'owner',
+			accessorKey: 'granteeDisplay',
 			header: ({ column }) =>
 				renderComponent(DataTableHeaderButton, {
-					label: 'Owner',
+					label: 'Grantee',
 					onclick: column.getToggleSortingHandler(),
 				}),
-			cell: ({ row }) => (row.original.owner || '-') as string,
-			meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
-		},
-		{
-			id: 'grants',
-			header: 'Grants',
-			cell: ({ row }) => renderSnippet(grantsCell, row.original),
+			cell: ({ row }) => row.original.granteeDisplay,
 			meta: { cellClass: 'px-4 py-3' },
 		},
 		{
-			id: 'permissions',
-			header: 'Permissions',
-			cell: ({ row }) => renderSnippet(permissionsCell, row.original),
+			accessorKey: 'granteeType',
+			header: 'Type',
+			cell: ({ row }) => renderSnippet(typeCell, row.original),
+			meta: { cellClass: 'px-4 py-3' },
+		},
+		{
+			accessorKey: 'permission',
+			header: ({ column }) =>
+				renderComponent(DataTableHeaderButton, {
+					label: 'Permission',
+					onclick: column.getToggleSortingHandler(),
+				}),
+			cell: ({ row }) => renderSnippet(permissionCell, row.original),
 			meta: { cellClass: 'px-4 py-3' },
 		},
 		{
@@ -186,9 +237,6 @@
 				get pagination() {
 					return pagination;
 				},
-				get rowSelection() {
-					return rowSelection;
-				},
 			},
 			onSortingChange: (updater) => {
 				sorting = typeof updater === 'function' ? updater(sorting) : updater;
@@ -196,93 +244,84 @@
 			onPaginationChange: (updater) => {
 				pagination = typeof updater === 'function' ? updater(pagination) : updater;
 			},
-			onRowSelectionChange: (updater) => {
-				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
-			},
 			getCoreRowModel: getCoreRowModel(),
 			getSortedRowModel: getSortedRowModel(),
 			getPaginationRowModel: getPaginationRowModel(),
-			enableRowSelection: true,
 		})
 	);
 
 	let noResultsMessage = $derived(
-		buckets.length === 0 ? 'No buckets found.' : `No results matching "${search}"`
+		rows.length === 0 ? 'No grants found.' : 'No results matching current filters'
 	);
 </script>
 
-{#snippet bucketNameCell(row: BucketAclRow)}
+{#snippet bucketNameCell(row: FlatGrantRow)}
 	<a
-		href="/buckets/{row.name}"
+		href="/buckets/{row.bucket}"
 		class="text-primary underline-offset-4 hover:underline"
-		onclick={(e) => {
-			e.stopPropagation();
-		}}
+		onclick={(e) => e.stopPropagation()}
 	>
-		{row.name}
+		{row.bucket}
 	</a>
 {/snippet}
 
-{#snippet grantsCell(row: BucketAclRow)}
-	<Badge variant="outline">{row.grantCount}</Badge>
+{#snippet typeCell(row: FlatGrantRow)}
+	<Badge variant="outline">{granteeTypeLabel(row.granteeType)}</Badge>
 {/snippet}
 
-{#snippet permissionsCell(row: BucketAclRow)}
-	{#if row.permissions.length > 0}
-		<div class="flex flex-wrap gap-1">
-			{#each row.permissions as perm (perm)}
-				<Badge variant={permissionColor(perm)}>{permissionLabel(perm)}</Badge>
-			{/each}
-		</div>
-	{:else}
-		<span class="text-muted-foreground">-</span>
-	{/if}
+{#snippet permissionCell(row: FlatGrantRow)}
+	<Badge variant={permissionColor(row.permission)}>{permissionLabel(row.permission)}</Badge>
 {/snippet}
 
-{#snippet actionsCell(row: BucketAclRow)}
+{#snippet actionsCell(row: FlatGrantRow)}
 	<Button
 		variant="ghost"
 		size="sm"
+		class="text-destructive hover:text-destructive"
 		onclick={(e) => {
 			e.stopPropagation();
-			goto(`/buckets/${row.name}`);
+			handleRevoke(row);
 		}}
+		disabled={revoking === revokeKey(row)}
 	>
-		View Details
+		<Trash2 class="h-3.5 w-3.5" />
+		{revoking === revokeKey(row) ? 'Revoking...' : 'Revoke'}
 	</Button>
 {/snippet}
 
 {#await bucketData}
-	<TableSkeleton rows={5} columns={6} />
+	<TableSkeleton rows={5} columns={5} />
 {:then}
 	<div class="space-y-2">
-		<div class="relative">
-			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-			<Input bind:value={search} placeholder="Search buckets..." class="pl-10" />
+		<div class="flex items-center gap-3">
+			<div class="relative flex-1">
+				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+				<Input bind:value={searchBucket} placeholder="Filter by bucket..." class="pl-10" />
+			</div>
+			<div class="relative flex-1">
+				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+				<Input bind:value={searchGrantee} placeholder="Filter by grantee..." class="pl-10" />
+			</div>
+			<select
+				class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-48 items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1"
+				bind:value={filterPermission}
+			>
+				<option value="">All permissions</option>
+				{#each allPermissions as p (p)}
+					<option value={p}>{permissionLabel(p)}</option>
+				{/each}
+			</select>
 		</div>
 		<div class="flex items-center">
 			<span class="ml-auto text-xs text-muted-foreground">
-				{filteredRows.length} of {rows.length} buckets
+				{filteredRows.length} of {rows.length} grants
 			</span>
 		</div>
 	</div>
 
-	{#if selectedCount > 0}
-		<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-			<span class="text-sm font-medium">{selectedCount} selected</span>
-			<Button variant="outline" size="sm" onclick={ongrant}>
-				<Plus class="h-3.5 w-3.5" />
-				Grant Access to Selected
-			</Button>
-			<Button variant="ghost" size="sm" onclick={() => (rowSelection = {})}>Deselect All</Button>
-		</div>
-	{/if}
-
-	<DataTable {table} onrowclick={(row) => goto(`/buckets/${row.name}`)} {noResultsMessage}>
+	<DataTable {table} {noResultsMessage}>
 		{#snippet footer()}
-			{#if selectedCount > 0}
-				{selectedCount} of {filteredRows.length} row(s) selected.
-			{/if}
+			{filteredRows.length} grant(s) across {new Set(rows.map((r) => r.bucket)).size} buckets
 		{/snippet}
 	</DataTable>
 {/await}

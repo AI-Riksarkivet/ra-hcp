@@ -6,13 +6,6 @@
 	import AclGrantDialog from './sections/acl-grant-dialog.svelte';
 
 	let grantOpen = $state(false);
-	let aclTableRef = $state<AclTable>();
-
-	function openGrantDialog() {
-		grantOpen = true;
-	}
-
-	let preselectedBuckets = $derived(grantOpen ? (aclTableRef?.getSelectedBucketNames() ?? []) : []);
 </script>
 
 <svelte:head>
@@ -24,7 +17,7 @@
 		{#snippet actions()}
 			<div class="flex items-center gap-2">
 				<Shield class="h-5 w-5 text-muted-foreground" />
-				<Button size="sm" onclick={openGrantDialog}>
+				<Button size="sm" onclick={() => (grantOpen = true)}>
 					<Plus class="h-4 w-4" />
 					Grant Access
 				</Button>
@@ -32,7 +25,7 @@
 		{/snippet}
 	</PageHeader>
 
-	<AclTable bind:this={aclTableRef} ongrant={openGrantDialog} />
+	<AclTable />
 </div>
 
-<AclGrantDialog bind:open={grantOpen} {preselectedBuckets} />
+<AclGrantDialog bind:open={grantOpen} />

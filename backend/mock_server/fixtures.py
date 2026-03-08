@@ -126,6 +126,7 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "localAuthentication": True,
             "enabled": True,
             "roles": {"role": ["ADMINISTRATOR", "SECURITY", "MONITOR", "COMPLIANCE"]},
+            "userGUID": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         },
         "user1": {
             "username": "user1",
@@ -134,6 +135,7 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "localAuthentication": True,
             "enabled": True,
             "roles": {"role": ["MONITOR"]},
+            "userGUID": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
         },
     },
     "research": {
@@ -144,6 +146,7 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "localAuthentication": True,
             "enabled": True,
             "roles": {"role": ["ADMINISTRATOR", "MONITOR"]},
+            "userGUID": "c3d4e5f6-a7b8-9012-cdef-123456789012",
         },
     },
     "mock": {
@@ -154,6 +157,7 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "localAuthentication": True,
             "enabled": True,
             "roles": {"role": ["ADMINISTRATOR", "SECURITY", "MONITOR", "COMPLIANCE"]},
+            "userGUID": "d4e5f6a7-b8c9-0123-defa-234567890123",
         },
         "analyst": {
             "username": "analyst",
@@ -162,6 +166,7 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "localAuthentication": True,
             "enabled": True,
             "roles": {"role": ["MONITOR"]},
+            "userGUID": "e5f6a7b8-c9d0-1234-efab-345678901234",
         },
         "developer": {
             "username": "developer",
@@ -170,6 +175,7 @@ USER_ACCOUNTS: dict[str, dict[str, dict]] = {
             "localAuthentication": True,
             "enabled": True,
             "roles": {"role": ["MONITOR"]},
+            "userGUID": "f6a7b8c9-d0e1-2345-fabc-456789012345",
         },
     },
 }
