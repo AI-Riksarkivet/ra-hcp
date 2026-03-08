@@ -12,6 +12,8 @@
 		put_bucket_acl,
 		type AclData,
 	} from '$lib/buckets.remote.js';
+	import { get_users, get_groups } from '$lib/users.remote.js';
+	import type { User, GroupAccount } from '$lib/constants.js';
 	import { SvelteMap } from 'svelte/reactivity';
 
 	const PERMISSIONS: { value: string; label: string }[] = [
@@ -22,11 +24,12 @@
 		{ value: 'WRITE_ACP', label: 'Write ACP' },
 	];
 
-	let {
-		open = $bindable(false),
-	}: {
+	interface Props {
+		tenant?: string;
 		open: boolean;
-	} = $props();
+	}
+
+	let { tenant, open = $bindable(false) }: Props = $props();
 
 	let bucketData = get_buckets();
 	let buckets = $derived(
@@ -42,7 +45,13 @@
 		return map;
 	});
 
-	let granteeType = $state('CanonicalUser');
+	// Fetch users and groups when tenant available
+	let usersData = $derived(tenant && open ? get_users({ tenant }) : null);
+	let groupsData = $derived(tenant && open ? get_groups({ tenant }) : null);
+	let users = $derived((usersData?.current ?? []) as User[]);
+	let groups = $derived((groupsData?.current ?? []) as GroupAccount[]);
+
+	let granteeType = $state<'CanonicalUser' | 'Group'>('CanonicalUser');
 	let granteeId = $state('');
 	let grantPermission = $state('READ');
 	let granting = $state(false);
@@ -104,7 +113,7 @@
 					},
 					Permission: grantPermission,
 				};
-				await put_bucket_acl({
+				const result = put_bucket_acl({
 					bucket: bucketName,
 					owner: currentAcl.owner
 						? { ID: currentAcl.owner.ID, DisplayName: currentAcl.owner.DisplayName }
@@ -117,6 +126,8 @@
 						newGrant,
 					],
 				});
+				if (aclQuery) await result.updates(aclQuery);
+				else await result;
 			}
 			toast.success(
 				`Granted ${permissionLabel(grantPermission)} to ${grantBuckets.length} bucket(s)`
@@ -191,32 +202,56 @@
 					id="grantee-type"
 					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
 					bind:value={granteeType}
+					onchange={() => {
+						granteeId = '';
+					}}
 				>
-					<option value="CanonicalUser">User (Canonical ID)</option>
-					<option value="Group">Group (URI)</option>
+					<option value="CanonicalUser">User</option>
+					<option value="Group">Group</option>
 				</select>
 			</div>
 
-			<!-- Grantee ID -->
+			<!-- Grantee selector -->
 			<div class="space-y-2">
 				<Label>
-					{#if granteeType === 'CanonicalUser'}
-						Canonical User ID
-					{:else}
-						Group URI
-					{/if}
+					{granteeType === 'CanonicalUser' ? 'User' : 'Group'}
 				</Label>
-				<Input
-					bind:value={granteeId}
-					placeholder={granteeType === 'CanonicalUser'
-						? 'HCP user canonical ID'
-						: 'e.g. http://acs.amazonaws.com/groups/global/AllUsers'}
-				/>
-				{#if granteeType === 'Group'}
-					<p class="text-xs text-muted-foreground">
-						Common groups: <code class="rounded bg-muted px-1">AllUsers</code> (public),
-						<code class="rounded bg-muted px-1">AuthenticatedUsers</code> (any logged-in user).
-					</p>
+				{#if tenant && granteeType === 'CanonicalUser' && users.length > 0}
+					<select
+						class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+						bind:value={granteeId}
+					>
+						<option value="">Select a user...</option>
+						{#each users as u (u.username)}
+							<option value={u.userGUID ?? u.username}>
+								{u.username}{u.fullName ? ` — ${u.fullName}` : ''}
+							</option>
+						{/each}
+					</select>
+					{#if granteeId}
+						<p class="truncate font-mono text-[11px] text-muted-foreground">
+							ID: {granteeId}
+						</p>
+					{/if}
+				{:else if tenant && granteeType === 'Group' && groups.length > 0}
+					<select
+						class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+						bind:value={granteeId}
+					>
+						<option value="">Select a group...</option>
+						{#each groups as g (g.groupname ?? g.name)}
+							<option value={g.groupname ?? g.name ?? ''}>
+								{g.groupname ?? g.name}{g.description ? ` — ${g.description}` : ''}
+							</option>
+						{/each}
+					</select>
+				{:else}
+					<Input
+						bind:value={granteeId}
+						placeholder={granteeType === 'CanonicalUser'
+							? 'HCP user canonical ID'
+							: 'Group name or URI'}
+					/>
 				{/if}
 			</div>
 

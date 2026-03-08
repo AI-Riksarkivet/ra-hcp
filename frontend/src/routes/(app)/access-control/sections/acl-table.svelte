@@ -12,6 +12,8 @@
 		type AclGrant,
 		type AclData,
 	} from '$lib/buckets.remote.js';
+	import { get_users } from '$lib/users.remote.js';
+	import type { User } from '$lib/constants.js';
 	import {
 		DataTable,
 		DataTableHeaderButton,
@@ -24,6 +26,12 @@
 	} from '$lib/components/ui/data-table/index.js';
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import { SvelteMap } from 'svelte/reactivity';
+
+	interface Props {
+		tenant?: string;
+	}
+
+	let { tenant }: Props = $props();
 
 	type FlatGrantRow = {
 		bucket: string;
@@ -49,6 +57,19 @@
 		return map;
 	});
 
+	// Fetch users for username resolution when tenant available
+	let usersData = $derived(tenant ? get_users({ tenant }) : null);
+	let guidToUsername = $derived.by(() => {
+		const map = new SvelteMap<string, string>();
+		const users = (usersData?.current ?? []) as User[];
+		for (const u of users) {
+			if (u.userGUID) {
+				map.set(u.userGUID, u.username);
+			}
+		}
+		return map;
+	});
+
 	function resolveGrantee(grant: AclGrant): {
 		display: string;
 		type: string;
@@ -61,9 +82,14 @@
 			const label = uri.split('/').pop() || uri || 'Unknown';
 			return { display: label, type: 'Group', id: uri };
 		}
-		const display = (g.DisplayName as string) || (g.ID as string) || 'Unknown';
 		const id = (g.ID as string) || '';
-		return { display, type: 'CanonicalUser', id };
+		const displayName = (g.DisplayName as string) || '';
+		// Try to resolve the canonical ID to a username
+		const username = guidToUsername.get(id);
+		if (username) {
+			return { display: username, type: 'CanonicalUser', id };
+		}
+		return { display: displayName || id || 'Unknown', type: 'CanonicalUser', id };
 	}
 
 	// Derive flat grant rows
@@ -154,7 +180,7 @@
 				return true;
 			});
 
-			await put_bucket_acl({
+			const result = put_bucket_acl({
 				bucket: row.bucket,
 				owner: currentAcl.owner
 					? { ID: currentAcl.owner.ID, DisplayName: currentAcl.owner.DisplayName }
@@ -164,6 +190,8 @@
 					Permission: g.Permission,
 				})),
 			});
+			if (aclQuery) await result.updates(aclQuery);
+			else await result;
 
 			toast.success(`Revoked ${permissionLabel(row.permission)} on ${row.bucket}`);
 		} catch (err) {
@@ -195,7 +223,7 @@
 					label: 'Grantee',
 					onclick: column.getToggleSortingHandler(),
 				}),
-			cell: ({ row }) => row.original.granteeDisplay,
+			cell: ({ row }) => renderSnippet(granteeCell, row.original),
 			meta: { cellClass: 'px-4 py-3' },
 		},
 		{
@@ -263,6 +291,17 @@
 	>
 		{row.bucket}
 	</a>
+{/snippet}
+
+{#snippet granteeCell(row: FlatGrantRow)}
+	<div class="flex flex-col gap-0.5">
+		<span>{row.granteeDisplay}</span>
+		{#if row.granteeId && row.granteeDisplay !== row.granteeId}
+			<span class="truncate font-mono text-[11px] text-muted-foreground" title={row.granteeId}>
+				{row.granteeId}
+			</span>
+		{/if}
+	</div>
 {/snippet}
 
 {#snippet typeCell(row: FlatGrantRow)}

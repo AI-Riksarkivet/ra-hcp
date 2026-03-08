@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { Shield, Plus } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import AclTable from './sections/acl-table.svelte';
 	import AclGrantDialog from './sections/acl-grant-dialog.svelte';
 
+	let tenant = $derived(page.data.tenant as string | undefined);
 	let grantOpen = $state(false);
 </script>
 
@@ -25,7 +27,7 @@
 		{/snippet}
 	</PageHeader>
 
-	<AclTable />
+	<AclTable {tenant} />
 </div>
 
-<AclGrantDialog bind:open={grantOpen} />
+<AclGrantDialog {tenant} bind:open={grantOpen} />
