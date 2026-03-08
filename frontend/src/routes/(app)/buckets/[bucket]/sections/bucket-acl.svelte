@@ -216,25 +216,7 @@
 			</div>
 		</Card.Content>
 	{:then}
-		<Card.Content class="space-y-4">
-			<details class="text-sm">
-				<summary class="cursor-pointer font-medium text-muted-foreground hover:text-foreground">
-					<Info class="mr-1 inline h-4 w-4" /> How ACLs work
-				</summary>
-				<div class="mt-2 space-y-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-					<p>
-						An <strong class="text-foreground">Access Control List (ACL)</strong> is a set of grants that
-						define who can access this bucket and what operations they can perform.
-					</p>
-					<div class="mt-1 space-y-1">
-						<p class="font-medium text-foreground">Permission levels:</p>
-						{#each PERMISSIONS as p (p.value)}
-							<p><strong class="text-foreground">{p.label}</strong> — {p.description}</p>
-						{/each}
-					</div>
-				</div>
-			</details>
-
+		<Card.Content class="space-y-5">
 			{#if acl.owner}
 				<div class="flex items-center gap-1.5 text-sm text-muted-foreground">
 					<span>Owner:</span>
@@ -256,63 +238,9 @@
 				</div>
 			{/if}
 
-			<!-- 2-column layout: grants list + add form -->
-			<div class="grid gap-6 md:grid-cols-[1fr,300px]">
-				<!-- Left: Current grants grouped by grantee -->
-				<div class="space-y-2">
-					<h3 class="text-sm font-medium">Current Grants</h3>
-					{#if groupedGrants.length > 0}
-						<div class="space-y-2">
-							{#each groupedGrants as grantee (grantee.id)}
-								<div class="rounded-md border px-3 py-2.5 text-sm">
-									<div class="mb-1.5 flex items-center gap-1.5">
-										<span class="font-medium">{grantee.display}</span>
-										<Badge variant="outline" class="text-[10px]">{grantee.type}</Badge>
-									</div>
-									<div class="flex flex-wrap gap-1.5">
-										{#each grantee.permissions as perm (perm.value)}
-											{@const key = grantee.id + ':' + perm.value}
-											<Tooltip.Root>
-												<Tooltip.Trigger>
-													{#snippet child({ props })}
-														<span {...props} class="inline-flex items-center gap-0.5">
-															<Badge variant={permissionColor(perm.value)} class="pr-1">
-																{permissionLabel(perm.value)}
-																<button
-																	class="ml-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full hover:bg-black/20 dark:hover:bg-white/20"
-																	disabled={revoking === key}
-																	onclick={() => revokePermission(perm.grantIndex)}
-																	title="Revoke"
-																>
-																	{#if revoking === key}
-																		<Loader2 class="h-2.5 w-2.5 animate-spin" />
-																	{:else}
-																		<X class="h-2.5 w-2.5" />
-																	{/if}
-																</button>
-															</Badge>
-														</span>
-													{/snippet}
-												</Tooltip.Trigger>
-												<Tooltip.Content side="top" class="max-w-xs">
-													{PERMISSION_MAP.get(perm.value)?.description ?? perm.value}
-												</Tooltip.Content>
-											</Tooltip.Root>
-										{/each}
-									</div>
-								</div>
-							{/each}
-						</div>
-					{:else}
-						<p
-							class="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground"
-						>
-							No ACL grants configured. Only the bucket owner has access.
-						</p>
-					{/if}
-				</div>
-
-				<!-- Right: Add grant form -->
+			<!-- Top row: Add Grant form + How ACLs work -->
+			<div class="grid gap-4 md:grid-cols-[1fr,1fr]">
+				<!-- Left: Add grant form -->
 				<div class="space-y-3 rounded-lg border bg-muted/30 p-4">
 					<h3 class="flex items-center gap-1.5 text-sm font-medium">
 						<Plus class="h-3.5 w-3.5" /> Add Grant
@@ -377,25 +305,7 @@
 					</div>
 
 					<div class="space-y-1">
-						<div class="flex items-center gap-1">
-							<Label class="text-xs">Permission</Label>
-							<Tooltip.Root>
-								<Tooltip.Trigger>
-									{#snippet child({ props })}
-										<span {...props}>
-											<HelpCircle class="h-3 w-3 text-muted-foreground" />
-										</span>
-									{/snippet}
-								</Tooltip.Trigger>
-								<Tooltip.Content side="top" class="max-w-xs">
-									<ul class="space-y-1 text-xs">
-										{#each PERMISSIONS as p (p.value)}
-											<li><strong>{p.label}</strong> — {p.description}</li>
-										{/each}
-									</ul>
-								</Tooltip.Content>
-							</Tooltip.Root>
-						</div>
+						<Label class="text-xs">Permission</Label>
 						<select
 							class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-full rounded-md border px-2 text-sm shadow-sm focus:outline-none focus:ring-1"
 							bind:value={grantPermission}
@@ -415,6 +325,82 @@
 						{/if}
 					</Button>
 				</div>
+
+				<!-- Right: How ACLs work -->
+				<div class="space-y-2 rounded-lg border bg-muted/30 p-4 text-xs text-muted-foreground">
+					<h3 class="flex items-center gap-1.5 text-sm font-medium text-foreground">
+						<Info class="h-3.5 w-3.5" /> How ACLs work
+					</h3>
+					<p>
+						An <strong class="text-foreground">Access Control List</strong> is a set of grants that define
+						who can access this bucket. Each grant pairs a grantee (user or group) with a permission.
+					</p>
+					<div class="space-y-1">
+						<p class="font-medium text-foreground">Permission levels:</p>
+						{#each PERMISSIONS as p (p.value)}
+							<p><strong class="text-foreground">{p.label}</strong> — {p.description}</p>
+						{/each}
+					</div>
+				</div>
+			</div>
+
+			<!-- Current grants list below -->
+			<div class="space-y-2">
+				<h3 class="text-sm font-medium">
+					Current Grants
+					{#if groupedGrants.length > 0}
+						<span class="font-normal text-muted-foreground">({groupedGrants.length})</span>
+					{/if}
+				</h3>
+				{#if groupedGrants.length > 0}
+					<div class="space-y-2">
+						{#each groupedGrants as grantee (grantee.id)}
+							<div class="rounded-md border px-3 py-2.5 text-sm">
+								<div class="mb-1.5 flex items-center gap-1.5">
+									<span class="font-medium">{grantee.display}</span>
+									<Badge variant="outline" class="text-[10px]">{grantee.type}</Badge>
+								</div>
+								<div class="flex flex-wrap gap-1.5">
+									{#each grantee.permissions as perm (perm.value)}
+										{@const key = grantee.id + ':' + perm.value}
+										<Tooltip.Root>
+											<Tooltip.Trigger>
+												{#snippet child({ props })}
+													<span {...props} class="inline-flex items-center gap-0.5">
+														<Badge variant={permissionColor(perm.value)} class="pr-1">
+															{permissionLabel(perm.value)}
+															<button
+																class="ml-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full hover:bg-black/20 dark:hover:bg-white/20"
+																disabled={revoking === key}
+																onclick={() => revokePermission(perm.grantIndex)}
+																title="Revoke"
+															>
+																{#if revoking === key}
+																	<Loader2 class="h-2.5 w-2.5 animate-spin" />
+																{:else}
+																	<X class="h-2.5 w-2.5" />
+																{/if}
+															</button>
+														</Badge>
+													</span>
+												{/snippet}
+											</Tooltip.Trigger>
+											<Tooltip.Content side="top" class="max-w-xs">
+												{PERMISSION_MAP.get(perm.value)?.description ?? perm.value}
+											</Tooltip.Content>
+										</Tooltip.Root>
+									{/each}
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<p
+						class="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground"
+					>
+						No ACL grants configured. Only the bucket owner has access.
+					</p>
+				{/if}
 			</div>
 		</Card.Content>
 	{/await}
