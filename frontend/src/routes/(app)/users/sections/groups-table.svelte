@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Plus } from 'lucide-svelte';
+	import { Plus, Info } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
@@ -108,6 +108,15 @@
 {#await groupsData}
 	<TableSkeleton rows={3} columns={3} />
 {:then}
+	<div
+		class="mb-3 flex gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50"
+	>
+		<Info class="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+		<p class="text-xs text-blue-800 dark:text-blue-300">
+			Group accounts correspond to Active Directory groups. Membership is managed in AD — HCP uses
+			these accounts to assign roles and namespace permissions to AD groups.
+		</p>
+	</div>
 	<div class="flex items-center justify-end">
 		<Button size="sm" onclick={oncreate}>
 			<Plus class="h-4 w-4" />
