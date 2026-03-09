@@ -106,6 +106,8 @@ When working on backend code, **always activate these skills**:
 - `astral:ruff` — Python linting and formatting
 - `astral:uv` — Python package management
 - `testing-python` — pytest patterns and best practices
+- `fastapi-templates` — Best practies for fastapi patterns
+
 
 ## Testing
 
