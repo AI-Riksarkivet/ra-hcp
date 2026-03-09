@@ -639,9 +639,11 @@
 	<DataTable
 		table={objTable}
 		onrowclick={handleRowClick}
-		noResultsMessage={objects.length === 0
-			? 'No objects in this bucket'
-			: `No results matching "${search}"`}
+		noResultsMessage={objectData.current?.error
+			? objectData.current.error
+			: objects.length === 0
+				? 'No objects in this bucket'
+				: `No results matching "${search}"`}
 	>
 		{#snippet footer()}
 			{#if selectedKeys.length > 0}

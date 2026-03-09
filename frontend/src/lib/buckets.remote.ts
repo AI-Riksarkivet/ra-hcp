@@ -70,27 +70,29 @@ export const get_objects = query(
           keyCount: data.key_count ?? 0,
         };
       }
+      if (res.status === 403) {
+        return {
+          objects: [],
+          commonPrefixes: [] as string[],
+          isTruncated: false,
+          keyCount: 0,
+          nextToken: null,
+          error:
+            "Access Denied — you don't have permission to list objects in this namespace." as
+              | string
+              | null,
+        };
+      }
     } catch (err) {
       console.error("[buckets.remote]", err);
     }
     return {
-      objects: [] as {
-        key: string;
-        size: number;
-        last_modified: string;
-        etag: string;
-        storage_class: string;
-        owner: {
-          display_name?: string;
-          id?: string;
-          DisplayName?: string;
-          ID?: string;
-        } | null;
-      }[],
+      objects: [],
       commonPrefixes: [] as string[],
       isTruncated: false,
       keyCount: 0,
       nextToken: null,
+      error: null as string | null,
     };
   },
 );
@@ -316,6 +318,7 @@ export const copy_object = command(
 export type BucketVersioning = {
   status: string | null;
   mfa_delete: string | null;
+  error?: string | null;
 };
 
 export const get_bucket_versioning = query(
@@ -330,12 +333,20 @@ export const get_bucket_versioning = query(
         return {
           status: (data.status ?? null) as string | null,
           mfa_delete: (data.mfa_delete ?? null) as string | null,
+          error: null,
+        };
+      }
+      if (res.status === 403) {
+        return {
+          status: null,
+          mfa_delete: null,
+          error: "Access Denied — insufficient permissions.",
         };
       }
     } catch (err) {
       console.error("[buckets.remote] get_bucket_versioning", err);
     }
-    return { status: null, mfa_delete: null } as BucketVersioning;
+    return { status: null, mfa_delete: null, error: null } as BucketVersioning;
   },
 );
 
@@ -378,6 +389,7 @@ export type AclGrant = {
 export type AclData = {
   owner: AclOwner | null;
   grants: AclGrant[];
+  error?: string | null;
 };
 
 export const get_bucket_acl = query(
@@ -392,12 +404,30 @@ export const get_bucket_acl = query(
         return {
           owner: (data.owner ?? null) as AclOwner | null,
           grants: (data.grants ?? []) as AclGrant[],
+          error: null,
         };
       }
+      if (res.status === 403) {
+        return {
+          owner: null,
+          grants: [] as AclGrant[],
+          error:
+            "Access Denied — you don't have READ_ACL permission on this namespace.",
+        };
+      }
+      return {
+        owner: null,
+        grants: [] as AclGrant[],
+        error: `Failed to load ACL (HTTP ${res.status})`,
+      };
     } catch (err) {
       console.error("[buckets.remote] get_bucket_acl", err);
     }
-    return { owner: null, grants: [] } as AclData;
+    return {
+      owner: null,
+      grants: [] as AclGrant[],
+      error: "Failed to load ACL",
+    };
   },
 );
 

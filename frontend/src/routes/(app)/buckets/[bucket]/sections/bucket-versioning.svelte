@@ -56,27 +56,31 @@
 	{#await versioningData}
 		<div class="h-5 w-16 animate-pulse rounded bg-muted"></div>
 	{:then}
-		<Tooltip.Root>
-			<Tooltip.Trigger>
-				{#snippet child({ props })}
-					<span {...props} class="inline-flex items-center gap-1">
-						<Badge variant={statusVariant}>
-							Versioning: {statusLabel}
-						</Badge>
-						<HelpCircle class="h-3 w-3 text-muted-foreground" />
-					</span>
-				{/snippet}
-			</Tooltip.Trigger>
-			<Tooltip.Content side="bottom" class="max-w-xs">{statusTooltip}</Tooltip.Content>
-		</Tooltip.Root>
-		<Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={toggle} disabled={saving}>
-			{#if saving}
-				<Loader2 class="h-3 w-3 animate-spin" />
-			{:else if versioning.status === 'Enabled'}
-				Suspend
-			{:else}
-				Enable
-			{/if}
-		</Button>
+		{#if versioning.error}
+			<Badge variant="outline" class="text-amber-600 dark:text-amber-400">Versioning: N/A</Badge>
+		{:else}
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<span {...props} class="inline-flex items-center gap-1">
+							<Badge variant={statusVariant}>
+								Versioning: {statusLabel}
+							</Badge>
+							<HelpCircle class="h-3 w-3 text-muted-foreground" />
+						</span>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content side="bottom" class="max-w-xs">{statusTooltip}</Tooltip.Content>
+			</Tooltip.Root>
+			<Button variant="ghost" size="sm" class="h-7 px-2 text-xs" onclick={toggle} disabled={saving}>
+				{#if saving}
+					<Loader2 class="h-3 w-3 animate-spin" />
+				{:else if versioning.status === 'Enabled'}
+					Suspend
+				{:else}
+					Enable
+				{/if}
+			</Button>
+		{/if}
 	{/await}
 </div>
