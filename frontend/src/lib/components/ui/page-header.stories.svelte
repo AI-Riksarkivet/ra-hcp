@@ -20,8 +20,8 @@
 <Story name="Default" args={{ title: 'Namespaces', description: 'Manage tenant namespaces' }} />
 
 <Story name="With Actions">
-	{#snippet template()}
-		<PageHeader title="Namespaces" description="Manage tenant namespaces">
+	{#snippet template(args)}
+		<PageHeader title={args.title} description={args.description}>
 			{#snippet actions()}
 				<button
 					class="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90"

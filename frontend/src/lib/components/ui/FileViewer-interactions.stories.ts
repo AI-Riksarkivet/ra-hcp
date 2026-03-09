@@ -3,6 +3,8 @@
  *
  * Tests rendering, navigation between files, metadata panel toggle, and close.
  * Note: Dialog renders via a portal, so queries use document.body with findBy*.
+ * The harness also shows the filename in a data-testid element, so we use
+ * findByRole("heading") to target the dialog title specifically.
  *
  * Run `make storybook` and open the "Interactions" panel to see results.
  */
@@ -30,8 +32,9 @@ export const RendersFirstFile: Story = {
   play: async () => {
     const page = getPage();
 
+    // Use heading role to target the dialog title (not the harness data-testid div)
     await expect(
-      await page.findByText("photo-001.jpg"),
+      await page.findByRole("heading", { name: "photo-001.jpg" }),
     ).toBeInTheDocument();
     await expect(await page.findByText("1 of 3")).toBeInTheDocument();
     await expect(await page.findByText("240 KB")).toBeInTheDocument();
@@ -53,7 +56,7 @@ export const NavigateNext: Story = {
 
     // Should now show second file
     await expect(
-      await page.findByText("photo-002.png"),
+      await page.findByRole("heading", { name: "photo-002.png" }),
     ).toBeInTheDocument();
     await expect(await page.findByText("2 of 3")).toBeInTheDocument();
 
@@ -77,7 +80,7 @@ export const UnsupportedFileType: Story = {
     await userEvent.click(nextBtn);
 
     await expect(
-      await page.findByText("data-export.parquet"),
+      await page.findByRole("heading", { name: "data-export.parquet" }),
     ).toBeInTheDocument();
     await expect(
       await page.findByText(/Preview not available/),
@@ -126,7 +129,7 @@ export const CloseViewer: Story = {
 
     // Verify dialog is open
     await expect(
-      await page.findByText("photo-001.jpg"),
+      await page.findByRole("heading", { name: "photo-001.jpg" }),
     ).toBeInTheDocument();
 
     // Click close button

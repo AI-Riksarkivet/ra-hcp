@@ -2,17 +2,36 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { fn } from 'storybook/test';
 	import FileViewer from './FileViewer.svelte';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 
 	const { Story } = defineMeta({
 		title: 'UI/FileViewer',
 		component: FileViewer,
 		tags: ['autodocs'],
+		render: template,
 		args: {
 			open: true,
 			onclose: fn(),
 		},
+		argTypes: {
+			filename: { control: 'text' },
+			url: { control: 'text' },
+			size: { control: 'number' },
+			objectKey: { control: 'text' },
+			lastModified: { control: 'text' },
+			etag: { control: 'text' },
+			storageClass: { control: 'text' },
+			hasPrev: { control: 'boolean' },
+			hasNext: { control: 'boolean' },
+		},
 	});
 </script>
+
+{#snippet template(args)}
+	<Tooltip.Provider>
+		<FileViewer {...args} />
+	</Tooltip.Provider>
+{/snippet}
 
 <Story
 	name="Image"

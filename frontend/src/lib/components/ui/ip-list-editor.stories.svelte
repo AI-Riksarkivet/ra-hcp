@@ -6,6 +6,13 @@
 		title: 'UI/IpListEditor',
 		component: IpListEditor,
 		tags: ['autodocs'],
+		args: {
+			label: 'Allowed IPs',
+			placeholder: 'IP address or CIDR (e.g. 10.0.0.0/8)',
+			variant: 'secondary',
+			emptyText: 'No addresses configured.',
+			disabled: false,
+		},
 		argTypes: {
 			label: { control: 'text' },
 			placeholder: { control: 'text' },
@@ -25,36 +32,62 @@
 	let destructiveAddresses = $state(['10.0.0.1', '192.168.1.100']);
 </script>
 
-<Story name="Empty">
-	{#snippet template()}
-		<IpListEditor bind:addresses={emptyAddresses} label="Allowed IPs" />
-	{/snippet}
-</Story>
-
-<Story name="With Addresses">
-	{#snippet template()}
-		<IpListEditor bind:addresses={populatedAddresses} label="Allow List" />
-	{/snippet}
-</Story>
-
-<Story name="Destructive Variant">
-	{#snippet template()}
+<Story name="Empty" args={{ label: 'Allowed IPs' }}>
+	{#snippet template(args)}
 		<IpListEditor
-			bind:addresses={destructiveAddresses}
-			label="Deny List"
-			variant="destructive"
-			placeholder="Block IP address..."
-			emptyText="No blocked addresses."
+			bind:addresses={emptyAddresses}
+			label={args.label}
+			placeholder={args.placeholder}
+			variant={args.variant}
+			emptyText={args.emptyText}
+			disabled={args.disabled}
 		/>
 	{/snippet}
 </Story>
 
-<Story name="Disabled">
-	{#snippet template()}
+<Story name="With Addresses" args={{ label: 'Allow List' }}>
+	{#snippet template(args)}
+		<IpListEditor
+			bind:addresses={populatedAddresses}
+			label={args.label}
+			placeholder={args.placeholder}
+			variant={args.variant}
+			emptyText={args.emptyText}
+			disabled={args.disabled}
+		/>
+	{/snippet}
+</Story>
+
+<Story
+	name="Destructive Variant"
+	args={{
+		label: 'Deny List',
+		variant: 'destructive',
+		placeholder: 'Block IP address...',
+		emptyText: 'No blocked addresses.',
+	}}
+>
+	{#snippet template(args)}
+		<IpListEditor
+			bind:addresses={destructiveAddresses}
+			label={args.label}
+			placeholder={args.placeholder}
+			variant={args.variant}
+			emptyText={args.emptyText}
+			disabled={args.disabled}
+		/>
+	{/snippet}
+</Story>
+
+<Story name="Disabled" args={{ label: 'Read-only IPs', disabled: true }}>
+	{#snippet template(args)}
 		<IpListEditor
 			addresses={['10.0.0.0/8', '192.168.1.0/24']}
-			label="Read-only IPs"
-			disabled={true}
+			label={args.label}
+			placeholder={args.placeholder}
+			variant={args.variant}
+			emptyText={args.emptyText}
+			disabled={args.disabled}
 		/>
 	{/snippet}
 </Story>
