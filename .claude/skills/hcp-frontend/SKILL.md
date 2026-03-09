@@ -228,6 +228,17 @@ When adding a new feature that touches the API, **all three layers must be updat
 The mock server is what the frontend develops against. If a backend endpoint
 exists but the mock doesn't handle it, the frontend cannot be tested.
 
+## Required Skills
+
+When working on frontend code, **always activate these skills**:
+
+- `svelte:svelte-core-bestpractices` — Svelte 5 reactivity, events, styling
+- `svelte:svelte-code-writer` — documentation lookup + autofixer validation
+- `deno-skills:deno-expert` — Deno runtime best practices
+
+These ensure code follows Svelte 5 runes patterns and Deno conventions.
+Run the Svelte autofixer on any new or modified `.svelte` file before finalizing.
+
 ## Anti-Patterns to Avoid
 
 - **Don't duplicate save boilerplate** — use `useSave()` composable

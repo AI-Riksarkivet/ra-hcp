@@ -99,6 +99,14 @@ async def get_namespace(
     return handle_response(response)
 ```
 
+## Required Skills
+
+When working on backend code, **always activate these skills**:
+
+- `astral:ruff` — Python linting and formatting
+- `astral:uv` — Python package management
+- `testing-python` — pytest patterns and best practices
+
 ## Testing
 
 Tests live in `backend/tests/` and use pytest with async support.
