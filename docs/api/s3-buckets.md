@@ -4,8 +4,8 @@ Manage S3-compatible buckets on the HCP system. All endpoints require JWT authen
 
 **Base path:** `/api/v1/buckets`
 
-!!! tip "Interactive docs"
-    For full request/response schemas and try-it-out, visit the [Swagger UI](/docs#/S3%20Buckets) at `/docs`.
+!!! tip "Full schema details"
+    See the auto-generated [S3 Schema Reference](reference/s3.md) for exact field types and defaults, or the [Swagger UI](/docs#/S3%20Buckets) for try-it-out.
 
 ---
 

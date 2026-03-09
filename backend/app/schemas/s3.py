@@ -7,91 +7,141 @@ from datetime import datetime
 
 
 class CreateBucketRequest(BaseModel):
-    bucket: str
+    """Request body for creating a new S3 bucket."""
+
+    bucket: str = Field(description="Name for the new bucket")
 
 
 class BucketInfo(BaseModel):
-    name: str = Field(alias="Name")
-    creation_date: Optional[datetime] = Field(None, alias="CreationDate")
+    """Information about a single S3 bucket."""
+
+    name: str = Field(alias="Name", description="Bucket name")
+    creation_date: Optional[datetime] = Field(
+        None, alias="CreationDate", description="ISO 8601 creation timestamp"
+    )
 
     model_config = {"populate_by_name": True}
 
 
 class OwnerInfo(BaseModel):
-    display_name: Optional[str] = Field(None, alias="DisplayName")
-    id: Optional[str] = Field(None, alias="ID")
+    """S3 bucket or object owner."""
+
+    display_name: Optional[str] = Field(
+        None, alias="DisplayName", description="Owner display name"
+    )
+    id: Optional[str] = Field(None, alias="ID", description="Owner canonical ID")
 
     model_config = {"populate_by_name": True}
 
 
 class ListBucketsResponse(BaseModel):
-    buckets: List[BucketInfo] = []
-    owner: Optional[OwnerInfo] = None
+    """Response for listing all S3 buckets."""
+
+    buckets: List[BucketInfo] = Field(default=[], description="List of bucket objects")
+    owner: Optional[OwnerInfo] = Field(None, description="Bucket owner information")
 
 
 class ObjectInfo(BaseModel):
-    key: str = Field(alias="Key")
-    size: Optional[int] = Field(None, alias="Size")
-    last_modified: Optional[datetime] = Field(None, alias="LastModified")
-    etag: Optional[str] = Field(None, alias="ETag")
-    storage_class: Optional[str] = Field(None, alias="StorageClass")
-    owner: Optional[OwnerInfo] = Field(None, alias="Owner")
+    """Information about a single S3 object."""
+
+    key: str = Field(alias="Key", description="Object key (path)")
+    size: Optional[int] = Field(None, alias="Size", description="Object size in bytes")
+    last_modified: Optional[datetime] = Field(
+        None, alias="LastModified", description="Last modification timestamp"
+    )
+    etag: Optional[str] = Field(None, alias="ETag", description="Entity tag (hash)")
+    storage_class: Optional[str] = Field(
+        None, alias="StorageClass", description="S3 storage class"
+    )
+    owner: Optional[OwnerInfo] = Field(None, alias="Owner", description="Object owner")
 
     model_config = {"populate_by_name": True}
 
 
 class ListObjectsResponse(BaseModel):
-    objects: List[ObjectInfo] = []
-    common_prefixes: List[str] = []
-    is_truncated: bool = False
-    next_continuation_token: Optional[str] = None
-    key_count: int = 0
+    """Response for listing objects in a bucket."""
+
+    objects: List[ObjectInfo] = Field(default=[], description="List of objects")
+    common_prefixes: List[str] = Field(
+        default=[], description="Grouped prefixes when using delimiter"
+    )
+    is_truncated: bool = Field(
+        False, description="Whether there are more results to fetch"
+    )
+    next_continuation_token: Optional[str] = Field(
+        None, description="Token for the next page of results"
+    )
+    key_count: int = Field(0, description="Number of keys returned")
 
 
 class UploadObjectResponse(BaseModel):
-    bucket: str
-    key: str
-    status: str = "uploaded"
+    """Response for uploading an object."""
+
+    bucket: str = Field(description="Bucket name")
+    key: str = Field(description="Object key")
+    status: str = Field("uploaded", description="Operation result")
 
 
 class HeadObjectResponse(BaseModel):
-    content_length: Optional[int] = None
-    content_type: Optional[str] = None
-    etag: Optional[str] = None
-    last_modified: Optional[str] = None
+    """Object metadata returned by HEAD."""
+
+    content_length: Optional[int] = Field(None, description="File size in bytes")
+    content_type: Optional[str] = Field(None, description="MIME type")
+    etag: Optional[str] = Field(None, description="Entity tag (hash)")
+    last_modified: Optional[str] = Field(
+        None, description="Last modification timestamp"
+    )
 
 
 class CopyObjectRequest(BaseModel):
-    source_bucket: str
-    source_key: str
+    """Request body for copying an object."""
+
+    source_bucket: str = Field(description="Source bucket name")
+    source_key: str = Field(description="Source object key")
 
 
 class DeleteObjectsRequest(BaseModel):
-    keys: List[str]
+    """Request body for bulk deleting objects."""
+
+    keys: List[str] = Field(description="List of object keys to delete")
 
 
 class BulkDownloadRequest(BaseModel):
-    keys: List[str] = Field(..., min_length=1)
+    """Request body for bulk downloading objects as ZIP."""
+
+    keys: List[str] = Field(..., min_length=1, description="Object keys to include")
 
 
 class BulkPresignRequest(BaseModel):
-    keys: List[str] = Field(..., min_length=1)
-    expires_in: int = Field(3600, ge=1, le=604800)
+    """Request body for generating bulk presigned URLs."""
+
+    keys: List[str] = Field(..., min_length=1, description="Object keys")
+    expires_in: int = Field(
+        3600, ge=1, le=604800, description="URL expiration in seconds (max 7 days)"
+    )
 
 
 class BulkPresignItem(BaseModel):
-    key: str
-    url: str
+    """A single presigned URL entry."""
+
+    key: str = Field(description="Object key")
+    url: str = Field(description="Presigned URL")
 
 
 class BulkPresignResponse(BaseModel):
-    urls: List[BulkPresignItem]
-    expires_in: int
+    """Response containing bulk presigned URLs."""
+
+    urls: List[BulkPresignItem] = Field(description="Presigned URL entries")
+    expires_in: int = Field(description="URL expiration in seconds")
 
 
 class BucketVersioningResponse(BaseModel):
-    status: Optional[str] = None
-    mfa_delete: Optional[str] = None
+    """Bucket versioning configuration."""
+
+    status: Optional[str] = Field(
+        None, description="Enabled, Suspended, or empty (never enabled)"
+    )
+    mfa_delete: Optional[str] = Field(None, description="MFA delete status")
 
 
 class PutBucketVersioningRequest(BaseModel):

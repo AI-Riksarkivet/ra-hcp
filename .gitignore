@@ -9,3 +9,6 @@ __pycache__/
 frontend/node_modules/
 frontend/.svelte-kit/
 frontend/build/
+
+# Docs
+site/

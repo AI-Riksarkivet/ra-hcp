@@ -4,8 +4,8 @@ Manage objects within S3-compatible buckets. All endpoints require JWT authentic
 
 **Base path:** `/api/v1/buckets/{bucket}/objects`
 
-!!! tip "Interactive docs"
-    For full request/response schemas and try-it-out, visit the [Swagger UI](/docs#/S3%20Objects) at `/docs`.
+!!! tip "Full schema details"
+    See the auto-generated [S3 Schema Reference](reference/s3.md) for exact field types and defaults, or the [Swagger UI](/docs#/S3%20Objects) for try-it-out.
 
 ---
 

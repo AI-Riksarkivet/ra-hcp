@@ -1,4 +1,15 @@
-"""S3 bucket CRUD endpoints."""
+"""S3 bucket CRUD endpoints.
+
+Endpoints:
+    GET  /buckets              — list all buckets
+    POST /buckets              — create a bucket
+    HEAD /buckets/{bucket}     — check if bucket exists
+    DELETE /buckets/{bucket}   — delete a bucket
+    GET  /buckets/{bucket}/versioning — get versioning status
+    PUT  /buckets/{bucket}/versioning — set versioning
+    GET  /buckets/{bucket}/acl — get bucket ACL
+    PUT  /buckets/{bucket}/acl — set bucket ACL
+"""
 
 from __future__ import annotations
 
@@ -28,6 +39,7 @@ router = APIRouter(prefix="/buckets", tags=["S3 Buckets"])
 
 @router.get("", response_model=ListBucketsResponse)
 async def list_buckets(s3: S3Service = Depends(get_s3_service)):
+    """List all S3 buckets accessible to the authenticated user."""
     try:
         result = await asyncio.to_thread(s3.list_buckets)
     except ClientError as exc:
@@ -48,18 +60,21 @@ async def create_bucket(
     body: CreateBucketRequest,
     s3: S3Service = Depends(get_s3_service),
 ):
+    """Create a new S3 bucket."""
     await run_s3(s3.create_bucket, f"bucket '{body.bucket}'", body.bucket)
     return {"status": "created", "bucket": body.bucket}
 
 
 @router.head("/{bucket}")
 async def head_bucket(bucket: str, s3: S3Service = Depends(get_s3_service)):
+    """Check whether a bucket exists. Returns 200 or 404."""
     await run_s3(s3.head_bucket, f"bucket '{bucket}'", bucket)
     return Response(status_code=200)
 
 
 @router.delete("/{bucket}", response_model=BucketMutationResponse)
 async def delete_bucket(bucket: str, s3: S3Service = Depends(get_s3_service)):
+    """Delete an S3 bucket. The bucket must be empty."""
     await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
     return {"status": "deleted", "bucket": bucket}
 
@@ -72,6 +87,7 @@ async def get_bucket_versioning(
     bucket: str,
     s3: S3Service = Depends(get_s3_service),
 ):
+    """Get the versioning configuration for a bucket."""
     result = await run_s3(s3.get_bucket_versioning, f"bucket '{bucket}'", bucket)
     return BucketVersioningResponse(
         status=result.get("Status"),
@@ -85,6 +101,7 @@ async def put_bucket_versioning(
     body: PutBucketVersioningRequest,
     s3: S3Service = Depends(get_s3_service),
 ):
+    """Enable or suspend versioning on a bucket."""
     await run_s3(s3.put_bucket_versioning, f"bucket '{bucket}'", bucket, body.status)
     return {"status": "updated", "versioning": body.status}
 
@@ -94,6 +111,7 @@ async def put_bucket_versioning(
 
 @router.get("/{bucket}/acl", response_model=AclResponse)
 async def get_bucket_acl(bucket: str, s3: S3Service = Depends(get_s3_service)):
+    """Get the access control list (ACL) for a bucket."""
     result = await run_s3(s3.get_bucket_acl, f"bucket '{bucket}'", bucket)
     return {
         "owner": result.get("Owner", {}),
@@ -107,6 +125,7 @@ async def put_bucket_acl(
     body: AclPolicy,
     s3: S3Service = Depends(get_s3_service),
 ):
+    """Set the access control list (ACL) for a bucket."""
     await run_s3(
         s3.put_bucket_acl,
         f"bucket '{bucket}'",

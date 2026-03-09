@@ -16,7 +16,7 @@ nav = [
   { "Architecture" = [
     { "Overview" = "architecture/index.md" },
   ]},
-  { "API Reference" = [
+  { "API Guide" = [
     { "Overview" = "api/index.md" },
     { "Authentication" = "api/authentication.md" },
     { "S3 Buckets" = "api/s3-buckets.md" },
@@ -24,6 +24,16 @@ nav = [
     { "Tenants" = "api/tenants.md" },
     { "Namespaces" = "api/namespaces.md" },
     { "System" = "api/system.md" },
+  ]},
+  { "API Reference" = [
+    { "Endpoints" = "api/reference/endpoints.md" },
+    { "Common" = "api/reference/common.md" },
+    { "S3" = "api/reference/s3.md" },
+    { "Tenant" = "api/reference/tenant.md" },
+    { "Namespace" = "api/reference/namespace.md" },
+    { "User Account" = "api/reference/user-account.md" },
+    { "Group Account" = "api/reference/group-account.md" },
+    { "Content Class" = "api/reference/content-class.md" },
   ]},
   { "Components" = [
     { "UI Components" = "components/index.md" },
