@@ -11,13 +11,8 @@
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
-	import {
-		get_namespaces,
-		update_namespace,
-		delete_namespace,
-		type Namespace,
-	} from '$lib/namespaces.remote.js';
-	import { get_tenant_chargeback } from '$lib/tenant-info.remote.js';
+	import type { RemoteQuery } from '@sveltejs/kit';
+	import { update_namespace, delete_namespace, type Namespace } from '$lib/namespaces.remote.js';
 	import {
 		formatBytes,
 		parseQuotaBytes,
@@ -41,14 +36,15 @@
 
 	let {
 		tenant,
+		nsData,
+		chargebackData,
 		ongrantaccess,
 	}: {
 		tenant: string;
+		nsData: RemoteQuery<Namespace[]>;
+		chargebackData: RemoteQuery<Record<string, unknown>>;
 		ongrantaccess?: (namespaceNames: string[]) => void;
 	} = $props();
-
-	let nsData = $derived(get_namespaces({ tenant }));
-	let chargebackData = $derived(get_tenant_chargeback({ tenant }));
 
 	let chargeback = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
 	let nsStorageMap = $derived(buildStorageMap(chargeback));

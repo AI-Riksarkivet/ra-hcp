@@ -632,6 +632,44 @@ export const update_repl_collision = command(
   },
 );
 
+// ── Namespace Templates (Export) ─────────────────────────────────────
+
+export const export_namespace_config = command(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/export`,
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Export failed",
+      }));
+      throw new Error(err.detail);
+    }
+    return await res.json();
+  },
+);
+
+export const export_namespace_configs = command(
+  z.object({ tenant: z.string(), names: z.array(z.string()) }),
+  async ({ tenant, names }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/export?names=${
+        names.map(encodeURIComponent).join(",")
+      }`,
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Export failed",
+      }));
+      throw new Error(err.detail);
+    }
+    return await res.json();
+  },
+);
+
 // ── Delete Namespace ─────────────────────────────────────────────────
 
 export const delete_namespace = command(

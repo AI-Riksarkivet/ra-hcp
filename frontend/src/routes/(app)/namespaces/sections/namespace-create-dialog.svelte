@@ -8,17 +8,18 @@
 	import { toast } from 'svelte-sonner';
 	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
-	import { get_namespaces, create_namespace } from '$lib/namespaces.remote.js';
+	import type { RemoteQuery } from '@sveltejs/kit';
+	import { create_namespace, type Namespace } from '$lib/namespaces.remote.js';
 
 	let {
 		tenant,
+		nsData,
 		open = $bindable(false),
 	}: {
 		tenant: string;
+		nsData: RemoteQuery<Namespace[]>;
 		open: boolean;
 	} = $props();
-
-	let nsData = $derived(get_namespaces({ tenant }));
 
 	let createError = $state('');
 	let creating = $state(false);

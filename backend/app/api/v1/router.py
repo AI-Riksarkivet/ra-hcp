@@ -27,6 +27,7 @@ from app.api.v1.endpoints.mapi.namespace import (
     access as ns_access,
     indexing as ns_indexing,
     statistics as ns_statistics,
+    templates as ns_templates,
 )
 from app.api.v1.endpoints.query import search as query_search
 
@@ -64,6 +65,9 @@ api_router.include_router(
 api_router.include_router(content_classes.router, prefix="/mapi", dependencies=_auth)
 
 # ── Namespace-level MAPI (requires admin/compliance role) ────────────
+# Templates must be registered before management so /export is matched
+# before the {ns_name} path parameter.
+api_router.include_router(ns_templates.router, prefix="/mapi", dependencies=_auth)
 api_router.include_router(ns_management.router, prefix="/mapi", dependencies=_auth)
 api_router.include_router(ns_compliance.router, prefix="/mapi", dependencies=_auth)
 api_router.include_router(ns_access.router, prefix="/mapi", dependencies=_auth)

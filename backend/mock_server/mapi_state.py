@@ -378,12 +378,49 @@ def _handle_account_sub(
     return _not_found()
 
 
+def _export_ns(state: MockMapiState, tenant: str, ns_name: str) -> dict[str, Any]:
+    """Build an export template for a single namespace."""
+    ns_map = state.namespaces.get(tenant, {})
+    ns_data = ns_map.get(ns_name, {})
+    ns_settings = state.ns_settings.get((tenant, ns_name), {})
+    rc_store = state.retention_classes.get((tenant, ns_name), {})
+
+    config: dict[str, Any] = dict(ns_data)
+
+    if "versioningSettings" in ns_settings:
+        config["versioning"] = ns_settings["versioningSettings"]
+    if "complianceSettings" in ns_settings:
+        config["compliance"] = ns_settings["complianceSettings"]
+    if "permissions" in ns_settings:
+        config["permissions"] = ns_settings["permissions"]
+
+    protocols: dict[str, Any] = {}
+    proto_store = ns_settings.get("protocols", {})
+    for proto in ("http", "cifs", "nfs", "smtp"):
+        if proto in proto_store:
+            protocols[proto] = proto_store[proto]
+    if protocols:
+        config["protocols"] = protocols
+
+    if rc_store:
+        config["retentionClasses"] = list(rc_store.values())
+    if "customMetadataIndexingSettings" in ns_settings:
+        config["indexing"] = ns_settings["customMetadataIndexingSettings"]
+    if "cors" in ns_settings:
+        config["cors"] = ns_settings["cors"]
+    if "replicationCollisionSettings" in ns_settings:
+        config["replicationCollision"] = ns_settings["replicationCollisionSettings"]
+
+    return config
+
+
 def _handle_namespaces(
     state: MockMapiState,
     tenant: str,
     method: str,
     segments: list[str],
     body: dict,
+    query_params: dict[str, str] | None = None,
 ) -> HttpxResponse:
     """Handle all /tenants/{T}/namespaces/... routes."""
     n = len(segments)
@@ -401,6 +438,22 @@ def _handle_namespaces(
 
     ns_name = segments[3]
 
+    # /tenants/{T}/namespaces/export  (bulk export)
+    if ns_name == "export" and n == 4 and method == "GET":
+        from datetime import datetime, timezone
+
+        names_str = (query_params or {}).get("names", "")
+        names = [x.strip() for x in names_str.split(",") if x.strip()]
+        configs = [_export_ns(state, tenant, ns) for ns in names if ns in ns_map]
+        return _json(
+            {
+                "version": "1.0",
+                "exportedAt": datetime.now(timezone.utc).isoformat(),
+                "sourceTenant": tenant,
+                "namespaces": configs,
+            }
+        )
+
     # /tenants/{T}/namespaces/{N}
     if n == 4:
         if method == "DELETE":
@@ -408,6 +461,23 @@ def _handle_namespaces(
         return _crud(ns_map, method, ns_name, body)
 
     ns_sub = segments[4]
+
+    # /tenants/{T}/namespaces/{N}/export  (single export)
+    if ns_sub == "export" and n == 5 and method == "GET":
+        from datetime import datetime, timezone
+
+        if ns_name not in ns_map:
+            return _not_found()
+        config = _export_ns(state, tenant, ns_name)
+        return _json(
+            {
+                "version": "1.0",
+                "exportedAt": datetime.now(timezone.utc).isoformat(),
+                "sourceTenant": tenant,
+                "namespaces": [config],
+            }
+        )
+
     ns_settings = state.ns_settings.setdefault((tenant, ns_name), {})
 
     # retentionClasses — standard CRUD (depth 5–6)
@@ -517,7 +587,8 @@ def _make_mapi_dispatcher(state: MockMapiState):
 
         # ── Namespaces (CRUD + deep sub-resources) ──
         if resource == "namespaces":
-            return _handle_namespaces(state, tenant, method, segments, body)
+            qp = dict(request.url.params)
+            return _handle_namespaces(state, tenant, method, segments, body, qp)
 
         # ── Tenant-level leaf endpoints (depth 3 only) ──
         if n == 3:
