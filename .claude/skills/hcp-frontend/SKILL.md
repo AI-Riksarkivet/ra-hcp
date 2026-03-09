@@ -235,9 +235,11 @@ When working on frontend code, **always activate these skills**:
 - `svelte:svelte-core-bestpractices` — Svelte 5 reactivity, events, styling
 - `svelte:svelte-code-writer` — documentation lookup + autofixer validation
 - `deno-skills:deno-expert` — Deno runtime best practices
+- **Svelte MCP server** (`@sveltejs/mcp`) — use `svelte-autofixer` tool to validate components, `get-documentation` for syntax questions
 
 These ensure code follows Svelte 5 runes patterns and Deno conventions.
-Run the Svelte autofixer on any new or modified `.svelte` file before finalizing.
+Run the Svelte autofixer (`mcp__plugin_svelte_svelte__svelte-autofixer`) on any new or modified `.svelte` file before finalizing.
+Use the shadcn-svelte MCP tools (`shadcnSvelteGetTool`, `shadcnSvelteSearchTool`) when looking up component APIs.
 
 ## Anti-Patterns to Avoid
 
