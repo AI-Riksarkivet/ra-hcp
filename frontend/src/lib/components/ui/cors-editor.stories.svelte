@@ -6,7 +6,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/CorsEditor',
 		component: CorsEditor,
-		tags: ['autodocs'],
 		args: {
 			corsXml: '',
 			loading: false,

@@ -6,7 +6,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/FormDialog',
 		component: FormDialog,
-		tags: ['autodocs'],
 		args: {
 			title: 'Create Namespace',
 			description: 'Create a new namespace in the tenant.',

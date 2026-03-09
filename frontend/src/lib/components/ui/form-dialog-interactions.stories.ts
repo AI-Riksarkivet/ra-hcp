@@ -15,7 +15,7 @@ import FormDialogTestHarness from "./form-dialog-test-harness.svelte";
 const meta = {
   title: "Tests/FormDialog Interactions",
   component: FormDialogTestHarness,
-  tags: ["autodocs"],
+  tags: ["!autodocs"],
 } satisfies Meta<FormDialogTestHarness>;
 
 export default meta;

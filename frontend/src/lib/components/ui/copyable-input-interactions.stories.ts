@@ -12,7 +12,7 @@ import CopyableInputTestHarness from "./copyable-input-test-harness.svelte";
 const meta = {
   title: "Tests/CopyableInput Interactions",
   component: CopyableInputTestHarness,
-  tags: ["autodocs"],
+  tags: ["!autodocs"],
 } satisfies Meta<CopyableInputTestHarness>;
 
 export default meta;

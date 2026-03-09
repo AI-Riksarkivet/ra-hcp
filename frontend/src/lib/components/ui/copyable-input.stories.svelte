@@ -6,7 +6,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/CopyableInput',
 		component: CopyableInput,
-		tags: ['autodocs'],
 		render: template,
 		args: {
 			value: 'urn:hcp:namespace:my-namespace',

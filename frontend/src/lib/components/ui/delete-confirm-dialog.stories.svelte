@@ -6,7 +6,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/DeleteConfirmDialog',
 		component: DeleteConfirmDialog,
-		tags: ['autodocs'],
 		args: {
 			open: true,
 			name: 'production-data',

@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/ErrorBanner',
 		component: ErrorBanner,
-		tags: ['autodocs'],
 		args: {
 			message: 'Failed to save settings. Please try again.',
 		},

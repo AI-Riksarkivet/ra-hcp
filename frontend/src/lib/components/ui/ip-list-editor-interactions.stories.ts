@@ -12,7 +12,7 @@ import IpListEditorTestHarness from "./ip-list-editor-test-harness.svelte";
 const meta = {
   title: "Tests/IpListEditor Interactions",
   component: IpListEditorTestHarness,
-  tags: ["autodocs"],
+  tags: ["!autodocs"],
 } satisfies Meta<IpListEditorTestHarness>;
 
 export default meta;

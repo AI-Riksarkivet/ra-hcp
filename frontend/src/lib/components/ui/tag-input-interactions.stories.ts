@@ -12,7 +12,7 @@ import TagInputTestHarness from "./tag-input-test-harness.svelte";
 const meta = {
   title: "Tests/TagInput Interactions",
   component: TagInputTestHarness,
-  tags: ["autodocs"],
+  tags: ["!autodocs"],
 } satisfies Meta<TagInputTestHarness>;
 
 export default meta;

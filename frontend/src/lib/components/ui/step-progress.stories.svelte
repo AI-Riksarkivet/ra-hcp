@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/StepProgress',
 		component: StepProgress,
-		tags: ['autodocs'],
 		args: {
 			steps: [
 				{ label: 'Validate configuration', status: 'pending' },

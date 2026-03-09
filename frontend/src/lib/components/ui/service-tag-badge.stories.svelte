@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/ServiceTagBadge',
 		component: ServiceTagBadge,
-		tags: ['autodocs'],
 		args: {
 			tag: 's3',
 		},

@@ -16,7 +16,7 @@ import DataTableTestHarness from "./data-table-test-harness.svelte";
 const meta = {
   title: "Tests/DataTable Interactions",
   component: DataTableTestHarness,
-  tags: ["autodocs"],
+  tags: ["!autodocs"],
 } satisfies Meta<DataTableTestHarness>;
 
 export default meta;

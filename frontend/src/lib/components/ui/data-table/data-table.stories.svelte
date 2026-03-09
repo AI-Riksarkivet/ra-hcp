@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/DataTable',
 		component: DataTable,
-		tags: ['autodocs'],
 	});
 </script>
 

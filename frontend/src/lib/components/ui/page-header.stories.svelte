@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/PageHeader',
 		component: PageHeader,
-		tags: ['autodocs'],
 		args: {
 			title: 'Namespaces',
 			description: 'Manage tenant namespaces',

@@ -12,7 +12,7 @@ import CorsEditorTestHarness from "./cors-editor-test-harness.svelte";
 const meta = {
   title: "Tests/CorsEditor Interactions",
   component: CorsEditorTestHarness,
-  tags: ["autodocs"],
+  tags: ["!autodocs"],
 } satisfies Meta<CorsEditorTestHarness>;
 
 export default meta;

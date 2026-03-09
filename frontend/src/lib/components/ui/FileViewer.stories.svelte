@@ -7,7 +7,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/FileViewer',
 		component: FileViewer,
-		tags: ['autodocs'],
 		render: template,
 		args: {
 			open: true,

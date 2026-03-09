@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/TagInput',
 		component: TagInput,
-		tags: ['autodocs'],
 		argTypes: {
 			placeholder: { control: 'text' },
 			disabled: { control: 'boolean' },

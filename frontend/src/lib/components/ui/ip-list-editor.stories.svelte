@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/IpListEditor',
 		component: IpListEditor,
-		tags: ['autodocs'],
 		args: {
 			label: 'Allowed IPs',
 			placeholder: 'IP address or CIDR (e.g. 10.0.0.0/8)',

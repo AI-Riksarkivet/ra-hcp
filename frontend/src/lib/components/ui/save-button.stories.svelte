@@ -6,7 +6,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/SaveButton',
 		component: SaveButton,
-		tags: ['autodocs'],
 		args: {
 			onclick: fn(),
 		},

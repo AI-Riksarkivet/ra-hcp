@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/Badge',
 		component: Badge,
-		tags: ['autodocs'],
 		render: template,
 		args: {
 			label: 'Badge',

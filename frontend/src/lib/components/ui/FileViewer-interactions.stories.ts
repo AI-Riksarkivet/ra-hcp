@@ -15,7 +15,7 @@ import FileViewerTestHarness from "./FileViewer-test-harness.svelte";
 const meta = {
   title: "Tests/FileViewer Interactions",
   component: FileViewerTestHarness,
-  tags: ["autodocs"],
+  tags: ["!autodocs"],
 } satisfies Meta<FileViewerTestHarness>;
 
 export default meta;

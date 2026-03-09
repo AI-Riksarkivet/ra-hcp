@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/StatCard',
 		component: StatCard,
-		tags: ['autodocs'],
 		argTypes: {
 			label: { control: 'text' },
 			value: { control: 'text' },

@@ -5,7 +5,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/StorageProgressBar',
 		component: StorageProgressBar,
-		tags: ['autodocs'],
 		render: template,
 		args: {
 			percent: 50,

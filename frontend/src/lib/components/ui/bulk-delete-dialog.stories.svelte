@@ -6,7 +6,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/BulkDeleteDialog',
 		component: BulkDeleteDialog,
-		tags: ['autodocs'],
 		args: {
 			open: true,
 			count: 5,
