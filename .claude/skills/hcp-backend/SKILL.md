@@ -71,6 +71,18 @@ state.groups = { "tenant": { "groupname": { ... } } }
 - **Response format**: MAPI wraps responses in XML-like JSON structures
   (e.g., `{ "name": { "namespaceSettings": [...] } }`)
 
+## Required Checklist for Every Backend Change
+
+Any change to the backend **MUST** include all three:
+
+1. **Backend endpoint** — the actual FastAPI route in `app/api/v1/endpoints/`
+2. **Mock server support** — matching route in `mock_server/mapi_state.py` + seed data in `fixtures.py`
+3. **Tests** — pytest tests in `backend/tests/` covering the new/changed endpoint
+
+The mock server is what the frontend develops against. If a backend endpoint
+exists but the mock doesn't handle it, the frontend cannot be tested locally.
+Never skip the mock or tests — they are not optional.
+
 ## Endpoint Pattern
 
 ```python

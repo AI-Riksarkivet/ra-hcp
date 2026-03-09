@@ -215,6 +215,19 @@ Each section is a self-contained Card that:
 - Utilities: `use-*.svelte.ts` for composables with reactive state
 - Roles enum: `ADMINISTRATOR`, `SECURITY`, `MONITOR`, `COMPLIANCE`
 
+## Full-Stack Feature Checklist
+
+When adding a new feature that touches the API, **all three layers must be updated**:
+
+1. **Backend endpoint** (`backend/app/api/v1/endpoints/`) — the FastAPI route
+2. **Mock server** (`backend/mock_server/mapi_state.py` + `fixtures.py`) — so the frontend can be tested locally
+3. **Frontend remote function** (`frontend/src/lib/*.remote.ts`) — the `query()` or `command()` call
+4. **Frontend UI** — the component(s) using the remote function
+5. **Tests** (`backend/tests/`) — pytest tests for the endpoint
+
+The mock server is what the frontend develops against. If a backend endpoint
+exists but the mock doesn't handle it, the frontend cannot be tested.
+
 ## Anti-Patterns to Avoid
 
 - **Don't duplicate save boilerplate** — use `useSave()` composable
