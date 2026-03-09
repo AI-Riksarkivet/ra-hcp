@@ -29,10 +29,8 @@ export const RendersWithContent: Story = {
     await expect(canvas.getByText("Delete CORS")).toBeInTheDocument();
 
     // The textarea should contain the initial XML
-    const textarea = canvas.getByRole("textbox");
-    await expect(textarea).toHaveValue(
-      expect.stringContaining("<CORSConfiguration>"),
-    );
+    const textarea = canvas.getByRole("textbox") as HTMLTextAreaElement;
+    await expect(textarea.value).toContain("<CORSConfiguration>");
   },
 };
 
