@@ -5,7 +5,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { HelpCircle, Copy, Check } from 'lucide-svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import { get_user, update_user } from '$lib/users.remote.js';
 	import { AVAILABLE_ROLES, ROLE_DESCRIPTIONS, getUserRoles } from '$lib/constants.js';
 	import type { User } from '$lib/constants.js';
@@ -22,8 +22,11 @@
 	let userData = $derived(get_user({ tenant, username }));
 	let user = $derived((userData?.current ?? null) as User | null);
 
-	// Local editable state
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'User updated successfully',
+		errorMsg: 'Failed to update user',
+	});
+
 	let localFullName = $state('');
 	let localDescription = $state('');
 	let localEnabled = $state(true);
@@ -31,7 +34,7 @@
 
 	$effect(() => {
 		const u = user;
-		void syncVersion;
+		void saver.syncVersion;
 		localFullName = u?.fullName ?? '';
 		localDescription = u?.description ?? '';
 		localEnabled = u?.enabled ?? true;
@@ -45,28 +48,6 @@
 			JSON.stringify([...localRoles].sort()) !==
 				JSON.stringify([...(user ? getUserRoles(user) : [])].sort())
 	);
-
-	let saving = $state(false);
-
-	async function saveUser() {
-		if (!userData) return;
-		saving = true;
-		try {
-			const body: Record<string, unknown> = {
-				fullName: localFullName,
-				description: localDescription,
-				enabled: localEnabled,
-				roles: { role: localRoles },
-			};
-			await update_user({ tenant, username, body }).updates(userData);
-			syncVersion++;
-			toast.success('User updated successfully');
-		} catch {
-			toast.error('Failed to update user');
-		} finally {
-			saving = false;
-		}
-	}
 
 	function toggleRole(role: string) {
 		if (localRoles.includes(role)) {
@@ -201,7 +182,21 @@
 					{/each}
 				</div>
 				<div class="pt-4">
-					<SaveButton {dirty} {saving} onclick={saveUser} />
+					<SaveButton
+						{dirty}
+						saving={saver.saving}
+						onclick={() =>
+							saver.run(async () => {
+								if (!userData) return;
+								const body: Record<string, unknown> = {
+									fullName: localFullName,
+									description: localDescription,
+									enabled: localEnabled,
+									roles: { role: localRoles },
+								};
+								await update_user({ tenant, username, body }).updates(userData);
+							})}
+					/>
 				</div>
 			</div>
 		</div>

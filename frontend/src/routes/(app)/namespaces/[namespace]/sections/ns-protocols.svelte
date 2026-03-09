@@ -7,7 +7,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { HelpCircle, Info, Terminal, Copy } from 'lucide-svelte';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_ns_protocols,
 		update_ns_protocol,
@@ -50,7 +50,11 @@
 	let protocolsData = $derived(get_ns_protocols({ tenant, name: namespaceName }));
 	let protocols = $derived((protocolsData?.current ?? {}) as NsProtocols);
 
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Protocols updated',
+		errorMsg: 'Failed to update protocols',
+	});
+
 	let localHttpEnabled = $state(false);
 	let localHttpsEnabled = $state(false);
 	let localCifsEnabled = $state(false);
@@ -59,7 +63,7 @@
 
 	$effect(() => {
 		const p = protocols;
-		void syncVersion;
+		void saver.syncVersion;
 		localHttpEnabled = p.httpEnabled ?? false;
 		localHttpsEnabled = p.httpsEnabled ?? false;
 		localCifsEnabled = p.cifsEnabled ?? false;
@@ -74,56 +78,6 @@
 			localNfsEnabled !== (protocols.nfsEnabled ?? false) ||
 			localSmtpEnabled !== (protocols.smtpEnabled ?? false)
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!protocolsData) return;
-		saving = true;
-		try {
-			const changes: Array<{
-				protocol: 'http' | 'cifs' | 'nfs' | 'smtp';
-				body: Record<string, unknown>;
-			}> = [];
-			if (
-				localHttpEnabled !== (protocols.httpEnabled ?? false) ||
-				localHttpsEnabled !== (protocols.httpsEnabled ?? false)
-			) {
-				changes.push({
-					protocol: 'http',
-					body: { httpEnabled: localHttpEnabled, httpsEnabled: localHttpsEnabled },
-				});
-			}
-			if (localCifsEnabled !== (protocols.cifsEnabled ?? false)) {
-				changes.push({ protocol: 'cifs', body: { cifsEnabled: localCifsEnabled } });
-			}
-			if (localNfsEnabled !== (protocols.nfsEnabled ?? false)) {
-				changes.push({ protocol: 'nfs', body: { nfsEnabled: localNfsEnabled } });
-			}
-			if (localSmtpEnabled !== (protocols.smtpEnabled ?? false)) {
-				changes.push({ protocol: 'smtp', body: { smtpEnabled: localSmtpEnabled } });
-			}
-			for (let i = 0; i < changes.length; i++) {
-				const call = update_ns_protocol({
-					tenant,
-					name: namespaceName,
-					protocol: changes[i].protocol,
-					body: changes[i].body,
-				});
-				if (i === changes.length - 1) {
-					await call.updates(protocolsData);
-				} else {
-					await call;
-				}
-			}
-			syncVersion++;
-			toast.success('Protocols updated');
-		} catch {
-			toast.error('Failed to update protocols');
-		} finally {
-			saving = false;
-		}
-	}
 </script>
 
 {#snippet protoSwitch(
@@ -206,7 +160,49 @@
 				</div>
 			</Card.Content>
 			<Card.Footer>
-				<SaveButton {dirty} {saving} onclick={save} />
+				<SaveButton
+					{dirty}
+					saving={saver.saving}
+					onclick={() =>
+						saver.run(async () => {
+							if (!protocolsData) return;
+							const changes: Array<{
+								protocol: 'http' | 'cifs' | 'nfs' | 'smtp';
+								body: Record<string, unknown>;
+							}> = [];
+							if (
+								localHttpEnabled !== (protocols.httpEnabled ?? false) ||
+								localHttpsEnabled !== (protocols.httpsEnabled ?? false)
+							) {
+								changes.push({
+									protocol: 'http',
+									body: { httpEnabled: localHttpEnabled, httpsEnabled: localHttpsEnabled },
+								});
+							}
+							if (localCifsEnabled !== (protocols.cifsEnabled ?? false)) {
+								changes.push({ protocol: 'cifs', body: { cifsEnabled: localCifsEnabled } });
+							}
+							if (localNfsEnabled !== (protocols.nfsEnabled ?? false)) {
+								changes.push({ protocol: 'nfs', body: { nfsEnabled: localNfsEnabled } });
+							}
+							if (localSmtpEnabled !== (protocols.smtpEnabled ?? false)) {
+								changes.push({ protocol: 'smtp', body: { smtpEnabled: localSmtpEnabled } });
+							}
+							for (let i = 0; i < changes.length; i++) {
+								const call = update_ns_protocol({
+									tenant,
+									name: namespaceName,
+									protocol: changes[i].protocol,
+									body: changes[i].body,
+								});
+								if (i === changes.length - 1) {
+									await call.updates(protocolsData);
+								} else {
+									await call;
+								}
+							}
+						})}
+				/>
 			</Card.Footer>
 		{/await}
 	</Card.Root>

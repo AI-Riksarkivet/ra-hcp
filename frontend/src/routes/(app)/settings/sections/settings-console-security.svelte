@@ -6,7 +6,7 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_console_security,
 		update_console_security,
@@ -22,8 +22,11 @@
 	let securityData = $derived(get_console_security({ tenant }));
 	let security = $derived((securityData?.current ?? {}) as ConsoleSecurity);
 
-	// ---- Local state ----
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Console security updated',
+		errorMsg: 'Failed to update console security',
+	});
+
 	let localMinPasswordLength = $state(0);
 	let localLowerCase = $state(0);
 	let localUpperCase = $state(0);
@@ -44,7 +47,7 @@
 
 	$effect(() => {
 		const s = security;
-		void syncVersion;
+		void saver.syncVersion;
 		localMinPasswordLength = s.minimumPasswordLength ?? 0;
 		localLowerCase = s.lowerCaseLetterCount ?? 0;
 		localUpperCase = s.upperCaseLetterCount ?? 0;
@@ -83,43 +86,6 @@
 			localLogoutOnInactive !== (security.logoutOnInactive ?? 0) ||
 			localLoginMessage !== (security.loginMessage ?? '')
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!securityData) return;
-		saving = true;
-		try {
-			await update_console_security({
-				tenant,
-				body: {
-					minimumPasswordLength: localMinPasswordLength,
-					lowerCaseLetterCount: localLowerCase,
-					upperCaseLetterCount: localUpperCase,
-					numericCharacterCount: localNumeric,
-					specialCharacterCount: localSpecial,
-					passwordReuseDepth: localPasswordReuseDepth,
-					blockCommonPassword: localBlockCommonPassword,
-					passwordContainsUsername: localPasswordContainsUsername,
-					forcePasswordChangeDays: localForcePasswordChangeDays,
-					disableAfterAttempts: localDisableAfterAttempts,
-					coolDownPeriodSettings: localCoolDownEnabled,
-					coolDownPeriodDuration: localCoolDownDuration,
-					automaticUserAccountUnlockSetting: localAutoUnlock,
-					automaticUserAccoutUnlockDuration: localAutoUnlockDuration,
-					disableAfterInactiveDays: localDisableAfterInactiveDays,
-					logoutOnInactive: localLogoutOnInactive,
-					loginMessage: localLoginMessage || undefined,
-				},
-			}).updates(securityData);
-			syncVersion++;
-			toast.success('Console security updated');
-		} catch {
-			toast.error('Failed to update console security');
-		} finally {
-			saving = false;
-		}
-	}
 </script>
 
 {#await securityData}
@@ -287,7 +253,36 @@
 				</div>
 			</Card.Content>
 			<Card.Footer>
-				<SaveButton {dirty} {saving} onclick={save} />
+				<SaveButton
+					{dirty}
+					saving={saver.saving}
+					onclick={() =>
+						saver.run(async () => {
+							if (!securityData) return;
+							await update_console_security({
+								tenant,
+								body: {
+									minimumPasswordLength: localMinPasswordLength,
+									lowerCaseLetterCount: localLowerCase,
+									upperCaseLetterCount: localUpperCase,
+									numericCharacterCount: localNumeric,
+									specialCharacterCount: localSpecial,
+									passwordReuseDepth: localPasswordReuseDepth,
+									blockCommonPassword: localBlockCommonPassword,
+									passwordContainsUsername: localPasswordContainsUsername,
+									forcePasswordChangeDays: localForcePasswordChangeDays,
+									disableAfterAttempts: localDisableAfterAttempts,
+									coolDownPeriodSettings: localCoolDownEnabled,
+									coolDownPeriodDuration: localCoolDownDuration,
+									automaticUserAccountUnlockSetting: localAutoUnlock,
+									automaticUserAccoutUnlockDuration: localAutoUnlockDuration,
+									disableAfterInactiveDays: localDisableAfterInactiveDays,
+									logoutOnInactive: localLogoutOnInactive,
+									loginMessage: localLoginMessage || undefined,
+								},
+							}).updates(securityData);
+						})}
+				/>
 			</Card.Footer>
 		</Card.Root>
 	</div>

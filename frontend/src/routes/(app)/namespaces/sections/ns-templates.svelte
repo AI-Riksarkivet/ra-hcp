@@ -160,7 +160,7 @@
 		hashScheme?: string;
 		searchEnabled?: boolean;
 		versioningEnabled?: boolean;
-		tags?: string[];
+		tags?: { tag: string[] } | string[];
 		versioning?: { enabled: boolean };
 		compliance?: Record<string, unknown>;
 		permissions?: Record<string, unknown>;
@@ -186,6 +186,14 @@
 		step: string;
 		status: 'pending' | 'running' | 'done' | 'failed';
 		error?: string;
+	}
+
+	/** Extract tags as a flat string[] regardless of API format ({tag: string[]} or string[]). */
+	function getTags(tags: TemplateNamespace['tags']): string[] {
+		if (!tags) return [];
+		if (Array.isArray(tags)) return tags;
+		if (typeof tags === 'object' && 'tag' in tags && Array.isArray(tags.tag)) return tags.tag;
+		return [];
 	}
 
 	const PROTOCOLS = ['http', 'cifs', 'nfs', 'smtp'] as const;
@@ -308,6 +316,8 @@
 		if (ns.hardQuota) parts.push(`${ns.hardQuota} quota`);
 		if (ns.versioningEnabled || ns.versioning?.enabled) parts.push('versioning: on');
 		if (ns.searchEnabled) parts.push('search: on');
+		const tagList = getTags(ns.tags);
+		if (tagList.length) parts.push(`tags: ${tagList.join(', ')}`);
 		return parts.join(' | ') || 'default settings';
 	}
 
@@ -356,11 +366,11 @@
 	}
 
 	function updateTags(idx: number, tagsStr: string) {
-		const tags = tagsStr
+		const tagArr = tagsStr
 			.split(',')
 			.map((t) => t.trim())
 			.filter(Boolean);
-		updateNsField(idx, 'tags', tags.length > 0 ? tags : undefined);
+		updateNsField(idx, 'tags', tagArr.length > 0 ? { tag: tagArr } : undefined);
 	}
 
 	// ── Import execution ───────────────────────────────────────────────
@@ -428,7 +438,7 @@
 					hashScheme: ns.hashScheme,
 					searchEnabled: ns.searchEnabled,
 					versioningEnabled: ns.versioningEnabled,
-					tags: ns.tags,
+					tags: getTags(ns.tags),
 				})
 			);
 
@@ -587,10 +597,10 @@
 											{/if}
 										</div>
 
-										{#if ns.tags?.length}
+										{#if getTags(ns.tags).length}
 											<div class="flex flex-wrap gap-1">
 												<span class="text-xs font-medium text-muted-foreground">Tags:</span>
-												{#each ns.tags as tag (tag)}
+												{#each getTags(ns.tags) as tag (tag)}
 													<Badge variant="outline" class="text-xs">{tag}</Badge>
 												{/each}
 											</div>
@@ -966,7 +976,7 @@
 															</Label>
 															<Input
 																id="edit-tags-{i}"
-																value={ns.tags?.join(', ') ?? ''}
+																value={getTags(ns.tags).join(', ')}
 																oninput={(e) =>
 																	updateTags(i, (e.currentTarget as HTMLInputElement).value)}
 																placeholder="e.g. lakefs, nfs, s3"

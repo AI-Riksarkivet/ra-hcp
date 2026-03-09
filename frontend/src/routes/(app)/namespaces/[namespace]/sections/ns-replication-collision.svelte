@@ -4,7 +4,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_repl_collision,
 		update_repl_collision,
@@ -22,14 +22,18 @@
 	let replData = $derived(get_repl_collision({ tenant, name: namespaceName }));
 	let repl = $derived((replData?.current ?? {}) as ReplicationCollision);
 
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Replication collision settings updated',
+		errorMsg: 'Failed to update replication collision settings',
+	});
+
 	let localAction = $state('');
 	let localDeleteEnabled = $state(false);
 	let localDeleteDays = $state('0');
 
 	$effect(() => {
 		const r = repl;
-		void syncVersion;
+		void saver.syncVersion;
 		localAction = r.action ?? '';
 		localDeleteEnabled = r.deleteEnabled ?? false;
 		localDeleteDays = String(r.deleteDays ?? 0);
@@ -40,30 +44,6 @@
 			localDeleteEnabled !== (repl.deleteEnabled ?? false) ||
 			localDeleteDays !== String(repl.deleteDays ?? 0)
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!replData) return;
-		saving = true;
-		try {
-			await update_repl_collision({
-				tenant,
-				name: namespaceName,
-				body: {
-					action: localAction || undefined,
-					deleteEnabled: localDeleteEnabled,
-					deleteDays: parseInt(localDeleteDays, 10) || 0,
-				},
-			}).updates(replData);
-			syncVersion++;
-			toast.success('Replication collision settings updated');
-		} catch {
-			toast.error('Failed to update replication collision settings');
-		} finally {
-			saving = false;
-		}
-	}
 </script>
 
 <Card.Root class="flex h-full flex-col">
@@ -110,7 +90,23 @@
 			{/if}
 		</Card.Content>
 		<Card.Footer>
-			<SaveButton {dirty} {saving} onclick={save} />
+			<SaveButton
+				{dirty}
+				saving={saver.saving}
+				onclick={() =>
+					saver.run(async () => {
+						if (!replData) return;
+						await update_repl_collision({
+							tenant,
+							name: namespaceName,
+							body: {
+								action: localAction || undefined,
+								deleteEnabled: localDeleteEnabled,
+								deleteDays: parseInt(localDeleteDays, 10) || 0,
+							},
+						}).updates(replData);
+					})}
+			/>
 		</Card.Footer>
 	{/await}
 </Card.Root>

@@ -5,7 +5,7 @@
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_tenant_settings,
 		update_namespace_defaults,
@@ -21,8 +21,11 @@
 	let settingsData = $derived(get_tenant_settings({ tenant }));
 	let settings = $derived((settingsData?.current ?? null) as TenantSettings | null);
 
-	// Local editable state
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Namespace defaults updated successfully',
+		errorMsg: 'Failed to update namespace defaults',
+	});
+
 	let localHardQuota = $state('');
 	let localSoftQuota = $state('');
 	let localOptimizedFor = $state('');
@@ -32,7 +35,7 @@
 
 	$effect(() => {
 		const s = settings;
-		void syncVersion;
+		void saver.syncVersion;
 		localHardQuota = (s?.namespaceDefaults?.hardQuota as string) ?? '';
 		localSoftQuota = (s?.namespaceDefaults?.softQuota as string) ?? '';
 		localOptimizedFor = (s?.namespaceDefaults?.optimizedFor as string) ?? '';
@@ -50,32 +53,6 @@
 			localVersioningEnabled !==
 				((settings?.namespaceDefaults?.versioningEnabled as boolean) ?? false)
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!settingsData) return;
-		saving = true;
-		try {
-			await update_namespace_defaults({
-				tenant,
-				body: {
-					hardQuota: localHardQuota,
-					softQuota: localSoftQuota,
-					optimizedFor: localOptimizedFor,
-					hashScheme: localHashScheme,
-					searchEnabled: localSearchEnabled,
-					versioningEnabled: localVersioningEnabled,
-				},
-			}).updates(settingsData);
-			syncVersion++;
-			toast.success('Namespace defaults updated successfully');
-		} catch {
-			toast.error('Failed to update namespace defaults');
-		} finally {
-			saving = false;
-		}
-	}
 </script>
 
 {#await settingsData}
@@ -135,7 +112,25 @@
 							<Label for="ns-versioning" class="text-sm">Versioning Enabled</Label>
 						</div>
 					</div>
-					<SaveButton {dirty} {saving} onclick={save} />
+					<SaveButton
+						{dirty}
+						saving={saver.saving}
+						onclick={() =>
+							saver.run(async () => {
+								if (!settingsData) return;
+								await update_namespace_defaults({
+									tenant,
+									body: {
+										hardQuota: localHardQuota,
+										softQuota: localSoftQuota,
+										optimizedFor: localOptimizedFor,
+										hashScheme: localHashScheme,
+										searchEnabled: localSearchEnabled,
+										versioningEnabled: localVersioningEnabled,
+									},
+								}).updates(settingsData);
+							})}
+					/>
 				</div>
 			{/if}
 		</Card.Content>

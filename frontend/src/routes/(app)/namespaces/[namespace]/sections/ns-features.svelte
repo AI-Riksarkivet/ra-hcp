@@ -5,7 +5,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { HelpCircle } from 'lucide-svelte';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_namespace,
 		update_namespace,
@@ -24,13 +24,17 @@
 	let nsData = $derived(get_namespace({ tenant, name: namespaceName }));
 	let ns = $derived((nsData?.current ?? null) as Namespace | null);
 
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Settings updated',
+		errorMsg: 'Failed to update settings',
+	});
+
 	let localSearchEnabled = $state(false);
 	let localVersioningEnabled = $state(false);
 
 	$effect(() => {
 		const n = ns;
-		void syncVersion;
+		void saver.syncVersion;
 		localSearchEnabled = n?.searchEnabled ?? false;
 		localVersioningEnabled = n?.versioningSettings?.enabled ?? false;
 	});
@@ -39,35 +43,6 @@
 		localSearchEnabled !== (ns?.searchEnabled ?? false) ||
 			localVersioningEnabled !== (ns?.versioningSettings?.enabled ?? false)
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!nsData) return;
-		saving = true;
-		try {
-			if (localSearchEnabled !== (ns?.searchEnabled ?? false)) {
-				await update_namespace({
-					tenant,
-					name: namespaceName,
-					body: { searchEnabled: localSearchEnabled },
-				});
-			}
-			if (localVersioningEnabled !== (ns?.versioningSettings?.enabled ?? false)) {
-				await update_versioning({
-					tenant,
-					name: namespaceName,
-					enabled: localVersioningEnabled,
-				});
-			}
-			syncVersion++;
-			toast.success('Settings updated');
-		} catch {
-			toast.error('Failed to update settings');
-		} finally {
-			saving = false;
-		}
-	}
 </script>
 
 {#snippet featureSwitch(
@@ -119,6 +94,27 @@
 		</div>
 	</Card.Content>
 	<Card.Footer>
-		<SaveButton {dirty} {saving} onclick={save} />
+		<SaveButton
+			{dirty}
+			saving={saver.saving}
+			onclick={() =>
+				saver.run(async () => {
+					if (!nsData) return;
+					if (localSearchEnabled !== (ns?.searchEnabled ?? false)) {
+						await update_namespace({
+							tenant,
+							name: namespaceName,
+							body: { searchEnabled: localSearchEnabled },
+						});
+					}
+					if (localVersioningEnabled !== (ns?.versioningSettings?.enabled ?? false)) {
+						await update_versioning({
+							tenant,
+							name: namespaceName,
+							enabled: localVersioningEnabled,
+						});
+					}
+				})}
+		/>
 	</Card.Footer>
 </Card.Root>

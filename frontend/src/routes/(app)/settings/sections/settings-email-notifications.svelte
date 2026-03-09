@@ -8,7 +8,7 @@
 	import { Plus, Trash2 } from 'lucide-svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_email_notification,
 		update_email_notification,
@@ -24,8 +24,11 @@
 	let emailData = $derived(get_email_notification({ tenant }));
 	let email = $derived((emailData?.current ?? {}) as EmailNotification);
 
-	// ---- Local state ----
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Email notification settings updated',
+		errorMsg: 'Failed to update email notification settings',
+	});
+
 	let localEnabled = $state(false);
 	let localFrom = $state('');
 	let localSubject = $state('');
@@ -34,7 +37,7 @@
 
 	$effect(() => {
 		const e = email;
-		void syncVersion;
+		void saver.syncVersion;
 		localEnabled = e.enabled ?? false;
 		localFrom = e.emailTemplate?.from ?? '';
 		localSubject = e.emailTemplate?.subject ?? '';
@@ -64,33 +67,6 @@
 			localBody !== (email.emailTemplate?.body ?? '') ||
 			!recipientsEqual()
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!emailData) return;
-		saving = true;
-		try {
-			await update_email_notification({
-				tenant,
-				body: {
-					enabled: localEnabled,
-					emailTemplate: {
-						from: localFrom || undefined,
-						subject: localSubject || undefined,
-						body: localBody || undefined,
-					},
-					recipients: localRecipients.filter((r) => r.address.trim()),
-				},
-			}).updates(emailData);
-			syncVersion++;
-			toast.success('Email notification settings updated');
-		} catch {
-			toast.error('Failed to update email notification settings');
-		} finally {
-			saving = false;
-		}
-	}
 
 	function addRecipient() {
 		localRecipients = [...localRecipients, { address: '', importance: 'ALL', severity: 'NOTICE' }];
@@ -213,7 +189,26 @@
 				</Button>
 			</Card.Content>
 			<Card.Footer>
-				<SaveButton {dirty} {saving} onclick={save} />
+				<SaveButton
+					{dirty}
+					saving={saver.saving}
+					onclick={() =>
+						saver.run(async () => {
+							if (!emailData) return;
+							await update_email_notification({
+								tenant,
+								body: {
+									enabled: localEnabled,
+									emailTemplate: {
+										from: localFrom || undefined,
+										subject: localSubject || undefined,
+										body: localBody || undefined,
+									},
+									recipients: localRecipients.filter((r) => r.address.trim()),
+								},
+							}).updates(emailData);
+						})}
+				/>
 			</Card.Footer>
 		</Card.Root>
 	</div>

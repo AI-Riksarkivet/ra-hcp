@@ -4,7 +4,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_ns_compliance,
 		update_ns_compliance,
@@ -22,7 +22,11 @@
 	let complianceData = $derived(get_ns_compliance({ tenant, name: namespaceName }));
 	let compliance = $derived((complianceData?.current ?? {}) as ComplianceSettings);
 
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Compliance settings updated',
+		errorMsg: 'Failed to update compliance settings',
+	});
+
 	let localRetentionDefault = $state('');
 	let localMinRetention = $state('');
 	let localShreddingDefault = $state(false);
@@ -31,7 +35,7 @@
 
 	$effect(() => {
 		const c = compliance;
-		void syncVersion;
+		void saver.syncVersion;
 		localRetentionDefault = c.retentionDefault ?? '';
 		localMinRetention = c.minimumRetentionAfterInitialUnspecified ?? '';
 		localShreddingDefault = c.shreddingDefault ?? false;
@@ -46,32 +50,6 @@
 			localCustomMetadataChanges !== (compliance.customMetadataChanges ?? '') ||
 			localDispositionEnabled !== (compliance.dispositionEnabled ?? false)
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!complianceData) return;
-		saving = true;
-		try {
-			await update_ns_compliance({
-				tenant,
-				name: namespaceName,
-				body: {
-					retentionDefault: localRetentionDefault || undefined,
-					minimumRetentionAfterInitialUnspecified: localMinRetention || undefined,
-					shreddingDefault: localShreddingDefault,
-					customMetadataChanges: localCustomMetadataChanges || undefined,
-					dispositionEnabled: localDispositionEnabled,
-				},
-			}).updates(complianceData);
-			syncVersion++;
-			toast.success('Compliance settings updated');
-		} catch {
-			toast.error('Failed to update compliance settings');
-		} finally {
-			saving = false;
-		}
-	}
 </script>
 
 <Card.Root class="flex h-full flex-col">
@@ -136,7 +114,25 @@
 			</div>
 		</Card.Content>
 		<Card.Footer>
-			<SaveButton {dirty} {saving} onclick={save} />
+			<SaveButton
+				{dirty}
+				saving={saver.saving}
+				onclick={() =>
+					saver.run(async () => {
+						if (!complianceData) return;
+						await update_ns_compliance({
+							tenant,
+							name: namespaceName,
+							body: {
+								retentionDefault: localRetentionDefault || undefined,
+								minimumRetentionAfterInitialUnspecified: localMinRetention || undefined,
+								shreddingDefault: localShreddingDefault,
+								customMetadataChanges: localCustomMetadataChanges || undefined,
+								dispositionEnabled: localDispositionEnabled,
+							},
+						}).updates(complianceData);
+					})}
+			/>
 		</Card.Footer>
 	{/await}
 </Card.Root>

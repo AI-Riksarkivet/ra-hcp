@@ -4,7 +4,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { HelpCircle } from 'lucide-svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import { get_group, update_group } from '$lib/users.remote.js';
 	import { GROUP_ROLES, ROLE_DESCRIPTIONS, getGroupName, getGroupRoles } from '$lib/constants.js';
 	import type { GroupAccount } from '$lib/constants.js';
@@ -21,14 +21,17 @@
 	let groupData = $derived(get_group({ tenant, groupname }));
 	let group = $derived((groupData?.current ?? null) as GroupAccount | null);
 
-	// Local editable state
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Group updated successfully',
+		errorMsg: 'Failed to update group',
+	});
+
 	let localDescription = $state('');
 	let localRoles = $state<string[]>([]);
 
 	$effect(() => {
 		const g = group;
-		void syncVersion;
+		void saver.syncVersion;
 		localDescription = g?.description ?? '';
 		localRoles = g ? getGroupRoles(g) : [];
 	});
@@ -38,26 +41,6 @@
 			JSON.stringify([...localRoles].sort()) !==
 				JSON.stringify([...(group ? getGroupRoles(group) : [])].sort())
 	);
-
-	let saving = $state(false);
-
-	async function saveGroup() {
-		if (!groupData) return;
-		saving = true;
-		try {
-			const body: Record<string, unknown> = {
-				description: localDescription,
-				roles: { role: localRoles },
-			};
-			await update_group({ tenant, groupname, body }).updates(groupData);
-			syncVersion++;
-			toast.success('Group updated successfully');
-		} catch {
-			toast.error('Failed to update group');
-		} finally {
-			saving = false;
-		}
-	}
 
 	function toggleRole(role: string) {
 		if (localRoles.includes(role)) {
@@ -127,7 +110,19 @@
 					{/each}
 				</div>
 				<div class="pt-4">
-					<SaveButton {dirty} {saving} onclick={saveGroup} />
+					<SaveButton
+						{dirty}
+						saving={saver.saving}
+						onclick={() =>
+							saver.run(async () => {
+								if (!groupData) return;
+								const body: Record<string, unknown> = {
+									description: localDescription,
+									roles: { role: localRoles },
+								};
+								await update_group({ tenant, groupname, body }).updates(groupData);
+							})}
+					/>
 				</div>
 			</div>
 		</div>

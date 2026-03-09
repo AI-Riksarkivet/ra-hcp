@@ -4,7 +4,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_ns_indexing,
 		update_ns_indexing,
@@ -22,14 +22,18 @@
 	let indexingData = $derived(get_ns_indexing({ tenant, name: namespaceName }));
 	let indexing = $derived((indexingData?.current ?? {}) as IndexingSettings);
 
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Indexing settings updated',
+		errorMsg: 'Failed to update indexing settings',
+	});
+
 	let localFullIndexing = $state(false);
 	let localContentClasses = $state('');
 	let localExcludedAnnotations = $state('');
 
 	$effect(() => {
 		const idx = indexing;
-		void syncVersion;
+		void saver.syncVersion;
 		localFullIndexing = idx.fullIndexingEnabled ?? false;
 		localContentClasses = (idx.contentClasses ?? []).join(', ');
 		localExcludedAnnotations = idx.excludedAnnotations ?? '';
@@ -40,34 +44,6 @@
 			localContentClasses !== (indexing.contentClasses ?? []).join(', ') ||
 			localExcludedAnnotations !== (indexing.excludedAnnotations ?? '')
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!indexingData) return;
-		saving = true;
-		try {
-			const classes = localContentClasses
-				.split(',')
-				.map((s) => s.trim())
-				.filter(Boolean);
-			await update_ns_indexing({
-				tenant,
-				name: namespaceName,
-				body: {
-					fullIndexingEnabled: localFullIndexing,
-					contentClasses: classes.length > 0 ? classes : undefined,
-					excludedAnnotations: localExcludedAnnotations || undefined,
-				},
-			}).updates(indexingData);
-			syncVersion++;
-			toast.success('Indexing settings updated');
-		} catch {
-			toast.error('Failed to update indexing settings');
-		} finally {
-			saving = false;
-		}
-	}
 </script>
 
 <Card.Root class="flex h-full flex-col">
@@ -122,7 +98,27 @@
 			</div>
 		</Card.Content>
 		<Card.Footer>
-			<SaveButton {dirty} {saving} onclick={save} />
+			<SaveButton
+				{dirty}
+				saving={saver.saving}
+				onclick={() =>
+					saver.run(async () => {
+						if (!indexingData) return;
+						const classes = localContentClasses
+							.split(',')
+							.map((s) => s.trim())
+							.filter(Boolean);
+						await update_ns_indexing({
+							tenant,
+							name: namespaceName,
+							body: {
+								fullIndexingEnabled: localFullIndexing,
+								contentClasses: classes.length > 0 ? classes : undefined,
+								excludedAnnotations: localExcludedAnnotations || undefined,
+							},
+						}).updates(indexingData);
+					})}
+			/>
 		</Card.Footer>
 	{/await}
 </Card.Root>

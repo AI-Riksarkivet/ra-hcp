@@ -5,7 +5,7 @@
 	import { HelpCircle } from 'lucide-svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_tenant_settings,
 		update_permissions,
@@ -45,13 +45,16 @@
 	let settingsData = $derived(get_tenant_settings({ tenant }));
 	let settings = $derived((settingsData?.current ?? null) as TenantSettings | null);
 
-	// Local editable state
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Permissions updated successfully',
+		errorMsg: 'Failed to update permissions',
+	});
+
 	let localPermissions = $state<Record<string, boolean>>({});
 
 	$effect(() => {
 		const s = settings;
-		void syncVersion;
+		void saver.syncVersion;
 		const perms: Record<string, boolean> = {};
 		for (const key of PERMISSION_KEYS) {
 			perms[key] = (s?.permissions?.[key] as boolean) ?? false;
@@ -65,25 +68,6 @@
 				(localPermissions[key] ?? false) !== ((settings?.permissions?.[key] as boolean) ?? false)
 		)
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!settingsData) return;
-		saving = true;
-		try {
-			await update_permissions({
-				tenant,
-				body: { ...localPermissions },
-			}).updates(settingsData);
-			syncVersion++;
-			toast.success('Permissions updated successfully');
-		} catch {
-			toast.error('Failed to update permissions');
-		} finally {
-			saving = false;
-		}
-	}
 
 	function togglePermission(key: string) {
 		localPermissions = { ...localPermissions, [key]: !localPermissions[key] };
@@ -128,7 +112,18 @@
 							</div>
 						{/each}
 					</div>
-					<SaveButton {dirty} {saving} onclick={save} />
+					<SaveButton
+						{dirty}
+						saving={saver.saving}
+						onclick={() =>
+							saver.run(async () => {
+								if (!settingsData) return;
+								await update_permissions({
+									tenant,
+									body: { ...localPermissions },
+								}).updates(settingsData);
+							})}
+					/>
 				</div>
 			{/if}
 		</Card.Content>

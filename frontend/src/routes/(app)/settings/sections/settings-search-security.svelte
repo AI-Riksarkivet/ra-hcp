@@ -5,7 +5,7 @@
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
 	import IpListEditor from '$lib/components/ui/ip-list-editor.svelte';
-	import { toast } from 'svelte-sonner';
+	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_search_security,
 		update_search_security,
@@ -21,15 +21,18 @@
 	let securityData = $derived(get_search_security({ tenant }));
 	let security = $derived((securityData?.current ?? {}) as SearchSecurity);
 
-	// ---- Local state ----
-	let syncVersion = $state(0);
+	const saver = useSave({
+		successMsg: 'Search security updated',
+		errorMsg: 'Failed to update search security',
+	});
+
 	let localAllowAddresses = $state<string[]>([]);
 	let localDenyAddresses = $state<string[]>([]);
 	let localAllowIfInBoth = $state(false);
 
 	$effect(() => {
 		const s = security;
-		void syncVersion;
+		void saver.syncVersion;
 		localAllowAddresses = [...(s.ipSettings?.allowAddresses ?? [])];
 		localDenyAddresses = [...(s.ipSettings?.denyAddresses ?? [])];
 		localAllowIfInBoth = s.ipSettings?.allowIfInBothLists ?? false;
@@ -45,31 +48,6 @@
 			!arraysEqual(localDenyAddresses, security.ipSettings?.denyAddresses ?? []) ||
 			localAllowIfInBoth !== (security.ipSettings?.allowIfInBothLists ?? false)
 	);
-
-	let saving = $state(false);
-
-	async function save() {
-		if (!securityData) return;
-		saving = true;
-		try {
-			await update_search_security({
-				tenant,
-				body: {
-					ipSettings: {
-						allowAddresses: localAllowAddresses.filter(Boolean),
-						denyAddresses: localDenyAddresses.filter(Boolean),
-						allowIfInBothLists: localAllowIfInBoth,
-					},
-				},
-			}).updates(securityData);
-			syncVersion++;
-			toast.success('Search security updated');
-		} catch {
-			toast.error('Failed to update search security');
-		} finally {
-			saving = false;
-		}
-	}
 </script>
 
 {#await securityData}
@@ -105,7 +83,24 @@
 			</p>
 		</Card.Content>
 		<Card.Footer>
-			<SaveButton {dirty} {saving} onclick={save} />
+			<SaveButton
+				{dirty}
+				saving={saver.saving}
+				onclick={() =>
+					saver.run(async () => {
+						if (!securityData) return;
+						await update_search_security({
+							tenant,
+							body: {
+								ipSettings: {
+									allowAddresses: localAllowAddresses.filter(Boolean),
+									denyAddresses: localDenyAddresses.filter(Boolean),
+									allowIfInBothLists: localAllowIfInBoth,
+								},
+							},
+						}).updates(securityData);
+					})}
+			/>
 		</Card.Footer>
 	</Card.Root>
 {/await}
