@@ -7,7 +7,7 @@ bugs:
 - [SOLVED] invalid date on created in /buckets - formatDate now handles empty/invalid dates
 - [SOLVED] Can we not create a template without importing? — added "Create from Scratch" option alongside file import, with inline editing, add/remove namespace entries, and per-entry trash button
 - [SOLVED] button should never be flexed — removed w-full from template import Create/Start Over buttons, now right-aligned with normal sizing
-- [NEEDS INPUT] Missing feature to add the exact user rights when export a user (similar to export a namespace), we want to be able to set also user permissions in the route /users/<user>
+- [SOLVED] Missing feature to add the exact user rights — namespace access section on /users/<user> and /users/groups/<group> is now fully editable with clickable permission badges, add/remove namespaces via dropdown, select all/clear all, and save button
 - [SOLVED] replication collision import error: deleteDays now stripped when deleteEnabled is false
 - [NEEDS INPUT] error in rights with full control: Access Denied on /buckets/ai-icelandic-ner — this is an HCP-side permission issue (user doesn't have WRITE_ACL on that namespace), not a frontend bug
 - [SOLVED] edit (pencil) for tags in namespace table - fixed async save callback so save state is properly tracked
