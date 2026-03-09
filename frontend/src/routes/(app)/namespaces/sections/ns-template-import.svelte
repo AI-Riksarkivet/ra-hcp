@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { toast } from 'svelte-sonner';
-	import { Upload, FileJson, Loader2, AlertTriangle } from 'lucide-svelte';
+	import { Upload, FileJson, Loader2, AlertTriangle, Plus, Trash2 } from 'lucide-svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import {
 		create_namespace,
@@ -272,6 +272,20 @@
 		else toast.warning(`Import completed: ${succeeded} steps succeeded, ${failed} failed`);
 	}
 
+	function addBlankTemplate() {
+		const name = `new-namespace-${templateData.length + 1}`;
+		templateData = [...templateData, { name }];
+		importNames = [...importNames, name];
+		importSteps = [];
+		importDone = false;
+		sourceInfo = '';
+	}
+
+	function removeTemplate(index: number) {
+		templateData = templateData.filter((_, i) => i !== index);
+		importNames = importNames.filter((_, i) => i !== index);
+	}
+
 	function clearImport() {
 		templateData = [];
 		importNames = [];
@@ -287,8 +301,10 @@
 		<div class="flex items-center gap-2">
 			<Upload class="h-5 w-5 text-muted-foreground" />
 			<div>
-				<Card.Title>Import Template</Card.Title>
-				<Card.Description>Create namespaces from a JSON template file</Card.Description>
+				<Card.Title>Create / Import Namespaces</Card.Title>
+				<Card.Description
+					>Build namespaces from scratch or import from a JSON template</Card.Description
+				>
 			</div>
 		</div>
 	</Card.Header>
@@ -302,15 +318,26 @@
 		/>
 
 		{#if templateData.length === 0}
-			<button
-				type="button"
-				class="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-8 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-				onclick={() => fileInput?.click()}
-			>
-				<FileJson class="h-10 w-10" />
-				<p class="text-sm font-medium">Click to browse for a template file</p>
-				<p class="text-xs">Accepts .json files exported from this tool</p>
-			</button>
+			<div class="grid gap-3 sm:grid-cols-2">
+				<button
+					type="button"
+					class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+					onclick={addBlankTemplate}
+				>
+					<Plus class="h-10 w-10" />
+					<p class="text-sm font-medium">Create from Scratch</p>
+					<p class="text-xs">Build a namespace template inline</p>
+				</button>
+				<button
+					type="button"
+					class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+					onclick={() => fileInput?.click()}
+				>
+					<FileJson class="h-10 w-10" />
+					<p class="text-sm font-medium">Import from File</p>
+					<p class="text-xs">Load a .json template file</p>
+				</button>
+			</div>
 		{:else}
 			<div class="space-y-3">
 				<div class="flex items-center justify-between">
@@ -322,22 +349,42 @@
 							<p class="text-xs text-muted-foreground">{sourceInfo}</p>
 						{/if}
 					</div>
-					<Button variant="ghost" size="sm" onclick={clearImport}>Clear</Button>
+					<div class="flex items-center gap-1">
+						{#if !importing && !importDone}
+							<Button variant="ghost" size="sm" onclick={addBlankTemplate}>
+								<Plus class="h-4 w-4" />
+								Add
+							</Button>
+						{/if}
+						<Button variant="ghost" size="sm" onclick={clearImport}>Clear</Button>
+					</div>
 				</div>
 
 				<Separator />
 
 				<div class="max-h-[32rem] space-y-3 overflow-y-auto">
 					{#each templateData as ns, i (i)}
-						<NsImportEditor
-							{ns}
-							index={i}
-							name={importNames[i]}
-							hasConflict={existingNames.has(importNames[i])}
-							disabled={importing || importDone}
-							onnamechange={handleNameChange}
-							onnsupdate={handleNsUpdate}
-						/>
+						<div class="relative">
+							<NsImportEditor
+								{ns}
+								index={i}
+								name={importNames[i]}
+								hasConflict={existingNames.has(importNames[i])}
+								disabled={importing || importDone}
+								onnamechange={handleNameChange}
+								onnsupdate={handleNsUpdate}
+							/>
+							{#if !importing && !importDone && templateData.length > 1}
+								<Button
+									variant="ghost"
+									size="icon"
+									class="absolute right-1 top-1 h-7 w-7 text-muted-foreground hover:text-destructive"
+									onclick={() => removeTemplate(i)}
+								>
+									<Trash2 class="h-3.5 w-3.5" />
+								</Button>
+							{/if}
+						</div>
 					{/each}
 				</div>
 
@@ -345,7 +392,7 @@
 					<Separator />
 					<div class="space-y-2 rounded-md border bg-muted/30 p-3">
 						<h4 class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-							Import Summary
+							Summary
 						</h4>
 						<div class="text-sm">
 							<span class="font-medium">{totalSteps}</span> total step{totalSteps !== 1 ? 's' : ''} across
@@ -388,23 +435,21 @@
 					<StepProgress steps={progressSteps} />
 				{/if}
 
-				{#if !importDone}
-					<Button
-						class="w-full"
-						onclick={handleImport}
-						disabled={importing || templateData.length === 0}
-					>
-						{#if importing}
-							<Loader2 class="h-4 w-4 animate-spin" />
-							Importing...
-						{:else}
-							<Upload class="h-4 w-4" />
-							Create from Template
-						{/if}
-					</Button>
-				{:else}
-					<Button variant="outline" class="w-full" onclick={clearImport}>Import Another</Button>
-				{/if}
+				<div class="flex justify-end gap-2">
+					{#if !importDone}
+						<Button onclick={handleImport} disabled={importing || templateData.length === 0}>
+							{#if importing}
+								<Loader2 class="h-4 w-4 animate-spin" />
+								Creating...
+							{:else}
+								<Plus class="h-4 w-4" />
+								Create {templateData.length} Namespace{templateData.length !== 1 ? 's' : ''}
+							{/if}
+						</Button>
+					{:else}
+						<Button variant="outline" onclick={clearImport}>Start Over</Button>
+					{/if}
+				</div>
 			</div>
 		{/if}
 	</Card.Content>
