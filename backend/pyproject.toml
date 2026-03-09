@@ -33,6 +33,11 @@ dev = [
     "ty>=0.0.1a7",
 ]
 
+docs = [
+    "zensical>=0.0.24",
+    "mkdocstrings-python>=2.0.3",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
