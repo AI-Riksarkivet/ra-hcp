@@ -14,6 +14,7 @@
 		type AclData,
 	} from '$lib/buckets.remote.js';
 	import { get_users } from '$lib/users.remote.js';
+	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
 	import type { User } from '$lib/constants.js';
 	import {
 		DataTable,
@@ -47,9 +48,23 @@
 
 	// Data fetching
 	let bucketData = get_buckets();
-	let buckets = $derived(
+	let s3Buckets = $derived(
 		(bucketData.current?.buckets ?? []) as { name: string; creation_date: string }[]
 	);
+	let nsData = $derived(tenant ? get_namespaces({ tenant }) : undefined);
+	let namespaces = $derived((nsData?.current ?? []) as Namespace[]);
+
+	// Merge S3 buckets with all accessible namespaces
+	let buckets = $derived.by(() => {
+		const s3Set = new Set(s3Buckets.map((b) => b.name));
+		const merged = [...s3Buckets];
+		for (const ns of namespaces) {
+			if (!s3Set.has(ns.name)) {
+				merged.push({ name: ns.name, creation_date: ns.creationTime ?? '' });
+			}
+		}
+		return merged;
+	});
 
 	// Fetch ACL for each bucket using a reactive map
 	let bucketAcls = $derived.by(() => {
