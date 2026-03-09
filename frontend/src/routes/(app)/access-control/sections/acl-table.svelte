@@ -12,9 +12,9 @@
 		put_bucket_acl,
 		type AclGrant,
 		type AclData,
-	} from '$lib/buckets.remote.js';
-	import { get_users } from '$lib/users.remote.js';
-	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
+	} from '$lib/remote/buckets.remote.js';
+	import { get_users } from '$lib/remote/users.remote.js';
+	import { get_namespaces, type Namespace } from '$lib/remote/namespaces.remote.js';
 	import type { User } from '$lib/constants.js';
 	import {
 		DataTable,

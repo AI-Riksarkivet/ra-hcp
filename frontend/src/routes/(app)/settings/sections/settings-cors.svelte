@@ -6,7 +6,7 @@
 		set_tenant_cors,
 		delete_tenant_cors,
 		type TenantCors,
-	} from '$lib/tenant-info.remote.js';
+	} from '$lib/remote/tenant-info.remote.js';
 
 	let {
 		tenant,

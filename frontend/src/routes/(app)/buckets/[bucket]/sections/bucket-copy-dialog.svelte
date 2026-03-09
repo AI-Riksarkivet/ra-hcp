@@ -5,7 +5,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Loader2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
-	import { copy_object, get_buckets } from '$lib/buckets.remote.js';
+	import { copy_object, get_buckets } from '$lib/remote/buckets.remote.js';
 
 	let {
 		bucket,

@@ -8,9 +8,9 @@
 		get_tenant,
 		get_tenant_statistics,
 		type ChargebackReport,
-	} from '$lib/tenant-info.remote.js';
-	import { type Namespace } from '$lib/namespaces.remote.js';
-	import { get_users } from '$lib/users.remote.js';
+	} from '$lib/remote/tenant-info.remote.js';
+	import { type Namespace } from '$lib/remote/namespaces.remote.js';
+	import { get_users } from '$lib/remote/users.remote.js';
 	import {
 		formatBytes,
 		parseQuotaBytes,

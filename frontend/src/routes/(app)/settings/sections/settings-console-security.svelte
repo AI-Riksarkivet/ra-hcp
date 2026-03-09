@@ -11,7 +11,7 @@
 		get_console_security,
 		update_console_security,
 		type ConsoleSecurity,
-	} from '$lib/tenant-info.remote.js';
+	} from '$lib/remote/tenant-info.remote.js';
 
 	let {
 		tenant,

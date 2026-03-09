@@ -4,7 +4,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { toast } from 'svelte-sonner';
 	import FormDialog from '$lib/components/ui/form-dialog.svelte';
-	import { get_users, create_user } from '$lib/users.remote.js';
+	import { get_users, create_user } from '$lib/remote/users.remote.js';
 	import { AVAILABLE_ROLES } from '$lib/constants.js';
 
 	let {

@@ -10,8 +10,8 @@
 	import NamespaceCreateDialog from './sections/namespace-create-dialog.svelte';
 	import NsGrantDialog from './sections/ns-grant-dialog.svelte';
 	import NsTemplates from './sections/ns-templates.svelte';
-	import { get_namespaces } from '$lib/namespaces.remote.js';
-	import { get_tenant_chargeback } from '$lib/tenant-info.remote.js';
+	import { get_namespaces } from '$lib/remote/namespaces.remote.js';
+	import { get_tenant_chargeback } from '$lib/remote/tenant-info.remote.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 

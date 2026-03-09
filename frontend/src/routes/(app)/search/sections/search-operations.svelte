@@ -19,7 +19,7 @@
 		search_operations,
 		type QueryResultObject,
 		type OperationQueryResponse,
-	} from '$lib/search.remote.js';
+	} from '$lib/remote/search.remote.js';
 
 	let {
 		tenant,

@@ -9,7 +9,7 @@
 		get_ns_compliance,
 		update_ns_compliance,
 		type ComplianceSettings,
-	} from '$lib/namespaces.remote.js';
+	} from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

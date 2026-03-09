@@ -13,7 +13,7 @@
 		get_email_notification,
 		update_email_notification,
 		type EmailNotification,
-	} from '$lib/tenant-info.remote.js';
+	} from '$lib/remote/tenant-info.remote.js';
 
 	let {
 		tenant,

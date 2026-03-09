@@ -6,7 +6,7 @@
 	import FormDialog from '$lib/components/ui/form-dialog.svelte';
 	import TagInput from '$lib/components/ui/tag-input.svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
-	import { create_namespace, type Namespace } from '$lib/namespaces.remote.js';
+	import { create_namespace, type Namespace } from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

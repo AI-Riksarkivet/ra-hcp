@@ -4,7 +4,7 @@
 		get_group_permissions,
 		set_group_permissions,
 		type DataAccessPermissions,
-	} from '$lib/users.remote.js';
+	} from '$lib/remote/users.remote.js';
 
 	let {
 		tenant,

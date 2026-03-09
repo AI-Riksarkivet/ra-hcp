@@ -27,7 +27,7 @@
 		delete_object,
 		bulk_delete_objects,
 		bulk_presign,
-	} from '$lib/buckets.remote.js';
+	} from '$lib/remote/buckets.remote.js';
 	import {
 		DataTable,
 		DataTableCheckbox,

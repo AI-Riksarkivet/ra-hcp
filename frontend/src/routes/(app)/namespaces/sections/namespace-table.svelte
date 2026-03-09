@@ -12,8 +12,12 @@
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
-	import { update_namespace, delete_namespace, type Namespace } from '$lib/namespaces.remote.js';
-	import { type ChargebackReport } from '$lib/tenant-info.remote.js';
+	import {
+		update_namespace,
+		delete_namespace,
+		type Namespace,
+	} from '$lib/remote/namespaces.remote.js';
+	import { type ChargebackReport } from '$lib/remote/tenant-info.remote.js';
 	import {
 		formatBytes,
 		parseQuotaBytes,

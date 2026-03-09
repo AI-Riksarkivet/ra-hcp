@@ -10,7 +10,7 @@
 		get_search_security,
 		update_search_security,
 		type SearchSecurity,
-	} from '$lib/tenant-info.remote.js';
+	} from '$lib/remote/tenant-info.remote.js';
 
 	let {
 		tenant,

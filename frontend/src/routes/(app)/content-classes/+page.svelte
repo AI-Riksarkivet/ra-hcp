@@ -14,7 +14,7 @@
 		create_content_class,
 		delete_content_class,
 		type ContentClass,
-	} from '$lib/content-classes.remote.js';
+	} from '$lib/remote/content-classes.remote.js';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';

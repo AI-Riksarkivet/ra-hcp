@@ -3,7 +3,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { toast } from 'svelte-sonner';
 	import FormDialog from '$lib/components/ui/form-dialog.svelte';
-	import { get_buckets, create_bucket } from '$lib/buckets.remote.js';
+	import { get_buckets, create_bucket } from '$lib/remote/buckets.remote.js';
 
 	let {
 		open = $bindable(false),

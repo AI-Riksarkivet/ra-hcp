@@ -7,7 +7,7 @@
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import { formatDate, formatBytes, parseQuotaBytes, getStorageUsed } from '$lib/utils/format.js';
 	import type { ChargebackEntry } from '$lib/utils/format.js';
-	import { get_tenant_chargeback } from '$lib/tenant-info.remote.js';
+	import { get_tenant_chargeback } from '$lib/remote/tenant-info.remote.js';
 	import { toast } from 'svelte-sonner';
 	import {
 		get_namespace,
@@ -15,7 +15,7 @@
 		update_namespace,
 		type Namespace,
 		type NsStatistics,
-	} from '$lib/namespaces.remote.js';
+	} from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

@@ -11,7 +11,7 @@
 		update_namespace,
 		update_versioning,
 		type Namespace,
-	} from '$lib/namespaces.remote.js';
+	} from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

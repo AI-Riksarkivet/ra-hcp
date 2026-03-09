@@ -9,7 +9,7 @@
 		get_users,
 		get_user_permissions,
 		type DataAccessPermissions,
-	} from '$lib/users.remote.js';
+	} from '$lib/remote/users.remote.js';
 	import { type User, getUserRoles } from '$lib/constants.js';
 	import {
 		DataTable,

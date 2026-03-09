@@ -6,7 +6,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { toast } from 'svelte-sonner';
 	import { Download, Search, Eye, Loader2 } from 'lucide-svelte';
-	import { export_namespace_configs, type Namespace } from '$lib/namespaces.remote.js';
+	import { export_namespace_configs, type Namespace } from '$lib/remote/namespaces.remote.js';
 	import NsExportPreviewDialog from './ns-export-preview-dialog.svelte';
 
 	let {

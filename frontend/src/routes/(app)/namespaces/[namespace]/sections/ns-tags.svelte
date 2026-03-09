@@ -6,7 +6,11 @@
 	import SaveButton from '$lib/components/ui/save-button.svelte';
 	import TagInput from '$lib/components/ui/tag-input.svelte';
 	import { toast } from 'svelte-sonner';
-	import { get_namespace, update_namespace, type Namespace } from '$lib/namespaces.remote.js';
+	import {
+		get_namespace,
+		update_namespace,
+		type Namespace,
+	} from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

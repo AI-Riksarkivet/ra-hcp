@@ -26,7 +26,7 @@
 		update_retention_class,
 		delete_retention_class,
 		type RetentionClass,
-	} from '$lib/namespaces.remote.js';
+	} from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

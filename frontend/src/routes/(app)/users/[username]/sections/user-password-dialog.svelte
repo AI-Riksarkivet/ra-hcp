@@ -3,7 +3,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { toast } from 'svelte-sonner';
 	import FormDialog from '$lib/components/ui/form-dialog.svelte';
-	import { change_password } from '$lib/users.remote.js';
+	import { change_password } from '$lib/remote/users.remote.js';
 
 	let {
 		tenant,

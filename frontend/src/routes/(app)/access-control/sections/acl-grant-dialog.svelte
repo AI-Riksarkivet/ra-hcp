@@ -11,9 +11,9 @@
 		get_bucket_acl,
 		put_bucket_acl,
 		type AclData,
-	} from '$lib/buckets.remote.js';
-	import { get_users, get_groups } from '$lib/users.remote.js';
-	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
+	} from '$lib/remote/buckets.remote.js';
+	import { get_users, get_groups } from '$lib/remote/users.remote.js';
+	import { get_namespaces, type Namespace } from '$lib/remote/namespaces.remote.js';
 	import type { User, GroupAccount } from '$lib/constants.js';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { ACL_PERMISSIONS, permissionLabel } from '../acl-constants.js';

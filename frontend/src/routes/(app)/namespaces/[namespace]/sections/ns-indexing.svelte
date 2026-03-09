@@ -9,7 +9,7 @@
 		get_ns_indexing,
 		update_ns_indexing,
 		type IndexingSettings,
-	} from '$lib/namespaces.remote.js';
+	} from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

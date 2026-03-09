@@ -4,7 +4,7 @@
 		get_user_permissions,
 		set_user_permissions,
 		type DataAccessPermissions,
-	} from '$lib/users.remote.js';
+	} from '$lib/remote/users.remote.js';
 
 	let {
 		tenant,

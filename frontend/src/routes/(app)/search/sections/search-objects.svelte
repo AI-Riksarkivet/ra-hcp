@@ -34,7 +34,7 @@
 		search_objects,
 		type QueryResultObject,
 		type ObjectQueryResponse,
-	} from '$lib/search.remote.js';
+	} from '$lib/remote/search.remote.js';
 	import DataTableActions from '../data-table/data-table-actions.svelte';
 
 	let {

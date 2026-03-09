@@ -5,7 +5,7 @@
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import { Trash2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
-	import { get_group, delete_group } from '$lib/users.remote.js';
+	import { get_group, delete_group } from '$lib/remote/users.remote.js';
 	import type { GroupAccount } from '$lib/constants.js';
 	import BackButton from '$lib/components/ui/back-button.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';

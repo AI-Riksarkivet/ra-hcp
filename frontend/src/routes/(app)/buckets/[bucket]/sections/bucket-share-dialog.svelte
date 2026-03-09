@@ -6,7 +6,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Loader2, Copy, Check } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
-	import { generate_presigned_url } from '$lib/buckets.remote.js';
+	import { generate_presigned_url } from '$lib/remote/buckets.remote.js';
 
 	let {
 		bucket,

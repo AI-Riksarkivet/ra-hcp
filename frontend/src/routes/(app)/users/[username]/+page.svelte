@@ -5,7 +5,7 @@
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import { KeyRound, Trash2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
-	import { get_user, delete_user } from '$lib/users.remote.js';
+	import { get_user, delete_user } from '$lib/remote/users.remote.js';
 	import type { User } from '$lib/constants.js';
 	import BackButton from '$lib/components/ui/back-button.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';

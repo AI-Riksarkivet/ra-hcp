@@ -9,7 +9,7 @@
 		get_tenant_settings,
 		update_contact_info,
 		type TenantSettings,
-	} from '$lib/tenant-info.remote.js';
+	} from '$lib/remote/tenant-info.remote.js';
 
 	let {
 		tenant,

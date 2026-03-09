@@ -12,8 +12,8 @@
 		put_bucket_acl,
 		type AclGrant,
 		type AclData,
-	} from '$lib/buckets.remote.js';
-	import { get_users, get_groups } from '$lib/users.remote.js';
+	} from '$lib/remote/buckets.remote.js';
+	import { get_users, get_groups } from '$lib/remote/users.remote.js';
 	import type { User, GroupAccount } from '$lib/constants.js';
 	import {
 		ACL_PERMISSIONS,

@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import { get_groups } from '$lib/users.remote.js';
+	import { get_groups } from '$lib/remote/users.remote.js';
 	import { type GroupAccount, getGroupName, getGroupRoles } from '$lib/constants.js';
 	import {
 		DataTable,

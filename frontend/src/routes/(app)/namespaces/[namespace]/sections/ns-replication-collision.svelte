@@ -9,7 +9,7 @@
 		get_repl_collision,
 		update_repl_collision,
 		type ReplicationCollision,
-	} from '$lib/namespaces.remote.js';
+	} from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

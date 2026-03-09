@@ -3,7 +3,7 @@
 	import { Users, UsersRound } from 'lucide-svelte';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { get_users, get_groups } from '$lib/users.remote.js';
+	import { get_users, get_groups } from '$lib/remote/users.remote.js';
 	import type { User, GroupAccount } from '$lib/constants.js';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';

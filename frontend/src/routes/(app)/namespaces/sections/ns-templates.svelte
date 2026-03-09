@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { RemoteQuery } from '@sveltejs/kit';
-	import type { Namespace } from '$lib/namespaces.remote.js';
+	import type { Namespace } from '$lib/remote/namespaces.remote.js';
 	import NsTemplateExport from './ns-template-export.svelte';
 	import NsTemplateImport from './ns-template-import.svelte';
 

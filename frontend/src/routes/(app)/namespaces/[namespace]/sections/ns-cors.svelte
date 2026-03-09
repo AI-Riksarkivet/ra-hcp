@@ -5,7 +5,7 @@
 		set_ns_cors,
 		delete_ns_cors,
 		type CorsConfig,
-	} from '$lib/namespaces.remote.js';
+	} from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

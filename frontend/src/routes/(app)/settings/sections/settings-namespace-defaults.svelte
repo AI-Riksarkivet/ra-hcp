@@ -10,7 +10,7 @@
 		get_tenant_settings,
 		update_namespace_defaults,
 		type TenantSettings,
-	} from '$lib/tenant-info.remote.js';
+	} from '$lib/remote/tenant-info.remote.js';
 
 	let {
 		tenant,

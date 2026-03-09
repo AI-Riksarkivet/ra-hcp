@@ -12,7 +12,7 @@
 		get_ns_protocols,
 		update_ns_protocol,
 		type NsProtocols,
-	} from '$lib/namespaces.remote.js';
+	} from '$lib/remote/namespaces.remote.js';
 
 	let {
 		tenant,

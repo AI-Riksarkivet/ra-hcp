@@ -6,7 +6,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { HelpCircle, Copy, Check } from 'lucide-svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
-	import { get_user, update_user } from '$lib/users.remote.js';
+	import { get_user, update_user } from '$lib/remote/users.remote.js';
 	import { AVAILABLE_ROLES, ROLE_DESCRIPTIONS, getUserRoles } from '$lib/constants.js';
 	import type { User } from '$lib/constants.js';
 	import SaveButton from '$lib/components/ui/save-button.svelte';

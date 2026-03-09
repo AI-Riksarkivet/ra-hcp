@@ -7,8 +7,8 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
-	import type { DataAccessPermissions } from '$lib/users.remote.js';
-	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
+	import type { DataAccessPermissions } from '$lib/remote/users.remote.js';
+	import { get_namespaces, type Namespace } from '$lib/remote/namespaces.remote.js';
 	import { PERMISSION_DESCRIPTIONS } from '$lib/constants.js';
 	import { Plus, Trash2, Shield } from 'lucide-svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';

@@ -14,7 +14,7 @@
 		delete_content_class,
 		type ContentClass,
 		type ContentProperty,
-	} from '$lib/content-classes.remote.js';
+	} from '$lib/remote/content-classes.remote.js';
 	import CcProperties from './sections/cc-properties.svelte';
 	import CcNamespaces from './sections/cc-namespaces.svelte';
 

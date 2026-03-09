@@ -17,7 +17,7 @@
 		set_ns_cors,
 		update_repl_collision,
 		type Namespace,
-	} from '$lib/namespaces.remote.js';
+	} from '$lib/remote/namespaces.remote.js';
 	import {
 		type TemplateNamespace,
 		type ImportStep,

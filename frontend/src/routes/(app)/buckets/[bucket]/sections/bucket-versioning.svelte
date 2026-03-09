@@ -8,7 +8,7 @@
 		get_bucket_versioning,
 		set_bucket_versioning,
 		type BucketVersioning,
-	} from '$lib/buckets.remote.js';
+	} from '$lib/remote/buckets.remote.js';
 
 	let {
 		bucket,

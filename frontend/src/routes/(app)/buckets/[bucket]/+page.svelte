@@ -14,8 +14,8 @@
 	import { goto } from '$app/navigation';
 	import BackButton from '$lib/components/ui/back-button.svelte';
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
-	import { get_tenant_chargeback } from '$lib/tenant-info.remote.js';
-	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
+	import { get_tenant_chargeback } from '$lib/remote/tenant-info.remote.js';
+	import { get_namespaces, type Namespace } from '$lib/remote/namespaces.remote.js';
 	import BucketVersioning from './sections/bucket-versioning.svelte';
 	import BucketAcl from './sections/bucket-acl.svelte';
 	import BucketObjectBrowser from './sections/bucket-object-browser.svelte';

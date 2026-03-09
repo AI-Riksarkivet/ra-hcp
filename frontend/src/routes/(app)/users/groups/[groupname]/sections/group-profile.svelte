@@ -5,7 +5,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { HelpCircle } from 'lucide-svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
-	import { get_group, update_group } from '$lib/users.remote.js';
+	import { get_group, update_group } from '$lib/remote/users.remote.js';
 	import { GROUP_ROLES, ROLE_DESCRIPTIONS, getGroupName, getGroupRoles } from '$lib/constants.js';
 	import type { GroupAccount } from '$lib/constants.js';
 	import SaveButton from '$lib/components/ui/save-button.svelte';

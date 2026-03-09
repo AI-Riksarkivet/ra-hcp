@@ -2,7 +2,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
-	import { get_tenant, type TenantInfo } from '$lib/tenant-info.remote.js';
+	import { get_tenant, type TenantInfo } from '$lib/remote/tenant-info.remote.js';
 
 	let {
 		tenant,

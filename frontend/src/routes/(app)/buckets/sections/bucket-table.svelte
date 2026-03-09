@@ -10,13 +10,13 @@
 	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
-	import { get_buckets, delete_bucket } from '$lib/buckets.remote.js';
+	import { get_buckets, delete_bucket } from '$lib/remote/buckets.remote.js';
 	import {
 		get_tenant,
 		get_tenant_statistics,
 		get_tenant_chargeback,
-	} from '$lib/tenant-info.remote.js';
-	import { get_namespaces, type Namespace } from '$lib/namespaces.remote.js';
+	} from '$lib/remote/tenant-info.remote.js';
+	import { get_namespaces, type Namespace } from '$lib/remote/namespaces.remote.js';
 	import {
 		formatDate,
 		formatBytes,

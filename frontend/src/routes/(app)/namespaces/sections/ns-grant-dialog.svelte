@@ -14,7 +14,7 @@
 		get_user_permissions,
 		set_user_permissions,
 		type DataAccessPermissions,
-	} from '$lib/users.remote.js';
+	} from '$lib/remote/users.remote.js';
 
 	const PERMISSION_KEYS = ['READ', 'WRITE', 'DELETE', 'PURGE', 'SEARCH', 'BROWSE'] as const;
 
