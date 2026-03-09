@@ -52,11 +52,11 @@
 				<Tooltip.Trigger>
 					{#snippet child({ props })}
 						<Button
+							{...props}
 							variant="ghost"
 							size="icon"
 							class="h-8 w-8 shrink-0"
 							onclick={() => (revealed = !revealed)}
-							{...props}
 						>
 							{#if revealed}<EyeOff class="h-3.5 w-3.5" />{:else}<Eye class="h-3.5 w-3.5" />{/if}
 						</Button>
@@ -68,7 +68,7 @@
 		<Tooltip.Root>
 			<Tooltip.Trigger>
 				{#snippet child({ props })}
-					<Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={copy} {...props}>
+					<Button {...props} variant="ghost" size="icon" class="h-8 w-8 shrink-0" onclick={copy}>
 						{#if copied}<Check class="h-3.5 w-3.5 text-emerald-500" />{:else}<Copy
 								class="h-3.5 w-3.5"
 							/>{/if}

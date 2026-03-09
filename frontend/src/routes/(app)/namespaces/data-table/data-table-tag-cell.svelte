@@ -13,7 +13,7 @@
 	}: {
 		tags: string[];
 		editing: boolean;
-		onsave: (tags: string[]) => void;
+		onsave: (tags: string[]) => void | Promise<void>;
 		onstartedit: () => void;
 		oncanceledit: () => void;
 	} = $props();
@@ -50,8 +50,11 @@
 
 	async function handleSave() {
 		saving = true;
-		onsave(editTags);
-		saving = false;
+		try {
+			await onsave(editTags);
+		} finally {
+			saving = false;
+		}
 	}
 </script>
 

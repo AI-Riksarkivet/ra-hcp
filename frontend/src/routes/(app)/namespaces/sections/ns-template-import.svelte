@@ -244,10 +244,13 @@
 				const corsStr = typeof ns.cors === 'string' ? ns.cors : JSON.stringify(ns.cors);
 				await runStep(() => set_ns_cors({ tenant, name, body: { cors: corsStr } }));
 			}
-			if (ns.replicationCollision)
-				await runStep(() =>
-					update_repl_collision({ tenant, name, body: ns.replicationCollision! })
-				);
+			if (ns.replicationCollision) {
+				const replBody = { ...ns.replicationCollision };
+				if (!replBody.deleteEnabled) {
+					delete replBody.deleteDays;
+				}
+				await runStep(() => update_repl_collision({ tenant, name, body: replBody }));
+			}
 		}
 
 		const lastName =

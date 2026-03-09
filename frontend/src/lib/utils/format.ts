@@ -9,7 +9,9 @@ export function formatBytes(bytes: number, decimals = 1): string {
 }
 
 export function formatDate(date: string | Date): string {
+  if (!date || (typeof date === "string" && date.trim() === "")) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("sv-SE", {
     year: "numeric",
     month: "short",
