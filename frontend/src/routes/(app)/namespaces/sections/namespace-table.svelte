@@ -13,6 +13,7 @@
 	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import { update_namespace, delete_namespace, type Namespace } from '$lib/namespaces.remote.js';
+	import { type ChargebackReport } from '$lib/tenant-info.remote.js';
 	import {
 		formatBytes,
 		parseQuotaBytes,
@@ -42,7 +43,7 @@
 	}: {
 		tenant: string;
 		nsData: RemoteQuery<Namespace[]>;
-		chargebackData: RemoteQuery<Record<string, unknown>>;
+		chargebackData: RemoteQuery<ChargebackReport>;
 		ongrantaccess?: (namespaceNames: string[]) => void;
 	} = $props();
 

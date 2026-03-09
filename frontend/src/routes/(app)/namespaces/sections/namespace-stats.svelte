@@ -4,7 +4,11 @@
 	import StatCard from '$lib/components/ui/stat-card.svelte';
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
-	import { get_tenant, get_tenant_statistics } from '$lib/tenant-info.remote.js';
+	import {
+		get_tenant,
+		get_tenant_statistics,
+		type ChargebackReport,
+	} from '$lib/tenant-info.remote.js';
 	import { type Namespace } from '$lib/namespaces.remote.js';
 	import { get_users } from '$lib/users.remote.js';
 	import {
@@ -22,7 +26,7 @@
 	}: {
 		tenant: string;
 		nsData: RemoteQuery<Namespace[]>;
-		chargebackData: RemoteQuery<Record<string, unknown>>;
+		chargebackData: RemoteQuery<ChargebackReport>;
 	} = $props();
 
 	let tenantInfo = $derived(get_tenant({ tenant }));
