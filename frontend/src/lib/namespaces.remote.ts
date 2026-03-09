@@ -12,6 +12,7 @@ export interface Namespace {
   versioningSettings?: { enabled: boolean };
   tags?: { tag: string[] };
   owner?: string;
+  ownerType?: string;
   creationTime?: string;
 }
 
@@ -77,6 +78,7 @@ export const create_namespace = command(
     searchEnabled: z.boolean().optional(),
     versioningEnabled: z.boolean().optional(),
     tags: z.array(z.string()).optional(),
+    owner: z.string().optional(),
   }),
   async ({ tenant, ...body }) => {
     const payload: Record<string, unknown> = { name: body.name };
@@ -89,6 +91,10 @@ export const create_namespace = command(
       payload.versioningSettings = { enabled: body.versioningEnabled };
     }
     if (body.tags) payload.tags = { tag: body.tags };
+    if (body.owner) {
+      payload.owner = body.owner;
+      payload.ownerType = "LOCAL";
+    }
     const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/namespaces`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

@@ -1,14 +1,18 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-	import { HelpCircle } from 'lucide-svelte';
+	import { HelpCircle, Pencil, Check, X } from 'lucide-svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import { formatDate, formatBytes, parseQuotaBytes, getStorageUsed } from '$lib/utils/format.js';
 	import type { ChargebackEntry } from '$lib/utils/format.js';
 	import { get_tenant_chargeback } from '$lib/tenant-info.remote.js';
+	import { toast } from 'svelte-sonner';
 	import {
 		get_namespace,
 		get_ns_statistics,
+		update_namespace,
 		type Namespace,
 		type NsStatistics,
 	} from '$lib/namespaces.remote.js';
@@ -35,9 +39,45 @@
 		)
 	);
 
+	// Owner editing
+	let editingOwner = $state(false);
+	let ownerInput = $state('');
+	let savingOwner = $state(false);
+
+	function startEditOwner() {
+		ownerInput = ns?.owner ?? '';
+		editingOwner = true;
+	}
+
+	function cancelEditOwner() {
+		editingOwner = false;
+	}
+
+	async function saveOwner() {
+		if (!nsData) return;
+		savingOwner = true;
+		try {
+			await update_namespace({
+				tenant,
+				name: namespaceName,
+				body: {
+					owner: ownerInput || '',
+					ownerType: ownerInput ? 'LOCAL' : '',
+				},
+			}).updates(nsData);
+			toast.success('Namespace owner updated');
+			editingOwner = false;
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to update owner');
+		} finally {
+			savingOwner = false;
+		}
+	}
+
 	const FIELD_DESCRIPTIONS: Record<string, string> = {
 		description: 'A human-readable summary of the namespace purpose.',
-		owner: 'The HCP user account that owns this namespace.',
+		owner:
+			'The HCP user account that owns this namespace. The owner sees this namespace as an S3 bucket.',
 		hashScheme: 'The algorithm used to generate object content hashes (e.g. SHA-256, MD5).',
 		created: 'The date and time the namespace was created.',
 		storageUsed:
@@ -94,7 +134,49 @@
 					</div>
 					<div>
 						{@render fieldLabel('Owner', 'owner')}
-						<p class="mt-0.5 text-sm">{ns.owner || '—'}</p>
+						{#if editingOwner}
+							<div class="mt-0.5 flex items-center gap-1">
+								<Input
+									class="h-7 w-36 text-sm"
+									bind:value={ownerInput}
+									placeholder="username"
+									disabled={savingOwner}
+									onkeydown={(e: KeyboardEvent) => {
+										if (e.key === 'Enter') saveOwner();
+										if (e.key === 'Escape') cancelEditOwner();
+									}}
+								/>
+								<Button
+									variant="ghost"
+									size="icon"
+									class="h-7 w-7"
+									onclick={saveOwner}
+									disabled={savingOwner}
+								>
+									<Check class="h-3.5 w-3.5" />
+								</Button>
+								<Button
+									variant="ghost"
+									size="icon"
+									class="h-7 w-7"
+									onclick={cancelEditOwner}
+									disabled={savingOwner}
+								>
+									<X class="h-3.5 w-3.5" />
+								</Button>
+							</div>
+						{:else}
+							<p class="mt-0.5 flex items-center gap-1 text-sm">
+								{ns.owner || '—'}
+								<button
+									class="inline-flex text-muted-foreground hover:text-foreground"
+									onclick={startEditOwner}
+									title="Change owner"
+								>
+									<Pencil class="h-3 w-3" />
+								</button>
+							</p>
+						{/if}
 					</div>
 					<div>
 						{@render fieldLabel('Hash Scheme', 'hashScheme')}

@@ -40,6 +40,7 @@
 			const hashScheme = (formData.get('hashScheme') as string) || undefined;
 			const searchEnabled = formData.has('searchEnabled');
 			const versioningEnabled = formData.has('versioningEnabled');
+			const owner = (formData.get('owner') as string) || undefined;
 			await create_namespace({
 				tenant,
 				name,
@@ -50,6 +51,7 @@
 				searchEnabled,
 				versioningEnabled,
 				tags: createTags.length > 0 ? createTags : undefined,
+				owner,
 			}).updates(nsData);
 			toast.success('Namespace created successfully');
 			open = false;
@@ -78,6 +80,11 @@
 	<div class="space-y-2">
 		<Label for="ns-desc">Description</Label>
 		<Input id="ns-desc" name="description" placeholder="Optional description" />
+	</div>
+	<div class="space-y-2">
+		<Label for="ns-owner">Owner</Label>
+		<Input id="ns-owner" name="owner" placeholder="HCP username (optional)" />
+		<p class="text-xs text-muted-foreground">The owner sees this namespace as an S3 bucket.</p>
 	</div>
 	<div class="grid grid-cols-2 gap-4">
 		<div class="space-y-2">

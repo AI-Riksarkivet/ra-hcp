@@ -67,6 +67,14 @@
 		return map;
 	});
 
+	let bucketOwnerMap = $derived.by(() => {
+		const map = new Map<string, string>();
+		for (const ns of namespaces) {
+			if (ns.owner) map.set(ns.name, ns.owner);
+		}
+		return map;
+	});
+
 	let bucketData = get_buckets();
 	let owner = $derived(
 		bucketData.current?.owner as {
@@ -80,7 +88,19 @@
 
 	let search = $state('');
 	let dateFilter = $state('');
-	let buckets = $derived((bucketData.current?.buckets ?? []) as BucketRow[]);
+	let s3Buckets = $derived((bucketData.current?.buckets ?? []) as BucketRow[]);
+
+	// Merge S3 buckets (owned) with all accessible namespaces
+	let buckets = $derived.by(() => {
+		const s3Set = new Set(s3Buckets.map((b) => b.name));
+		const merged = [...s3Buckets];
+		for (const ns of namespaces) {
+			if (!s3Set.has(ns.name)) {
+				merged.push({ name: ns.name, creation_date: ns.creationTime ?? '' });
+			}
+		}
+		return merged;
+	});
 
 	let filteredBuckets = $derived(
 		buckets.filter((b) => {
@@ -163,7 +183,7 @@
 			{
 				id: 'owner',
 				header: 'Owner',
-				cell: () => (ownerName || '-') as string,
+				cell: ({ row }) => (bucketOwnerMap.get(row.original.name) || ownerName || '-') as string,
 				meta: { cellClass: 'px-4 py-3 text-muted-foreground' },
 			},
 			{
