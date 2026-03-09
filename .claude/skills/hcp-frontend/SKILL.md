@@ -207,12 +207,99 @@ Each section is a self-contained Card that:
 - `onclick={handler}` not `on:click={handler}`
 - `page.data.tenant` from `$app/state` (NOT `$app/stores`)
 
+## Storybook
+
+Visual component testing with **Storybook 10** + **Svelte CSF v5**.
+
+**Commands:** `make storybook` (dev on port 6006) / `make build-storybook` (static build)
+
+**CI:** `.github/workflows/storybook.yml` builds Storybook on PRs touching `frontend/`.
+
+**Running interaction tests in Storybook:**
+1. `make storybook` → open `http://localhost:6006`
+2. Sidebar → **Tests > DataTable Interactions** (or any story with play functions)
+3. Bottom panel → click **"Interactions"** tab to see step-by-step results
+4. Click the **play button** (triangle) in the Interactions panel to re-run tests
+5. Each step shows pass/fail — click a step to inspect its state
+
+**Story file convention:**
+- Co-locate stories next to their component: `button.stories.svelte` beside `button.svelte`
+- Stories live in `src/` (required for `$lib/` alias resolution) but are excluded from production builds
+- Use Svelte CSF format with `defineMeta` from `@storybook/addon-svelte-csf`
+
+**When to add/update stories:**
+- New reusable UI component → add a `*.stories.svelte` file with key variants
+- Modified component props/behavior → update existing story to cover the change
+- Stories are for **visual testing only** — they render components in isolation with mock data
+- They do NOT test logic, API calls, or page-level behavior
+
+**Story template:**
+```svelte
+<script module>
+  import { defineMeta } from '@storybook/addon-svelte-csf';
+  import MyComponent from './my-component.svelte';
+
+  const { Story } = defineMeta({
+    title: 'UI/MyComponent',
+    component: MyComponent,
+  });
+</script>
+
+<Story name="Default" args={{ someProp: 'value' }}>
+  {#snippet template(args)}
+    <MyComponent {...args} />
+  {/snippet}
+</Story>
+```
+
+**For data-table stories:** use `createSvelteTable` with inline mock data, `renderComponent`/`renderSnippet` for cells, and `toast` for action feedback instead of real API calls.
+
+### Interaction Tests (play functions)
+
+For automated UI assertions (click, type, assert), use **CSF3 `.stories.ts`** files with play functions. The Svelte CSF addon does not support play functions, so interaction tests are written in TypeScript CSF3 format alongside the `.stories.svelte` visual stories.
+
+**Pattern:** create a test harness `.svelte` component with all mock data inline (no props), then write CSF3 stories that target it:
+
+```typescript
+// my-component-interactions.stories.ts
+import type { Meta, StoryObj } from '@storybook/svelte';
+import { expect, userEvent, within } from 'storybook/test';
+import TestHarness from './my-component-test-harness.svelte';
+
+const meta = {
+  title: 'Tests/MyComponent',
+  component: TestHarness,
+} satisfies Meta<TestHarness>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const FiltersCorrectly: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const input = canvas.getByPlaceholderText('Search...');
+    await userEvent.type(input, 'query');
+    await expect(canvas.getByText('expected-result')).toBeInTheDocument();
+  },
+};
+```
+
+**Key conventions:**
+- Test harness files: `*-test-harness.svelte` — self-contained, no props, inline mock data
+- Interaction story files: `*-interactions.stories.ts` — CSF3 format with play functions
+- Import `expect`, `userEvent`, `within`, `fn` from `storybook/test`
+- Use `within(canvasElement)` to scope queries to the story canvas
+- See `data-table-interactions.stories.ts` for a full example with search, selection, sorting, and bulk actions
+
 ## Naming Conventions
 
 - Remote files: `*.remote.ts` (e.g., `namespaces.remote.ts`)
 - Section components: `ns-*.svelte`, `settings-*.svelte`, `user-*.svelte`
 - Dialog components: `*-dialog.svelte` (e.g., `bucket-create-dialog.svelte`)
 - Utilities: `use-*.svelte.ts` for composables with reactive state
+- Storybook visual stories: `*.stories.svelte` (Svelte CSF, co-located with component)
+- Storybook interaction tests: `*-interactions.stories.ts` (CSF3 with play functions)
+- Test harnesses: `*-test-harness.svelte` (self-contained wrapper for interaction tests)
 - Roles enum: `ADMINISTRATOR`, `SECURITY`, `MONITOR`, `COMPLIANCE`
 
 ## Full-Stack Feature Checklist

@@ -7,7 +7,7 @@ export PATH := $(HOME)/.deno/bin:$(PATH)
 .PHONY: help setup install-deno install-uv setup-hooks skills \
         fmt lint quality \
         run-api run-api-mock \
-        frontend-dev frontend-build \
+        frontend-dev frontend-build storybook build-storybook \
         checks test test-integration full-serve build
 
 ## help: list available targets
@@ -77,6 +77,14 @@ frontend-dev:
 ## frontend-build: build the frontend for production
 frontend-build:
 	cd frontend && deno task build
+
+## storybook: start Storybook dev server on port 6006
+storybook:
+	cd frontend && deno task storybook
+
+## build-storybook: build Storybook static site
+build-storybook:
+	cd frontend && deno task build-storybook
 
 # ── Dagger ───────────────────────────────────────────────────────────
 
