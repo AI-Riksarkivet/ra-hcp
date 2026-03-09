@@ -8,6 +8,11 @@
 		component: FormDialog,
 		tags: ['autodocs'],
 		args: {
+			title: 'Create Namespace',
+			description: 'Create a new namespace in the tenant.',
+			submitLabel: 'Create',
+			loading: false,
+			error: '',
 			onsubmit: fn(),
 		},
 		argTypes: {
@@ -31,14 +36,18 @@
 </script>
 
 <Story name="Default">
-	{#snippet template()}
+	{#snippet template(args)}
 		<Button onclick={() => (defaultOpen = true)}>Open Dialog</Button>
 		<FormDialog
 			bind:open={defaultOpen}
-			title="Create Namespace"
-			description="Create a new namespace in the tenant."
+			title={args.title}
+			description={args.description}
+			submitLabel={args.submitLabel}
+			loading={args.loading}
+			error={args.error}
 			onsubmit={(e) => {
 				e.preventDefault();
+				args.onsubmit?.(e);
 				defaultOpen = false;
 			}}
 		>
@@ -56,14 +65,20 @@
 	{/snippet}
 </Story>
 
-<Story name="With Error">
-	{#snippet template()}
+<Story name="With Error" args={{ error: "Namespace 'my-namespace' already exists." }}>
+	{#snippet template(args)}
 		<Button onclick={() => (errorOpen = true)}>Open With Error</Button>
 		<FormDialog
 			bind:open={errorOpen}
-			title="Create Namespace"
-			error="Namespace 'my-namespace' already exists."
-			onsubmit={(e) => e.preventDefault()}
+			title={args.title}
+			description={args.description}
+			submitLabel={args.submitLabel}
+			loading={args.loading}
+			error={args.error}
+			onsubmit={(e) => {
+				e.preventDefault();
+				args.onsubmit?.(e);
+			}}
 		>
 			<div>
 				<Label>Name</Label>
@@ -73,14 +88,20 @@
 	{/snippet}
 </Story>
 
-<Story name="Loading">
-	{#snippet template()}
+<Story name="Loading" args={{ loading: true }}>
+	{#snippet template(args)}
 		<Button onclick={() => (loadingOpen = true)}>Open Loading</Button>
 		<FormDialog
 			bind:open={loadingOpen}
-			title="Create Namespace"
-			loading={true}
-			onsubmit={(e) => e.preventDefault()}
+			title={args.title}
+			description={args.description}
+			submitLabel={args.submitLabel}
+			loading={args.loading}
+			error={args.error}
+			onsubmit={(e) => {
+				e.preventDefault();
+				args.onsubmit?.(e);
+			}}
 		>
 			<div>
 				<Label>Name</Label>
