@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "dependencies": {
+    "@storybook/addon-docs": "^10.2.16",
     "@storybook/addon-svelte-csf": "^5.0.11",
     "@storybook/svelte": "^10.2.16",
     "@storybook/sveltekit": "^10.2.16",

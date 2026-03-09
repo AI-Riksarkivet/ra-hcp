@@ -1,11 +1,6 @@
 name: Storybook
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/storybook.yml"
   pull_request:
     paths:
       - "frontend/**"
@@ -35,7 +30,7 @@ jobs:
         working-directory: frontend
         run: deno task build-storybook
 
-      - name: Upload Storybook artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: storybook-static

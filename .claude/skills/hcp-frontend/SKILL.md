@@ -213,7 +213,16 @@ Visual component testing with **Storybook 10** + **Svelte CSF v5**.
 
 **Commands:** `make storybook` (dev on port 6006) / `make build-storybook` (static build)
 
-**CI:** `.github/workflows/storybook.yml` builds Storybook on PRs touching `frontend/`.
+**CI:** `.github/workflows/storybook.yml` builds on PRs. On `main`, `docs.yml` builds both Zensical docs and Storybook, deploying to GitHub Pages at `/storybook/`.
+
+**Actions panel (Svelte 5):** Svelte 5 uses callback props instead of `on:event`. Use `fn()` from `storybook/test` in `args` for Actions panel logging:
+```svelte
+import { fn } from 'storybook/test';
+const { Story } = defineMeta({
+  component: MyButton,
+  args: { onclick: fn() },
+});
+```
 
 **Running interaction tests in Storybook:**
 1. `make storybook` → open `http://localhost:6006`

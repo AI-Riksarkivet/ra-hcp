@@ -1,11 +1,15 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import { fn } from 'storybook/test';
 	import Button from './button.svelte';
 
 	const { Story } = defineMeta({
 		title: 'UI/Button',
 		component: Button,
 		tags: ['autodocs'],
+		args: {
+			onclick: fn(),
+		},
 		argTypes: {
 			variant: {
 				control: 'select',

@@ -8,6 +8,9 @@ permissions:
   contents: read
   pages: write
   id-token: write
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 jobs:
   deploy:
     environment:
@@ -17,11 +20,28 @@ jobs:
     steps:
       - uses: actions/configure-pages@v5
       - uses: actions/checkout@v6
+
+      # Build Zensical docs
       - uses: actions/setup-python@v6
         with:
           python-version: 3.x
       - run: pip install zensical mkdocstrings-python
       - run: zensical build --clean
+
+      # Build Storybook and embed in docs site
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: deno install
+      - name: Build Storybook
+        working-directory: frontend
+        run: deno task build-storybook
+      - name: Copy Storybook into docs site
+        run: cp -r frontend/storybook-static site/storybook
+
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site
