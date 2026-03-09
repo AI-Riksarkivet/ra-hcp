@@ -2,6 +2,9 @@
  * CSF3 interaction tests for FormDialog.
  *
  * Tests form submission, validation errors, and cancel behavior.
+ * Note: Bits UI Dialog renders via a portal into document.body,
+ * so dialog content must be queried from document.body, not canvasElement.
+ * Uses findBy* (async) queries since the portal content renders asynchronously.
  *
  * Run `make storybook` and open the "Interactions" panel to see results.
  */
@@ -18,25 +21,33 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/** Query helper — dialog content is portaled to document.body */
+function getPage() {
+  return within(document.body);
+}
+
 /**
  * Verify the dialog renders with title and description.
  */
 export const RendersDialog: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+  play: async () => {
+    const page = getPage();
 
-    await expect(canvas.getByText("Create Namespace")).toBeInTheDocument();
+    // Use findBy* to wait for the portaled dialog content
     await expect(
-      canvas.getByText("Create a new namespace."),
+      await page.findByText("Create Namespace"),
     ).toBeInTheDocument();
     await expect(
-      canvas.getByPlaceholderText("my-namespace"),
+      await page.findByText("Create a new namespace."),
     ).toBeInTheDocument();
     await expect(
-      canvas.getByRole("button", { name: "Create" }),
+      await page.findByPlaceholderText("my-namespace"),
     ).toBeInTheDocument();
     await expect(
-      canvas.getByRole("button", { name: "Cancel" }),
+      await page.findByRole("button", { name: "Create" }),
+    ).toBeInTheDocument();
+    await expect(
+      await page.findByRole("button", { name: "Cancel" }),
     ).toBeInTheDocument();
   },
 };
@@ -45,13 +56,15 @@ export const RendersDialog: Story = {
  * Submit with empty name shows validation error.
  */
 export const ValidationError: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const submitBtn = canvas.getByRole("button", { name: "Create" });
+  play: async () => {
+    const page = getPage();
+    const submitBtn = await page.findByRole("button", { name: "Create" });
 
     await userEvent.click(submitBtn);
 
-    await expect(canvas.getByText("Name is required.")).toBeInTheDocument();
+    await expect(
+      await page.findByText("Name is required."),
+    ).toBeInTheDocument();
   },
 };
 
@@ -59,16 +72,16 @@ export const ValidationError: Story = {
  * Submit with duplicate name shows conflict error.
  */
 export const ConflictError: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const input = canvas.getByPlaceholderText("my-namespace");
-    const submitBtn = canvas.getByRole("button", { name: "Create" });
+  play: async () => {
+    const page = getPage();
+    const input = await page.findByPlaceholderText("my-namespace");
+    const submitBtn = await page.findByRole("button", { name: "Create" });
 
     await userEvent.type(input, "existing");
     await userEvent.click(submitBtn);
 
     await expect(
-      canvas.getByText("Namespace 'existing' already exists."),
+      await page.findByText("Namespace 'existing' already exists."),
     ).toBeInTheDocument();
   },
 };
@@ -78,15 +91,17 @@ export const ConflictError: Story = {
  */
 export const SuccessfulSubmit: Story = {
   play: async ({ canvasElement }) => {
+    const page = getPage();
     const canvas = within(canvasElement);
-    const input = canvas.getByPlaceholderText("my-namespace");
-    const submitBtn = canvas.getByRole("button", { name: "Create" });
+    const input = await page.findByPlaceholderText("my-namespace");
+    const submitBtn = await page.findByRole("button", { name: "Create" });
 
     await userEvent.type(input, "new-namespace");
     await userEvent.click(submitBtn);
 
+    // Success message renders in the harness (inside canvasElement), not the dialog
     await expect(
-      canvas.getByTestId("success-msg"),
+      await canvas.findByTestId("success-msg"),
     ).toHaveTextContent("Created namespace: new-namespace");
   },
 };

@@ -71,9 +71,9 @@ export const SaveConfiguration: Story = {
     const saveButton = canvas.getByRole("button", { name: /save/i });
     await userEvent.click(saveButton);
 
-    // Verify save was called
-    await expect(canvas.getByTestId("save-result")).toHaveTextContent(
-      "CORS saved",
-    );
+    // Verify save was called (async — wait for the handler to complete)
+    await expect(
+      await canvas.findByTestId("save-result"),
+    ).toHaveTextContent("CORS saved");
   },
 };

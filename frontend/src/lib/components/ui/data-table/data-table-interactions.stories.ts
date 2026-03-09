@@ -4,6 +4,9 @@
  * These use play() functions with @testing-library/user-event and
  * storybook/test assertions to automate UI interactions in the browser.
  *
+ * Note: Bits UI Checkbox uses pointer-events:none internally, so checkbox
+ * tests use userEvent.setup({ pointerEventsCheck: 0 }).
+ *
  * Run `make storybook` and open the "Interactions" panel to see results.
  */
 import type { Meta, StoryObj } from "@storybook/svelte";
@@ -95,23 +98,24 @@ export const SearchNoResults: Story = {
  */
 export const RowSelection: Story = {
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const canvas = within(canvasElement);
     const checkboxes = canvas.getAllByRole("checkbox");
 
     // First checkbox is "select all", rest are row checkboxes
     // Click first row checkbox (index 1)
-    await userEvent.click(checkboxes[1]);
+    await user.click(checkboxes[1]);
 
     // Selection bar should appear — use exact text to avoid matching footer
     await expect(canvas.getByText("1 selected")).toBeInTheDocument();
 
     // Click second row checkbox
-    await userEvent.click(checkboxes[2]);
+    await user.click(checkboxes[2]);
     await expect(canvas.getByText("2 selected")).toBeInTheDocument();
 
     // Click "Deselect All"
     const deselectBtn = canvas.getByText("Deselect All");
-    await userEvent.click(deselectBtn);
+    await user.click(deselectBtn);
 
     // Selection bar should disappear
     await expect(canvas.queryByText("Deselect All")).not.toBeInTheDocument();
@@ -123,17 +127,18 @@ export const RowSelection: Story = {
  */
 export const SelectAll: Story = {
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const canvas = within(canvasElement);
     const checkboxes = canvas.getAllByRole("checkbox");
 
     // First checkbox is "select all"
-    await userEvent.click(checkboxes[0]);
+    await user.click(checkboxes[0]);
 
     // Should show "10 selected" in the bar
     await expect(canvas.getByText("10 selected")).toBeInTheDocument();
 
     // Deselect all
-    await userEvent.click(checkboxes[0]);
+    await user.click(checkboxes[0]);
     await expect(canvas.queryByText("Deselect All")).not.toBeInTheDocument();
   },
 };
@@ -175,6 +180,7 @@ export const ColumnSorting: Story = {
  */
 export const BulkActionBar: Story = {
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const canvas = within(canvasElement);
     const checkboxes = canvas.getAllByRole("checkbox");
 
@@ -184,9 +190,9 @@ export const BulkActionBar: Story = {
     ).not.toBeInTheDocument();
 
     // Select 3 rows
-    await userEvent.click(checkboxes[1]);
-    await userEvent.click(checkboxes[2]);
-    await userEvent.click(checkboxes[3]);
+    await user.click(checkboxes[1]);
+    await user.click(checkboxes[2]);
+    await user.click(checkboxes[3]);
 
     // Bulk bar should show with correct count and all action buttons
     await expect(canvas.getByText("3 selected")).toBeInTheDocument();
@@ -196,6 +202,6 @@ export const BulkActionBar: Story = {
 
     // Clean up
     const deselectBtn = canvas.getByText("Deselect All");
-    await userEvent.click(deselectBtn);
+    await user.click(deselectBtn);
   },
 };
