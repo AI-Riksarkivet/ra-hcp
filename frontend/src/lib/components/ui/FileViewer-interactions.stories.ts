@@ -37,7 +37,7 @@ export const RendersFirstFile: Story = {
       await page.findByRole("heading", { name: "photo-001.jpg" }),
     ).toBeInTheDocument();
     await expect(await page.findByText("1 of 3")).toBeInTheDocument();
-    await expect(await page.findByText("240 KB")).toBeInTheDocument();
+    await expect(await page.findByText("240.0 KB")).toBeInTheDocument();
     await expect(await page.findByText("STANDARD")).toBeInTheDocument();
   },
 };
