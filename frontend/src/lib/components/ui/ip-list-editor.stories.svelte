@@ -6,6 +6,16 @@
 		title: 'UI/IpListEditor',
 		component: IpListEditor,
 		tags: ['autodocs'],
+		argTypes: {
+			label: { control: 'text' },
+			placeholder: { control: 'text' },
+			variant: {
+				control: 'select',
+				options: ['secondary', 'destructive'],
+			},
+			emptyText: { control: 'text' },
+			disabled: { control: 'boolean' },
+		},
 	});
 </script>
 

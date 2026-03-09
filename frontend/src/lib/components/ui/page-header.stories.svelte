@@ -6,6 +6,14 @@
 		title: 'UI/PageHeader',
 		component: PageHeader,
 		tags: ['autodocs'],
+		args: {
+			title: 'Namespaces',
+			description: 'Manage tenant namespaces',
+		},
+		argTypes: {
+			title: { control: 'text' },
+			description: { control: 'text' },
+		},
 	});
 </script>
 
@@ -25,11 +33,11 @@
 	{/snippet}
 </Story>
 
-<Story name="Long Description">
-	{#snippet template()}
-		<PageHeader
-			title="Settings"
-			description="Configure tenant-wide settings including authentication, storage quotas, and network policies."
-		/>
-	{/snippet}
-</Story>
+<Story
+	name="Long Description"
+	args={{
+		title: 'Settings',
+		description:
+			'Configure tenant-wide settings including authentication, storage quotas, and network policies.',
+	}}
+/>

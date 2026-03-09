@@ -6,6 +6,12 @@
 		title: 'UI/ErrorBanner',
 		component: ErrorBanner,
 		tags: ['autodocs'],
+		args: {
+			message: 'Failed to save settings. Please try again.',
+		},
+		argTypes: {
+			message: { control: 'text' },
+		},
 	});
 </script>
 
@@ -13,10 +19,10 @@
 
 <Story name="Empty" args={{ message: '' }} />
 
-<Story name="Long Message">
-	{#snippet template()}
-		<ErrorBanner
-			message="The namespace quota has been exceeded. Current usage is 150 GB which exceeds the hard quota of 100 GB. Please contact your administrator to increase the quota or delete unused objects."
-		/>
-	{/snippet}
-</Story>
+<Story
+	name="Long Message"
+	args={{
+		message:
+			'The namespace quota has been exceeded. Current usage is 150 GB which exceeds the hard quota of 100 GB. Please contact your administrator to increase the quota or delete unused objects.',
+	}}
+/>

@@ -6,6 +6,14 @@
 		title: 'UI/StatCard',
 		component: StatCard,
 		tags: ['autodocs'],
+		argTypes: {
+			label: { control: 'text' },
+			value: { control: 'text' },
+			delay: {
+				control: 'select',
+				options: ['', 'delay-75', 'delay-150', 'delay-200'],
+			},
+		},
 	});
 </script>
 
@@ -17,18 +25,18 @@
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 </script>
 
-<Story name="Default">
-	{#snippet template()}
+<Story name="Default" args={{ label: 'Total Namespaces', value: '24' }}>
+	{#snippet template(args)}
 		<div class="w-72">
-			<StatCard label="Total Namespaces" value="24" icon={Database} />
+			<StatCard {...args} icon={Database} />
 		</div>
 	{/snippet}
 </Story>
 
-<Story name="With Children">
-	{#snippet template()}
+<Story name="With Children" args={{ label: 'Storage Used', value: '1.2 TB' }}>
+	{#snippet template(args)}
 		<div class="w-72">
-			<StatCard label="Storage Used" value="1.2 TB" icon={HardDrive}>
+			<StatCard {...args} icon={HardDrive}>
 				<div class="mt-2">
 					<StorageProgressBar percent={62} />
 					<p class="mt-1 text-xs text-muted-foreground">62% of 2 TB quota</p>

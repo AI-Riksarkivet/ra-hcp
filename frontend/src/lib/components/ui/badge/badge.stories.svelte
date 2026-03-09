@@ -6,7 +6,13 @@
 		title: 'UI/Badge',
 		component: Badge,
 		tags: ['autodocs'],
+		render: template,
+		args: {
+			label: 'Badge',
+			variant: 'default',
+		},
 		argTypes: {
+			label: { control: 'text' },
 			variant: {
 				control: 'select',
 				options: ['default', 'secondary', 'destructive', 'outline', 'success', 'warning'],
@@ -15,47 +21,24 @@
 	});
 </script>
 
-<Story name="Default" args={{ variant: 'default' }}>
-	{#snippet template(args)}
-		<Badge {...args}>Default</Badge>
-	{/snippet}
-</Story>
+{#snippet template(args)}
+	{@const { label, ...badgeProps } = args}
+	<Badge {...badgeProps}>{label}</Badge>
+{/snippet}
 
-<Story name="Secondary" args={{ variant: 'secondary' }}>
-	{#snippet template(args)}
-		<Badge {...args}>Secondary</Badge>
-	{/snippet}
-</Story>
+<Story name="Default" args={{ variant: 'default', label: 'Default' }} />
 
-<Story name="Destructive" args={{ variant: 'destructive' }}>
-	{#snippet template(args)}
-		<Badge {...args}>Destructive</Badge>
-	{/snippet}
-</Story>
+<Story name="Secondary" args={{ variant: 'secondary', label: 'Secondary' }} />
 
-<Story name="Outline" args={{ variant: 'outline' }}>
-	{#snippet template(args)}
-		<Badge {...args}>Outline</Badge>
-	{/snippet}
-</Story>
+<Story name="Destructive" args={{ variant: 'destructive', label: 'Destructive' }} />
 
-<Story name="Success" args={{ variant: 'success' }}>
-	{#snippet template(args)}
-		<Badge {...args}>Success</Badge>
-	{/snippet}
-</Story>
+<Story name="Outline" args={{ variant: 'outline', label: 'Outline' }} />
 
-<Story name="Warning" args={{ variant: 'warning' }}>
-	{#snippet template(args)}
-		<Badge {...args}>Warning</Badge>
-	{/snippet}
-</Story>
+<Story name="Success" args={{ variant: 'success', label: 'Success' }} />
 
-<Story name="As Link" args={{ variant: 'default', href: '#' }}>
-	{#snippet template(args)}
-		<Badge {...args}>Clickable</Badge>
-	{/snippet}
-</Story>
+<Story name="Warning" args={{ variant: 'warning', label: 'Warning' }} />
+
+<Story name="As Link" args={{ variant: 'default', href: '#', label: 'Clickable' }} />
 
 <Story name="All Variants">
 	{#snippet template()}

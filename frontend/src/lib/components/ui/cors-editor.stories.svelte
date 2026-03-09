@@ -7,19 +7,29 @@
 		title: 'UI/CorsEditor',
 		component: CorsEditor,
 		tags: ['autodocs'],
+		args: {
+			corsXml: '',
+			loading: false,
+			title: 'CORS Configuration',
+			description: '',
+			onsave: fn(),
+			ondelete: fn(),
+		},
+		argTypes: {
+			corsXml: { control: 'text' },
+			loading: { control: 'boolean' },
+			title: { control: 'text' },
+			description: { control: 'text' },
+		},
 	});
 </script>
 
-<Story name="Empty">
-	{#snippet template()}
-		<CorsEditor corsXml="" onsave={fn()} ondelete={fn()} />
-	{/snippet}
-</Story>
+<Story name="Empty" args={{ corsXml: '' }} />
 
-<Story name="With Configuration">
-	{#snippet template()}
-		<CorsEditor
-			corsXml={`<CORSConfiguration>
+<Story
+	name="With Configuration"
+	args={{
+		corsXml: `<CORSConfiguration>
   <CORSRule>
     <AllowedOrigin>https://example.com</AllowedOrigin>
     <AllowedMethod>GET</AllowedMethod>
@@ -27,40 +37,31 @@
     <AllowedHeader>*</AllowedHeader>
     <MaxAgeSeconds>3600</MaxAgeSeconds>
   </CORSRule>
-</CORSConfiguration>`}
-			onsave={fn()}
-			ondelete={fn()}
-		/>
-	{/snippet}
-</Story>
+</CORSConfiguration>`,
+	}}
+/>
 
-<Story name="Loading">
-	{#snippet template()}
-		<CorsEditor corsXml="" loading={true} onsave={fn()} />
-	{/snippet}
-</Story>
+<Story name="Loading" args={{ corsXml: '', loading: true, ondelete: undefined }} />
 
-<Story name="Without Delete">
-	{#snippet template()}
-		<CorsEditor
-			corsXml={`<CORSConfiguration>
+<Story
+	name="Without Delete"
+	args={{
+		corsXml: `<CORSConfiguration>
   <CORSRule>
     <AllowedOrigin>*</AllowedOrigin>
     <AllowedMethod>GET</AllowedMethod>
   </CORSRule>
-</CORSConfiguration>`}
-			onsave={fn()}
-		/>
-	{/snippet}
-</Story>
+</CORSConfiguration>`,
+		ondelete: undefined,
+	}}
+/>
 
-<Story name="Custom Title">
-	{#snippet template()}
-		<CorsEditor
-			corsXml=""
-			title="Namespace CORS"
-			description="Configure cross-origin resource sharing rules for this namespace."
-			onsave={fn()}
-		/>
-	{/snippet}
-</Story>
+<Story
+	name="Custom Title"
+	args={{
+		corsXml: '',
+		title: 'Namespace CORS',
+		description: 'Configure cross-origin resource sharing rules for this namespace.',
+		ondelete: undefined,
+	}}
+/>

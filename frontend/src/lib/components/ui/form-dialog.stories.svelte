@@ -1,11 +1,22 @@
 <script module>
 	import { defineMeta } from '@storybook/addon-svelte-csf';
+	import { fn } from 'storybook/test';
 	import FormDialog from './form-dialog.svelte';
 
 	const { Story } = defineMeta({
 		title: 'UI/FormDialog',
 		component: FormDialog,
 		tags: ['autodocs'],
+		args: {
+			onsubmit: fn(),
+		},
+		argTypes: {
+			title: { control: 'text' },
+			description: { control: 'text' },
+			submitLabel: { control: 'text' },
+			loading: { control: 'boolean' },
+			error: { control: 'text' },
+		},
 	});
 </script>
 

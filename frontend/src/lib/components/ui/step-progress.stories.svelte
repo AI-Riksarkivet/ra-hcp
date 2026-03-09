@@ -6,6 +6,13 @@
 		title: 'UI/StepProgress',
 		component: StepProgress,
 		tags: ['autodocs'],
+		args: {
+			steps: [
+				{ label: 'Validate configuration', status: 'pending' },
+				{ label: 'Create namespace', status: 'pending' },
+				{ label: 'Apply permissions', status: 'pending' },
+			],
+		},
 	});
 </script>
 

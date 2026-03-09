@@ -7,8 +7,8 @@
 		component: TagInput,
 		tags: ['autodocs'],
 		argTypes: {
-			disabled: { control: 'boolean' },
 			placeholder: { control: 'text' },
+			disabled: { control: 'boolean' },
 		},
 	});
 </script>

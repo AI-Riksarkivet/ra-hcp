@@ -6,7 +6,14 @@
 		title: 'UI/CopyableInput',
 		component: CopyableInput,
 		tags: ['autodocs'],
+		args: {
+			value: 'urn:hcp:namespace:my-namespace',
+			label: 'Canonical ID',
+			secret: false,
+		},
 		argTypes: {
+			value: { control: 'text' },
+			label: { control: 'text' },
 			secret: { control: 'boolean' },
 		},
 	});
@@ -14,7 +21,10 @@
 
 <Story name="Default" args={{ value: 'urn:hcp:namespace:my-namespace', label: 'Canonical ID' }} />
 
-<Story name="Without Label" args={{ value: 'https://hcp.example.com/rest/namespaces' }} />
+<Story
+	name="Without Label"
+	args={{ value: 'https://hcp.example.com/rest/namespaces', label: '' }}
+/>
 
 <Story
 	name="Secret"

@@ -6,6 +6,15 @@
 		title: 'UI/ServiceTagBadge',
 		component: ServiceTagBadge,
 		tags: ['autodocs'],
+		args: {
+			tag: 's3',
+		},
+		argTypes: {
+			tag: {
+				control: 'select',
+				options: ['s3', 'nfs', 'cifs', 'hdfs', 'smtp', 'lakefs', 'custom-service'],
+			},
+		},
 	});
 </script>
 

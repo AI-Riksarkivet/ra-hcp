@@ -6,47 +6,30 @@
 		title: 'UI/StorageProgressBar',
 		component: StorageProgressBar,
 		tags: ['autodocs'],
+		render: template,
+		args: {
+			percent: 50,
+		},
 		argTypes: {
 			percent: { control: { type: 'range', min: 0, max: 100, step: 1 } },
 		},
 	});
 </script>
 
-<Story name="Low Usage" args={{ percent: 30 }}>
-	{#snippet template(args)}
-		<div class="w-64">
-			<StorageProgressBar {...args} />
-			<p class="mt-1 text-xs text-muted-foreground">{args.percent}% used</p>
-		</div>
-	{/snippet}
-</Story>
+{#snippet template(args)}
+	<div class="w-64">
+		<StorageProgressBar {...args} />
+		<p class="mt-1 text-xs text-muted-foreground">{args.percent}% used</p>
+	</div>
+{/snippet}
 
-<Story name="Medium Usage" args={{ percent: 65 }}>
-	{#snippet template(args)}
-		<div class="w-64">
-			<StorageProgressBar {...args} />
-			<p class="mt-1 text-xs text-muted-foreground">{args.percent}% used</p>
-		</div>
-	{/snippet}
-</Story>
+<Story name="Low Usage" args={{ percent: 30 }} />
 
-<Story name="Warning" args={{ percent: 80 }}>
-	{#snippet template(args)}
-		<div class="w-64">
-			<StorageProgressBar {...args} />
-			<p class="mt-1 text-xs text-muted-foreground">{args.percent}% used — approaching limit</p>
-		</div>
-	{/snippet}
-</Story>
+<Story name="Medium Usage" args={{ percent: 65 }} />
 
-<Story name="Critical" args={{ percent: 95 }}>
-	{#snippet template(args)}
-		<div class="w-64">
-			<StorageProgressBar {...args} />
-			<p class="mt-1 text-xs text-muted-foreground">{args.percent}% used — over quota!</p>
-		</div>
-	{/snippet}
-</Story>
+<Story name="Warning" args={{ percent: 80 }} />
+
+<Story name="Critical" args={{ percent: 95 }} />
 
 <Story name="All Levels">
 	{#snippet template()}
