@@ -87,9 +87,13 @@ export const RemoveTag: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    // The X buttons are inside each badge
-    const criticalBadge = canvas.getByText("critical").closest("div")!;
-    const removeButton = within(criticalBadge).getByRole("button");
+    // The X buttons are inside each badge <span>
+    const criticalBadge = canvas
+      .getByText("critical")
+      .closest("[data-slot='badge']")!;
+    const removeButton = within(criticalBadge as HTMLElement).getByRole(
+      "button",
+    );
     await userEvent.click(removeButton);
 
     await expect(canvas.queryByText("critical")).not.toBeInTheDocument();

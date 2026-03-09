@@ -103,8 +103,10 @@ export const RemoveIp: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    // Find the badge containing "10.0.0.0/8" and its X button
-    const badge = canvas.getByText("10.0.0.0/8").closest("div")!;
+    // Find the badge <span> containing "10.0.0.0/8" and its X button
+    const badge = canvas.getByText("10.0.0.0/8").closest(
+      "[data-slot='badge']",
+    )!;
     const removeButton = within(badge as HTMLElement).getByRole("button");
     await userEvent.click(removeButton);
 
