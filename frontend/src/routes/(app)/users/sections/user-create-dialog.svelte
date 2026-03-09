@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { toast } from 'svelte-sonner';
-	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
+	import FormDialog from '$lib/components/ui/form-dialog.svelte';
 	import { get_users, create_user } from '$lib/users.remote.js';
 	import { AVAILABLE_ROLES } from '$lib/constants.js';
 
@@ -49,45 +47,39 @@
 	}
 </script>
 
-<Dialog.Root bind:open>
-	<Dialog.Content class="sm:max-w-lg">
-		<Dialog.Header>
-			<Dialog.Title>Create User</Dialog.Title>
-			<Dialog.Description>Add a new user account to this tenant.</Dialog.Description>
-		</Dialog.Header>
-		<form onsubmit={handleCreateUser} class="space-y-4">
-			<ErrorBanner message={createError} />
-			<div class="space-y-2">
-				<Label for="cu-username">Username</Label>
-				<Input id="cu-username" name="username" placeholder="jdoe" required />
-			</div>
-			<div class="space-y-2">
-				<Label for="cu-fullname">Full Name</Label>
-				<Input id="cu-fullname" name="fullName" placeholder="Jane Doe" />
-			</div>
-			<div class="space-y-2">
-				<Label for="cu-desc">Description</Label>
-				<Input id="cu-desc" name="description" placeholder="Optional description" />
-			</div>
-			<div class="space-y-2">
-				<Label>Roles</Label>
-				<div class="flex flex-wrap gap-4">
-					{#each AVAILABLE_ROLES as role (role)}
-						<label class="flex items-center gap-2 text-sm">
-							<Checkbox name="role-{role}" />
-							{role}
-						</label>
-					{/each}
-				</div>
-			</div>
-			<label class="flex items-center gap-2 text-sm">
-				<Checkbox name="enabled" checked />
-				Enabled
-			</label>
-			<Dialog.Footer>
-				<Button variant="ghost" type="button" onclick={() => (open = false)}>Cancel</Button>
-				<Button type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create'}</Button>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
+<FormDialog
+	bind:open
+	title="Create User"
+	description="Add a new user account to this tenant."
+	loading={creating}
+	error={createError}
+	onsubmit={handleCreateUser}
+>
+	<div class="space-y-2">
+		<Label for="cu-username">Username</Label>
+		<Input id="cu-username" name="username" placeholder="jdoe" required />
+	</div>
+	<div class="space-y-2">
+		<Label for="cu-fullname">Full Name</Label>
+		<Input id="cu-fullname" name="fullName" placeholder="Jane Doe" />
+	</div>
+	<div class="space-y-2">
+		<Label for="cu-desc">Description</Label>
+		<Input id="cu-desc" name="description" placeholder="Optional description" />
+	</div>
+	<div class="space-y-2">
+		<Label>Roles</Label>
+		<div class="flex flex-wrap gap-4">
+			{#each AVAILABLE_ROLES as role (role)}
+				<label class="flex items-center gap-2 text-sm">
+					<Checkbox name="role-{role}" />
+					{role}
+				</label>
+			{/each}
+		</div>
+	</div>
+	<label class="flex items-center gap-2 text-sm">
+		<Checkbox name="enabled" checked />
+		Enabled
+	</label>
+</FormDialog>

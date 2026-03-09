@@ -1,14 +1,32 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
+	import { Switch } from '$lib/components/ui/switch/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { toast } from 'svelte-sonner';
-	import { Download, Upload, Search, FileJson, CheckCircle, XCircle, Loader2 } from 'lucide-svelte';
+	import {
+		Download,
+		Upload,
+		Search,
+		FileJson,
+		CheckCircle,
+		XCircle,
+		Loader2,
+		ChevronDown,
+		ChevronRight,
+		Eye,
+		AlertTriangle,
+		Pencil,
+		Code,
+	} from 'lucide-svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import {
 		export_namespace_configs,
@@ -79,6 +97,60 @@
 		}
 	}
 
+	// ── Export Preview Dialog state ────────────────────────────────────
+	let previewOpen = $state(false);
+	let previewLoading = $state(false);
+	let previewData = $state<Record<string, unknown> | null>(null);
+	let previewShowRaw = $state(false);
+	let previewExpandedNs = new SvelteSet<string>();
+
+	async function handlePreview() {
+		if (selected.size === 0) return;
+		previewLoading = true;
+		previewData = null;
+		previewShowRaw = false;
+		previewExpandedNs.clear();
+		previewOpen = true;
+		try {
+			const result = await export_namespace_configs({ tenant, names: [...selected] });
+			previewData = result as Record<string, unknown>;
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to load preview');
+			previewOpen = false;
+		} finally {
+			previewLoading = false;
+		}
+	}
+
+	let previewNamespaces = $derived.by<TemplateNamespace[]>(() => {
+		if (!previewData) return [];
+		if (previewData.namespaces && Array.isArray(previewData.namespaces)) {
+			return previewData.namespaces as TemplateNamespace[];
+		}
+		if (Array.isArray(previewData)) {
+			return previewData as TemplateNamespace[];
+		}
+		return [previewData as unknown as TemplateNamespace];
+	});
+
+	function downloadPreview() {
+		if (!previewData) return;
+		const blob = new Blob([JSON.stringify(previewData, null, 2)], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `namespace-templates-${new Date().toISOString().slice(0, 10)}.json`;
+		a.click();
+		URL.revokeObjectURL(url);
+		toast.success(`Downloaded ${selected.size} namespace template(s)`);
+		previewOpen = false;
+	}
+
+	function togglePreviewNs(name: string) {
+		if (previewExpandedNs.has(name)) previewExpandedNs.delete(name);
+		else previewExpandedNs.add(name);
+	}
+
 	// ── Import state ───────────────────────────────────────────────────
 	interface TemplateNamespace {
 		name: string;
@@ -118,6 +190,16 @@
 
 	const PROTOCOLS = ['http', 'cifs', 'nfs', 'smtp'] as const;
 
+	const PERMISSION_KEYS = [
+		{ key: 'readAllowed', label: 'Read' },
+		{ key: 'writeAllowed', label: 'Write' },
+		{ key: 'deleteAllowed', label: 'Delete' },
+		{ key: 'purgeAllowed', label: 'Purge' },
+		{ key: 'searchAllowed', label: 'Search' },
+		{ key: 'readAclAllowed', label: 'Read ACL' },
+		{ key: 'writeAclAllowed', label: 'Write ACL' },
+	] as const;
+
 	let fileInput: HTMLInputElement | undefined = $state();
 	let templateData = $state<TemplateNamespace[]>([]);
 	let importNames = $state<string[]>([]);
@@ -125,6 +207,67 @@
 	let importing = $state(false);
 	let importDone = $state(false);
 	let sourceInfo = $state('');
+
+	// ── Import Editor state ────────────────────────────────────────────
+	let editorExpandedNs = new SvelteSet<number>();
+	let editorRawMode = new SvelteSet<number>();
+
+	// Raw JSON text per namespace for the raw JSON textarea toggle
+	let rawJsonTexts = $state<string[]>([]);
+
+	// Track name conflicts: check importNames against existing namespaces
+	let existingNames = $derived(new Set(namespaces.map((n) => n.name)));
+
+	let nameConflicts = $derived(
+		importNames.map((name, i) => ({ name, index: i })).filter(({ name }) => existingNames.has(name))
+	);
+
+	// Build import summary: count steps and sub-resources per namespace
+	let importSummary = $derived(
+		templateData.map((ns, i) => {
+			const name = importNames[i] || ns.name;
+			const subResources: string[] = [];
+			let stepCount = 1; // Create namespace is always step 1
+			if (ns.versioning) {
+				subResources.push('versioning');
+				stepCount++;
+			}
+			if (ns.compliance) {
+				subResources.push('compliance');
+				stepCount++;
+			}
+			if (ns.permissions) {
+				subResources.push('permissions');
+				stepCount++;
+			}
+			for (const proto of PROTOCOLS) {
+				if (ns.protocols?.[proto]) {
+					subResources.push(`${proto.toUpperCase()} protocol`);
+					stepCount++;
+				}
+			}
+			if (ns.retentionClasses?.length) {
+				const count = ns.retentionClasses.length;
+				subResources.push(`${count} retention class${count !== 1 ? 'es' : ''}`);
+				stepCount += count;
+			}
+			if (ns.indexing) {
+				subResources.push('indexing');
+				stepCount++;
+			}
+			if (ns.cors) {
+				subResources.push('CORS');
+				stepCount++;
+			}
+			if (ns.replicationCollision) {
+				subResources.push('replication collision');
+				stepCount++;
+			}
+			return { name, stepCount, subResources, hasConflict: existingNames.has(name) };
+		})
+	);
+
+	let totalSteps = $derived(importSummary.reduce((sum, s) => sum + s.stepCount, 0));
 
 	function handleFileSelect(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
@@ -149,6 +292,9 @@
 				importNames = templates.map((t) => t.name);
 				importSteps = [];
 				importDone = false;
+				editorExpandedNs.clear();
+				editorRawMode.clear();
+				rawJsonTexts = templates.map((t) => JSON.stringify(t, null, 2));
 			} catch {
 				toast.error('Invalid JSON file');
 			}
@@ -165,6 +311,59 @@
 		return parts.join(' | ') || 'default settings';
 	}
 
+	// ── Editor helpers ─────────────────────────────────────────────────
+	function toggleEditorNs(idx: number) {
+		if (editorExpandedNs.has(idx)) editorExpandedNs.delete(idx);
+		else editorExpandedNs.add(idx);
+	}
+
+	function toggleEditorRaw(idx: number) {
+		if (editorRawMode.has(idx)) {
+			// Switching from raw to structured: try to parse the raw JSON back
+			try {
+				const parsed = JSON.parse(rawJsonTexts[idx]);
+				templateData[idx] = parsed;
+				templateData = [...templateData];
+				editorRawMode.delete(idx);
+			} catch {
+				toast.error('Invalid JSON -- fix errors before switching to structured view');
+			}
+		} else {
+			// Switching from structured to raw: serialize current state
+			rawJsonTexts[idx] = JSON.stringify(templateData[idx], null, 2);
+			rawJsonTexts = [...rawJsonTexts];
+			editorRawMode.add(idx);
+		}
+	}
+
+	function updateRawJson(idx: number, value: string) {
+		rawJsonTexts[idx] = value;
+		rawJsonTexts = [...rawJsonTexts];
+	}
+
+	function updateNsField(idx: number, field: keyof TemplateNamespace, value: unknown) {
+		const ns = { ...templateData[idx] };
+		(ns as Record<string, unknown>)[field] = value;
+		templateData[idx] = ns;
+		templateData = [...templateData];
+	}
+
+	function updatePermission(idx: number, key: string, value: boolean) {
+		const ns = { ...templateData[idx] };
+		ns.permissions = { ...(ns.permissions ?? {}), [key]: value };
+		templateData[idx] = ns;
+		templateData = [...templateData];
+	}
+
+	function updateTags(idx: number, tagsStr: string) {
+		const tags = tagsStr
+			.split(',')
+			.map((t) => t.trim())
+			.filter(Boolean);
+		updateNsField(idx, 'tags', tags.length > 0 ? tags : undefined);
+	}
+
+	// ── Import execution ───────────────────────────────────────────────
 	async function handleImport() {
 		if (templateData.length === 0) return;
 		importing = true;
@@ -286,7 +485,7 @@
 			try {
 				await update_namespace({ tenant, name: lastName, body: {} }).updates(nsData);
 			} catch {
-				// Ignore — list refreshes on next navigation
+				// Ignore -- list refreshes on next navigation
 			}
 		}
 
@@ -305,9 +504,171 @@
 		importSteps = [];
 		importDone = false;
 		importing = false;
+		editorExpandedNs.clear();
+		editorRawMode.clear();
+		rawJsonTexts = [];
 		if (fileInput) fileInput.value = '';
 	}
 </script>
+
+<!-- ── Export Preview Dialog ───────────────────────────────────────── -->
+<Dialog.Root open={previewOpen} onOpenChange={(v) => (previewOpen = v)}>
+	<Dialog.Content class="sm:max-w-2xl">
+		<Dialog.Header>
+			<Dialog.Title>Export Preview</Dialog.Title>
+			<Dialog.Description>Review the exported configuration before downloading.</Dialog.Description>
+		</Dialog.Header>
+
+		{#if previewLoading}
+			<div class="flex items-center justify-center py-12">
+				<Loader2 class="h-6 w-6 animate-spin text-muted-foreground" />
+				<span class="ml-2 text-sm text-muted-foreground">Loading export data...</span>
+			</div>
+		{:else if previewData}
+			<div class="space-y-3">
+				<!-- Toggle raw JSON -->
+				<div class="flex items-center justify-end gap-2">
+					<Label for="preview-raw-toggle" class="text-xs text-muted-foreground">Raw JSON</Label>
+					<Switch
+						id="preview-raw-toggle"
+						checked={previewShowRaw}
+						onCheckedChange={(v) => (previewShowRaw = v)}
+					/>
+				</div>
+
+				{#if previewShowRaw}
+					<div class="max-h-96 overflow-auto rounded-md border bg-muted/50 p-3">
+						<pre class="whitespace-pre-wrap text-xs">{JSON.stringify(previewData, null, 2)}</pre>
+					</div>
+				{:else}
+					<div class="max-h-96 space-y-2 overflow-y-auto">
+						{#each previewNamespaces as ns (ns.name)}
+							{@const expanded = previewExpandedNs.has(ns.name)}
+							<div class="rounded-md border">
+								<button
+									type="button"
+									class="flex w-full items-center gap-2 p-3 text-left hover:bg-muted/50"
+									onclick={() => togglePreviewNs(ns.name)}
+								>
+									{#if expanded}
+										<ChevronDown class="h-4 w-4 shrink-0 text-muted-foreground" />
+									{:else}
+										<ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+									{/if}
+									<span class="text-sm font-medium">{ns.name}</span>
+									{#if ns.hashScheme}
+										<Badge variant="secondary" class="text-xs">{ns.hashScheme}</Badge>
+									{/if}
+									{#if ns.hardQuota}
+										<Badge variant="outline" class="text-xs">{ns.hardQuota}</Badge>
+									{/if}
+								</button>
+
+								{#if expanded}
+									<div class="space-y-2 border-t px-3 pb-3 pt-2">
+										{#if ns.description}
+											<div class="text-xs">
+												<span class="font-medium text-muted-foreground">Description:</span>
+												{ns.description}
+											</div>
+										{/if}
+
+										<div class="flex flex-wrap gap-1.5">
+											{#if ns.searchEnabled}
+												<Badge variant="secondary" class="text-xs">Search: on</Badge>
+											{/if}
+											{#if ns.versioningEnabled || ns.versioning?.enabled}
+												<Badge variant="secondary" class="text-xs">Versioning: on</Badge>
+											{/if}
+											{#if ns.softQuota != null}
+												<Badge variant="outline" class="text-xs">
+													Soft quota: {ns.softQuota}%
+												</Badge>
+											{/if}
+										</div>
+
+										{#if ns.tags?.length}
+											<div class="flex flex-wrap gap-1">
+												<span class="text-xs font-medium text-muted-foreground">Tags:</span>
+												{#each ns.tags as tag (tag)}
+													<Badge variant="outline" class="text-xs">{tag}</Badge>
+												{/each}
+											</div>
+										{/if}
+
+										{#if ns.permissions}
+											<div>
+												<span class="text-xs font-medium text-muted-foreground">
+													Permissions:
+												</span>
+												<div class="mt-1 flex flex-wrap gap-1">
+													{#each Object.entries(ns.permissions) as [key, val] (key)}
+														<Badge variant={val ? 'secondary' : 'outline'} class="text-xs">
+															{key.replace('Allowed', '')}: {val ? 'yes' : 'no'}
+														</Badge>
+													{/each}
+												</div>
+											</div>
+										{/if}
+
+										{#if ns.compliance}
+											<div>
+												<span class="text-xs font-medium text-muted-foreground"> Compliance: </span>
+												<div class="mt-1 flex flex-wrap gap-1">
+													{#each Object.entries(ns.compliance) as [key, val] (key)}
+														<Badge variant="outline" class="text-xs">
+															{key}: {val}
+														</Badge>
+													{/each}
+												</div>
+											</div>
+										{/if}
+
+										{#if ns.retentionClasses?.length}
+											<div>
+												<span class="text-xs font-medium text-muted-foreground">
+													Retention Classes ({ns.retentionClasses.length}):
+												</span>
+												<div class="mt-1 flex flex-wrap gap-1">
+													{#each ns.retentionClasses as rc (rc.name)}
+														<Badge variant="outline" class="text-xs">
+															{rc.name} = {rc.value}
+														</Badge>
+													{/each}
+												</div>
+											</div>
+										{/if}
+
+										{#if ns.protocols}
+											<div>
+												<span class="text-xs font-medium text-muted-foreground"> Protocols: </span>
+												<div class="mt-1 flex flex-wrap gap-1">
+													{#each Object.keys(ns.protocols) as proto (proto)}
+														<Badge variant="secondary" class="text-xs">
+															{proto.toUpperCase()}
+														</Badge>
+													{/each}
+												</div>
+											</div>
+										{/if}
+									</div>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<Dialog.Footer>
+				<Button variant="ghost" onclick={() => (previewOpen = false)}>Close</Button>
+				<Button onclick={downloadPreview}>
+					<Download class="h-4 w-4" />
+					Download
+				</Button>
+			</Dialog.Footer>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
 
 <div class="grid gap-6 lg:grid-cols-2">
 	<!-- Export Card -->
@@ -351,15 +712,30 @@
 
 			<div class="flex items-center justify-between">
 				<p class="text-sm text-muted-foreground">{selected.size} selected</p>
-				<Button onclick={handleExport} disabled={selected.size === 0 || exporting}>
-					{#if exporting}
-						<Loader2 class="h-4 w-4 animate-spin" />
-						Exporting...
-					{:else}
-						<Download class="h-4 w-4" />
-						Export Selected
-					{/if}
-				</Button>
+				<div class="flex gap-2">
+					<Button
+						variant="outline"
+						onclick={handlePreview}
+						disabled={selected.size === 0 || previewLoading}
+					>
+						{#if previewLoading}
+							<Loader2 class="h-4 w-4 animate-spin" />
+							Loading...
+						{:else}
+							<Eye class="h-4 w-4" />
+							Preview
+						{/if}
+					</Button>
+					<Button onclick={handleExport} disabled={selected.size === 0 || exporting}>
+						{#if exporting}
+							<Loader2 class="h-4 w-4 animate-spin" />
+							Exporting...
+						{:else}
+							<Download class="h-4 w-4" />
+							Export Selected
+						{/if}
+					</Button>
+				</div>
 			</div>
 		</Card.Content>
 	</Card.Root>
@@ -410,20 +786,272 @@
 
 					<Separator />
 
-					<div class="max-h-64 space-y-3 overflow-y-auto">
+					<!-- Namespace list with inline editors -->
+					<div class="max-h-[32rem] space-y-3 overflow-y-auto">
 						{#each templateData as ns, i (i)}
-							<div class="space-y-1 rounded-md border p-3">
-								<Label for="import-name-{i}">Name</Label>
-								<Input
-									id="import-name-{i}"
-									bind:value={importNames[i]}
-									placeholder={ns.name}
-									disabled={importing || importDone}
-								/>
+							{@const hasConflict = existingNames.has(importNames[i])}
+							<div class="space-y-1 rounded-md border p-3" class:border-amber-500={hasConflict}>
+								<div class="flex items-center gap-2">
+									<div class="flex-1 space-y-1">
+										<Label for="import-name-{i}">Name</Label>
+										<Input
+											id="import-name-{i}"
+											bind:value={importNames[i]}
+											placeholder={ns.name}
+											disabled={importing || importDone}
+										/>
+									</div>
+								</div>
+
+								{#if hasConflict}
+									<div class="flex items-center gap-1.5 pt-1 text-xs text-amber-600">
+										<AlertTriangle class="h-3.5 w-3.5 shrink-0" />
+										<span>
+											A namespace named "{importNames[i]}" already exists. Import will fail unless
+											you change this name.
+										</span>
+									</div>
+								{/if}
+
 								<p class="text-xs text-muted-foreground">{summarizeNamespace(ns)}</p>
+
+								<!-- Edit Settings collapsible section -->
+								{#if !importing && !importDone}
+									<Collapsible.Root
+										open={editorExpandedNs.has(i)}
+										onOpenChange={() => toggleEditorNs(i)}
+									>
+										<Collapsible.Trigger
+											class="mt-1 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+										>
+											{#if editorExpandedNs.has(i)}
+												<ChevronDown class="h-3.5 w-3.5" />
+											{:else}
+												<ChevronRight class="h-3.5 w-3.5" />
+											{/if}
+											<Pencil class="h-3 w-3" />
+											Edit Settings
+										</Collapsible.Trigger>
+										<Collapsible.Content>
+											<div class="mt-2 space-y-3 rounded-md border bg-muted/30 p-3">
+												<!-- Toggle between structured and raw -->
+												<div class="flex items-center justify-end gap-2">
+													<button
+														type="button"
+														class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+														onclick={() => toggleEditorRaw(i)}
+													>
+														{#if editorRawMode.has(i)}
+															<Pencil class="h-3 w-3" />
+															Structured view
+														{:else}
+															<Code class="h-3 w-3" />
+															Raw JSON
+														{/if}
+													</button>
+												</div>
+
+												{#if editorRawMode.has(i)}
+													<!-- Raw JSON editor -->
+													<Textarea
+														value={rawJsonTexts[i]}
+														oninput={(e) =>
+															updateRawJson(i, (e.currentTarget as HTMLTextAreaElement).value)}
+														class="min-h-48 font-mono text-xs"
+														placeholder="Edit raw JSON..."
+													/>
+													<p class="text-xs text-muted-foreground">
+														Switch back to structured view to apply changes.
+													</p>
+												{:else}
+													<!-- Structured editor -->
+													<div class="space-y-3">
+														<!-- Description -->
+														<div class="space-y-1">
+															<Label for="edit-desc-{i}" class="text-xs">Description</Label>
+															<Input
+																id="edit-desc-{i}"
+																value={ns.description ?? ''}
+																oninput={(e) =>
+																	updateNsField(
+																		i,
+																		'description',
+																		(e.currentTarget as HTMLInputElement).value || undefined
+																	)}
+																placeholder="Optional description"
+															/>
+														</div>
+
+														<!-- Quotas -->
+														<div class="grid grid-cols-2 gap-3">
+															<div class="space-y-1">
+																<Label for="edit-hard-{i}" class="text-xs">Hard Quota</Label>
+																<Input
+																	id="edit-hard-{i}"
+																	value={ns.hardQuota ?? ''}
+																	oninput={(e) =>
+																		updateNsField(
+																			i,
+																			'hardQuota',
+																			(e.currentTarget as HTMLInputElement).value || undefined
+																		)}
+																	placeholder="e.g. 50 GB"
+																/>
+															</div>
+															<div class="space-y-1">
+																<Label for="edit-soft-{i}" class="text-xs">Soft Quota (%)</Label>
+																<Input
+																	id="edit-soft-{i}"
+																	type="number"
+																	min="10"
+																	max="95"
+																	value={ns.softQuota != null ? String(ns.softQuota) : ''}
+																	oninput={(e) => {
+																		const val = (e.currentTarget as HTMLInputElement).value;
+																		updateNsField(i, 'softQuota', val ? Number(val) : undefined);
+																	}}
+																	placeholder="85"
+																/>
+															</div>
+														</div>
+
+														<!-- Feature toggles -->
+														<div class="flex flex-wrap gap-x-5 gap-y-2">
+															<div class="flex items-center gap-2">
+																<Switch
+																	id="edit-search-{i}"
+																	checked={ns.searchEnabled ?? false}
+																	onCheckedChange={(v) => updateNsField(i, 'searchEnabled', v)}
+																/>
+																<Label for="edit-search-{i}" class="text-xs">Search</Label>
+															</div>
+															<div class="flex items-center gap-2">
+																<Switch
+																	id="edit-versioning-{i}"
+																	checked={ns.versioningEnabled ?? ns.versioning?.enabled ?? false}
+																	onCheckedChange={(v) => {
+																		updateNsField(i, 'versioningEnabled', v);
+																		if (ns.versioning) {
+																			const updated = { ...ns };
+																			updated.versioning = {
+																				...updated.versioning!,
+																				enabled: v,
+																			};
+																			templateData[i] = updated;
+																			templateData = [...templateData];
+																		}
+																	}}
+																/>
+																<Label for="edit-versioning-{i}" class="text-xs">Versioning</Label>
+															</div>
+														</div>
+
+														<!-- Hash scheme (read-only) -->
+														{#if ns.hashScheme}
+															<div class="flex items-center gap-2">
+																<span class="text-xs text-muted-foreground"> Hash Scheme: </span>
+																<Badge variant="secondary" class="text-xs">
+																	{ns.hashScheme}
+																</Badge>
+																<span class="text-xs text-muted-foreground">
+																	(read-only, set at creation)
+																</span>
+															</div>
+														{/if}
+
+														<!-- Tags -->
+														<div class="space-y-1">
+															<Label for="edit-tags-{i}" class="text-xs">
+																Tags (comma-separated)
+															</Label>
+															<Input
+																id="edit-tags-{i}"
+																value={ns.tags?.join(', ') ?? ''}
+																oninput={(e) =>
+																	updateTags(i, (e.currentTarget as HTMLInputElement).value)}
+																placeholder="e.g. lakefs, nfs, s3"
+															/>
+														</div>
+
+														<!-- Permissions -->
+														{#if ns.permissions || true}
+															<div class="space-y-1.5">
+																<span class="text-xs font-medium">Permissions</span>
+																<div class="grid grid-cols-2 gap-x-4 gap-y-1.5">
+																	{#each PERMISSION_KEYS as perm (perm.key)}
+																		{@const checked =
+																			(ns.permissions as Record<string, boolean>)?.[perm.key] ??
+																			false}
+																		<div class="flex items-center gap-2">
+																			<Switch
+																				id="edit-perm-{i}-{perm.key}"
+																				{checked}
+																				onCheckedChange={(v) => updatePermission(i, perm.key, v)}
+																			/>
+																			<Label for="edit-perm-{i}-{perm.key}" class="text-xs">
+																				{perm.label}
+																			</Label>
+																		</div>
+																	{/each}
+																</div>
+															</div>
+														{/if}
+													</div>
+												{/if}
+											</div>
+										</Collapsible.Content>
+									</Collapsible.Root>
+								{/if}
 							</div>
 						{/each}
 					</div>
+
+					<!-- Import Preview Summary -->
+					{#if templateData.length > 0 && !importDone && importSteps.length === 0}
+						<Separator />
+						<div class="space-y-2 rounded-md border bg-muted/30 p-3">
+							<h4 class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+								Import Summary
+							</h4>
+							<div class="text-sm">
+								<span class="font-medium">{totalSteps}</span> total step{totalSteps !== 1
+									? 's'
+									: ''} across
+								<span class="font-medium">{templateData.length}</span>
+								namespace{templateData.length !== 1 ? 's' : ''}
+							</div>
+							<div class="space-y-1">
+								{#each importSummary as summary (summary.name)}
+									<div class="text-xs">
+										<span class="font-medium">{summary.name}</span>:
+										{summary.stepCount} step{summary.stepCount !== 1 ? 's' : ''}
+										{#if summary.subResources.length > 0}
+											<span class="text-muted-foreground">
+												({summary.subResources.join(', ')})
+											</span>
+										{/if}
+									</div>
+								{/each}
+							</div>
+
+							{#if nameConflicts.length > 0}
+								<div
+									class="mt-2 flex items-start gap-2 rounded-md border border-amber-400 bg-amber-50 p-2 dark:bg-amber-950/30"
+								>
+									<AlertTriangle
+										class="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400"
+									/>
+									<div class="text-xs text-amber-800 dark:text-amber-200">
+										<span class="font-medium">Name conflicts detected:</span>
+										{nameConflicts.map((c) => `"${c.name}"`).join(', ')}
+										{nameConflicts.length === 1 ? ' already exists' : ' already exist'}
+										in this tenant. Rename {nameConflicts.length === 1 ? 'it' : 'them'} above or the import
+										will fail.
+									</div>
+								</div>
+							{/if}
+						</div>
+					{/if}
 
 					{#if importSteps.length > 0}
 						<Separator />
