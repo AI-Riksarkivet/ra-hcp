@@ -7,10 +7,13 @@
 		title: 'UI/Button',
 		component: Button,
 		tags: ['autodocs'],
+		render: template,
 		args: {
+			label: 'Button',
 			onclick: fn(),
 		},
 		argTypes: {
+			label: { control: 'text' },
 			variant: {
 				control: 'select',
 				options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'],
@@ -24,65 +27,30 @@
 	});
 </script>
 
-<Story name="Default" args={{ variant: 'default' }}>
-	{#snippet template(args)}
-		<Button {...args}>Button</Button>
-	{/snippet}
-</Story>
+{#snippet template(args)}
+	{@const { label, ...buttonProps } = args}
+	<Button {...buttonProps}>{label}</Button>
+{/snippet}
 
-<Story name="Destructive" args={{ variant: 'destructive' }}>
-	{#snippet template(args)}
-		<Button {...args}>Delete</Button>
-	{/snippet}
-</Story>
+<Story name="Default" args={{ variant: 'default', label: 'Button' }} />
 
-<Story name="Outline" args={{ variant: 'outline' }}>
-	{#snippet template(args)}
-		<Button {...args}>Outline</Button>
-	{/snippet}
-</Story>
+<Story name="Destructive" args={{ variant: 'destructive', label: 'Delete' }} />
 
-<Story name="Secondary" args={{ variant: 'secondary' }}>
-	{#snippet template(args)}
-		<Button {...args}>Secondary</Button>
-	{/snippet}
-</Story>
+<Story name="Outline" args={{ variant: 'outline', label: 'Outline' }} />
 
-<Story name="Ghost" args={{ variant: 'ghost' }}>
-	{#snippet template(args)}
-		<Button {...args}>Ghost</Button>
-	{/snippet}
-</Story>
+<Story name="Secondary" args={{ variant: 'secondary', label: 'Secondary' }} />
 
-<Story name="Link" args={{ variant: 'link' }}>
-	{#snippet template(args)}
-		<Button {...args}>Link</Button>
-	{/snippet}
-</Story>
+<Story name="Ghost" args={{ variant: 'ghost', label: 'Ghost' }} />
 
-<Story name="Small" args={{ variant: 'default', size: 'sm' }}>
-	{#snippet template(args)}
-		<Button {...args}>Small</Button>
-	{/snippet}
-</Story>
+<Story name="Link" args={{ variant: 'link', label: 'Link' }} />
 
-<Story name="Large" args={{ variant: 'default', size: 'lg' }}>
-	{#snippet template(args)}
-		<Button {...args}>Large</Button>
-	{/snippet}
-</Story>
+<Story name="Small" args={{ variant: 'default', size: 'sm', label: 'Small' }} />
 
-<Story name="Disabled" args={{ variant: 'default', disabled: true }}>
-	{#snippet template(args)}
-		<Button {...args}>Disabled</Button>
-	{/snippet}
-</Story>
+<Story name="Large" args={{ variant: 'default', size: 'lg', label: 'Large' }} />
 
-<Story name="As Link" args={{ variant: 'default', href: '#' }}>
-	{#snippet template(args)}
-		<Button {...args}>Link Button</Button>
-	{/snippet}
-</Story>
+<Story name="Disabled" args={{ variant: 'default', disabled: true, label: 'Disabled' }} />
+
+<Story name="As Link" args={{ variant: 'default', href: '#', label: 'Link Button' }} />
 
 <Story name="All Variants">
 	{#snippet template()}
