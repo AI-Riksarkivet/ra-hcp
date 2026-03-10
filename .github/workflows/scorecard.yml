@@ -12,6 +12,9 @@ permissions: read-all
 jobs:
   analysis:
     name: Scorecard analysis
+    # Scorecard uses GitHub GraphQL API which requires broader permissions
+    # than GITHUB_TOKEN provides on private repos. Auto-enables when public.
+    if: ${{ github.repository_visibility == 'public' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
