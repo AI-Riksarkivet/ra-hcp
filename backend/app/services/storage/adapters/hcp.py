@@ -191,13 +191,18 @@ class HcpStorage(StorageBase):
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def get_object(self, bucket: str, key: str) -> dict:
+    def get_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict:
         with tracer.start_as_current_span(
             "s3.get_object",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.get_object(Bucket=bucket, Key=key)
+                kwargs: dict[str, Any] = {"Bucket": bucket, "Key": key}
+                if version_id:
+                    kwargs["VersionId"] = version_id
+                return self._client.get_object(**kwargs)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
@@ -215,13 +220,18 @@ class HcpStorage(StorageBase):
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def delete_object(self, bucket: str, key: str) -> dict:
+    def delete_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict:
         with tracer.start_as_current_span(
             "s3.delete_object",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.delete_object(Bucket=bucket, Key=key)
+                kwargs: dict[str, Any] = {"Bucket": bucket, "Key": key}
+                if version_id:
+                    kwargs["VersionId"] = version_id
+                return self._client.delete_object(**kwargs)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:

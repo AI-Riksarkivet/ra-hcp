@@ -2,12 +2,12 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import FileViewer from '$lib/components/ui/FileViewer.svelte';
 	import { get_lance_rows, get_lance_schema, search_lance } from '$lib/remote/lance.remote.js';
 	import {
 		cellUrl,
@@ -15,7 +15,7 @@
 		type VectorValue,
 		type BinaryCellMeta,
 	} from '$lib/types/lance.js';
-	import { Search, SlidersHorizontal, Radar } from 'lucide-svelte';
+	import { Search, SlidersHorizontal, Radar, X } from 'lucide-svelte';
 	import {
 		DataTable,
 		createSvelteTable,
@@ -23,6 +23,7 @@
 		renderSnippet,
 	} from '$lib/components/ui/data-table/index.js';
 	import type { ColumnDef, PaginationState, VisibilityState } from '@tanstack/table-core';
+	import { formatBytes } from '$lib/utils/format.js';
 
 	let {
 		bucket,
@@ -31,9 +32,6 @@
 	}: { bucket: string; path: string; table: string } = $props();
 
 	const PAGE_SIZE = 50;
-
-	// Mode: "browse" or "search"
-	let mode = $state<'browse' | 'search'>('browse');
 
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: PAGE_SIZE });
 	let columnVisibility = $state<VisibilityState>({});
@@ -52,6 +50,13 @@
 	// Row detail dialog state
 	let detailOpen = $state(false);
 	let detailRow = $state<Record<string, unknown> | null>(null);
+	let detailRowIndex = $state<number>(0);
+
+	// FileViewer state for binary cell preview
+	let fileViewerOpen = $state(false);
+	let fileViewerUrl = $state('');
+	let fileViewerFilename = $state('');
+	let fileViewerSize = $state<number | undefined>(undefined);
 
 	// Reset everything when the selected table changes.
 	let resetTable = (() => {
@@ -68,7 +73,6 @@
 				searchError = null;
 				searchActive = false;
 				selectedVectorCol = '';
-				mode = 'browse';
 			}
 			prev = current;
 		};
@@ -103,16 +107,24 @@
 	let total = $derived((rowsData?.current?.total ?? 0) as number);
 	let error = $derived(rowsData?.current?.error ?? null);
 
-	// Which data to display depends on mode
-	let displayRows = $derived(mode === 'search' && searchActive ? searchResults : rows);
-	let displayTotal = $derived(mode === 'search' && searchActive ? searchTotal : total);
-	let displayError = $derived(mode === 'search' && searchActive ? searchError : error);
+	// Which data to display depends on whether search is active
+	let displayRows = $derived(searchActive ? searchResults : rows);
+	let displayTotal = $derived(searchActive ? searchTotal : total);
+	let displayError = $derived(searchActive ? searchError : error);
 
 	let hiddenCount = $derived(Object.values(columnVisibility).filter((v) => v === false).length);
 
 	function applyFilter() {
 		activeFilter = filterInput.trim();
 		pagination = { pageIndex: 0, pageSize: pagination.pageSize };
+	}
+
+	function clearSearch() {
+		searchActive = false;
+		searchResults = [];
+		searchTotal = 0;
+		searchError = null;
+		searchInput = '';
 	}
 
 	async function executeSearch() {
@@ -132,19 +144,7 @@
 			limit: 20,
 		});
 
-		// Wait for the query to resolve
-		const checkResult = () => {
-			const result = searchData?.current;
-			if (result) {
-				searchResults = (result.rows ?? []) as Record<string, unknown>[];
-				searchTotal = (result.total ?? 0) as number;
-				searchError = (result.error as string) ?? null;
-			}
-		};
-
-		// The remote function is reactive — check it after a tick
-		setTimeout(checkResult, 100);
-		// Also set up a watcher
+		// The remote function is reactive -- poll until result arrives
 		const interval = setInterval(() => {
 			const result = searchData?.current;
 			if (result) {
@@ -154,7 +154,7 @@
 				clearInterval(interval);
 			}
 		}, 200);
-		// Safety: clear after 10s
+		// Safety: stop polling after 10s
 		setTimeout(() => clearInterval(interval), 10000);
 	}
 
@@ -164,7 +164,6 @@
 		const vecVal = row[colName] as VectorValue | null;
 		if (!vecVal?.preview) return;
 
-		mode = 'search';
 		searchType = 'vector';
 		searchInput = `Similar to row (vector: ${colName})`;
 		searchError = null;
@@ -194,7 +193,19 @@
 
 	function openDetail(row: Record<string, unknown>) {
 		detailRow = row;
+		// Find the row's position in the currently displayed data.
+		const idx = displayRows.indexOf(row);
+		// For browse mode, absolute index = offset + position in page.
+		// For search mode, the position within search results is the index itself.
+		detailRowIndex = searchActive ? idx : offset + idx;
 		detailOpen = true;
+	}
+
+	function openFileViewer(column: string, rowIndex: number, binVal: BinaryCellMeta) {
+		fileViewerUrl = cellUrl(bucket, tableName, column, rowIndex, path || undefined);
+		fileViewerFilename = `${column}_row${rowIndex}`;
+		fileViewerSize = binVal.size ?? undefined;
+		fileViewerOpen = true;
 	}
 
 	function formatDetailValue(val: unknown): string {
@@ -227,7 +238,7 @@
 					header: field.name,
 					cell: ({ row }) => {
 						const val = row.original[field.name] as BinaryCellMeta | null;
-						const rowIndex = row.index;
+						const rowIndex = searchActive ? row.index : offset + row.index;
 						return renderSnippet(binaryCell, {
 							val,
 							column: field.name,
@@ -265,7 +276,7 @@
 		return cols;
 	}
 
-	let columns = $derived.by(() => makeColumns(mode === 'search' && searchActive));
+	let columns = $derived.by(() => makeColumns(searchActive));
 
 	let tanstackTable = $derived(
 		createSvelteTable({
@@ -301,7 +312,7 @@
 {#snippet binaryCell(props: { val: BinaryCellMeta | null; column: string; rowIndex: number })}
 	{#if props.val?.size}
 		<img
-			src={cellUrl(bucket, tableName, props.column, offset + props.rowIndex, path || undefined)}
+			src={cellUrl(bucket, tableName, props.column, props.rowIndex, path || undefined)}
 			alt={props.column}
 			class="h-12 w-12 rounded object-cover"
 			loading="lazy"
@@ -336,11 +347,17 @@
 				{#if displayTotal > 0}
 					<Badge variant="secondary" class="ml-2"
 						>{displayTotal.toLocaleString()}
-						{mode === 'search' && searchActive ? 'results' : 'rows'}</Badge
+						{searchActive ? 'results' : 'rows'}</Badge
 					>
 				{/if}
 			</Card.Title>
 			<div class="flex items-center gap-2">
+				{#if searchActive}
+					<Button variant="outline" size="sm" onclick={clearSearch}>
+						<X class="mr-1.5 h-3.5 w-3.5" />
+						Clear search
+					</Button>
+				{/if}
 				{#if fields.length > 0}
 					<DropdownMenu.Root>
 						<DropdownMenu.Trigger>
@@ -379,69 +396,68 @@
 		</div>
 	</Card.Header>
 	<Card.Content class="space-y-3">
-		<Tabs.Root bind:value={mode}>
-			<Tabs.List>
-				<Tabs.Trigger value="browse">
-					<Search class="mr-1.5 h-3.5 w-3.5" />
-					Browse
-				</Tabs.Trigger>
-				<Tabs.Trigger value="search">
-					<Radar class="mr-1.5 h-3.5 w-3.5" />
-					Search
-				</Tabs.Trigger>
-			</Tabs.List>
+		<!-- Unified toolbar: filter (left) + search (right) -->
+		<div class="flex flex-wrap items-start gap-4">
+			<!-- Filter input (Lance SQL) -->
+			<form
+				class="flex min-w-0 flex-1 items-center gap-2"
+				onsubmit={(e) => {
+					e.preventDefault();
+					applyFilter();
+				}}
+			>
+				<div class="relative flex-1">
+					<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						bind:value={filterInput}
+						placeholder="Lance filter (e.g. label = 'cat' AND score > 0.5)"
+						class="pl-10 text-xs"
+					/>
+				</div>
+				<Button type="submit" variant="outline" size="sm">Filter</Button>
+			</form>
 
-			<Tabs.Content value="browse" class="space-y-3 pt-3">
+			<!-- Search input with mode buttons -->
+			{#if hasTextFields || vectorFields.length > 0}
 				<form
-					class="flex max-w-lg items-center gap-2"
-					onsubmit={(e) => {
-						e.preventDefault();
-						applyFilter();
-					}}
-				>
-					<div class="relative flex-1">
-						<Search
-							class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-						/>
-						<Input
-							bind:value={filterInput}
-							placeholder="Lance filter (e.g. label = 'cat' AND score > 0.5)"
-							class="pl-10 text-xs"
-						/>
-					</div>
-					<Button type="submit" variant="outline" size="sm">Filter</Button>
-				</form>
-			</Tabs.Content>
-
-			<Tabs.Content value="search" class="space-y-3 pt-3">
-				<form
-					class="flex max-w-lg items-center gap-2"
+					class="flex items-center gap-2"
 					onsubmit={(e) => {
 						e.preventDefault();
 						executeSearch();
 					}}
 				>
-					<div class="relative flex-1">
+					<div class="relative">
 						<Radar class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							bind:value={searchInput}
 							placeholder={searchType === 'fts'
 								? 'Full-text search...'
 								: searchType === 'hybrid'
-									? 'Hybrid search (text + vector)...'
-									: 'Vector search query...'}
-							class="pl-10 text-xs"
+									? 'Hybrid search...'
+									: 'Vector search...'}
+							class="w-56 pl-10 text-xs"
 						/>
 					</div>
 					<div class="flex items-center gap-1">
-						<Button
-							variant={searchType === 'fts' ? 'default' : 'outline'}
-							size="sm"
-							onclick={() => {
-								searchType = 'fts';
-							}}>FTS</Button
-						>
-						{#if vectorFields.length > 0 && hasTextFields}
+						{#if hasTextFields}
+							<Button
+								variant={searchType === 'fts' ? 'default' : 'outline'}
+								size="sm"
+								onclick={() => {
+									searchType = 'fts';
+								}}>FTS</Button
+							>
+						{/if}
+						{#if vectorFields.length > 0}
+							<Button
+								variant={searchType === 'vector' ? 'default' : 'outline'}
+								size="sm"
+								onclick={() => {
+									searchType = 'vector';
+								}}>Vector</Button
+							>
+						{/if}
+						{#if hasTextFields && vectorFields.length > 0}
 							<Button
 								variant={searchType === 'hybrid' ? 'default' : 'outline'}
 								size="sm"
@@ -453,33 +469,36 @@
 					</div>
 					<Button type="submit" variant="outline" size="sm">Search</Button>
 				</form>
-				{#if vectorFields.length > 1}
-					<div class="flex items-center gap-2 text-xs text-muted-foreground">
-						<span>Vector column:</span>
-						{#each vectorFields as vf (vf.name)}
-							<Button
-								variant={activeVectorCol === vf.name ? 'secondary' : 'ghost'}
-								size="sm"
-								class="h-6 px-2 text-xs"
-								onclick={() => {
-									selectedVectorCol = vf.name;
-								}}
-							>
-								{vf.name}
-								{#if vf.vector_dim}
-									<Badge variant="outline" class="ml-1 text-[9px]">{vf.vector_dim}</Badge>
-								{/if}
-							</Button>
-						{/each}
-					</div>
-				{/if}
-				{#if searchActive && !searchError && searchResults.length === 0}
-					<p class="text-sm text-muted-foreground">
-						No results found. Try a different query or check that an FTS index exists.
-					</p>
-				{/if}
-			</Tabs.Content>
-		</Tabs.Root>
+			{/if}
+		</div>
+
+		<!-- Vector column selector (when multiple vector columns exist) -->
+		{#if vectorFields.length > 1}
+			<div class="flex items-center gap-2 text-xs text-muted-foreground">
+				<span>Vector column:</span>
+				{#each vectorFields as vf (vf.name)}
+					<Button
+						variant={activeVectorCol === vf.name ? 'secondary' : 'ghost'}
+						size="sm"
+						class="h-6 px-2 text-xs"
+						onclick={() => {
+							selectedVectorCol = vf.name;
+						}}
+					>
+						{vf.name}
+						{#if vf.vector_dim}
+							<Badge variant="outline" class="ml-1 text-[9px]">{vf.vector_dim}</Badge>
+						{/if}
+					</Button>
+				{/each}
+			</div>
+		{/if}
+
+		{#if searchActive && !searchError && searchResults.length === 0}
+			<p class="text-sm text-muted-foreground">
+				No results found. Try a different query or check that an FTS index exists.
+			</p>
+		{/if}
 
 		{#if displayError}
 			<ErrorBanner message={String(displayError)} />
@@ -535,17 +554,30 @@
 							{#if field.is_binary}
 								{@const binVal = val as BinaryCellMeta | null}
 								{#if binVal?.size}
-									<img
-										src={cellUrl(
-											bucket,
-											tableName,
-											field.name,
-											rows.indexOf(detailRow) + offset,
-											path || undefined
-										)}
-										alt={field.name}
-										class="max-h-64 rounded object-contain"
-									/>
+									<button
+										type="button"
+										class="group relative cursor-pointer rounded border-0 bg-transparent p-0"
+										onclick={() => {
+											if (binVal) openFileViewer(field.name, detailRowIndex, binVal);
+										}}
+									>
+										<img
+											src={cellUrl(
+												bucket,
+												tableName,
+												field.name,
+												detailRowIndex,
+												path || undefined
+											)}
+											alt={field.name}
+											class="max-h-48 rounded object-contain transition-opacity group-hover:opacity-80"
+										/>
+										<span
+											class="absolute inset-0 flex items-center justify-center rounded bg-black/40 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100"
+										>
+											Click to preview ({formatBytes(binVal.size)})
+										</span>
+									</button>
 								{:else}
 									<span class="text-sm text-muted-foreground">null</span>
 								{/if}
@@ -587,3 +619,14 @@
 		{/if}
 	</Dialog.Content>
 </Dialog.Root>
+
+<!-- FileViewer for binary cell preview -->
+<FileViewer
+	bind:open={fileViewerOpen}
+	url={fileViewerUrl}
+	filename={fileViewerFilename}
+	size={fileViewerSize}
+	onclose={() => {
+		fileViewerOpen = false;
+	}}
+/>

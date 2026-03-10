@@ -49,13 +49,17 @@ class StorageBase(ABC):
     def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None: ...
 
     @abstractmethod
-    def get_object(self, bucket: str, key: str) -> dict: ...
+    def get_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict: ...
 
     @abstractmethod
     def head_object(self, bucket: str, key: str) -> dict: ...
 
     @abstractmethod
-    def delete_object(self, bucket: str, key: str) -> dict: ...
+    def delete_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict: ...
 
     def delete_objects(self, bucket: str, keys: List[str]) -> dict:
         """Delete multiple objects — default loops over delete_object.

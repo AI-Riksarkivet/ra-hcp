@@ -40,7 +40,7 @@
 			{#if tenant}
 				Tenant: {tenant}
 			{:else}
-				HCP Admin Console
+				RA-HCP Admin Console
 			{/if}
 		</h1>
 	</div>

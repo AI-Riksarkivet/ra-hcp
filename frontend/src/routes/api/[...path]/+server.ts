@@ -28,6 +28,10 @@ const handler: RequestHandler = async ({ params, request, locals }) => {
     "content-type": response.headers.get("content-type") ??
       "application/json",
   };
+  const contentLength = response.headers.get("content-length");
+  if (contentLength) {
+    responseHeaders["content-length"] = contentLength;
+  }
   const contentDisposition = response.headers.get("content-disposition");
   if (contentDisposition) {
     responseHeaders["content-disposition"] = contentDisposition;

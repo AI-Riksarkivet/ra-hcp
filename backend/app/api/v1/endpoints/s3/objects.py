@@ -387,9 +387,10 @@ async def upload_object(
 async def download_object(
     bucket: str,
     key: str,
+    version_id: Optional[str] = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    result = await run_s3(s3.get_object, f"object '{key}'", bucket, key)
+    result = await run_s3(s3.get_object, f"object '{key}'", bucket, key, version_id)
     body = result["Body"]
     return StreamingResponse(
         content=body.iter_chunks(),
@@ -420,7 +421,8 @@ async def head_object(
 async def delete_object(
     bucket: str,
     key: str,
+    version_id: Optional[str] = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    await run_s3(s3.delete_object, f"object '{key}'", bucket, key)
+    await run_s3(s3.delete_object, f"object '{key}'", bucket, key, version_id)
     return ObjectMutationResponse(status="deleted", bucket=bucket, key=key)

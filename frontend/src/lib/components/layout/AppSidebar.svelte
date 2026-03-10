@@ -30,6 +30,8 @@
 	] as const;
 
 	const analyticsItems = [{ href: '/analytics', label: 'Data Explorer', icon: Table2 }] as const;
+
+	const appVersion: string = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
 </script>
 
 <Sidebar.Root collapsible="icon">
@@ -39,7 +41,10 @@
 				<Sidebar.MenuButton size="lg">
 					<div class="flex items-center gap-3 overflow-hidden">
 						<Server class="h-6 w-6 shrink-0 text-primary" />
-						<span class="whitespace-nowrap text-lg font-bold">HCP App</span>
+						<div class="flex flex-col leading-tight">
+							<span class="whitespace-nowrap text-lg font-bold">RA-HCP</span>
+							<span class="text-[10px] text-muted-foreground">v{appVersion}</span>
+						</div>
 					</div>
 				</Sidebar.MenuButton>
 			</Sidebar.MenuItem>

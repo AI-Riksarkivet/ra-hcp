@@ -76,3 +76,27 @@ async def test_list_versions_with_prefix(
     mock_s3_service.list_object_versions.assert_called_once_with(
         "my-bucket", "logs/", 1000, None, None
     )
+
+
+async def test_download_versioned_object(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """GET with version_id passes it through to the storage layer."""
+    resp = await client.get(
+        "/api/v1/buckets/my-bucket/objects/file.txt?version_id=v1",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    mock_s3_service.get_object.assert_called_once_with("my-bucket", "file.txt", "v1")
+
+
+async def test_delete_versioned_object(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """DELETE with version_id passes it through to the storage layer."""
+    resp = await client.delete(
+        "/api/v1/buckets/my-bucket/objects/file.txt?version_id=v1",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    mock_s3_service.delete_object.assert_called_once_with("my-bucket", "file.txt", "v1")

@@ -258,7 +258,9 @@ class MockS3Service:
         data = body.read()
         self._objects[bucket][key] = _StoredObject(data)
 
-    def get_object(self, bucket: str, key: str) -> dict:
+    def get_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict:
         self._logger.info("get_object bucket=%s key=%s", bucket, key)
         obj = self._require_object(bucket, key)
         body = io.BytesIO(obj.data)
@@ -281,7 +283,9 @@ class MockS3Service:
             "LastModified": obj.last_modified,
         }
 
-    def delete_object(self, bucket: str, key: str) -> dict:
+    def delete_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict:
         self._logger.info("delete_object bucket=%s key=%s", bucket, key)
         self._require_bucket(bucket)
         self._objects.get(bucket, {}).pop(key, None)

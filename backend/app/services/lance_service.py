@@ -334,7 +334,7 @@ class LanceService:
                         query_vector, vector_column_name=vector_column
                     ).limit(limit)
                 elif query_type == "hybrid":
-                    if not query_vector:
+                    if not query_vector or not query_text:
                         raise ValueError(
                             "Hybrid search requires both query text and a vector"
                         )
