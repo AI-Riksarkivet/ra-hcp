@@ -1,23 +1,23 @@
 - https://mcpmarket.com/tools/skills/shadcn-svelte , fix. styling , ui/ custom componwnt route
 - improve theming? 
---
+---
 - improve lance viewer.. 
---
+---
 - protect main branch and work with pr
 - skills for pr and improve /commit command
 - storybook pr for changes so user need to check and run tests manually.. ? shooild we use playwright? 
 - fix storybook in github pages width
---
+---
 - is their a way to make login smoother.. ? custom endpoint that test what kinda user it is and what ui elments we should hide.
 - note settings tab and mapi setting needs to clearer. 
 - new /settings page route and rename old /settings to /tenant-settings
 - group routes into mapi and s3 instead lf (app) 
---
+---
 - how to support to be logined to multiple tenants in frontend...
 - do we need multiple backends? why does backend depend on domain? 
---
+---
 - fix all bugs for github actions
 - which should run on pr and which should run main..
 - fix releases..
---
+---
 - fix docs for sprintdemo.. 
