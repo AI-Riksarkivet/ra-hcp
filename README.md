@@ -1,5 +1,10 @@
 # HCP App
 
+[![Tests](https://github.com/AI-Riksarkivet/hcp/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Riksarkivet/hcp/actions/workflows/ci.yml)
+[![Documentation](https://github.com/AI-Riksarkivet/hcp/actions/workflows/docs.yml/badge.svg)](https://github.com/AI-Riksarkivet/hcp/actions/workflows/docs.yml)
+[![CodeQL](https://github.com/AI-Riksarkivet/hcp/actions/workflows/codeql.yml/badge.svg)](https://github.com/AI-Riksarkivet/hcp/actions/workflows/codeql.yml)
+[![TruffleHog](https://github.com/AI-Riksarkivet/hcp/actions/workflows/trufflehog.yml/badge.svg)](https://github.com/AI-Riksarkivet/hcp/actions/workflows/trufflehog.yml)
+
 Hitachi Content Platform (HCP) application — unified web app for S3-compatible object storage and HCP Management API operations.
 
 ## Project Structure
