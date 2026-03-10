@@ -21,6 +21,7 @@ from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.query_service import AuthenticatedQueryService, QueryService
 from app.schemas.lance import LanceDatasetParams
 from app.services.lance_service import LanceService
+from app.services.storage import StorageProtocol
 from app.services.storage.adapters.hcp import HcpStorage
 
 logger = logging.getLogger(__name__)
@@ -89,14 +90,14 @@ def _derive_s3_keys(creds: HcpCredentials) -> tuple[str, str]:
 async def get_s3_service(
     request: Request,
     token: Annotated[str, Depends(oauth2_scheme)],
-) -> AsyncGenerator[HcpStorage, None]:
-    """Yield an HcpStorage keyed by the caller's credentials.
+) -> AsyncGenerator[StorageProtocol, None]:
+    """Yield a StorageProtocol implementation keyed by the caller's credentials.
 
     When Redis caching is enabled, returns a CachedHcpStorage that
     transparently caches metadata reads and invalidates on writes.
     """
     creds = verify_token_with_credentials(token)
-    s3_cache: dict[HcpCredentials, HcpStorage] = request.app.state.s3_cache
+    s3_cache: dict[HcpCredentials, StorageProtocol] = request.app.state.s3_cache
     if creds not in s3_cache:
         settings = get_s3_settings()
         access_key, secret_key = _derive_s3_keys(creds)

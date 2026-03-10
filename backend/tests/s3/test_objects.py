@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import zipfile
 from datetime import datetime, timezone
@@ -199,7 +200,7 @@ async def test_delete_objects_bulk(
 async def test_download_objects_bulk(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    """Bulk download returns a zip archive containing requested objects."""
+    """Bulk download starts a task (202), then serves a zip archive (200)."""
 
     def mock_get_object(bucket, key):
         body = io.BytesIO(f"content of {key}".encode())
@@ -215,6 +216,16 @@ async def test_download_objects_bulk(
         "/api/v1/buckets/my-bucket/objects/download",
         headers=auth_headers,
         json={"keys": ["file1.txt", "file2.txt"]},
+    )
+    assert resp.status_code == 202
+    task_id = resp.json()["task_id"]
+
+    # Allow the background task to complete
+    await asyncio.sleep(0.1)
+
+    resp = await client.get(
+        f"/api/v1/buckets/my-bucket/objects/download/{task_id}",
+        headers=auth_headers,
     )
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/zip"
@@ -253,6 +264,15 @@ async def test_download_objects_bulk_skips_missing(
         headers=auth_headers,
         json={"keys": ["good.txt", "missing.txt"]},
     )
+    assert resp.status_code == 202
+    task_id = resp.json()["task_id"]
+
+    await asyncio.sleep(0.1)
+
+    resp = await client.get(
+        f"/api/v1/buckets/my-bucket/objects/download/{task_id}",
+        headers=auth_headers,
+    )
     assert resp.status_code == 200
     zf = zipfile.ZipFile(io.BytesIO(resp.content))
     assert zf.namelist() == ["good.txt"]
@@ -267,7 +287,7 @@ async def test_download_objects_bulk_empty_keys(
         headers=auth_headers,
         json={"keys": []},
     )
-    assert resp.status_code == 422
+    assert resp.status_code == 400
 
 
 async def test_bulk_presign_returns_urls(

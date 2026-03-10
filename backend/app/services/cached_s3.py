@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-class CachedS3Service(HcpStorage):
+class CachedHcpStorage(HcpStorage):
     """HcpStorage with transparent Redis caching on metadata reads.
 
     Inherits from HcpStorage so that ``isinstance`` checks and DI type
@@ -45,11 +45,11 @@ class CachedS3Service(HcpStorage):
         secret_key: str,
         endpoint_url: str | None = None,
         **kwargs: Any,
-    ) -> "CachedS3Service":
-        """Create a CachedS3Service with explicit credentials + cache."""
+    ) -> "CachedHcpStorage":
+        """Create a CachedHcpStorage with explicit credentials + cache."""
         cache: CacheService = kwargs.pop("cache")
         cache_settings: CacheSettings = kwargs.pop("cache_settings")
-        instance: CachedS3Service = super().with_credentials(  # type: ignore[assignment]
+        instance: CachedHcpStorage = super().with_credentials(  # type: ignore[assignment]
             settings, access_key, secret_key, endpoint_url=endpoint_url, **kwargs
         )
         instance._cache = cache
