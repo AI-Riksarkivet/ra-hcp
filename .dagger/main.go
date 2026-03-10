@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	uvPythonImage = "ghcr.io/astral-sh/uv:0.10.7-python3.14-alpine"
+	uvPythonImage = "ghcr.io/astral-sh/uv:0.10.7-python3.14-bookworm-slim"
 	denoImage     = "denoland/deno:2.7.1"
 	redisImage    = "redis:8.0.1-alpine"
 	backendDir    = "backend"
