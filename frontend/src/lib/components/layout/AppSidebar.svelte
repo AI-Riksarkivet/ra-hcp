@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import {
 		Database,
+		Table2,
 		Users,
 		Server,
 		Boxes,
@@ -27,6 +28,8 @@
 		{ href: '/buckets', label: 'Buckets', icon: Database },
 		{ href: '/access-control', label: 'Access Control', icon: Shield },
 	] as const;
+
+	const analyticsItems = [{ href: '/analytics', label: 'Data Explorer', icon: Table2 }] as const;
 </script>
 
 <Sidebar.Root collapsible="icon">
@@ -91,6 +94,27 @@
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each storageItems as item (item.href)}
+						{@const active = page.url.pathname.startsWith(item.href)}
+						<Sidebar.MenuItem>
+							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
+								{#snippet child({ props })}
+									<a href={item.href} {...props}>
+										<item.icon class="h-5 w-5 shrink-0" />
+										<span>{item.label}</span>
+									</a>
+								{/snippet}
+							</Sidebar.MenuButton>
+						</Sidebar.MenuItem>
+					{/each}
+				</Sidebar.Menu>
+			</Sidebar.GroupContent>
+		</Sidebar.Group>
+
+		<Sidebar.Group>
+			<Sidebar.GroupLabel>Analytics</Sidebar.GroupLabel>
+			<Sidebar.GroupContent>
+				<Sidebar.Menu>
+					{#each analyticsItems as item (item.href)}
 						{@const active = page.url.pathname.startsWith(item.href)}
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>

@@ -107,10 +107,20 @@ export const create_bucket = command(
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({
-        detail: "Failed to create bucket",
+        detail: `Failed to create bucket "${bucket}"`,
       }));
-      throw new Error(err.detail);
+      const raw = typeof err.detail === "string"
+        ? err.detail
+        : JSON.stringify(err.detail);
+      // Extract a user-friendly message from backend errors
+      let message = raw;
+      if (/invalid namespace name/i.test(raw)) {
+        message =
+          `Invalid bucket name "${bucket}". Bucket names must use only lowercase letters, numbers, hyphens, and dots (no underscores or spaces). Must be 3–63 characters long.`;
+      }
+      return { error: message };
     }
+    return { error: null as string | null };
   },
 );
 
