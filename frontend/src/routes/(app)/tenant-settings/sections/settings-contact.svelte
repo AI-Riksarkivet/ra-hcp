@@ -3,7 +3,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_tenant_settings,

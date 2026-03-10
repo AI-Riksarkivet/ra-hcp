@@ -3,8 +3,8 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import IpListEditor from '$lib/components/ui/ip-list-editor.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
+	import IpListEditor from '$lib/components/custom/ip-list-editor/ip-list-editor.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_search_security,

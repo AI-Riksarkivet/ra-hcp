@@ -4,7 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import type { DataAccessPermissions } from '$lib/remote/users.remote.js';
 	import { get_namespaces, type Namespace } from '$lib/remote/namespaces.remote.js';

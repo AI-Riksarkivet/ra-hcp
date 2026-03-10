@@ -4,10 +4,10 @@
 	import { Trash2 } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { toast } from 'svelte-sonner';
-	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
-	import BackButton from '$lib/components/ui/back-button.svelte';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
+	import BackButton from '$lib/components/custom/back-button/back-button.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
+	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
 	import {
 		get_content_class,
 		update_content_class,

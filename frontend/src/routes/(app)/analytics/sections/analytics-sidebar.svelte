@@ -5,7 +5,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
+	import ErrorBanner from '$lib/components/custom/error-banner/error-banner.svelte';
 	import { get_lance_tables, get_lance_schema } from '$lib/remote/lance.remote.js';
 	import type { LanceField } from '$lib/types/lance.js';
 	import { Database, Table2, RefreshCw, FileType, Waypoints } from 'lucide-svelte';

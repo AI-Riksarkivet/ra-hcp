@@ -3,8 +3,8 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
+	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
 	import { toast } from 'svelte-sonner';
 	import type { Snippet } from 'svelte';
 

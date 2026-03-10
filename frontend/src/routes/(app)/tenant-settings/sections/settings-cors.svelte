@@ -1,5 +1,5 @@
 <script lang="ts">
-	import CorsEditor from '$lib/components/ui/cors-editor.svelte';
+	import CorsEditor from '$lib/components/custom/cors-editor/cors-editor.svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import {
 		get_tenant_cors,

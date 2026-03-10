@@ -17,12 +17,12 @@
 		Archive,
 	} from 'lucide-svelte';
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
-	import FileViewer from '$lib/components/ui/FileViewer.svelte';
+	import FileViewer from '$lib/components/custom/file-viewer/FileViewer.svelte';
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
-	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
+	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
+	import BulkDeleteDialog from '$lib/components/custom/bulk-delete-dialog/bulk-delete-dialog.svelte';
 	import {
 		get_objects,
 		delete_object,

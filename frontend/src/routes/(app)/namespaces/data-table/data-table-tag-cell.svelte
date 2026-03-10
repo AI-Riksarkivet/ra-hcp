@@ -2,7 +2,7 @@
 	import { X, Pencil } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
+	import ServiceTagBadge from '$lib/components/custom/service-tag-badge/service-tag-badge.svelte';
 
 	let {
 		tags,

@@ -5,8 +5,8 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { get_users, get_groups } from '$lib/remote/users.remote.js';
 	import type { User, GroupAccount } from '$lib/constants.js';
-	import PageHeader from '$lib/components/ui/page-header.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
+	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
 	import UsersTable from './sections/users-table.svelte';
 	import GroupsTable from './sections/groups-table.svelte';
 	import UserCreateDialog from './sections/user-create-dialog.svelte';

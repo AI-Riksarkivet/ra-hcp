@@ -4,7 +4,7 @@
 	import { HelpCircle, Pencil, Check, X } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
+	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
 	import { formatDate, formatBytes, parseQuotaBytes, getStorageUsed } from '$lib/utils/format.js';
 	import type { ChargebackEntry } from '$lib/utils/format.js';
 	import { get_tenant_chargeback } from '$lib/remote/tenant-info.remote.js';

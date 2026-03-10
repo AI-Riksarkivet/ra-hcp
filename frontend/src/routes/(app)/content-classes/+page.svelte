@@ -8,16 +8,16 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
+	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
 	import {
 		get_content_classes,
 		create_content_class,
 		delete_content_class,
 		type ContentClass,
 	} from '$lib/remote/content-classes.remote.js';
-	import PageHeader from '$lib/components/ui/page-header.svelte';
-	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
+	import ErrorBanner from '$lib/components/custom/error-banner/error-banner.svelte';
+	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
 	import {
 		DataTable,
 		DataTableHeaderButton,

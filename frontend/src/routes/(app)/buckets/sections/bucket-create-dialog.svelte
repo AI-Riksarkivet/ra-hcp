@@ -2,7 +2,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { toast } from 'svelte-sonner';
-	import FormDialog from '$lib/components/ui/form-dialog.svelte';
+	import FormDialog from '$lib/components/custom/form-dialog/form-dialog.svelte';
 	import { get_buckets, create_bucket } from '$lib/remote/buckets.remote.js';
 
 	let {

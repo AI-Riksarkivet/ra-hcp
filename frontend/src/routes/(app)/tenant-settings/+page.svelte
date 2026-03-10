@@ -12,8 +12,8 @@
 		Globe,
 		CreditCard,
 	} from 'lucide-svelte';
-	import PageHeader from '$lib/components/ui/page-header.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
+	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
 	import SettingsGeneral from './sections/settings-general.svelte';
 	import SettingsContact from './sections/settings-contact.svelte';
 	import SettingsNamespaceDefaults from './sections/settings-namespace-defaults.svelte';

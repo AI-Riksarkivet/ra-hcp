@@ -2,13 +2,13 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
+	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
 	import { Trash2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { get_group, delete_group } from '$lib/remote/users.remote.js';
 	import type { GroupAccount } from '$lib/constants.js';
-	import BackButton from '$lib/components/ui/back-button.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import BackButton from '$lib/components/custom/back-button/back-button.svelte';
+	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
 	import GroupProfile from './sections/group-profile.svelte';
 	import GroupNamespaceAccess from './sections/group-namespace-access.svelte';
 

@@ -2,8 +2,8 @@
 	import { page } from '$app/state';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Database, Settings2 } from 'lucide-svelte';
-	import BackButton from '$lib/components/ui/back-button.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import BackButton from '$lib/components/custom/back-button/back-button.svelte';
+	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
 	import NsGeneralInfo from './sections/ns-general-info.svelte';
 	import NsProtocols from './sections/ns-protocols.svelte';
 	import NsFeatures from './sections/ns-features.svelte';

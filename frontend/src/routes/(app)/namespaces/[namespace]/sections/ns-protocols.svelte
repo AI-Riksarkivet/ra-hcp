@@ -5,7 +5,7 @@
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { HelpCircle, Info, Terminal, Copy } from 'lucide-svelte';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_ns_protocols,

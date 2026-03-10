@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import PageHeader from '$lib/components/ui/page-header.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
+	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
 	import AnalyticsSidebar from './sections/analytics-sidebar.svelte';
 	import AnalyticsTable from './sections/analytics-table.svelte';
 	import { Table2 } from 'lucide-svelte';

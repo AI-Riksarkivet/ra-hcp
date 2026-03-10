@@ -7,10 +7,10 @@
 	import { toast } from 'svelte-sonner';
 	import { useDelete } from '$lib/utils/use-delete.svelte.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
-	import BulkDeleteDialog from '$lib/components/ui/bulk-delete-dialog.svelte';
-	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
-	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
+	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
+	import BulkDeleteDialog from '$lib/components/custom/bulk-delete-dialog/bulk-delete-dialog.svelte';
+	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
+	import ServiceTagBadge from '$lib/components/custom/service-tag-badge/service-tag-badge.svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import {
 		update_namespace,

@@ -37,7 +37,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
+	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
 	import { toast } from 'svelte-sonner';
 
 	interface Namespace {

@@ -20,7 +20,7 @@
 	import HardDrive from 'lucide-svelte/icons/hard-drive';
 	import Users from 'lucide-svelte/icons/users';
 	import Shield from 'lucide-svelte/icons/shield';
-	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
+	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
 </script>
 
 <Story name="Default" args={{ label: 'Total Namespaces', value: '24' }}>

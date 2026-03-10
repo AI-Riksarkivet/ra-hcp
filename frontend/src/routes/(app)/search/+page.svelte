@@ -3,8 +3,8 @@
 	import { FileSearch, Activity, CircleHelp } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { cn } from '$lib/utils.js';
-	import PageHeader from '$lib/components/ui/page-header.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
+	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
 	import SearchObjects from './sections/search-objects.svelte';
 	import SearchOperations from './sections/search-operations.svelte';
 	import SearchHelp from './sections/search-help.svelte';

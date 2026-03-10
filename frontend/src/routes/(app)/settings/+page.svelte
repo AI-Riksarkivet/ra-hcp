@@ -6,7 +6,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import PageHeader from '$lib/components/ui/page-header.svelte';
+	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
 
 	let username = $derived(page.data.username as string);
 	let tenant = $derived(page.data.tenant as string | undefined);

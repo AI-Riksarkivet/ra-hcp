@@ -2,7 +2,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Loader2 } from 'lucide-svelte';
-	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
+	import ErrorBanner from '$lib/components/custom/error-banner/error-banner.svelte';
 	import type { Snippet } from 'svelte';
 
 	let {

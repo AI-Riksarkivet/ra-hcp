@@ -2,13 +2,13 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
+	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
 	import { KeyRound, Trash2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { get_user, delete_user } from '$lib/remote/users.remote.js';
 	import type { User } from '$lib/constants.js';
-	import BackButton from '$lib/components/ui/back-button.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
+	import BackButton from '$lib/components/custom/back-button/back-button.svelte';
+	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
 	import UserProfile from './sections/user-profile.svelte';
 	import UserS3Credentials from './sections/user-s3-credentials.svelte';
 	import UserNamespaceAccess from './sections/user-namespace-access.svelte';

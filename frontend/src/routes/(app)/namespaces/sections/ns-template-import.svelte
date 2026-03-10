@@ -25,7 +25,7 @@
 		getTags,
 	} from '$lib/types/ns-templates.js';
 	import NsImportEditor from './ns-import-editor.svelte';
-	import StepProgress from '$lib/components/ui/step-progress.svelte';
+	import StepProgress from '$lib/components/custom/step-progress/step-progress.svelte';
 
 	let {
 		tenant,

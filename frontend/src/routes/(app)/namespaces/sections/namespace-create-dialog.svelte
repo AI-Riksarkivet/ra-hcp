@@ -3,8 +3,8 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { toast } from 'svelte-sonner';
-	import FormDialog from '$lib/components/ui/form-dialog.svelte';
-	import TagInput from '$lib/components/ui/tag-input.svelte';
+	import FormDialog from '$lib/components/custom/form-dialog/form-dialog.svelte';
+	import TagInput from '$lib/components/custom/tag-input/tag-input.svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import { create_namespace, type Namespace } from '$lib/remote/namespaces.remote.js';
 

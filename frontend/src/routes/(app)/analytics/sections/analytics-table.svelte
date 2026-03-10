@@ -5,9 +5,9 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
+	import ErrorBanner from '$lib/components/custom/error-banner/error-banner.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import FileViewer from '$lib/components/ui/FileViewer.svelte';
+	import FileViewer from '$lib/components/custom/file-viewer/FileViewer.svelte';
 	import { get_lance_rows, get_lance_schema, search_lance } from '$lib/remote/lance.remote.js';
 	import {
 		cellUrl,

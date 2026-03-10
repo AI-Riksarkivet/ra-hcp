@@ -9,7 +9,7 @@
 	import { get_user, update_user } from '$lib/remote/users.remote.js';
 	import { AVAILABLE_ROLES, ROLE_DESCRIPTIONS, getUserRoles } from '$lib/constants.js';
 	import type { User } from '$lib/constants.js';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 
 	let {
 		tenant,

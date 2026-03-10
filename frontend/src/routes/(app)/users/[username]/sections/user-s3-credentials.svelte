@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { KeyRound } from 'lucide-svelte';
-	import CopyableInput from '$lib/components/ui/copyable-input.svelte';
+	import CopyableInput from '$lib/components/custom/copyable-input/copyable-input.svelte';
 	import { get_s3_credentials } from '$lib/remote/buckets.remote.js';
 
 	let {

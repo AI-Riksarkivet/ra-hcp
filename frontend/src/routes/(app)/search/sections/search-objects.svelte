@@ -17,7 +17,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as TablePrimitive from '$lib/components/ui/table/index.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
+	import ErrorBanner from '$lib/components/custom/error-banner/error-banner.svelte';
 	import {
 		DataTable,
 		DataTableCheckbox,

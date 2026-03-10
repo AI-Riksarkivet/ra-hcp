@@ -7,7 +7,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Plus, Trash2 } from 'lucide-svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_email_notification,

@@ -3,7 +3,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-	import DeleteConfirmDialog from '$lib/components/ui/delete-confirm-dialog.svelte';
+	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
 	import { Search, Download, Trash2, ChevronRight, ChevronDown } from 'lucide-svelte';
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import { toast } from 'svelte-sonner';

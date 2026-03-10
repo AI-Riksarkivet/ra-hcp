@@ -2,9 +2,9 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Pencil } from 'lucide-svelte';
-	import ServiceTagBadge from '$lib/components/ui/service-tag-badge.svelte';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
-	import TagInput from '$lib/components/ui/tag-input.svelte';
+	import ServiceTagBadge from '$lib/components/custom/service-tag-badge/service-tag-badge.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
+	import TagInput from '$lib/components/custom/tag-input/tag-input.svelte';
 	import { toast } from 'svelte-sonner';
 	import {
 		get_namespace,

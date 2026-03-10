@@ -8,7 +8,7 @@
 	import { get_group, update_group } from '$lib/remote/users.remote.js';
 	import { GROUP_ROLES, ROLE_DESCRIPTIONS, getGroupName, getGroupRoles } from '$lib/constants.js';
 	import type { GroupAccount } from '$lib/constants.js';
-	import SaveButton from '$lib/components/ui/save-button.svelte';
+	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 
 	let {
 		tenant,

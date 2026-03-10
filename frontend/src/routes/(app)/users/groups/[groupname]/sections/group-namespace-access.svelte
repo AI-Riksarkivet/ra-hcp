@@ -1,5 +1,5 @@
 <script lang="ts">
-	import NamespacePermissionsEditor from '$lib/components/ui/namespace-permissions-editor.svelte';
+	import NamespacePermissionsEditor from '$lib/components/custom/namespace-permissions-editor/namespace-permissions-editor.svelte';
 	import {
 		get_group_permissions,
 		set_group_permissions,

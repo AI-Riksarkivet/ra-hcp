@@ -1,5 +1,5 @@
 <script lang="ts">
-	import CorsEditor from '$lib/components/ui/cors-editor.svelte';
+	import CorsEditor from '$lib/components/custom/cors-editor/cors-editor.svelte';
 	import {
 		get_ns_cors,
 		set_ns_cors,

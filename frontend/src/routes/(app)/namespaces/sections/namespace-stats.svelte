@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { FileBox, HardDrive, Boxes, Users, ChartPie } from 'lucide-svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
-	import StatCard from '$lib/components/ui/stat-card.svelte';
-	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
+	import StatCard from '$lib/components/custom/stat-card/stat-card.svelte';
+	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import {
 		get_tenant,

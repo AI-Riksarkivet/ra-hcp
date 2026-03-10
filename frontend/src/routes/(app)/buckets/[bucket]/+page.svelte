@@ -12,8 +12,8 @@
 	} from '$lib/utils/format.js';
 	import type { ChargebackEntry } from '$lib/utils/format.js';
 	import { goto } from '$app/navigation';
-	import BackButton from '$lib/components/ui/back-button.svelte';
-	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
+	import BackButton from '$lib/components/custom/back-button/back-button.svelte';
+	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
 	import { get_tenant_chargeback } from '$lib/remote/tenant-info.remote.js';
 	import { get_namespaces, type Namespace } from '$lib/remote/namespaces.remote.js';
 	import BucketVersioning from './sections/bucket-versioning.svelte';

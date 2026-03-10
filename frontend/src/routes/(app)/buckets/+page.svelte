@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Plus } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import PageHeader from '$lib/components/ui/page-header.svelte';
+	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
 	import BucketTable from './sections/bucket-table.svelte';
 	import BucketCreateDialog from './sections/bucket-create-dialog.svelte';
 
