@@ -1,0 +1,3083 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Hitachi Content Platform application — unified FastAPI service for S3-compatible object storage and HCP Management API operations.">
+      
+      
+        <meta name="author" content="HCP App Team">
+      
+      
+      
+        <link rel="prev" href="../namespaces/">
+      
+      
+        <link rel="next" href="../reference/endpoints/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.25">
+    
+    
+      
+        <title>System API - HCP App</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.50057488.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#system-api" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="HCP App" class="md-header__button md-logo" aria-label="HCP App" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            HCP App
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              System API
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+    </div>
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  HCP App
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/" class="md-tabs__link">
+          
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  API Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../reference/endpoints/" class="md-tabs__link">
+          
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../components/" class="md-tabs__link">
+          
+  
+  Components
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="HCP App" class="md-nav__button md-logo" aria-label="HCP App" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+
+    </a>
+    HCP App
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HCP App
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HCP App
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HCP Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../s3-buckets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Buckets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../s3-objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Objects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tenants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../namespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#replication-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replication Links
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Replication Links">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#link-crud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link CRUD
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link Actions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-content" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link Content
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-schedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link Schedule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-candidates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link Candidates
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#replication-certificates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replication Certificates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#replication-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replication Service
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#erasure-coding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erasure Coding
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Erasure Coding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ec-topologies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EC Topologies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ec-topology-tenants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EC Topology Tenants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ec-candidates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EC Candidates
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Infrastructure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#network" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#licenses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Licenses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statistics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Statistics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#health-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Health Check
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#support-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Support Access
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Identity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="System Identity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#group-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Group Accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata Query
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metadata Query">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#object-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Object Query
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#operation-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operation Query
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#verbose-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verbose Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-responses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Responses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-responses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Responses
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/endpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Endpoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/common/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/s3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/namespace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/user-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/group-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Group Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/content-class/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Class
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Components
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Components
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#replication-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replication Links
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Replication Links">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#link-crud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link CRUD
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link Actions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-content" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link Content
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-schedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link Schedule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-candidates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link Candidates
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#replication-certificates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replication Certificates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#replication-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Replication Service
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#erasure-coding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Erasure Coding
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Erasure Coding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ec-topologies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EC Topologies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ec-topology-tenants" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EC Topology Tenants
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ec-candidates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EC Candidates
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Infrastructure
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Infrastructure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#network" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Network
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#licenses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Licenses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statistics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Statistics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Operations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#health-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Health Check
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#support-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Support Access
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Identity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="System Identity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#group-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Group Accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata Query
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metadata Query">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#object-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Object Query
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#operation-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operation Query
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#verbose-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verbose Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-responses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Responses
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-responses" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Responses
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Index
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    API Guide
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+<h1 id="system-api">System API</h1>
+<p>All System API endpoints require JWT authentication with <strong>system-level admin credentials</strong>.
+Log in with a system-level username (no tenant prefix) to obtain a valid token.</p>
+<p>Base URL: <code>/api/v1/mapi</code></p>
+<hr />
+<h2 id="replication-links">Replication Links</h2>
+<p>Manage replication links between HCP systems.</p>
+<p><strong>Prefix:</strong> <code>/services/replication/links</code></p>
+<h3 id="link-crud">Link CRUD</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/services/replication/links</code></td>
+<td>List all replication links</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/services/replication/links</code></td>
+<td>Create a replication link</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/services/replication/links/{link_name}</code></td>
+<td>Get link details</td>
+</tr>
+<tr>
+<td>HEAD</td>
+<td><code>/services/replication/links/{link_name}</code></td>
+<td>Check if link exists</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/services/replication/links/{link_name}</code></td>
+<td>Modify link or trigger action</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/services/replication/links/{link_name}</code></td>
+<td>Delete a replication link</td>
+</tr>
+</tbody>
+</table>
+<h3 id="link-actions">Link Actions</h3>
+<p>Link actions are triggered via <code>POST /services/replication/links/{link_name}</code> with query parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Query Param</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>suspend</code></td>
+<td>Suspend the replication link</td>
+</tr>
+<tr>
+<td><code>resume</code></td>
+<td>Resume a suspended link</td>
+</tr>
+<tr>
+<td><code>failOver</code></td>
+<td>Trigger failover to the remote system</td>
+</tr>
+<tr>
+<td><code>failBack</code></td>
+<td>Trigger failback to the local system</td>
+</tr>
+<tr>
+<td><code>beginRecover</code></td>
+<td>Begin recovery after failover</td>
+</tr>
+<tr>
+<td><code>completeRecovery</code></td>
+<td>Complete the recovery process</td>
+</tr>
+<tr>
+<td><code>restore</code></td>
+<td>Restore link state</td>
+</tr>
+</tbody>
+</table>
+<h3 id="link-content">Link Content</h3>
+<p>Manage which tenants, directories, and chained links are included in replication.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/content</code></td>
+<td>Get all link content</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/content/tenants</code></td>
+<td>List tenants in link</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/{link_name}/content/tenants/{tenant_name}</code></td>
+<td>Add tenant to link</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/content/tenants/{tenant_name}</code></td>
+<td>Get tenant replication details</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/{link_name}/content/tenants/{tenant_name}</code></td>
+<td>Pause/resume tenant replication</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/{link_name}/content/tenants/{tenant_name}</code></td>
+<td>Remove tenant from link</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/content/defaultNamespaceDirectories</code></td>
+<td>List default namespace directories</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/{link_name}/content/defaultNamespaceDirectories/{dir}</code></td>
+<td>Add directory to link</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/{link_name}/content/defaultNamespaceDirectories/{dir}</code></td>
+<td>Remove directory from link</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/content/chainedLinks</code></td>
+<td>List chained links</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/{link_name}/content/chainedLinks/{chained}</code></td>
+<td>Add chained link</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/{link_name}/content/chainedLinks/{chained}</code></td>
+<td>Remove chained link</td>
+</tr>
+</tbody>
+</table>
+<h3 id="link-schedule">Link Schedule</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/schedule</code></td>
+<td>Get link schedule</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/{link_name}/schedule</code></td>
+<td>Update link schedule</td>
+</tr>
+</tbody>
+</table>
+<h3 id="link-candidates">Link Candidates</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/localCandidates</code></td>
+<td>All local candidates</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/localCandidates/tenants</code></td>
+<td>Local tenant candidates</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/localCandidates/defaultNamespaceDirectories</code></td>
+<td>Local directory candidates</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/localCandidates/chainedLinks</code></td>
+<td>Local chained link candidates</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/remoteCandidates</code></td>
+<td>All remote candidates</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/{link_name}/remoteCandidates/tenants</code></td>
+<td>Remote tenant candidates</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="replication-certificates">Replication Certificates</h2>
+<p>Manage SSL certificates used for replication link encryption.</p>
+<p><strong>Prefix:</strong> <code>/services/replication/certificates</code></p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/services/replication/certificates</code></td>
+<td>List all certificates</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/services/replication/certificates</code></td>
+<td>Upload a certificate (PEM file)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/services/replication/certificates/{id}</code></td>
+<td>Get certificate details</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/services/replication/certificates/{id}</code></td>
+<td>Delete a certificate</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/services/replication/certificates/server</code></td>
+<td>Download server certificate</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="replication-service">Replication Service</h2>
+<p>View and modify the global replication service configuration.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/services/replication</code></td>
+<td>Get replication service status</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/services/replication</code></td>
+<td>Update replication settings</td>
+</tr>
+</tbody>
+</table>
+<p>Query parameters for POST: <code>shutDownAllLinks</code>, <code>reestablishAllLinks</code>.</p>
+<hr />
+<h2 id="erasure-coding">Erasure Coding</h2>
+<p>Manage erasure coding (EC) topologies for storage efficiency.</p>
+<p><strong>Prefix:</strong> <code>/services/erasureCoding</code></p>
+<h3 id="ec-topologies">EC Topologies</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/services/erasureCoding/ecTopologies</code></td>
+<td>List EC topologies</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/services/erasureCoding/ecTopologies</code></td>
+<td>Create EC topology</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/services/erasureCoding/ecTopologies/{name}</code></td>
+<td>Get topology details</td>
+</tr>
+<tr>
+<td>HEAD</td>
+<td><code>/services/erasureCoding/ecTopologies/{name}</code></td>
+<td>Check if topology exists</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/services/erasureCoding/ecTopologies/{name}</code></td>
+<td>Modify or retire topology</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/services/erasureCoding/ecTopologies/{name}</code></td>
+<td>Delete topology</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ec-topology-tenants">EC Topology Tenants</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/ecTopologies/{name}/tenants</code></td>
+<td>List tenants in topology</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/ecTopologies/{name}/tenants/{tenant}</code></td>
+<td>Add tenant to topology</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/ecTopologies/{name}/tenants/{tenant}</code></td>
+<td>Remove tenant from topology</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ec-candidates">EC Candidates</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/ecTopologies/{name}/tenantCandidates</code></td>
+<td>Eligible tenants</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/ecTopologies/{name}/tenantConflictingCandidates</code></td>
+<td>Tenants with conflicts</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/linkCandidates</code></td>
+<td>Eligible replication links</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="infrastructure">Infrastructure</h2>
+<h3 id="network">Network</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/network</code></td>
+<td>Get network settings</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/network</code></td>
+<td>Update network settings</td>
+</tr>
+</tbody>
+</table>
+<h3 id="licenses">Licenses</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/storage/licenses</code></td>
+<td>List all licenses</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/storage/licenses</code></td>
+<td>Upload a license file</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/storage/licenses/{serial}</code></td>
+<td>Get license details</td>
+</tr>
+</tbody>
+</table>
+<h3 id="statistics">Statistics</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/nodes/statistics</code></td>
+<td>Node-level statistics (CPU, memory, disk)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/services/statistics</code></td>
+<td>Service-level statistics</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="operations">Operations</h2>
+<h3 id="health-check">Health Check</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/healthCheckReport</code></td>
+<td>Get health check status</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/healthCheckReport/prepare</code></td>
+<td>Prepare a health check</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/healthCheckReport/download</code></td>
+<td>Download health check data</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/healthCheckReport/cancel</code></td>
+<td>Cancel in-progress health check</td>
+</tr>
+</tbody>
+</table>
+<h3 id="logs">Logs</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/logs</code></td>
+<td>Get log download status</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/logs</code></td>
+<td>Mark logs or cancel download</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/logs/prepare</code></td>
+<td>Prepare log download</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/logs/download</code></td>
+<td>Download logs</td>
+</tr>
+</tbody>
+</table>
+<h3 id="support-access">Support Access</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/supportaccesscredentials</code></td>
+<td>Get support credentials</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/supportaccesscredentials</code></td>
+<td>Upload support credentials</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="system-identity">System Identity</h2>
+<p>Manage system-level user and group accounts.</p>
+<h3 id="user-accounts">User Accounts</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/userAccounts</code></td>
+<td>List system user accounts</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/userAccounts/{username}</code></td>
+<td>Get user account details</td>
+</tr>
+<tr>
+<td>HEAD</td>
+<td><code>/userAccounts/{username}</code></td>
+<td>Check if user exists</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/userAccounts/{username}</code></td>
+<td>Modify user account</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/userAccounts/{username}/changePassword</code></td>
+<td>Change user password</td>
+</tr>
+</tbody>
+</table>
+<h3 id="group-accounts">Group Accounts</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/groupAccounts</code></td>
+<td>List system group accounts</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/groupAccounts/{group}</code></td>
+<td>Get group account details</td>
+</tr>
+<tr>
+<td>HEAD</td>
+<td><code>/groupAccounts/{group}</code></td>
+<td>Check if group exists</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="metadata-query">Metadata Query</h2>
+<p>Search object metadata and audit operations across tenant namespaces.</p>
+<p><strong>Prefix:</strong> <code>/query/tenants/{tenant_name}</code></p>
+<p>!!! note
+    Metadata Query endpoints use the <code>/api/v1/query</code> prefix (not <code>/api/v1/mapi</code>).</p>
+<h3 id="object-query">Object Query</h3>
+<div class="highlight"><pre><span></span><code>POST /api/v1/query/tenants/{tenant_name}/objects
+</code></pre></div>
+<p>Search for objects using Lucene query syntax against indexed metadata.</p>
+<p><strong>Request Body:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>query</code></td>
+<td>string</td>
+<td><em>(required)</em></td>
+<td>Lucene query expression</td>
+</tr>
+<tr>
+<td><code>count</code></td>
+<td>integer</td>
+<td><code>100</code></td>
+<td>Maximum results to return</td>
+</tr>
+<tr>
+<td><code>offset</code></td>
+<td>integer</td>
+<td><code>0</code></td>
+<td>Starting offset for pagination</td>
+</tr>
+<tr>
+<td><code>sort</code></td>
+<td>string</td>
+<td><code>null</code></td>
+<td>Sort field (<code>+field</code> ascending, <code>-field</code> descending)</td>
+</tr>
+<tr>
+<td><code>verbose</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Include full metadata in results</td>
+</tr>
+<tr>
+<td><code>objectProperties</code></td>
+<td>string[]</td>
+<td><code>null</code></td>
+<td>Specific properties to return</td>
+</tr>
+<tr>
+<td><code>facets</code></td>
+<td>string[]</td>
+<td><code>null</code></td>
+<td>Facet fields to aggregate</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;query&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;namespace:finance AND size:[1048576 TO *]&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;offset&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;sort&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;-changeTimeMilliseconds&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;verbose&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;objectProperties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;urlName&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;size&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;contentType&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;changeTimeString&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="operation-query">Operation Query</h3>
+<div class="highlight"><pre><span></span><code>POST /api/v1/query/tenants/{tenant_name}/operations
+</code></pre></div>
+<p>Audit trail of create, delete, purge, and dispose events.</p>
+<p><strong>Request Body:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>count</code></td>
+<td>integer</td>
+<td><code>100</code></td>
+<td>Maximum results to return</td>
+</tr>
+<tr>
+<td><code>lastResult</code></td>
+<td>object</td>
+<td><code>null</code></td>
+<td>Cursor from previous page (for pagination)</td>
+</tr>
+<tr>
+<td><code>verbose</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Include full metadata</td>
+</tr>
+<tr>
+<td><code>systemMetadata</code></td>
+<td>object</td>
+<td><code>null</code></td>
+<td>Filters for time range, namespaces, transactions</td>
+</tr>
+</tbody>
+</table>
+<p><strong>System Metadata Filters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>changeTime.start</code></td>
+<td>string</td>
+<td>Start time (epoch ms or ISO 8601)</td>
+</tr>
+<tr>
+<td><code>changeTime.end</code></td>
+<td>string</td>
+<td>End time (epoch ms or ISO 8601)</td>
+</tr>
+<tr>
+<td><code>namespaces.namespace</code></td>
+<td>string[]</td>
+<td>Filter to specific namespaces</td>
+</tr>
+<tr>
+<td><code>transactions.transaction</code></td>
+<td>string[]</td>
+<td>Transaction types: <code>create</code>, <code>delete</code>, <code>purge</code>, <code>dispose</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="common-patterns">Common Patterns</h2>
+<h3 id="verbose-mode">Verbose Mode</h3>
+<p>Most <code>GET</code> endpoints accept a <code>verbose</code> query parameter. When <code>true</code>, the response includes all available fields. When <code>false</code> (default), only names or identifiers are returned.</p>
+<h3 id="status-responses">Status Responses</h3>
+<p>Mutating operations return a <code>StatusResponse</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;created&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Common status values: <code>created</code>, <code>updated</code>, <code>deleted</code>, <code>ok</code>, <code>password_changed</code>, <code>cancelled</code>.</p>
+<h3 id="error-responses">Error Responses</h3>
+<table>
+<thead>
+<tr>
+<th>Status Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>400</td>
+<td>Bad request (invalid body or parameters)</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Unauthorized (missing or expired JWT)</td>
+</tr>
+<tr>
+<td>403</td>
+<td>Forbidden (insufficient permissions)</td>
+</tr>
+<tr>
+<td>404</td>
+<td>Resource not found</td>
+</tr>
+<tr>
+<td>409</td>
+<td>Conflict (resource already exists)</td>
+</tr>
+<tr>
+<td>500</td>
+<td>Internal server error</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../namespaces/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Namespaces">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Namespaces
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../reference/endpoints/" class="md-footer__link md-footer__link--next" aria-label="Next: Endpoints">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Endpoints
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 HCP App
+    </div>
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.5fd3284f.min.js"></script>
+      
+    
+  </body>
+</html>

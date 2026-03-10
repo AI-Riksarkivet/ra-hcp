@@ -1,0 +1,2543 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Hitachi Content Platform application — unified FastAPI service for S3-compatible object storage and HCP Management API operations.">
+      
+      
+        <meta name="author" content="HCP App Team">
+      
+      
+      
+        <link rel="prev" href="../getting-started/configuration/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.25">
+    
+    
+      
+        <title>Architecture - HCP App</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.50057488.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.dfe2e883.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="HCP App" class="md-header__button md-logo" aria-label="HCP App" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            HCP App
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+    </div>
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="./.." class="md-tabs__link">
+          
+  
+  HCP App
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../getting-started/" class="md-tabs__link">
+          
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="././" class="md-tabs__link">
+          
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/" class="md-tabs__link">
+          
+  
+  API Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/reference/endpoints/" class="md-tabs__link">
+          
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../components/" class="md-tabs__link">
+          
+  
+  Components
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="HCP App" class="md-nav__button md-logo" aria-label="HCP App" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+
+    </a>
+    HCP App
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HCP App
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HCP App
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Index
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HCP Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#system-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#request-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backend Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Decisions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backend-router-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Router Organization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-layer-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Layer Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage Layer Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-storage-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new storage backend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hcp-specific-workarounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HCP-specific workarounds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespace-protocol-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Namespace protocol configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frontend-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frontend Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#frontend-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend RBAC
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frontend RBAC">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#access-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#protected-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protected routes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sidebar-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidebar filtering
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frontend-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mock-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mock Server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/s3-buckets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Buckets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/s3-objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Objects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/tenants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/namespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reference/endpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Endpoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reference/common/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reference/s3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reference/tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reference/namespace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reference/user-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reference/group-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Group Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reference/content-class/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Class
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Components
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Components
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#system-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#request-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backend Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Decisions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backend-router-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend Router Organization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-layer-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Layer Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage Layer Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-storage-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new storage backend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hcp-specific-workarounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HCP-specific workarounds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespace-protocol-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Namespace protocol configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frontend-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frontend Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#frontend-rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend RBAC
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Frontend RBAC">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#access-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#protected-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protected routes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sidebar-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidebar filtering
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frontend-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mock-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mock Server
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="./.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Index
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="././" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Architecture
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+<h1 id="architecture">Architecture</h1>
+<p>This page describes the overall design of the HCP application, how the backend and frontend work together, and the key architectural decisions.</p>
+<h2 id="system-overview">System Overview</h2>
+<pre class="mermaid"><code>graph TB
+    subgraph "Browser"
+        FE["SvelteKit Frontend&lt;br/&gt;:5173"]
+    end
+
+    subgraph "Backend Server"
+        API["FastAPI Backend&lt;br/&gt;:8000"]
+        MW["Middleware Stack&lt;br/&gt;CORS · GZip · RequestID"]
+        AUTH["JWT Auth&lt;br/&gt;OAuth2 Password Flow"]
+    end
+
+    subgraph "Services Layer"
+        MAPI["MapiService&lt;br/&gt;HCP Management API"]
+        S3["StorageProtocol&lt;br/&gt;Backend-agnostic S3"]
+        QUERY["QueryService&lt;br/&gt;Metadata Query"]
+        CACHE["CacheService&lt;br/&gt;Redis (optional)"]
+    end
+
+    subgraph "External Systems"
+        HCP["HCP System&lt;br/&gt;Management API :9090"]
+        S3EP["HCP S3 Endpoint&lt;br/&gt;Object Storage"]
+        REDIS["Redis&lt;br/&gt;(optional)"]
+    end
+
+    FE --&gt;|"REST API&lt;br/&gt;JWT Bearer"| API
+    API --&gt; MW --&gt; AUTH
+    AUTH --&gt; MAPI
+    AUTH --&gt; S3
+    AUTH --&gt; QUERY
+    MAPI --&gt; CACHE
+    S3 --&gt; CACHE
+    QUERY --&gt; CACHE
+    MAPI --&gt;|"HTTPS :9090"| HCP
+    S3 --&gt;|"S3 Protocol"| S3EP
+    QUERY --&gt;|"HTTPS"| HCP
+    CACHE --&gt;|"Redis Protocol"| REDIS</code></pre>
+<h2 id="request-flow">Request Flow</h2>
+<pre class="mermaid"><code>sequenceDiagram
+    participant B as Browser
+    participant F as SvelteKit
+    participant A as FastAPI
+    participant M as Middleware
+    participant S as Service Layer
+    participant H as HCP System
+
+    B-&gt;&gt;F: User action (click, form submit)
+    F-&gt;&gt;A: HTTP request + JWT token
+    A-&gt;&gt;M: RequestID + GZip + CORS
+    M-&gt;&gt;M: Decode JWT → extract credentials
+    M-&gt;&gt;S: Forward with HCP credentials
+
+    alt Cache hit (Redis enabled)
+        S--&gt;&gt;M: Return cached response
+    else Cache miss or no Redis
+        S-&gt;&gt;H: MAPI/S3 request with credentials
+        H--&gt;&gt;S: HCP response
+        S-&gt;&gt;S: Cache response (if Redis enabled)
+        S--&gt;&gt;M: Return response
+    end
+
+    M--&gt;&gt;A: Add X-Request-ID header
+    A--&gt;&gt;F: JSON response
+    F--&gt;&gt;B: Update UI reactively</code></pre>
+<h2 id="backend-architecture">Backend Architecture</h2>
+<p>The FastAPI backend is organized in layers:</p>
+<pre class="mermaid"><code>graph TD
+    subgraph "API Layer"
+        R["Routers&lt;br/&gt;api/v1/endpoints/"]
+        DEP["Dependencies&lt;br/&gt;api/dependencies.py"]
+    end
+
+    subgraph "Service Layer"
+        MS["MapiService"]
+        CMS["CachedMapiService"]
+        SP["StorageProtocol"]
+        SB["StorageBase (ABC)"]
+        HCP_A["HcpStorage&lt;br/&gt;boto3 adapter"]
+        CHCP["CachedHcpStorage"]
+        QS["QueryService"]
+        CQS["CachedQueryService"]
+        CS["CacheService"]
+    end
+
+    subgraph "Core"
+        CFG["Config&lt;br/&gt;MapiSettings · S3Settings&lt;br/&gt;CacheSettings · AuthSettings"]
+        SEC["Security&lt;br/&gt;JWT · OAuth2"]
+        AUTH2["Auth Utils&lt;br/&gt;S3 key derivation"]
+        TEL["Telemetry&lt;br/&gt;OpenTelemetry"]
+    end
+
+    R --&gt; DEP
+    DEP --&gt; MS
+    DEP --&gt; CMS
+    DEP --&gt;|"type-hints"| SP
+    DEP --&gt;|"actual impl"| CHCP
+    SP -.-&gt;|"structural typing"| SB
+    SB --&gt;|"inherits"| HCP_A
+    HCP_A --&gt;|"inherits"| CHCP
+    CHCP --&gt; CS
+    MS --&gt; CFG
+    CMS --&gt; MS
+    CMS --&gt; CS
+    HCP_A --&gt; CFG
+    HCP_A --&gt; AUTH2
+    QS --&gt; CFG
+    CQS --&gt; QS
+    CQS --&gt; CS
+    R --&gt; SEC</code></pre>
+<h3 id="key-design-decisions">Key Design Decisions</h3>
+<ul>
+<li>
+<p><strong>Credential pass-through</strong>: The API does not store user passwords. Credentials are embedded in the JWT and forwarded to HCP on each request. HCP is the sole authority for authentication and authorization.</p>
+</li>
+<li>
+<p><strong>Optional caching</strong>: When Redis is configured, <code>CachedMapiService</code>, <code>CachedQueryService</code>, and <code>CachedHcpStorage</code> wrap the base services with TTL-based caching. When Redis is not configured, the base services are used directly.</p>
+</li>
+<li>
+<p><strong>S3 credential derivation</strong>: S3 access keys are derived from HCP credentials (base64-encoded username + MD5-hashed password) per HCP convention. No separate S3 credentials need to be configured.</p>
+</li>
+<li>
+<p><strong>Backend-agnostic storage layer</strong>: The S3 data-plane uses a hybrid Protocol + ABC pattern so storage backends (HCP, MinIO, Ceph, AWS) can be swapped without touching endpoint code. See <a href="#storage-layer-architecture">Storage Layer Architecture</a> for details.</p>
+</li>
+<li>
+<p><strong>Sync-over-async S3</strong>: Storage operations use synchronous boto3 calls executed via <code>asyncio.to_thread()</code>. This avoids the complexity of async S3 clients while keeping the FastAPI event loop non-blocking.</p>
+</li>
+</ul>
+<h3 id="backend-router-organization">Backend Router Organization</h3>
+<p>The API is organized into five endpoint groups, each with distinct auth requirements:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Prefix</th>
+<th>Auth</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>S3 Data-Plane</strong></td>
+<td><code>/api/v1/buckets</code>, <code>/objects</code>, <code>/versions</code>, <code>/multipart</code>, <code>/credentials</code></td>
+<td>JWT</td>
+<td>Bucket CRUD, object upload/download, presigned URLs</td>
+</tr>
+<tr>
+<td><strong>System MAPI</strong></td>
+<td><code>/api/v1/mapi/system/</code></td>
+<td>System admin</td>
+<td>Tenant management, replication, erasure coding</td>
+</tr>
+<tr>
+<td><strong>Tenant MAPI</strong></td>
+<td><code>/api/v1/mapi/tenants/{tenant}/</code></td>
+<td>Tenant admin/monitor/security</td>
+<td>Users, groups, settings, chargeback</td>
+</tr>
+<tr>
+<td><strong>Namespace MAPI</strong></td>
+<td><code>/api/v1/mapi/tenants/{tenant}/namespaces/</code></td>
+<td>Admin/compliance</td>
+<td>Namespace config, compliance, protocols, CORS</td>
+</tr>
+<tr>
+<td><strong>Query</strong></td>
+<td><code>/api/v1/query/</code></td>
+<td>JWT</td>
+<td>Metadata search</td>
+</tr>
+</tbody>
+</table>
+<h2 id="storage-layer-architecture">Storage Layer Architecture</h2>
+<p>The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against <code>StorageProtocol</code> (structural typing) and never imports backend-specific libraries like <code>boto3</code>.</p>
+<pre class="mermaid"><code>graph TD
+    subgraph "Endpoint Code"
+        EP["S3 Endpoints&lt;br/&gt;buckets · objects · versions · multipart"]
+    end
+
+    subgraph "Contracts"
+        SP["StorageProtocol&lt;br/&gt;(Protocol — structural typing)"]
+        SB["StorageBase&lt;br/&gt;(ABC — enforced at instantiation)"]
+    end
+
+    subgraph "Adapters"
+        HCP_A["HcpStorage&lt;br/&gt;boto3 wrapper&lt;br/&gt;HCP-specific workarounds"]
+        FUTURE["MinIO / Ceph / AWS&lt;br/&gt;(future adapters)"]
+    end
+
+    subgraph "Caching"
+        CHCP["CachedHcpStorage&lt;br/&gt;Redis caching layer"]
+    end
+
+    EP --&gt;|"type-hints against"| SP
+    SP -.-&gt;|"structural match"| SB
+    SB --&gt;|"inherits"| HCP_A
+    SB -.-&gt;|"inherits"| FUTURE
+    HCP_A --&gt;|"inherits"| CHCP</code></pre>
+<h3 id="how-it-works">How it works</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>StorageProtocol</code></td>
+<td><code>services/storage/protocol.py</code></td>
+<td>Structural typing interface — endpoint DI type hints use this</td>
+</tr>
+<tr>
+<td><code>StorageBase</code></td>
+<td><code>services/storage/base.py</code></td>
+<td>Abstract base class — enforces method implementation at instantiation</td>
+</tr>
+<tr>
+<td><code>HcpStorage</code></td>
+<td><code>services/storage/adapters/hcp.py</code></td>
+<td>Concrete adapter — wraps boto3 with HCP-specific workarounds</td>
+</tr>
+<tr>
+<td><code>CachedHcpStorage</code></td>
+<td><code>services/cached_s3.py</code></td>
+<td>Caching decorator — inherits from <code>HcpStorage</code>, adds Redis caching</td>
+</tr>
+<tr>
+<td><code>StorageError</code></td>
+<td><code>services/storage/errors.py</code></td>
+<td>Backend-agnostic exceptions — adapters catch library errors and re-raise</td>
+</tr>
+</tbody>
+</table>
+<h3 id="adding-a-new-storage-backend">Adding a new storage backend</h3>
+<p>To add support for MinIO, Ceph, or AWS S3:</p>
+<ol>
+<li>Create <code>services/storage/adapters/minio.py</code> (or similar)</li>
+<li>Inherit from <code>StorageBase</code> — the ABC enforces all required methods</li>
+<li>Catch the backend's native exceptions and re-raise as <code>StorageError</code></li>
+<li>Register the new adapter in the dependency injection layer</li>
+<li>No endpoint code changes needed — they type-hint against <code>StorageProtocol</code></li>
+</ol>
+<h3 id="storage-operations">Storage operations</h3>
+<p>The storage layer supports these operation groups:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Operations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Buckets</strong></td>
+<td>list, create, head, delete</td>
+</tr>
+<tr>
+<td><strong>Objects</strong></td>
+<td>list, put, get, head, delete, copy, bulk delete</td>
+</tr>
+<tr>
+<td><strong>Versioning</strong></td>
+<td>get/set bucket versioning, list object versions, version-aware get/delete</td>
+</tr>
+<tr>
+<td><strong>ACLs</strong></td>
+<td>get/set bucket ACL, get/set object ACL</td>
+</tr>
+<tr>
+<td><strong>Multipart uploads</strong></td>
+<td>create, upload part, complete, abort, list parts</td>
+</tr>
+<tr>
+<td><strong>Presigned URLs</strong></td>
+<td>generate for get/put operations</td>
+</tr>
+</tbody>
+</table>
+<h3 id="hcp-specific-workarounds">HCP-specific workarounds</h3>
+<p>The <code>HcpStorage</code> adapter handles several HCP quirks that differ from standard S3:</p>
+<table>
+<thead>
+<tr>
+<th>Workaround</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Disabled S3 region redirector</td>
+<td>HCP returns non-standard redirect responses that confuse boto3</td>
+</tr>
+<tr>
+<td>Path-style addressing</td>
+<td>HCP does not support virtual-hosted bucket names</td>
+</tr>
+<tr>
+<td>Individual deletes for bulk</td>
+<td>HCP requires <code>Content-MD5</code> on multi-delete but boto3 sends CRC32 instead</td>
+</tr>
+<tr>
+<td>OTel span tracing</td>
+<td>Every storage operation is traced with bucket, key, and method attributes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespace-protocol-configuration">Namespace protocol configuration</h3>
+<p>Each HCP namespace supports multiple access protocols configured independently via MAPI:</p>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Schema</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HTTP/REST/S3/WebDAV</strong></td>
+<td><code>HttpProtocol</code></td>
+<td>Primary data access protocols with IP-based access control</td>
+</tr>
+<tr>
+<td><strong>NFS</strong></td>
+<td><code>NfsProtocol</code></td>
+<td>Network file system mount access</td>
+</tr>
+<tr>
+<td><strong>CIFS/SMB</strong></td>
+<td><code>CifsProtocol</code></td>
+<td>Windows file sharing access</td>
+</tr>
+<tr>
+<td><strong>SMTP</strong></td>
+<td><code>SmtpProtocol</code></td>
+<td>Email ingestion (storing email as objects)</td>
+</tr>
+</tbody>
+</table>
+<p>Protocol settings are managed through the namespace access endpoints (<code>/api/v1/mapi/tenants/{tenant}/namespaces/{ns}/protocols/</code>) and each includes <code>ipSettings</code> for IP-based access control.</p>
+<h2 id="frontend-architecture">Frontend Architecture</h2>
+<p>The SvelteKit frontend follows a reactive pattern with remote function abstractions and server-side RBAC:</p>
+<pre class="mermaid"><code>graph TD
+    subgraph "Pages"
+        P["SvelteKit Routes&lt;br/&gt;+page.svelte"]
+        L["Layout Server Load&lt;br/&gt;+layout.server.ts"]
+        G["Route Guards&lt;br/&gt;+page.server.ts"]
+    end
+
+    subgraph "RBAC"
+        HOOK["Server Hook&lt;br/&gt;Token extraction"]
+        AL["Access Levels&lt;br/&gt;sys-admin · tenant-admin&lt;br/&gt;namespace-user"]
+        GUARD["requireAdmin()&lt;br/&gt;Server-side redirect"]
+    end
+
+    subgraph "Components"
+        UI["UI Components&lt;br/&gt;DataTable · FormDialog&lt;br/&gt;FileViewer · etc."]
+        FEAT["Feature Components&lt;br/&gt;Namespace settings&lt;br/&gt;User management"]
+        SIDE["Sidebar&lt;br/&gt;Role-conditional sections"]
+    end
+
+    subgraph "Data Layer"
+        Q["query()&lt;br/&gt;GET requests with caching"]
+        C["command()&lt;br/&gt;POST/PUT/DELETE mutations"]
+        REM["Remote Functions&lt;br/&gt;*.remote.ts"]
+    end
+
+    subgraph "State"
+        ST["$state&lt;br/&gt;Mutable reactive state"]
+        DER["$derived&lt;br/&gt;Computed values"]
+        EFF["$effect&lt;br/&gt;Side effects"]
+    end
+
+    HOOK --&gt;|"JWT cookie"| L
+    L --&gt;|"fetch user profile"| REM
+    L --&gt;|"accessLevel"| AL
+    AL --&gt; G
+    G --&gt;|"namespace-user → /buckets"| GUARD
+    L --&gt; P
+    P --&gt; UI
+    P --&gt; FEAT
+    SIDE --&gt;|"isAdmin filter"| AL
+    FEAT --&gt; Q
+    FEAT --&gt; C
+    Q --&gt; REM
+    C --&gt; REM
+    REM --&gt;|"fetch()"| API2["FastAPI Backend"]
+    P --&gt; ST
+    P --&gt; DER
+    P --&gt; EFF
+    C --&gt;|".updates(queryData)"| Q</code></pre>
+<h3 id="frontend-rbac">Frontend RBAC</h3>
+<p>The frontend enforces role-based access control entirely on the server side, making it impossible to bypass via client-side manipulation.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant B as Browser
+    participant H as hooks.server.ts
+    participant L as +layout.server.ts
+    participant G as +page.server.ts
+    participant A as FastAPI Backend
+
+    B-&gt;&gt;H: Request /tenant-settings
+    H-&gt;&gt;H: Extract hcp_token cookie
+    H-&gt;&gt;L: event.locals.token
+
+    alt No token
+        L--&gt;&gt;B: Redirect → /login
+    else Has token
+        L-&gt;&gt;L: Parse JWT (username, tenant)
+        L-&gt;&gt;A: GET /userAccounts/{username}?verbose=true
+        A--&gt;&gt;L: { roles: [ADMINISTRATOR, ...], userGUID }
+        L-&gt;&gt;L: getAccessLevel(tenant, roles)
+
+        alt sys-admin (no tenant)
+            L--&gt;&gt;G: accessLevel = "sys-admin"
+        else tenant-admin (has ADMINISTRATOR role)
+            L--&gt;&gt;G: accessLevel = "tenant-admin"
+        else namespace-user (other roles)
+            L--&gt;&gt;G: accessLevel = "namespace-user"
+        end
+
+        G-&gt;&gt;G: requireAdmin(accessLevel)
+
+        alt namespace-user on admin route
+            G--&gt;&gt;B: Redirect → /buckets
+        else admin or sys-admin
+            G--&gt;&gt;B: Render page
+        end
+    end</code></pre>
+<h4 id="access-levels">Access levels</h4>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Condition</th>
+<th>Access</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>sys-admin</strong></td>
+<td>No tenant in JWT</td>
+<td>Full access to all routes</td>
+</tr>
+<tr>
+<td><strong>tenant-admin</strong></td>
+<td>Has <code>ADMINISTRATOR</code> role</td>
+<td>Full access to tenant routes</td>
+</tr>
+<tr>
+<td><strong>namespace-user</strong></td>
+<td>Any other role set</td>
+<td>Storage routes only (buckets, access control, analytics, settings)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="protected-routes">Protected routes</h4>
+<p>These routes call <code>requireAdmin()</code> in their <code>+page.server.ts</code> and redirect non-admin users to <code>/buckets</code>:</p>
+<ul>
+<li><code>/namespaces</code>, <code>/namespaces/[namespace]</code></li>
+<li><code>/users</code>, <code>/users/[username]</code>, <code>/users/groups/[groupname]</code></li>
+<li><code>/tenant-settings</code></li>
+<li><code>/search</code></li>
+<li><code>/content-classes</code>, <code>/content-classes/[name]</code></li>
+</ul>
+<h4 id="sidebar-filtering">Sidebar filtering</h4>
+<p>The sidebar conditionally renders sections based on access level:</p>
+<ul>
+<li><strong>All users</strong>: Storage (Buckets, Access Control), Analytics (Data Explorer)</li>
+<li><strong>Admins only</strong>: Tenant (Namespaces, Users &amp; Groups, Tenant Settings), Search &amp; Indexing (Search, Content Classes)</li>
+</ul>
+<h3 id="frontend-patterns">Frontend Patterns</h3>
+<ul>
+<li>
+<p><strong>Remote functions</strong>: All API calls are defined in <code>*.remote.ts</code> files using <code>query()</code> for reads and <code>command()</code> for mutations.</p>
+</li>
+<li>
+<p><strong>Mutation refresh</strong>: After a mutation, <code>command(...).updates(queryData)</code> automatically invalidates and refetches the relevant query data.</p>
+</li>
+<li>
+<p><strong>Svelte 5 runes</strong>: Components use <code>$state</code> for mutable state, <code>$derived</code> for computed values, and <code>$effect</code> for async side effects with cancellation.</p>
+</li>
+</ul>
+<h2 id="mock-server">Mock Server</h2>
+<p>For development without an HCP system, the backend includes a mock server:</p>
+<pre class="mermaid"><code>graph LR
+    subgraph "Mock Server"
+        DISP["mapi_state.py&lt;br/&gt;Request dispatcher"]
+        FIX["fixtures.py&lt;br/&gt;Seed data"]
+        STATE["In-memory state&lt;br/&gt;Dict-based storage"]
+    end
+
+    API3["FastAPI"] --&gt;|"same interface as&lt;br/&gt;MapiService"| DISP
+    FIX --&gt;|"initial data"| STATE
+    DISP --&gt;|"CRUD operations"| STATE</code></pre>
+<p>The mock server implements the same interface as the real MAPI service, allowing the frontend to be developed and tested independently. Start it with <code>make run-api-mock</code>.</p>
+<h2 id="deployment">Deployment</h2>
+<pre class="mermaid"><code>graph LR
+    subgraph "Docker / Production"
+        FE2["Frontend&lt;br/&gt;SvelteKit + Node"]
+        BE["Backend&lt;br/&gt;FastAPI + uvicorn"]
+        RD["Redis&lt;br/&gt;(optional)"]
+    end
+
+    LB["Load Balancer /&lt;br/&gt;Reverse Proxy"] --&gt; FE2
+    LB --&gt; BE
+    BE --&gt; RD
+    BE --&gt; HCP2["HCP System"]
+    BE --&gt; S3E["HCP S3 Endpoint"]</code></pre>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Technology</th>
+<th>Port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend</td>
+<td>SvelteKit 2 + Svelte 5, Deno</td>
+<td>5173 (dev)</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>FastAPI, Python 3.12+, uv</td>
+<td>8000</td>
+</tr>
+<tr>
+<td>Storage adapters</td>
+<td>HcpStorage (boto3) — pluggable via StorageProtocol</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td>Redis 7+ (optional)</td>
+<td>6379</td>
+</tr>
+<tr>
+<td>HCP MAPI</td>
+<td>Hitachi Content Platform</td>
+<td>9090</td>
+</tr>
+<tr>
+<td>S3 endpoint</td>
+<td>S3-compatible endpoint (HCP, MinIO, Ceph, AWS)</td>
+<td>443</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../getting-started/configuration/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Configuration">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Configuration
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../api/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Overview
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 HCP App
+    </div>
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.5fd3284f.min.js"></script>
+      
+    
+  </body>
+</html>
