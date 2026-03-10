@@ -236,11 +236,22 @@ const { Story } = defineMeta({
 - Stories live in `src/` (required for `$lib/` alias resolution) but are excluded from production builds
 - Use Svelte CSF format with `defineMeta` from `@storybook/addon-svelte-csf`
 
-**When to add/update stories:**
-- New reusable UI component → add a `*.stories.svelte` file with key variants
-- Modified component props/behavior → update existing story to cover the change
-- Stories are for **visual testing only** — they render components in isolation with mock data
-- They do NOT test logic, API calls, or page-level behavior
+**Storybook philosophy:**
+- We test **our own custom components** — not third-party libraries
+- shadcn-svelte components (Button, Badge, etc.) are already tested upstream — do NOT write stories for them unless we've significantly customized their behavior
+- Stories focus on components with **our business logic and composition** (e.g., DataTable, CorsEditor, TagInput, FormDialog)
+- If a component is just a thin wrapper around a shadcn-svelte primitive with no custom logic, skip the story
+
+**When to add visual stories (`.stories.svelte`):**
+- New reusable UI component **with custom logic** → add key variants
+- Modified component props/behavior → update existing story
+- Pure display components (progress bars, badges, stat cards) → visual story only, no interaction tests needed
+
+**When to add interaction tests (`-interactions.stories.ts`):**
+- Component has **user input** (typing, clicking, form submission)
+- Component has **state transitions** (dirty tracking, loading states, open/close)
+- Component has **validation logic** (duplicates, required fields, format checks)
+- Do NOT write interaction tests for pure display components
 
 **Story template:**
 ```svelte
@@ -262,6 +273,33 @@ const { Story } = defineMeta({
 ```
 
 **For data-table stories:** use `createSvelteTable` with inline mock data, `renderComponent`/`renderSnippet` for cells, and `toast` for action feedback instead of real API calls.
+
+### Mocking SvelteKit modules
+
+Use `parameters.sveltekit_experimental` to mock SvelteKit imports in stories. This is needed when a component uses `$app/state`, `$app/navigation`, or `$app/forms`.
+
+```svelte
+<Story
+  name="WithPageData"
+  parameters={{
+    sveltekit_experimental: {
+      state: {
+        page: {
+          data: { tenant: 'test-tenant' },
+        },
+      },
+    },
+  }}
+/>
+```
+
+Available mocks:
+- `state.page` — mock `$app/state` page data (use this, NOT `stores.page`)
+- `state.navigating` — mock navigation state
+- `state.updated` — mock `{ current: boolean }` for update checks
+- `navigation.goto` / `navigation.invalidate` — mock `$app/navigation` functions (defaults to Actions panel logging)
+- `hrefs` — mock link click behavior: `{ '/path': (to, event) => { ... } }` (supports `asRegex: true`)
+- `forms.enhance` — mock `$app/forms` enhance callback
 
 ### Interaction Tests (play functions)
 
