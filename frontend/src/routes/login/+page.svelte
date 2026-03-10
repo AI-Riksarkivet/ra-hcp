@@ -11,16 +11,17 @@
 </script>
 
 <svelte:head>
-	<title>Login - HCP Admin Console</title>
+	<title>Login - RA HCP Console</title>
 </svelte:head>
 
-<div class="flex min-h-screen items-center justify-center bg-background px-4">
-	<div class="w-full max-w-sm">
+<div class="relative flex min-h-screen items-center justify-center bg-background px-4">
+	<RetroGrid />
+	<div class="relative z-10 w-full max-w-sm">
 		<div class="mb-8 text-center">
 			<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
 				<Server class="h-7 w-7 text-primary" />
 			</div>
-			<h1 class="text-2xl font-bold">HCP Admin Console</h1>
+			<h1 class="text-2xl font-bold">RA HCP Console</h1>
 			<p class="mt-1 text-sm text-muted-foreground">Sign in to your HCP tenant</p>
 		</div>
 

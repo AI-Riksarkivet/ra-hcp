@@ -107,3 +107,16 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+@keyframes grid {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(var(--cell-size));
+  }
+}
+
+@utility animate-grid {
+  animation: grid 15s linear infinite;
+}

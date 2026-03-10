@@ -6,7 +6,7 @@ import logging
 from functools import lru_cache
 from typing import Annotated, AsyncGenerator, Optional
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 
 from app.core.auth_utils import derive_s3_keys
 from app.core.config import CacheSettings, MapiSettings, S3Settings
@@ -136,6 +136,13 @@ async def get_lance_service(
     params: LanceDatasetParams = Depends(),
 ) -> AsyncGenerator[LanceService, None]:
     """Yield a LanceService for the given S3 bucket/path, keyed by credentials."""
+    try:
+        import lancedb as _  # noqa: F811, F401
+    except ImportError:
+        raise HTTPException(
+            status_code=501,
+            detail="Lance support not installed. Install with: pip install '.[lance]'",
+        )
     creds = verify_token_with_credentials(token)
     access_key, secret_key = _derive_s3_keys(creds)
     settings = get_s3_settings()
