@@ -1,3 +1,14 @@
+---
+template: main.html
+hide:
+  - toc
+---
+
+<style>
+  .md-grid { max-width: initial; }
+  .md-content { max-width: initial; }
+</style>
+
 # UI Components
 
 The HCP App uses [shadcn-svelte](https://next.shadcn-svelte.com/) with custom components built on top. Browse the full interactive component library below.
@@ -5,7 +16,7 @@ The HCP App uses [shadcn-svelte](https://next.shadcn-svelte.com/) with custom co
 <iframe
   src="https://ai-riksarkivet.github.io/hcp/storybook/"
   width="100%"
-  height="800"
+  height="1000"
   style="border: 1px solid #e0e0e0; border-radius: 8px;"
 ></iframe>
 
@@ -36,4 +47,4 @@ The HCP App uses [shadcn-svelte](https://next.shadcn-svelte.com/) with custom co
 | **StepProgress** | Multi-step progress indicator for wizard flows |
 
 !!! info "Storybook deploys automatically"
-    Stories are co-located with components (`*.stories.svelte`) and deployed to GitHub Pages on every push to `main`. The embed above always reflects the latest code — no manual sync needed.
+    Stories are co-located with components (`*.stories.svelte`) and deployed to GitHub Pages on every push to `main`. The embed above always reflects the latest code -- no manual sync needed.

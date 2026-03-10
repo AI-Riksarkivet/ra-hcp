@@ -134,6 +134,20 @@ graph TD
 
 - **Backend-agnostic storage layer**: The S3 data-plane uses a hybrid Protocol + ABC pattern so storage backends (HCP, MinIO, Ceph, AWS) can be swapped without touching endpoint code. See [Storage Layer Architecture](#storage-layer-architecture) for details.
 
+- **Sync-over-async S3**: Storage operations use synchronous boto3 calls executed via `asyncio.to_thread()`. This avoids the complexity of async S3 clients while keeping the FastAPI event loop non-blocking.
+
+### Backend Router Organization
+
+The API is organized into five endpoint groups, each with distinct auth requirements:
+
+| Group | Prefix | Auth | Examples |
+|-------|--------|------|----------|
+| **S3 Data-Plane** | `/api/v1/buckets`, `/objects`, `/versions`, `/multipart`, `/credentials` | JWT | Bucket CRUD, object upload/download, presigned URLs |
+| **System MAPI** | `/api/v1/mapi/system/` | System admin | Tenant management, replication, erasure coding |
+| **Tenant MAPI** | `/api/v1/mapi/tenants/{tenant}/` | Tenant admin/monitor/security | Users, groups, settings, chargeback |
+| **Namespace MAPI** | `/api/v1/mapi/tenants/{tenant}/namespaces/` | Admin/compliance | Namespace config, compliance, protocols, CORS |
+| **Query** | `/api/v1/query/` | JWT | Metadata search |
+
 ## Storage Layer Architecture
 
 The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against `StorageProtocol` (structural typing) and never imports backend-specific libraries like `boto3`.
@@ -198,20 +212,52 @@ The storage layer supports these operation groups:
 | **Multipart uploads** | create, upload part, complete, abort, list parts |
 | **Presigned URLs** | generate for get/put operations |
 
+### HCP-specific workarounds
+
+The `HcpStorage` adapter handles several HCP quirks that differ from standard S3:
+
+| Workaround | Reason |
+|------------|--------|
+| Disabled S3 region redirector | HCP returns non-standard redirect responses that confuse boto3 |
+| Path-style addressing | HCP does not support virtual-hosted bucket names |
+| Individual deletes for bulk | HCP requires `Content-MD5` on multi-delete but boto3 sends CRC32 instead |
+| OTel span tracing | Every storage operation is traced with bucket, key, and method attributes |
+
+### Namespace protocol configuration
+
+Each HCP namespace supports multiple access protocols configured independently via MAPI:
+
+| Protocol | Schema | Description |
+|----------|--------|-------------|
+| **HTTP/REST/S3/WebDAV** | `HttpProtocol` | Primary data access protocols with IP-based access control |
+| **NFS** | `NfsProtocol` | Network file system mount access |
+| **CIFS/SMB** | `CifsProtocol` | Windows file sharing access |
+| **SMTP** | `SmtpProtocol` | Email ingestion (storing email as objects) |
+
+Protocol settings are managed through the namespace access endpoints (`/api/v1/mapi/tenants/{tenant}/namespaces/{ns}/protocols/`) and each includes `ipSettings` for IP-based access control.
+
 ## Frontend Architecture
 
-The SvelteKit frontend follows a reactive pattern with remote function abstractions:
+The SvelteKit frontend follows a reactive pattern with remote function abstractions and server-side RBAC:
 
 ```mermaid
 graph TD
     subgraph "Pages"
         P["SvelteKit Routes<br/>+page.svelte"]
-        L["Layouts<br/>+layout.svelte"]
+        L["Layout Server Load<br/>+layout.server.ts"]
+        G["Route Guards<br/>+page.server.ts"]
+    end
+
+    subgraph "RBAC"
+        HOOK["Server Hook<br/>Token extraction"]
+        AL["Access Levels<br/>sys-admin · tenant-admin<br/>namespace-user"]
+        GUARD["requireAdmin()<br/>Server-side redirect"]
     end
 
     subgraph "Components"
         UI["UI Components<br/>DataTable · FormDialog<br/>FileViewer · etc."]
         FEAT["Feature Components<br/>Namespace settings<br/>User management"]
+        SIDE["Sidebar<br/>Role-conditional sections"]
     end
 
     subgraph "Data Layer"
@@ -226,9 +272,15 @@ graph TD
         EFF["$effect<br/>Side effects"]
     end
 
+    HOOK -->|"JWT cookie"| L
+    L -->|"fetch user profile"| REM
+    L -->|"accessLevel"| AL
+    AL --> G
+    G -->|"namespace-user → /buckets"| GUARD
+    L --> P
     P --> UI
     P --> FEAT
-    L --> P
+    SIDE -->|"isAdmin filter"| AL
     FEAT --> Q
     FEAT --> C
     Q --> REM
@@ -239,6 +291,73 @@ graph TD
     P --> EFF
     C -->|".updates(queryData)"| Q
 ```
+
+### Frontend RBAC
+
+The frontend enforces role-based access control entirely on the server side, making it impossible to bypass via client-side manipulation.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant H as hooks.server.ts
+    participant L as +layout.server.ts
+    participant G as +page.server.ts
+    participant A as FastAPI Backend
+
+    B->>H: Request /tenant-settings
+    H->>H: Extract hcp_token cookie
+    H->>L: event.locals.token
+
+    alt No token
+        L-->>B: Redirect → /login
+    else Has token
+        L->>L: Parse JWT (username, tenant)
+        L->>A: GET /userAccounts/{username}?verbose=true
+        A-->>L: { roles: [ADMINISTRATOR, ...], userGUID }
+        L->>L: getAccessLevel(tenant, roles)
+
+        alt sys-admin (no tenant)
+            L-->>G: accessLevel = "sys-admin"
+        else tenant-admin (has ADMINISTRATOR role)
+            L-->>G: accessLevel = "tenant-admin"
+        else namespace-user (other roles)
+            L-->>G: accessLevel = "namespace-user"
+        end
+
+        G->>G: requireAdmin(accessLevel)
+
+        alt namespace-user on admin route
+            G-->>B: Redirect → /buckets
+        else admin or sys-admin
+            G-->>B: Render page
+        end
+    end
+```
+
+#### Access levels
+
+| Level | Condition | Access |
+|-------|-----------|--------|
+| **sys-admin** | No tenant in JWT | Full access to all routes |
+| **tenant-admin** | Has `ADMINISTRATOR` role | Full access to tenant routes |
+| **namespace-user** | Any other role set | Storage routes only (buckets, access control, analytics, settings) |
+
+#### Protected routes
+
+These routes call `requireAdmin()` in their `+page.server.ts` and redirect non-admin users to `/buckets`:
+
+- `/namespaces`, `/namespaces/[namespace]`
+- `/users`, `/users/[username]`, `/users/groups/[groupname]`
+- `/tenant-settings`
+- `/search`
+- `/content-classes`, `/content-classes/[name]`
+
+#### Sidebar filtering
+
+The sidebar conditionally renders sections based on access level:
+
+- **All users**: Storage (Buckets, Access Control), Analytics (Data Explorer)
+- **Admins only**: Tenant (Namespaces, Users & Groups, Tenant Settings), Search & Indexing (Search, Content Classes)
 
 ### Frontend Patterns
 
