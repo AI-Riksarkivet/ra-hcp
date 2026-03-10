@@ -14,6 +14,7 @@
 		Search,
 		ListTree,
 		FolderTree,
+		Archive,
 	} from 'lucide-svelte';
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import FileViewer from '$lib/components/ui/FileViewer.svelte';
@@ -27,6 +28,7 @@
 		delete_object,
 		bulk_delete_objects,
 		bulk_presign,
+		start_zip_download,
 	} from '$lib/remote/buckets.remote.js';
 	import {
 		DataTable,
@@ -462,6 +464,95 @@
 		}
 	}
 
+	// --- ZIP Download All ---
+	let zipDownloading = $state(false);
+	let zipProgress = $state({ total: 0, completed: 0, failed: 0 });
+	let zipTaskId = $state<string | null>(null);
+
+	async function startZipDownload() {
+		zipDownloading = true;
+		zipProgress = { total: 0, completed: 0, failed: 0 };
+		try {
+			const result = await start_zip_download({ bucket, prefix: prefix || '' });
+			zipTaskId = result.task_id;
+			zipProgress.total = result.total;
+			toast.info(`Preparing ZIP... 0/${result.total} files`);
+			pollZipStatus();
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to start ZIP download');
+			zipDownloading = false;
+		}
+	}
+
+	function pollZipStatus() {
+		if (!zipTaskId) return;
+		const tid = zipTaskId;
+		const interval = setInterval(async () => {
+			try {
+				const res = await fetch(
+					`/api/v1/buckets/${encodeURIComponent(bucket)}/objects/download/${encodeURIComponent(tid)}`
+				);
+				const contentType = res.headers.get('content-type') ?? '';
+
+				if (
+					contentType.includes('application/zip') ||
+					contentType.includes('application/octet-stream')
+				) {
+					clearInterval(interval);
+					const blob = await res.blob();
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = `${bucket}-objects.zip`;
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					URL.revokeObjectURL(url);
+
+					if (zipProgress.failed > 0) {
+						toast.warning(
+							`ZIP ready — ${zipProgress.failed} file${zipProgress.failed !== 1 ? 's' : ''} could not be included`
+						);
+					} else {
+						toast.success('ZIP download complete');
+					}
+					zipDownloading = false;
+					zipTaskId = null;
+					return;
+				}
+
+				if (res.ok && contentType.includes('application/json')) {
+					const data = await res.json();
+					zipProgress = {
+						total: data.total ?? zipProgress.total,
+						completed: data.completed ?? 0,
+						failed: data.failed ?? 0,
+					};
+
+					if (data.status === 'failed') {
+						clearInterval(interval);
+						toast.error('ZIP download failed');
+						zipDownloading = false;
+						zipTaskId = null;
+						return;
+					}
+				}
+
+				if (!res.ok && res.status !== 200) {
+					clearInterval(interval);
+					toast.error('ZIP download failed');
+					zipDownloading = false;
+					zipTaskId = null;
+				}
+			} catch {
+				clearInterval(interval);
+				toast.error('Failed to check ZIP status');
+				zipDownloading = false;
+				zipTaskId = null;
+			}
+		}, 2000);
+	}
+
 	// --- File Viewer ---
 	let viewerOpen = $state(false);
 	let viewerIndex = $state(-1);
@@ -559,6 +650,34 @@
 					{:else}
 						<strong>Folder view</strong> — showing current folder only. Click to flatten and search across
 						all objects recursively.
+					{/if}
+				</Tooltip.Content>
+			</Tooltip.Root>
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<Button
+							{...props}
+							variant="outline"
+							size="icon"
+							class="h-9 w-9 shrink-0"
+							onclick={startZipDownload}
+							disabled={zipDownloading}
+						>
+							{#if zipDownloading}
+								<Loader2 class="h-4 w-4 animate-spin" />
+							{:else}
+								<Archive class="h-4 w-4" />
+							{/if}
+						</Button>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content side="bottom" class="max-w-xs">
+					{#if zipDownloading}
+						<strong>Preparing ZIP...</strong> {zipProgress.completed}/{zipProgress.total} files
+					{:else}
+						<strong>Download All as ZIP</strong> — download all objects under the current prefix as a
+						single ZIP file
 					{/if}
 				</Tooltip.Content>
 			</Tooltip.Root>

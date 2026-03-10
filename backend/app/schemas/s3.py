@@ -109,7 +109,22 @@ class DeleteObjectsRequest(BaseModel):
 class BulkDownloadRequest(BaseModel):
     """Request body for bulk downloading objects as ZIP."""
 
-    keys: List[str] = Field(..., min_length=1, description="Object keys to include")
+    keys: List[str] = Field(default=[], description="Object keys to include")
+    prefix: Optional[str] = Field(
+        None, description="Download all objects under this prefix"
+    )
+
+
+class ZipTaskResponse(BaseModel):
+    """Response for a ZIP download task."""
+
+    task_id: str
+    status: str = Field(description="processing, ready, or failed")
+    total: int = 0
+    completed: int = 0
+    failed: int = 0
+    failed_keys: List[str] = Field(default=[])
+    error: Optional[str] = None
 
 
 class BulkPresignRequest(BaseModel):

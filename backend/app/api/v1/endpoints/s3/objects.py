@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import asyncio
-import io
+import logging
+import tempfile
+import uuid
 import zipfile
+from pathlib import Path
 from typing import Optional
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, File, Query, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
+from starlette.background import BackgroundTask as StarletteBackgroundTask
 
-from app.api.dependencies import get_s3_service
+from app.api.dependencies import get_cache_service, get_s3_service
 from app.api.errors import run_s3
 from app.schemas.s3 import (
     AclPolicy,
@@ -27,9 +31,21 @@ from app.schemas.s3 import (
     ObjectInfo,
     ObjectMutationResponse,
     UploadObjectResponse,
+    ZipTaskResponse,
 )
 from app.schemas.common import StatusResponse
+from app.services.cache_service import CacheService
 from app.services.s3_service import S3Service
+
+logger = logging.getLogger(__name__)
+
+# ── In-memory fallback for ZIP task state (no Redis) ──────────────────
+_zip_tasks: dict[str, dict] = {}
+
+ZIP_TEMP_DIR = Path(tempfile.gettempdir()) / "zip_tasks"
+ZIP_TEMP_DIR.mkdir(exist_ok=True)
+MAX_ZIP_OBJECTS = 50_000
+BATCH_SIZE = 20
 
 router = APIRouter(prefix="/buckets/{bucket}/objects", tags=["S3 Objects"])
 
@@ -82,33 +98,198 @@ async def delete_objects(
     }
 
 
+# ── ZIP task helpers ──────────────────────────────────────────────────
+
+
+async def _get_task_state(task_id: str, cache: CacheService | None) -> dict | None:
+    """Read task state from Redis (preferred) or in-memory fallback."""
+    if cache and cache.enabled:
+        state = await cache.get(f"zip_task:{task_id}")
+        if state:
+            return state
+    return _zip_tasks.get(task_id)
+
+
+async def _set_task_state(
+    task_id: str, state: dict, cache: CacheService | None
+) -> None:
+    """Write task state to Redis with TTL, or in-memory fallback."""
+    if cache and cache.enabled:
+        await cache.set(f"zip_task:{task_id}", state, ttl=600)
+    _zip_tasks[task_id] = state
+
+
+async def _list_all_keys(s3: S3Service, bucket: str, prefix: str) -> list[str]:
+    """List all object keys under a prefix, handling S3 pagination."""
+    keys: list[str] = []
+    token: str | None = None
+    while True:
+        result = await asyncio.to_thread(s3.list_objects, bucket, prefix, 1000, token)
+        for obj in result.get("Contents", []):
+            keys.append(obj["Key"])
+            if len(keys) > MAX_ZIP_OBJECTS:
+                return keys
+        if not result.get("IsTruncated", False):
+            break
+        token = result.get("NextContinuationToken")
+    return keys
+
+
+async def _build_zip(
+    task_id: str,
+    s3: S3Service,
+    bucket: str,
+    keys: list[str],
+    cache: CacheService | None,
+) -> None:
+    """Background coroutine: build ZIP on disk in batches."""
+    zip_path = ZIP_TEMP_DIR / f"{task_id}.zip"
+    state: dict = {
+        "status": "processing",
+        "total": len(keys),
+        "completed": 0,
+        "failed": 0,
+        "failed_keys": [],
+        "path": str(zip_path),
+    }
+    await _set_task_state(task_id, state, cache)
+
+    try:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for batch_start in range(0, len(keys), BATCH_SIZE):
+                batch = keys[batch_start : batch_start + BATCH_SIZE]
+
+                async def _fetch(key: str) -> tuple[str, bytes | None]:
+                    try:
+                        result = await asyncio.to_thread(s3.get_object, bucket, key)
+                        return key, result["Body"].read()
+                    except (ClientError, BotoCoreError):
+                        return key, None
+
+                results = await asyncio.gather(*[_fetch(k) for k in batch])
+                for key, data in results:
+                    if data is not None:
+                        zf.writestr(key, data)
+                        state["completed"] += 1
+                    else:
+                        state["failed"] += 1
+                        state["failed_keys"].append(key)
+
+                await _set_task_state(task_id, state, cache)
+
+        state["status"] = "ready"
+        await _set_task_state(task_id, state, cache)
+    except Exception as exc:
+        logger.exception("ZIP task %s failed", task_id)
+        state["status"] = "failed"
+        state["error"] = str(exc)
+        await _set_task_state(task_id, state, cache)
+
+
 # ── Bulk download (must be before {key:path} catch-all) ──────────────
 
 
-@router.post("/download")
-async def download_objects(
+@router.post("/download", response_model=ZipTaskResponse, status_code=202)
+async def start_zip_download(
+    request: Request,
     bucket: str,
     body: BulkDownloadRequest,
     s3: S3Service = Depends(get_s3_service),
+    cache: CacheService | None = Depends(get_cache_service),
 ):
-    async def _generate_zip():
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            for key in body.keys:
-                try:
-                    result = await asyncio.to_thread(s3.get_object, bucket, key)
-                    data = result["Body"].read()
-                    zf.writestr(key, data)
-                except (ClientError, BotoCoreError):
-                    continue
-        buf.seek(0)
-        yield buf.read()
+    """Start a background ZIP download task.
 
-    return StreamingResponse(
-        content=_generate_zip(),
+    Accepts either explicit keys or a prefix to list all objects under.
+    Returns 202 with task_id for polling.
+    """
+    if body.prefix is not None:
+        keys = await _list_all_keys(s3, bucket, body.prefix)
+    elif body.keys:
+        keys = body.keys
+    else:
+        from fastapi import HTTPException
+
+        raise HTTPException(400, "Provide either 'prefix' or 'keys'")
+
+    if len(keys) > MAX_ZIP_OBJECTS:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            400,
+            f"Too many objects ({len(keys)}). Maximum is {MAX_ZIP_OBJECTS}.",
+        )
+
+    if len(keys) == 0:
+        from fastapi import HTTPException
+
+        raise HTTPException(400, "No objects found under the given prefix")
+
+    task_id = str(uuid.uuid4())
+
+    # Schedule the ZIP build as a background task
+    asyncio.ensure_future(_build_zip(task_id, s3, bucket, keys, cache))
+
+    return ZipTaskResponse(
+        task_id=task_id,
+        status="processing",
+        total=len(keys),
+    )
+
+
+@router.get("/download/{task_id}")
+async def get_zip_download(
+    bucket: str,
+    task_id: str,
+    cache: CacheService | None = Depends(get_cache_service),
+):
+    """Poll ZIP task status or download the completed ZIP."""
+    from fastapi import HTTPException
+
+    state = await _get_task_state(task_id, cache)
+    if not state:
+        raise HTTPException(404, "Task not found")
+
+    if state["status"] == "processing":
+        return ZipTaskResponse(
+            task_id=task_id,
+            status="processing",
+            total=state.get("total", 0),
+            completed=state.get("completed", 0),
+            failed=state.get("failed", 0),
+        )
+
+    if state["status"] == "failed":
+        raise HTTPException(
+            500,
+            detail={
+                "status": "failed",
+                "error": state.get("error", "Unknown error"),
+                "failed_keys": state.get("failed_keys", []),
+            },
+        )
+
+    # status == "ready" — stream the file
+    zip_path = state.get("path", "")
+    if not zip_path or not Path(zip_path).exists():
+        raise HTTPException(500, "ZIP file not found on disk")
+
+    async def _cleanup() -> None:
+        try:
+            Path(zip_path).unlink(missing_ok=True)
+        except OSError:
+            pass
+        _zip_tasks.pop(task_id, None)
+        if cache and cache.enabled:
+            await cache.delete(f"zip_task:{task_id}")
+
+    return FileResponse(
+        path=zip_path,
         media_type="application/zip",
+        filename=f"{bucket}-objects.zip",
+        background=StarletteBackgroundTask(_cleanup),
         headers={
-            "Content-Disposition": f'attachment; filename="{bucket}-objects.zip"',
+            "X-Zip-Failed": str(state.get("failed", 0)),
+            "X-Zip-Failed-Keys": ",".join(state.get("failed_keys", [])[:50]),
         },
     )
 

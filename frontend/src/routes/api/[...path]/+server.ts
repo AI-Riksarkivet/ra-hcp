@@ -24,13 +24,19 @@ const handler: RequestHandler = async ({ params, request, locals }) => {
     duplex: "half",
   });
 
+  const responseHeaders: Record<string, string> = {
+    "content-type": response.headers.get("content-type") ??
+      "application/json",
+  };
+  const contentDisposition = response.headers.get("content-disposition");
+  if (contentDisposition) {
+    responseHeaders["content-disposition"] = contentDisposition;
+  }
+
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
-    headers: {
-      "content-type": response.headers.get("content-type") ??
-        "application/json",
-    },
+    headers: responseHeaders,
   });
 };
 

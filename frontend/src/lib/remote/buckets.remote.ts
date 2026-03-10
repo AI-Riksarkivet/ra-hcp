@@ -256,6 +256,82 @@ export const generate_presigned_url = command(
   },
 );
 
+// ── ZIP Download Task ───────────────────────────────────────────────
+
+export const start_zip_download = command(
+  z.object({
+    bucket: z.string(),
+    prefix: z.string().optional(),
+    keys: z.array(z.string()).optional(),
+  }),
+  async ({ bucket, prefix, keys }) => {
+    const body: Record<string, unknown> = {};
+    if (prefix != null) body.prefix = prefix;
+    if (keys && keys.length > 0) body.keys = keys;
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/download`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to start ZIP download",
+      }));
+      throw new Error(
+        typeof err.detail === "string" ? err.detail : JSON.stringify(
+          err.detail,
+        ),
+      );
+    }
+    return (await res.json()) as {
+      task_id: string;
+      status: string;
+      total: number;
+    };
+  },
+);
+
+export const poll_zip_download = query(
+  z.object({ bucket: z.string(), task_id: z.string() }),
+  async ({ bucket, task_id }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/download/${
+          encodeURIComponent(task_id)
+        }`,
+      );
+      if (res.ok) {
+        const contentType = res.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          return (await res.json()) as {
+            task_id: string;
+            status: string;
+            total: number;
+            completed: number;
+            failed: number;
+            failed_keys: string[];
+          };
+        }
+        // If it's a ZIP file, the task is ready
+        return {
+          task_id,
+          status: "ready" as string,
+          total: 0,
+          completed: 0,
+          failed: 0,
+          failed_keys: [] as string[],
+        };
+      }
+    } catch (err) {
+      console.error("[buckets.remote] poll_zip_download", err);
+    }
+    return null;
+  },
+);
+
 // ── Head Object ─────────────────────────────────────────────────────
 
 export const head_object = query(

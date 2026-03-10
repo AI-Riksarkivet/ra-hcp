@@ -678,6 +678,36 @@ export const export_namespace_configs = command(
 
 // ── Delete Namespace ─────────────────────────────────────────────────
 
+// ── Namespace Chargeback ──────────────────────────────────────────────
+
+export const get_ns_chargeback = query(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    start: z.string().optional(),
+    end: z.string().optional(),
+    granularity: z.enum(["hour", "day", "total"]).optional(),
+  }),
+  async ({ tenant, name, start, end, granularity }) => {
+    try {
+      const params = new URLSearchParams();
+      if (start) params.set("start", start);
+      if (end) params.set("end", end);
+      if (granularity) params.set("granularity", granularity);
+      const qs = params.toString();
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/chargebackReport${qs ? `?${qs}` : ""}`,
+      );
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.error("[namespaces.remote]", err);
+    }
+    return { chargebackData: [] };
+  },
+);
+
 export const delete_namespace = command(
   z.object({ tenant: z.string(), name: z.string() }),
   async ({ tenant, name }) => {

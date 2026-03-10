@@ -38,6 +38,8 @@ export function parseQuotaBytes(quota: string): number | null {
 
 export interface ChargebackEntry {
   namespaceName?: string;
+  startTime?: string;
+  endTime?: string;
   objectCount?: number;
   ingestedVolume?: number;
   storageCapacityUsed?: number;

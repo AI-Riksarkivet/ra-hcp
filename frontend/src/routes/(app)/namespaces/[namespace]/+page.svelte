@@ -9,6 +9,7 @@
 	import NsFeatures from './sections/ns-features.svelte';
 	import NsTags from './sections/ns-tags.svelte';
 	import NsUserAccess from './sections/ns-user-access.svelte';
+	import NsChargeback from './sections/ns-chargeback.svelte';
 	import NsCompliance from './sections/ns-compliance.svelte';
 	import NsRetentionClasses from './sections/ns-retention-classes.svelte';
 	import NsIndexing from './sections/ns-indexing.svelte';
@@ -60,6 +61,7 @@
 				</div>
 
 				<NsUserAccess {tenant} {namespaceName} />
+				<NsChargeback {tenant} {namespaceName} />
 			</Tabs.Content>
 
 			<Tabs.Content value="advanced" class="space-y-6">
