@@ -21,7 +21,7 @@
 	const tenantItems = [
 		{ href: '/namespaces', label: 'Namespaces', icon: Boxes },
 		{ href: '/users', label: 'Users & Groups', icon: Users },
-		{ href: '/settings', label: 'Settings', icon: Settings },
+		{ href: '/tenant-settings', label: 'Tenant Settings', icon: Settings },
 	] as const;
 
 	const searchItems = [

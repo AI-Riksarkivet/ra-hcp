@@ -1,31 +1,37 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import * as Tabs from '$lib/components/ui/tabs/index.js';
-	import {
-		Settings,
-		Contact,
-		Database,
-		Shield,
-		Lock,
-		Mail,
-		Search,
-		Globe,
-		CreditCard,
-	} from 'lucide-svelte';
+	import { mode, setMode } from 'mode-watcher';
+	import { Sun, Moon, Monitor, User, Copy, Check, Shield } from 'lucide-svelte';
+	import { toast } from 'svelte-sonner';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
-	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
-	import SettingsGeneral from './sections/settings-general.svelte';
-	import SettingsContact from './sections/settings-contact.svelte';
-	import SettingsNamespaceDefaults from './sections/settings-namespace-defaults.svelte';
-	import SettingsPermissions from './sections/settings-permissions.svelte';
-	import SettingsConsoleSecurity from './sections/settings-console-security.svelte';
-	import SettingsEmailNotifications from './sections/settings-email-notifications.svelte';
-	import SettingsSearchSecurity from './sections/settings-search-security.svelte';
-	import SettingsCors from './sections/settings-cors.svelte';
-	import SettingsServicePlans from './sections/settings-service-plans.svelte';
 
+	let username = $derived(page.data.username as string);
 	let tenant = $derived(page.data.tenant as string | undefined);
-	let activeTab = $state('general');
+	let userGUID = $derived(page.data.userGUID as string | undefined);
+	let roles = $derived((page.data.roles as string[]) ?? []);
+
+	let copied = $state(false);
+
+	async function copyCanonicalId() {
+		if (!userGUID) return;
+		try {
+			await navigator.clipboard.writeText(userGUID);
+			copied = true;
+			toast.success('Canonical ID copied');
+			setTimeout(() => (copied = false), 2000);
+		} catch {
+			toast.error('Failed to copy');
+		}
+	}
+
+	const themes = [
+		{ value: 'light', label: 'Light', icon: Sun },
+		{ value: 'dark', label: 'Dark', icon: Moon },
+		{ value: 'system', label: 'System', icon: Monitor },
+	] as const;
 </script>
 
 <svelte:head>
@@ -33,89 +39,84 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<PageHeader
-		title="Tenant Settings"
-		description="View and manage tenant configuration and permissions"
-	/>
+	<PageHeader title="Settings" description="Manage your preferences and view your profile" />
 
-	{#if tenant}
-		<Tabs.Root bind:value={activeTab}>
-			<Tabs.List class="flex-wrap">
-				<Tabs.Trigger value="general">
-					<Settings class="mr-1.5 h-4 w-4" />
-					General
-				</Tabs.Trigger>
-				<Tabs.Trigger value="contact">
-					<Contact class="mr-1.5 h-4 w-4" />
-					Contact
-				</Tabs.Trigger>
-				<Tabs.Trigger value="namespace-defaults">
-					<Database class="mr-1.5 h-4 w-4" />
-					Namespace Defaults
-				</Tabs.Trigger>
-				<Tabs.Trigger value="permissions">
-					<Shield class="mr-1.5 h-4 w-4" />
-					Permissions
-				</Tabs.Trigger>
-				<Tabs.Trigger value="console-security">
-					<Lock class="mr-1.5 h-4 w-4" />
-					Console Security
-				</Tabs.Trigger>
-				<Tabs.Trigger value="email">
-					<Mail class="mr-1.5 h-4 w-4" />
-					Email
-				</Tabs.Trigger>
-				<Tabs.Trigger value="search-security">
-					<Search class="mr-1.5 h-4 w-4" />
-					Search Security
-				</Tabs.Trigger>
-				<Tabs.Trigger value="cors">
-					<Globe class="mr-1.5 h-4 w-4" />
-					CORS
-				</Tabs.Trigger>
-				<Tabs.Trigger value="service-plans">
-					<CreditCard class="mr-1.5 h-4 w-4" />
-					Service Plans
-				</Tabs.Trigger>
-			</Tabs.List>
+	<div class="grid gap-6 md:grid-cols-2">
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>Theme Preference</Card.Title>
+				<Card.Description>Choose how the console looks to you</Card.Description>
+			</Card.Header>
+			<Card.Content>
+				<div class="flex gap-2">
+					{#each themes as theme (theme.value)}
+						<Button
+							variant={mode.current === theme.value ? 'default' : 'outline'}
+							size="sm"
+							onclick={() => setMode(theme.value)}
+						>
+							<theme.icon class="mr-1.5 h-4 w-4" />
+							{theme.label}
+						</Button>
+					{/each}
+				</div>
+			</Card.Content>
+		</Card.Root>
 
-			<Tabs.Content value="general">
-				<SettingsGeneral {tenant} />
-			</Tabs.Content>
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>User Profile</Card.Title>
+				<Card.Description>Your account information</Card.Description>
+			</Card.Header>
+			<Card.Content class="space-y-4">
+				<div class="flex items-center gap-3">
+					<div
+						class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary"
+					>
+						<User class="h-5 w-5" />
+					</div>
+					<div>
+						<p class="text-sm font-semibold">{username}</p>
+						{#if tenant}
+							<p class="text-xs text-muted-foreground">{tenant}</p>
+						{/if}
+					</div>
+				</div>
 
-			<Tabs.Content value="contact">
-				<SettingsContact {tenant} />
-			</Tabs.Content>
+				{#if roles.length > 0}
+					<div class="space-y-1.5">
+						<p class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+							<Shield class="h-3.5 w-3.5" />
+							Roles
+						</p>
+						<div class="flex flex-wrap gap-1.5">
+							{#each roles as role (role)}
+								<Badge variant="secondary">{role}</Badge>
+							{/each}
+						</div>
+					</div>
+				{/if}
 
-			<Tabs.Content value="namespace-defaults">
-				<SettingsNamespaceDefaults {tenant} />
-			</Tabs.Content>
-
-			<Tabs.Content value="permissions">
-				<SettingsPermissions {tenant} />
-			</Tabs.Content>
-
-			<Tabs.Content value="console-security">
-				<SettingsConsoleSecurity {tenant} />
-			</Tabs.Content>
-
-			<Tabs.Content value="email">
-				<SettingsEmailNotifications {tenant} />
-			</Tabs.Content>
-
-			<Tabs.Content value="search-security">
-				<SettingsSearchSecurity {tenant} />
-			</Tabs.Content>
-
-			<Tabs.Content value="cors">
-				<SettingsCors {tenant} />
-			</Tabs.Content>
-
-			<Tabs.Content value="service-plans">
-				<SettingsServicePlans {tenant} />
-			</Tabs.Content>
-		</Tabs.Root>
-	{:else}
-		<NoTenantPlaceholder message="Log in with a tenant to view settings." />
-	{/if}
+				{#if userGUID}
+					<div class="space-y-1.5">
+						<p class="text-xs font-medium text-muted-foreground">Canonical ID</p>
+						<button
+							class="flex w-full cursor-pointer items-center gap-1.5 rounded-md bg-muted/60 px-2.5 py-1.5 transition-colors hover:bg-muted"
+							onclick={copyCanonicalId}
+							title="Click to copy canonical ID"
+						>
+							<span class="flex-1 truncate text-left font-mono text-xs text-muted-foreground">
+								{userGUID}
+							</span>
+							{#if copied}
+								<Check class="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+							{:else}
+								<Copy class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+							{/if}
+						</button>
+					</div>
+				{/if}
+			</Card.Content>
+		</Card.Root>
+	</div>
 </div>

@@ -120,3 +120,21 @@
 @utility animate-grid {
   animation: grid 15s linear infinite;
 }
+
+/* View Transitions — smooth cross-fade between pages */
+::view-transition-old(root) {
+  animation: 200ms ease-out both fade-out;
+}
+::view-transition-new(root) {
+  animation: 200ms ease-in both fade-in;
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
