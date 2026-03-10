@@ -26,8 +26,9 @@ jobs:
         with:
           python-version: 3.x
       - run: pip install zensical mkdocstrings-python
-      - run: pip install -e backend --no-deps
       - run: zensical build --clean
+        env:
+          PYTHONPATH: backend
 
       # Build Storybook and embed in docs site
       - name: Install Deno

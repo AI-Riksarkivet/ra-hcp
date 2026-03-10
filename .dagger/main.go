@@ -27,7 +27,7 @@ func (m *HcpApp) buildBackendDev(source *dagger.Directory) *dagger.Container {
 		WithMountedCache("/root/.cache/uv", dag.CacheVolume("uv-cache")).
 		WithMountedDirectory("/app", backend).
 		WithWorkdir("/app").
-		WithExec([]string{"uv", "sync", "--frozen"})
+		WithExec([]string{"uv", "sync", "--frozen", "--extra", "lance"})
 }
 
 // buildFrontendDev returns a Deno container with frontend deps installed.
