@@ -12,5 +12,7 @@
 - do we need multiple backends? why does backend depend on domain? 
 
 - fix all bugs for github actions
+- which should run on pr and which should run main..
+- fix releases..
 
 - fix docs for sprintdemo.. 
