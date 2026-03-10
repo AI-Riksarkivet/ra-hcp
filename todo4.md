@@ -1,0 +1,8 @@
+- https://mcpmarket.com/tools/skills/shadcn-svelte , fix. styling , ui/ custom componwnt route
+- improve theming? 
+- improve lance viewer.. 
+- protect main branch and work with pr
+- fix storybook in github pages width
+- how to support to be logined to multiple tenants in frontend...
+- do we beed multiple backends? why does backend depend on domain? 
+- 
