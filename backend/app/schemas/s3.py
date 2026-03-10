@@ -255,6 +255,87 @@ class PresignedUrlResponse(BaseModel):
     method: str
 
 
+# ── Object Versions ────────────────────────────────────────────────
+
+
+class ObjectVersionInfo(BaseModel):
+    key: str = Field(alias="Key")
+    version_id: Optional[str] = Field(None, alias="VersionId")
+    is_latest: Optional[bool] = Field(None, alias="IsLatest")
+    last_modified: Optional[datetime] = Field(None, alias="LastModified")
+    etag: Optional[str] = Field(None, alias="ETag")
+    size: Optional[int] = Field(None, alias="Size")
+    storage_class: Optional[str] = Field(None, alias="StorageClass")
+    owner: Optional[OwnerInfo] = Field(None, alias="Owner")
+
+    model_config = {"populate_by_name": True}
+
+
+class DeleteMarkerInfo(BaseModel):
+    key: str = Field(alias="Key")
+    version_id: Optional[str] = Field(None, alias="VersionId")
+    is_latest: Optional[bool] = Field(None, alias="IsLatest")
+    last_modified: Optional[datetime] = Field(None, alias="LastModified")
+    owner: Optional[OwnerInfo] = Field(None, alias="Owner")
+
+    model_config = {"populate_by_name": True}
+
+
+class ListObjectVersionsResponse(BaseModel):
+    versions: List[ObjectVersionInfo] = Field(default=[])
+    delete_markers: List[DeleteMarkerInfo] = Field(default=[])
+    is_truncated: bool = False
+    next_key_marker: Optional[str] = None
+    next_version_id_marker: Optional[str] = None
+    key_count: int = 0
+
+
+# ── Multipart Upload ──────────────────────────────────────────────
+
+
+class CreateMultipartUploadResponse(BaseModel):
+    bucket: str
+    key: str
+    upload_id: str
+
+
+class UploadPartResponse(BaseModel):
+    part_number: int
+    etag: str
+
+
+class CompleteMultipartUploadRequest(BaseModel):
+    upload_id: str
+    parts: List[dict] = Field(description="List of {PartNumber, ETag} dicts")
+
+
+class CompleteMultipartUploadResponse(BaseModel):
+    bucket: str
+    key: str
+    etag: Optional[str] = None
+
+
+class AbortMultipartUploadRequest(BaseModel):
+    upload_id: str
+
+
+class PartInfo(BaseModel):
+    part_number: int = Field(alias="PartNumber")
+    etag: Optional[str] = Field(None, alias="ETag")
+    size: Optional[int] = Field(None, alias="Size")
+    last_modified: Optional[datetime] = Field(None, alias="LastModified")
+
+    model_config = {"populate_by_name": True}
+
+
+class ListPartsResponse(BaseModel):
+    bucket: str
+    key: str
+    upload_id: str
+    parts: List[PartInfo] = Field(default=[])
+    is_truncated: bool = False
+
+
 # ── S3 Credentials Model ────────────────────────────────────────
 
 

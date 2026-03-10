@@ -31,11 +31,18 @@ async def get_tenant(
     verbose: bool = False,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    return await hcp.fetch_json(
+    from app.api.errors import raise_for_hcp_status, parse_json_response
+
+    resp = await hcp.get(
         f"/tenants/{tenant_name}",
-        resource=f"tenant '{tenant_name}'",
         query={"verbose": str(verbose).lower()},
     )
+    raise_for_hcp_status(resp, f"tenant '{tenant_name}'")
+    data = parse_json_response(resp)
+    version = resp.headers.get("X-HCP-SoftwareVersion")
+    if version:
+        data["softwareVersion"] = version
+    return data
 
 
 @router.head("/{tenant_name}")

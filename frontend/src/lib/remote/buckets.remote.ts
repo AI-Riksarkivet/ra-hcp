@@ -594,3 +594,194 @@ export const put_object_acl = command(
     return await res.json();
   },
 );
+
+// ── Object Versions ────────────────────────────────────────────────
+
+export type ObjectVersion = {
+  Key: string;
+  VersionId: string | null;
+  IsLatest: boolean | null;
+  LastModified: string | null;
+  ETag: string | null;
+  Size: number | null;
+  StorageClass: string | null;
+  Owner: { DisplayName?: string; ID?: string } | null;
+};
+
+export type DeleteMarker = {
+  Key: string;
+  VersionId: string | null;
+  IsLatest: boolean | null;
+  LastModified: string | null;
+  Owner: { DisplayName?: string; ID?: string } | null;
+};
+
+export const get_object_versions = query(
+  z.object({
+    bucket: z.string(),
+    prefix: z.string().optional(),
+    max_keys: z.number().optional(),
+    key_marker: z.string().optional(),
+    version_id_marker: z.string().optional(),
+  }),
+  async ({ bucket, prefix, max_keys, key_marker, version_id_marker }) => {
+    try {
+      const params = new URLSearchParams();
+      if (prefix) params.set("prefix", prefix);
+      if (max_keys) params.set("max_keys", String(max_keys));
+      if (key_marker) params.set("key_marker", key_marker);
+      if (version_id_marker) {
+        params.set("version_id_marker", version_id_marker);
+      }
+      const qs = params.toString();
+      const res = await apiFetch(
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/versions${
+          qs ? `?${qs}` : ""
+        }`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          versions: (data.versions ?? []) as ObjectVersion[],
+          delete_markers: (data.delete_markers ?? []) as DeleteMarker[],
+          is_truncated: (data.is_truncated ?? false) as boolean,
+          next_key_marker: (data.next_key_marker ?? null) as string | null,
+          next_version_id_marker: (data.next_version_id_marker ?? null) as
+            | string
+            | null,
+          key_count: (data.key_count ?? 0) as number,
+          error: null as string | null,
+        };
+      }
+      if (res.status === 403) {
+        return {
+          versions: [] as ObjectVersion[],
+          delete_markers: [] as DeleteMarker[],
+          is_truncated: false,
+          next_key_marker: null,
+          next_version_id_marker: null,
+          key_count: 0,
+          error: "Access Denied — insufficient permissions.",
+        };
+      }
+    } catch (err) {
+      console.error("[buckets.remote] get_object_versions", err);
+    }
+    return {
+      versions: [] as ObjectVersion[],
+      delete_markers: [] as DeleteMarker[],
+      is_truncated: false,
+      next_key_marker: null as string | null,
+      next_version_id_marker: null as string | null,
+      key_count: 0,
+      error: null as string | null,
+    };
+  },
+);
+
+export const delete_object_version = command(
+  z.object({
+    bucket: z.string(),
+    key: z.string(),
+    version_id: z.string(),
+  }),
+  async ({ bucket, key, version_id }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/${
+        encodeURIComponent(key)
+      }?version_id=${encodeURIComponent(version_id)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to delete version",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── Multipart Upload ───────────────────────────────────────────────
+
+export const create_multipart_upload = command(
+  z.object({ bucket: z.string(), key: z.string() }),
+  async ({ bucket, key }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/multipart/${
+        encodeURIComponent(key)
+      }`,
+      { method: "POST" },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to initiate multipart upload",
+      }));
+      throw new Error(err.detail);
+    }
+    return (await res.json()) as {
+      bucket: string;
+      key: string;
+      upload_id: string;
+    };
+  },
+);
+
+export const complete_multipart_upload = command(
+  z.object({
+    bucket: z.string(),
+    key: z.string(),
+    upload_id: z.string(),
+    parts: z.array(
+      z.object({ PartNumber: z.number(), ETag: z.string() }),
+    ),
+  }),
+  async ({ bucket, key, upload_id, parts }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/multipart/${
+        encodeURIComponent(key)
+      }/complete`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ upload_id, parts }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to complete multipart upload",
+      }));
+      throw new Error(err.detail);
+    }
+    return (await res.json()) as {
+      bucket: string;
+      key: string;
+      etag: string | null;
+    };
+  },
+);
+
+export const abort_multipart_upload = command(
+  z.object({
+    bucket: z.string(),
+    key: z.string(),
+    upload_id: z.string(),
+  }),
+  async ({ bucket, key, upload_id }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/multipart/${
+        encodeURIComponent(key)
+      }/abort`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ upload_id }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to abort multipart upload",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);

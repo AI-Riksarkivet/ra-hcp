@@ -103,6 +103,24 @@ def mock_s3_service() -> MagicMock:
         "https://s3.test.example.com/my-bucket/test.txt"
         "?AWSAccessKeyId=dGVzdHVzZXI%3D&Expires=9999999999&Signature=abc123"
     )
+    mock.list_object_versions.return_value = {
+        "Versions": [],
+        "DeleteMarkers": [],
+        "IsTruncated": False,
+    }
+    mock.create_multipart_upload.return_value = {
+        "Bucket": "my-bucket",
+        "Key": "test.txt",
+        "UploadId": "upload-000",
+    }
+    mock.upload_part.return_value = {"ETag": '"mock-etag"'}
+    mock.complete_multipart_upload.return_value = {
+        "Bucket": "my-bucket",
+        "Key": "test.txt",
+        "ETag": '"final-etag"',
+    }
+    mock.abort_multipart_upload.return_value = {}
+    mock.list_parts.return_value = {"Parts": [], "IsTruncated": False}
     return mock
 
 

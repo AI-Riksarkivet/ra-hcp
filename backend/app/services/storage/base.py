@@ -49,13 +49,17 @@ class StorageBase(ABC):
     def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None: ...
 
     @abstractmethod
-    def get_object(self, bucket: str, key: str) -> dict: ...
+    def get_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict: ...
 
     @abstractmethod
     def head_object(self, bucket: str, key: str) -> dict: ...
 
     @abstractmethod
-    def delete_object(self, bucket: str, key: str) -> dict: ...
+    def delete_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict: ...
 
     def delete_objects(self, bucket: str, keys: List[str]) -> dict:
         """Delete multiple objects — default loops over delete_object.
@@ -101,6 +105,18 @@ class StorageBase(ABC):
     @abstractmethod
     def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict: ...
 
+    # ── Object versions ────────────────────────────────────────────
+
+    @abstractmethod
+    def list_object_versions(
+        self,
+        bucket: str,
+        prefix: Optional[str] = None,
+        max_keys: int = 1000,
+        key_marker: Optional[str] = None,
+        version_id_marker: Optional[str] = None,
+    ) -> dict: ...
+
     # ── Presigned URLs ───────────────────────────────────────────────
 
     @abstractmethod
@@ -111,3 +127,39 @@ class StorageBase(ABC):
         expires_in: int = 3600,
         method: str = "get_object",
     ) -> str: ...
+
+    # ── Multipart uploads ────────────────────────────────────────────
+
+    @abstractmethod
+    def create_multipart_upload(self, bucket: str, key: str) -> dict: ...
+
+    @abstractmethod
+    def upload_part(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        part_number: int,
+        body: IO[bytes],
+    ) -> dict: ...
+
+    @abstractmethod
+    def complete_multipart_upload(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        parts: List[dict],
+    ) -> dict: ...
+
+    @abstractmethod
+    def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict: ...
+
+    @abstractmethod
+    def list_parts(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        max_parts: int = 1000,
+    ) -> dict: ...

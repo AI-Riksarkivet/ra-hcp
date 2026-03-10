@@ -30,6 +30,10 @@
 						<dd class="text-sm font-medium">{info.name}</dd>
 					</div>
 					<div class="flex justify-between">
+						<dt class="text-sm text-muted-foreground">HCP Version</dt>
+						<dd class="text-sm font-medium">{info.softwareVersion ?? '—'}</dd>
+					</div>
+					<div class="flex justify-between">
 						<dt class="text-sm text-muted-foreground">Namespace Quota</dt>
 						<dd class="text-sm font-medium">{info.namespaceQuota ?? '—'}</dd>
 					</div>

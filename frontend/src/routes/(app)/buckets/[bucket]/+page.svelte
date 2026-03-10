@@ -3,7 +3,7 @@
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Upload, Folder, FolderOpen, Shield } from 'lucide-svelte';
+	import { Upload, Folder, FolderOpen, Shield, History } from 'lucide-svelte';
 	import {
 		formatBytes,
 		parseQuotaBytes,
@@ -19,6 +19,7 @@
 	import BucketVersioning from './sections/bucket-versioning.svelte';
 	import BucketAcl from './sections/bucket-acl.svelte';
 	import BucketObjectBrowser from './sections/bucket-object-browser.svelte';
+	import BucketVersions from './sections/bucket-versions.svelte';
 
 	// --- Page params ---
 	let tenant = $derived(page.data.tenant as string | undefined);
@@ -108,6 +109,10 @@
 				<FolderOpen class="mr-1.5 h-4 w-4" />
 				Objects
 			</Tabs.Trigger>
+			<Tabs.Trigger value="versions">
+				<History class="mr-1.5 h-4 w-4" />
+				Versions
+			</Tabs.Trigger>
 			<Tabs.Trigger value="acl">
 				<Shield class="mr-1.5 h-4 w-4" />
 				Access Control
@@ -137,6 +142,10 @@
 
 			<!-- Object Browser -->
 			<BucketObjectBrowser {bucket} {prefix} bind:uploadOpen onnavigate={navigatePrefix} />
+		</Tabs.Content>
+
+		<Tabs.Content value="versions" class="space-y-4">
+			<BucketVersions {bucket} />
 		</Tabs.Content>
 
 		<Tabs.Content value="acl">

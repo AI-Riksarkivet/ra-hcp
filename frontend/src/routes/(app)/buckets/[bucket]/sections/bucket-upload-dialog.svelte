@@ -17,6 +17,14 @@
 	import { formatBytes } from '$lib/utils/format.js';
 	import { cn } from '$lib/utils.js';
 	import { toast } from 'svelte-sonner';
+	import {
+		create_multipart_upload,
+		complete_multipart_upload,
+		abort_multipart_upload,
+	} from '$lib/remote/buckets.remote.js';
+
+	const MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100 MB
+	const PART_SIZE = 10 * 1024 * 1024; // 10 MB
 
 	let {
 		open = $bindable(false),
@@ -77,7 +85,7 @@
 		addFiles(e.dataTransfer?.files ?? null);
 	}
 
-	function uploadFile(index: number): Promise<void> {
+	function simpleUpload(index: number): Promise<void> {
 		return new Promise((resolve) => {
 			const item = selectedFiles[index];
 			const formData = new FormData();
@@ -117,6 +125,96 @@
 			selectedFiles[index] = { ...selectedFiles[index], status: 'uploading', progress: 0 };
 			xhr.send(formData);
 		});
+	}
+
+	function uploadPartXhr(
+		bucket: string,
+		key: string,
+		uploadId: string,
+		partNumber: number,
+		blob: Blob
+	): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const formData = new FormData();
+			formData.append('file', blob);
+			const xhr = new XMLHttpRequest();
+			xhr.open(
+				'PUT',
+				`/api/v1/buckets/${encodeURIComponent(bucket)}/multipart/${encodeURIComponent(key)}?upload_id=${encodeURIComponent(uploadId)}&part_number=${partNumber}`
+			);
+			xhr.onload = () => {
+				if (xhr.status >= 200 && xhr.status < 300) {
+					try {
+						const data = JSON.parse(xhr.responseText);
+						resolve(data.etag as string);
+					} catch {
+						reject(new Error('Invalid response from part upload'));
+					}
+				} else {
+					reject(new Error(`Part ${partNumber} upload failed (HTTP ${xhr.status})`));
+				}
+			};
+			xhr.onerror = () => reject(new Error(`Part ${partNumber} network error`));
+			xhr.send(formData);
+		});
+	}
+
+	async function multipartUpload(index: number): Promise<void> {
+		const item = selectedFiles[index];
+		selectedFiles[index] = { ...selectedFiles[index], status: 'uploading', progress: 0 };
+
+		let uploadId: string | null = null;
+		try {
+			const init = await create_multipart_upload({ bucket, key: item.key });
+			uploadId = init.upload_id;
+
+			const totalParts = Math.ceil(item.file.size / PART_SIZE);
+			const parts: { PartNumber: number; ETag: string }[] = [];
+
+			for (let i = 0; i < totalParts; i++) {
+				const start = i * PART_SIZE;
+				const end = Math.min(start + PART_SIZE, item.file.size);
+				const blob = item.file.slice(start, end);
+				const partNumber = i + 1;
+
+				const etag = await uploadPartXhr(bucket, item.key, uploadId, partNumber, blob);
+				parts.push({ PartNumber: partNumber, ETag: etag });
+
+				selectedFiles[index] = {
+					...selectedFiles[index],
+					progress: Math.round((partNumber / totalParts) * 100),
+				};
+			}
+
+			await complete_multipart_upload({
+				bucket,
+				key: item.key,
+				upload_id: uploadId,
+				parts,
+			});
+			selectedFiles[index] = { ...selectedFiles[index], status: 'done', progress: 100 };
+		} catch (err) {
+			if (uploadId) {
+				try {
+					await abort_multipart_upload({ bucket, key: item.key, upload_id: uploadId });
+				} catch {
+					// best-effort abort
+				}
+			}
+			selectedFiles[index] = {
+				...selectedFiles[index],
+				status: 'error',
+				error: err instanceof Error ? err.message : 'Multipart upload failed',
+			};
+		}
+	}
+
+	function uploadFile(index: number): Promise<void> {
+		const item = selectedFiles[index];
+		if (item.file.size >= MULTIPART_THRESHOLD) {
+			return multipartUpload(index);
+		}
+		return simpleUpload(index);
 	}
 
 	async function uploadAll() {

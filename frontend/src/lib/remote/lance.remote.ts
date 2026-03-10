@@ -107,6 +107,53 @@ export const get_lance_rows = query(
   },
 );
 
+export const search_lance = query(
+  z.object({
+    bucket: z.string(),
+    path: z.string().optional(),
+    table: z.string(),
+    query: z.string().optional(),
+    vector: z.string().optional(),
+    vector_column: z.string().optional(),
+    query_type: z.string().optional(),
+    limit: z.number().optional(),
+    filter: z.string().optional(),
+  }),
+  async (
+    {
+      bucket,
+      path,
+      table,
+      query: q,
+      vector,
+      vector_column,
+      query_type,
+      limit,
+      filter,
+    },
+  ) => {
+    try {
+      const params = new URLSearchParams({ bucket, table });
+      if (path) params.set("path", path);
+      if (q) params.set("query", q);
+      if (vector) params.set("vector", vector);
+      if (vector_column) params.set("vector_column", vector_column);
+      if (query_type) params.set("query_type", query_type);
+      if (limit) params.set("limit", String(limit));
+      if (filter) params.set("filter", filter);
+      const res = await apiFetch(`/api/v1/lance/search?${params}`);
+      if (!res.ok) {
+        const body = await res.text();
+        return { rows: [], total: 0, error: body || "Search failed" };
+      }
+      return { ...(await res.json()), error: null };
+    } catch (err) {
+      console.error("search_lance error:", err);
+      return { rows: [], total: 0, error: "Connection failed" };
+    }
+  },
+);
+
 export const get_vector_preview = query(
   z.object({
     bucket: z.string(),

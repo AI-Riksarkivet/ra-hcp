@@ -18,7 +18,7 @@ graph TB
 
     subgraph "Services Layer"
         MAPI["MapiService<br/>HCP Management API"]
-        S3["S3Service<br/>boto3 / botocore"]
+        S3["StorageProtocol<br/>Backend-agnostic S3"]
         QUERY["QueryService<br/>Metadata Query"]
         CACHE["CacheService<br/>Redis (optional)"]
     end
@@ -88,7 +88,10 @@ graph TD
     subgraph "Service Layer"
         MS["MapiService"]
         CMS["CachedMapiService"]
-        SS["S3Service"]
+        SP["StorageProtocol"]
+        SB["StorageBase (ABC)"]
+        HCP_A["HcpStorage<br/>boto3 adapter"]
+        CHCP["CachedHcpStorage"]
         QS["QueryService"]
         CQS["CachedQueryService"]
         CS["CacheService"]
@@ -104,14 +107,17 @@ graph TD
     R --> DEP
     DEP --> MS
     DEP --> CMS
-    DEP --> SS
-    DEP --> QS
-    DEP --> CQS
+    DEP -->|"type-hints"| SP
+    DEP -->|"actual impl"| CHCP
+    SP -.->|"structural typing"| SB
+    SB -->|"inherits"| HCP_A
+    HCP_A -->|"inherits"| CHCP
+    CHCP --> CS
     MS --> CFG
     CMS --> MS
     CMS --> CS
-    SS --> CFG
-    SS --> AUTH2
+    HCP_A --> CFG
+    HCP_A --> AUTH2
     QS --> CFG
     CQS --> QS
     CQS --> CS
@@ -122,9 +128,75 @@ graph TD
 
 - **Credential pass-through**: The API does not store user passwords. Credentials are embedded in the JWT and forwarded to HCP on each request. HCP is the sole authority for authentication and authorization.
 
-- **Optional caching**: When Redis is configured, `CachedMapiService` and `CachedQueryService` wrap the base services with TTL-based caching. When Redis is not configured, the base services are used directly.
+- **Optional caching**: When Redis is configured, `CachedMapiService`, `CachedQueryService`, and `CachedHcpStorage` wrap the base services with TTL-based caching. When Redis is not configured, the base services are used directly.
 
 - **S3 credential derivation**: S3 access keys are derived from HCP credentials (base64-encoded username + MD5-hashed password) per HCP convention. No separate S3 credentials need to be configured.
+
+- **Backend-agnostic storage layer**: The S3 data-plane uses a hybrid Protocol + ABC pattern so storage backends (HCP, MinIO, Ceph, AWS) can be swapped without touching endpoint code. See [Storage Layer Architecture](#storage-layer-architecture) for details.
+
+## Storage Layer Architecture
+
+The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against `StorageProtocol` (structural typing) and never imports backend-specific libraries like `boto3`.
+
+```mermaid
+graph TD
+    subgraph "Endpoint Code"
+        EP["S3 Endpoints<br/>buckets · objects · versions · multipart"]
+    end
+
+    subgraph "Contracts"
+        SP["StorageProtocol<br/>(Protocol — structural typing)"]
+        SB["StorageBase<br/>(ABC — enforced at instantiation)"]
+    end
+
+    subgraph "Adapters"
+        HCP_A["HcpStorage<br/>boto3 wrapper<br/>HCP-specific workarounds"]
+        FUTURE["MinIO / Ceph / AWS<br/>(future adapters)"]
+    end
+
+    subgraph "Caching"
+        CHCP["CachedHcpStorage<br/>Redis caching layer"]
+    end
+
+    EP -->|"type-hints against"| SP
+    SP -.->|"structural match"| SB
+    SB -->|"inherits"| HCP_A
+    SB -.->|"inherits"| FUTURE
+    HCP_A -->|"inherits"| CHCP
+```
+
+### How it works
+
+| Layer | File | Role |
+|-------|------|------|
+| `StorageProtocol` | `services/storage/protocol.py` | Structural typing interface — endpoint DI type hints use this |
+| `StorageBase` | `services/storage/base.py` | Abstract base class — enforces method implementation at instantiation |
+| `HcpStorage` | `services/storage/adapters/hcp.py` | Concrete adapter — wraps boto3 with HCP-specific workarounds |
+| `CachedHcpStorage` | `services/cached_s3.py` | Caching decorator — inherits from `HcpStorage`, adds Redis caching |
+| `StorageError` | `services/storage/errors.py` | Backend-agnostic exceptions — adapters catch library errors and re-raise |
+
+### Adding a new storage backend
+
+To add support for MinIO, Ceph, or AWS S3:
+
+1. Create `services/storage/adapters/minio.py` (or similar)
+2. Inherit from `StorageBase` — the ABC enforces all required methods
+3. Catch the backend's native exceptions and re-raise as `StorageError`
+4. Register the new adapter in the dependency injection layer
+5. No endpoint code changes needed — they type-hint against `StorageProtocol`
+
+### Storage operations
+
+The storage layer supports these operation groups:
+
+| Group | Operations |
+|-------|-----------|
+| **Buckets** | list, create, head, delete |
+| **Objects** | list, put, get, head, delete, copy, bulk delete |
+| **Versioning** | get/set bucket versioning, list object versions, version-aware get/delete |
+| **ACLs** | get/set bucket ACL, get/set object ACL |
+| **Multipart uploads** | create, upload part, complete, abort, list parts |
+| **Presigned URLs** | generate for get/put operations |
 
 ## Frontend Architecture
 
@@ -216,6 +288,7 @@ graph LR
 |-----------|-----------|------|
 | Frontend | SvelteKit 2 + Svelte 5, Deno | 5173 (dev) |
 | Backend | FastAPI, Python 3.12+, uv | 8000 |
+| Storage adapters | HcpStorage (boto3) — pluggable via StorageProtocol | — |
 | Cache | Redis 7+ (optional) | 6379 |
 | HCP MAPI | Hitachi Content Platform | 9090 |
-| HCP S3 | S3-compatible endpoint | 443 |
+| S3 endpoint | S3-compatible endpoint (HCP, MinIO, Ceph, AWS) | 443 |

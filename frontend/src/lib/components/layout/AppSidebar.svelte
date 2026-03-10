@@ -12,6 +12,7 @@
 		FileType,
 	} from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import { APP_VERSION } from '$lib/constants.js';
 
 	const tenantItems = [
 		{ href: '/namespaces', label: 'Namespaces', icon: Boxes },
@@ -39,7 +40,10 @@
 				<Sidebar.MenuButton size="lg">
 					<div class="flex items-center gap-3 overflow-hidden">
 						<Server class="h-6 w-6 shrink-0 text-primary" />
-						<span class="whitespace-nowrap text-lg font-bold">HCP App</span>
+						<div class="flex flex-col leading-tight">
+							<span class="whitespace-nowrap text-lg font-bold">RA-HCP</span>
+							<span class="text-[10px] text-muted-foreground">v{APP_VERSION}</span>
+						</div>
 					</div>
 				</Sidebar.MenuButton>
 			</Sidebar.MenuItem>

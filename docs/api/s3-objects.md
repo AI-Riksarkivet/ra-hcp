@@ -50,6 +50,12 @@ GET /api/v1/buckets/{bucket}/objects/{key}
 
 Returns the object content as a streaming response with appropriate `Content-Type` and `Content-Disposition` headers.
 
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `version_id` | string | | Download a specific version of the object |
+
 ---
 
 ### Get object metadata
@@ -74,6 +80,12 @@ HEAD /api/v1/buckets/{bucket}/objects/{key}
 ```
 DELETE /api/v1/buckets/{bucket}/objects/{key}
 ```
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `version_id` | string | | Delete a specific version permanently (bypasses delete markers) |
 
 **Response:** `ObjectMutationResponse` — `{ status, bucket, key }`
 
@@ -211,6 +223,171 @@ Generate presigned URLs for multiple objects.
 
 ---
 
+## Object Versions
+
+Browse version history for objects in versioning-enabled buckets.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `.../versions` | List all object versions in a bucket |
+
+---
+
+### List object versions
+
+```
+GET /api/v1/buckets/{bucket}/versions
+```
+
+Returns all object versions and delete markers for the bucket.
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `prefix` | string | | Filter versions by key prefix |
+| `max_keys` | integer | 1000 | Maximum number of entries to return |
+| `key_marker` | string | | Start listing after this key (pagination) |
+| `version_id_marker` | string | | Start listing after this version ID (pagination) |
+
+**Response:** `ListObjectVersionsResponse`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `versions` | array | Version entries (`Key`, `VersionId`, `IsLatest`, `LastModified`, `ETag`, `Size`, `StorageClass`) |
+| `delete_markers` | array | Delete marker entries (`Key`, `VersionId`, `IsLatest`, `LastModified`) |
+| `is_truncated` | boolean | Whether there are more results |
+| `next_key_marker` | string | Key marker for the next page |
+| `next_version_id_marker` | string | Version ID marker for the next page |
+| `key_count` | integer | Total entries returned |
+
+!!! tip "Version-aware operations"
+    Use the `version_id` query parameter on the [Download](#download-object) and [Delete](#delete-object) endpoints to target a specific version. Deleting a specific version permanently removes it (no delete marker). Deleting a delete marker restores the object.
+
+---
+
+## Multipart Upload
+
+Upload large files in parts. The frontend automatically uses multipart upload for files >= 100 MB, splitting them into 10 MB chunks.
+
+**Base path:** `/api/v1/buckets/{bucket}/multipart`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `.../multipart/{key}` | Initiate a multipart upload |
+| `PUT` | `.../multipart/{key}` | Upload a part |
+| `POST` | `.../multipart/{key}/complete` | Complete the upload |
+| `POST` | `.../multipart/{key}/abort` | Abort the upload |
+| `GET` | `.../multipart/{key}/parts` | List uploaded parts |
+
+---
+
+### Initiate multipart upload
+
+```
+POST /api/v1/buckets/{bucket}/multipart/{key}
+```
+
+Returns an upload ID to use for subsequent part uploads.
+
+**Response:** `CreateMultipartUploadResponse` (201 Created)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `bucket` | string | Bucket name |
+| `key` | string | Object key |
+| `upload_id` | string | Upload ID for subsequent operations |
+
+---
+
+### Upload part
+
+```
+PUT /api/v1/buckets/{bucket}/multipart/{key}
+```
+
+Upload a single part of a multipart upload.
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `upload_id` | string | Yes | Upload ID from initiate |
+| `part_number` | integer | Yes | Part number (1-10000) |
+
+**Request body:** Binary file data (multipart form with `file` field)
+
+**Response:** `UploadPartResponse`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `PartNumber` | integer | Part number |
+| `ETag` | string | Part ETag (needed for completion) |
+
+---
+
+### Complete multipart upload
+
+```
+POST /api/v1/buckets/{bucket}/multipart/{key}/complete
+```
+
+Assemble all uploaded parts into the final object.
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `upload_id` | string | Yes | Upload ID from initiate |
+| `parts` | array | Yes | List of `{ PartNumber, ETag }` for each part |
+
+**Response:** `CompleteMultipartUploadResponse` — `{ bucket, key, etag }`
+
+---
+
+### Abort multipart upload
+
+```
+POST /api/v1/buckets/{bucket}/multipart/{key}/abort
+```
+
+Abort an in-progress upload and discard all uploaded parts.
+
+**Request body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `upload_id` | string | Yes | Upload ID to abort |
+
+**Response:** `StatusResponse` — `{ status: "aborted" }`
+
+---
+
+### List uploaded parts
+
+```
+GET /api/v1/buckets/{bucket}/multipart/{key}/parts
+```
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `upload_id` | string | (required) | Upload ID |
+| `max_parts` | integer | 1000 | Maximum parts to return |
+
+**Response:** `ListPartsResponse`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `bucket` | string | Bucket name |
+| `key` | string | Object key |
+| `upload_id` | string | Upload ID |
+| `parts` | array | List of parts (`PartNumber`, `Size`, `ETag`, `LastModified`) |
+| `is_truncated` | boolean | Whether there are more parts |
+
+---
+
 ## S3 Credentials & Presigned URLs
 
 These endpoints are at the API root level (not scoped to a bucket).
@@ -292,4 +469,35 @@ curl -s -X POST \
 # Get S3 credentials
 curl -s http://localhost:8000/api/v1/credentials \
   -H "Authorization: Bearer $TOKEN" | jq .
+
+# List object versions
+curl -s "http://localhost:8000/api/v1/buckets/my-bucket/versions?prefix=documents/" \
+  -H "Authorization: Bearer $TOKEN" | jq .
+
+# Download a specific version
+curl -s "http://localhost:8000/api/v1/buckets/my-bucket/objects/report.pdf?version_id=v123" \
+  -H "Authorization: Bearer $TOKEN" -o report-v123.pdf
+
+# Delete a specific version permanently
+curl -s -X DELETE \
+  "http://localhost:8000/api/v1/buckets/my-bucket/objects/report.pdf?version_id=v123" \
+  -H "Authorization: Bearer $TOKEN" | jq .
+
+# Multipart upload: initiate
+curl -s -X POST \
+  http://localhost:8000/api/v1/buckets/my-bucket/multipart/large-file.bin \
+  -H "Authorization: Bearer $TOKEN" | jq .
+
+# Multipart upload: upload part 1
+curl -s -X PUT \
+  "http://localhost:8000/api/v1/buckets/my-bucket/multipart/large-file.bin?upload_id=UPLOAD_ID&part_number=1" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@/path/to/part1.bin" | jq .
+
+# Multipart upload: complete
+curl -s -X POST \
+  http://localhost:8000/api/v1/buckets/my-bucket/multipart/large-file.bin/complete \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"upload_id": "UPLOAD_ID", "parts": [{"PartNumber": 1, "ETag": "\"etag1\""}]}' | jq .
 ```

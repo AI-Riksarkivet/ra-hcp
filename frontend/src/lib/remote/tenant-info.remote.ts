@@ -15,6 +15,7 @@ export interface TenantInfo {
   searchConfigurationEnabled?: boolean;
   replicationConfigurationEnabled?: boolean;
   servicePlan?: string;
+  softwareVersion?: string;
 }
 
 export interface TenantStatistics {

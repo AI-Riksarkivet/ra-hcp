@@ -28,7 +28,9 @@ import base64
 import hashlib
 import os
 import random
+import ssl
 import sys
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -112,17 +114,53 @@ def make_metrics_data() -> list[dict]:
     return rows
 
 
+def _download_image(url: str) -> bytes:
+    """Download an image from a URL, returning raw bytes.
+
+    Uses an unverified SSL context since certificate verification may fail
+    for the demo endpoints.  Falls back to a small placeholder blob on error.
+    """
+    placeholder = b"\x89PNG\r\n\x1a\n" + b"\x00" * 56  # 64-byte placeholder
+    try:
+        ctx = ssl._create_unverified_context()
+        req = urllib.request.Request(url, headers={"User-Agent": "seed-script/1.0"})
+        with urllib.request.urlopen(req, timeout=30, context=ctx) as resp:
+            data = resp.read()
+            if data:
+                return data
+            return placeholder
+    except Exception as exc:
+        print(f"\n    [warn] download failed for {url}: {exc}")
+        return placeholder
+
+
 def make_images_data() -> list[dict]:
-    """Sample records with binary blobs (simulated small images)."""
+    """Download real images and store as binary data."""
+    image_urls = [
+        "https://riksarkivet-htr-demo.hf.space/gradio_api/file=/tmp/gradio/2799cab70cd5d1da347625baf9b44082df1726f558f1068c4a28f22a51ee512d/451511_1512_01.jpg",
+        "https://riksarkivet-htr-demo.hf.space/gradio_api/file=/tmp/gradio/3ae36f7a533bff7bd06352257920c06c84de674011553ed8fc113adae47440d3/30002027_00008.jpg",
+        "https://riksarkivet-htr-demo.hf.space/gradio_api/file=/tmp/gradio/053a755d8b5459e31f9bcf0a768c911bdf9fc735a2c7e7d0874906cf0b8723c5/A0062408_00006.jpg",
+    ]
+
+    # Download the three source images (with fallback)
+    print("\n  Downloading source images...")
+    downloaded: list[tuple[str, bytes]] = []
+    for url in image_urls:
+        filename = url.rsplit("/", 1)[-1]
+        print(f"    {filename}... ", end="", flush=True)
+        data = _download_image(url)
+        downloaded.append((filename, data))
+        print(f"{len(data)} bytes")
+
+    # Cycle through the 3 images to fill 8 rows
     random.seed(456)
     rows = []
     for i in range(8):
-        # Create a small random binary blob (fake "image")
-        blob = bytes(random.getrandbits(8) for _ in range(64))
+        filename, blob = downloaded[i % len(downloaded)]
         rows.append(
             {
                 "id": i + 1,
-                "filename": f"sample_{i + 1:03d}.png",
+                "filename": filename,
                 "width": random.choice([64, 128, 256]),
                 "height": random.choice([64, 128, 256]),
                 "image_data": blob,
@@ -215,7 +253,13 @@ def main() -> None:
                 db.drop_table(name)
             except Exception:
                 pass
-            db.create_table(name, data)
+            table = db.create_table(name, data)
+            if name == "documents":
+                try:
+                    table.create_fts_index("text")
+                    print("(FTS index created) ", end="")
+                except Exception as e:
+                    print(f"(FTS index skipped: {e}) ", end="")
             print("OK")
         except Exception as e:
             print(f"FAILED: {e}")

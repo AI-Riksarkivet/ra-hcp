@@ -191,13 +191,18 @@ class HcpStorage(StorageBase):
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def get_object(self, bucket: str, key: str) -> dict:
+    def get_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict:
         with tracer.start_as_current_span(
             "s3.get_object",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.get_object(Bucket=bucket, Key=key)
+                kwargs: dict[str, Any] = {"Bucket": bucket, "Key": key}
+                if version_id:
+                    kwargs["VersionId"] = version_id
+                return self._client.get_object(**kwargs)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
@@ -215,13 +220,18 @@ class HcpStorage(StorageBase):
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def delete_object(self, bucket: str, key: str) -> dict:
+    def delete_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict:
         with tracer.start_as_current_span(
             "s3.delete_object",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.delete_object(Bucket=bucket, Key=key)
+                kwargs: dict[str, Any] = {"Bucket": bucket, "Key": key}
+                if version_id:
+                    kwargs["VersionId"] = version_id
+                return self._client.delete_object(**kwargs)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
@@ -361,7 +371,35 @@ class HcpStorage(StorageBase):
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    # ── Presigned URLs ───────────────────────────────────────────────
+    # ── Object versions ────────────────────────────────────────────
+
+    def list_object_versions(
+        self,
+        bucket: str,
+        prefix: Optional[str] = None,
+        max_keys: int = 1000,
+        key_marker: Optional[str] = None,
+        version_id_marker: Optional[str] = None,
+    ) -> dict:
+        with tracer.start_as_current_span(
+            "s3.list_object_versions",
+            attributes={"s3.bucket": bucket, "s3.prefix": prefix or ""},
+        ):
+            try:
+                kwargs: dict[str, Any] = {"Bucket": bucket, "MaxKeys": max_keys}
+                if prefix:
+                    kwargs["Prefix"] = prefix
+                if key_marker:
+                    kwargs["KeyMarker"] = key_marker
+                if version_id_marker:
+                    kwargs["VersionIdMarker"] = version_id_marker
+                return self._client.list_object_versions(**kwargs)
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
+    # ── Presigned URLs (keep unique context for edit matching) ───────────────────────────────────────────────
 
     def generate_presigned_url(
         self,
@@ -379,6 +417,109 @@ class HcpStorage(StorageBase):
                     method,
                     Params={"Bucket": bucket, "Key": key},
                     ExpiresIn=expires_in,
+                )
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
+    # ── Multipart uploads ────────────────────────────────────────────
+
+    def create_multipart_upload(self, bucket: str, key: str) -> dict:
+        with tracer.start_as_current_span(
+            "s3.create_multipart_upload",
+            attributes={"s3.bucket": bucket, "s3.key": key},
+        ):
+            try:
+                return self._client.create_multipart_upload(Bucket=bucket, Key=key)
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
+    def upload_part(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        part_number: int,
+        body: IO[bytes],
+    ) -> dict:
+        with tracer.start_as_current_span(
+            "s3.upload_part",
+            attributes={
+                "s3.bucket": bucket,
+                "s3.key": key,
+                "s3.part_number": part_number,
+            },
+        ):
+            try:
+                return self._client.upload_part(
+                    Bucket=bucket,
+                    Key=key,
+                    UploadId=upload_id,
+                    PartNumber=part_number,
+                    Body=body,
+                )
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
+    def complete_multipart_upload(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        parts: List[dict],
+    ) -> dict:
+        with tracer.start_as_current_span(
+            "s3.complete_multipart_upload",
+            attributes={"s3.bucket": bucket, "s3.key": key},
+        ):
+            try:
+                return self._client.complete_multipart_upload(
+                    Bucket=bucket,
+                    Key=key,
+                    UploadId=upload_id,
+                    MultipartUpload={"Parts": parts},
+                )
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
+    def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict:
+        with tracer.start_as_current_span(
+            "s3.abort_multipart_upload",
+            attributes={"s3.bucket": bucket, "s3.key": key},
+        ):
+            try:
+                return self._client.abort_multipart_upload(
+                    Bucket=bucket, Key=key, UploadId=upload_id
+                )
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
+    def list_parts(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        max_parts: int = 1000,
+    ) -> dict:
+        with tracer.start_as_current_span(
+            "s3.list_parts",
+            attributes={"s3.bucket": bucket, "s3.key": key},
+        ):
+            try:
+                return self._client.list_parts(
+                    Bucket=bucket,
+                    Key=key,
+                    UploadId=upload_id,
+                    MaxParts=max_parts,
                 )
             except ClientError as exc:
                 raise from_client_error(exc) from exc

@@ -4,7 +4,6 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import SaveButton from '$lib/components/ui/save-button.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import type { DataAccessPermissions } from '$lib/remote/users.remote.js';
@@ -209,25 +208,16 @@
 			<div class="flex items-end gap-2">
 				<div class="flex-1 space-y-1">
 					<Label for="add-ns-{label}" class="text-xs">Add Namespace</Label>
-					<Select.Root type="single" bind:value={addingNs}>
-						<Select.Trigger id="add-ns-{label}" class="h-9">
-							{#if addingNs}
-								{addingNs}
-							{:else}
-								<span class="text-muted-foreground">Select namespace...</span>
-							{/if}
-						</Select.Trigger>
-						<Select.Content>
-							{#each availableNamespaces as ns (ns.name)}
-								<Select.Item value={ns.name}>{ns.name}</Select.Item>
-							{/each}
-							{#if availableNamespaces.length === 0}
-								<div class="px-2 py-1.5 text-xs text-muted-foreground">
-									All namespaces already assigned
-								</div>
-							{/if}
-						</Select.Content>
-					</Select.Root>
+					<select
+						id="add-ns-{label}"
+						class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+						bind:value={addingNs}
+					>
+						<option value="" disabled>Select namespace...</option>
+						{#each availableNamespaces as ns (ns.name)}
+							<option value={ns.name}>{ns.name}</option>
+						{/each}
+					</select>
 				</div>
 				<Button variant="outline" size="sm" onclick={addNamespace} disabled={!addingNs}>
 					<Plus class="h-4 w-4" />

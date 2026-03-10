@@ -199,8 +199,10 @@ class CachedHcpStorage(HcpStorage):
         self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")
         self._cache.delete_sync(self._key("head_object", bucket, key))
 
-    def delete_object(self, bucket: str, key: str) -> dict:
-        result = super().delete_object(bucket, key)
+    def delete_object(
+        self, bucket: str, key: str, version_id: Optional[str] = None
+    ) -> dict:
+        result = super().delete_object(bucket, key, version_id)
         self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")
         self._cache.delete_sync(self._key("head_object", bucket, key))
         self._cache.delete_sync(self._key("object_acl", bucket, key))

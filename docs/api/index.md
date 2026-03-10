@@ -29,6 +29,8 @@ All endpoints require a JWT bearer token obtained via the [Authentication](authe
 | **Health** | `/healthz`, `/readyz`, `/health` | Liveness probe, readiness probe, and legacy health endpoint. | Public |
 | **S3 Buckets** | `/api/v1/s3/buckets` | Create, list, and manage S3 buckets including versioning and ACLs. | JWT required |
 | **S3 Objects** | `/api/v1/s3/buckets/{bucket}/objects` | Upload, download, copy, and delete objects within buckets. | JWT required |
+| **S3 Versions** | `/api/v1/s3/buckets/{bucket}/versions` | List object versions and delete markers for versioning-enabled buckets. | JWT required |
+| **S3 Multipart** | `/api/v1/s3/buckets/{bucket}/multipart` | Multipart upload: initiate, upload parts, complete, abort, list parts. | JWT required |
 | **S3 Credentials** | `/api/v1/s3/credentials` | Generate presigned URLs and retrieve S3 access credentials. | JWT required |
 | **System Admin: Tenants** | `/api/v1/mapi/tenants` | List and create tenants. | System admin |
 | **System Admin: Identity** | `/api/v1/mapi/userAccounts`, `.../groupAccounts` | Manage system-level user and group accounts. | System admin |

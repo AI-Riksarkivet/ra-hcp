@@ -302,3 +302,86 @@ class LanceService:
             if isinstance(value, bytes):
                 return value
             return str(value).encode()
+
+    # ── Search ────────────────────────────────────────────────────
+
+    def search(
+        self,
+        table_name: str,
+        query_text: str | None = None,
+        query_vector: list[float] | None = None,
+        vector_column: str | None = None,
+        query_type: str = "fts",  # "fts", "vector", "hybrid"
+        limit: int = 20,
+        filter_expr: str | None = None,
+    ) -> dict[str, Any]:
+        """Search a Lance table using FTS, vector, or hybrid search."""
+        with tracer.start_as_current_span("lance.search") as span:
+            span.set_attribute("lance.table", table_name)
+            span.set_attribute("lance.query_type", query_type)
+            span.set_attribute("lance.limit", limit)
+
+            try:
+                table = self._db.open_table(table_name)
+            except Exception as exc:
+                raise LanceError(f"Cannot open table {table_name!r}: {exc}") from exc
+
+            try:
+                if query_type == "fts":
+                    q = table.search(query_text, query_type="fts").limit(limit)
+                elif query_type == "vector":
+                    q = table.search(
+                        query_vector, vector_column_name=vector_column
+                    ).limit(limit)
+                elif query_type == "hybrid":
+                    if not query_vector or not query_text:
+                        raise ValueError(
+                            "Hybrid search requires both query text and a vector"
+                        )
+                    q = (
+                        table.search(
+                            query_type="hybrid", vector_column_name=vector_column
+                        )
+                        .vector(query_vector)
+                        .text(query_text)
+                        .limit(limit)
+                    )
+                else:
+                    raise ValueError(f"Unsupported query_type: {query_type!r}")
+
+                if filter_expr:
+                    q = q.where(filter_expr)
+
+                rows = q.to_list()
+            except (LanceError, ValueError):
+                raise
+            except Exception as exc:
+                raise LanceError(f"Search failed on {table_name!r}: {exc}") from exc
+
+            # Detect vector fields from the table schema
+            vector_fields = {f.name for f in table.schema if _is_vector_field(f)}
+
+            for row in rows:
+                for col, val in row.items():
+                    if val is None:
+                        continue
+                    if col in vector_fields:
+                        row[col] = _serialize_vector(val)
+                    else:
+                        row[col] = serialize_value(val)
+
+            return {"rows": rows, "total": len(rows)}
+
+    def create_fts_index(self, table_name: str, columns: list[str]) -> None:
+        """Create a full-text search index on the specified columns."""
+        with tracer.start_as_current_span("lance.create_fts_index") as span:
+            span.set_attribute("lance.table", table_name)
+            span.set_attribute("lance.columns", columns)
+
+            try:
+                table = self._db.open_table(table_name)
+                table.create_fts_index(columns)
+            except Exception as exc:
+                raise LanceError(
+                    f"Cannot create FTS index on {table_name!r}: {exc}"
+                ) from exc

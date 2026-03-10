@@ -100,3 +100,21 @@ class VectorPreviewEntry(BaseModel):
 class VectorPreviewResponse(BaseModel):
     stats: VectorPreviewStats | None
     preview: list[VectorPreviewEntry]
+
+
+class LanceSearchParams(LanceTableParams):
+    """Search query params."""
+
+    query: str | None = Field(None, description="Text query for FTS/hybrid search")
+    vector: str | None = Field(
+        None, description="JSON-encoded vector for vector search"
+    )
+    vector_column: str | None = Field(None, description="Vector column name")
+    query_type: str = Field("fts", description="Search type: fts, vector, hybrid")
+    limit: Annotated[int, Field(ge=1, le=100)] = 20
+    filter: str | None = Field(None, description="Optional filter expression")
+
+
+class LanceSearchResponse(BaseModel):
+    rows: list[dict[str, Any]]
+    total: Annotated[int, Field(ge=0)]
