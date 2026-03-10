@@ -73,14 +73,16 @@ export const get_lance_rows = query(
     limit: z.number().optional(),
     offset: z.number().optional(),
     columns: z.string().optional(),
+    filter: z.string().optional(),
   }),
-  async ({ bucket, path, table, limit, offset, columns }) => {
+  async ({ bucket, path, table, limit, offset, columns, filter }) => {
     try {
       const params = new URLSearchParams({ bucket, table });
       if (path) params.set("path", path);
       if (limit) params.set("limit", String(limit));
       if (offset) params.set("offset", String(offset));
       if (columns) params.set("columns", columns);
+      if (filter) params.set("filter", filter);
       const res = await apiFetch(`/api/v1/lance/rows?${params}`);
       if (!res.ok) {
         return {

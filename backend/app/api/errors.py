@@ -89,12 +89,40 @@ def parse_json_response(resp: httpx.Response) -> dict:
     return {}
 
 
+async def run_storage(
+    func: Callable[..., Any], resource: str, *args: Any, **kwargs: Any
+) -> Any:
+    """Run a sync storage operation in a thread with StorageError handling.
+
+    This is the backend-agnostic version. Storage adapters raise
+    StorageError, which is translated to HTTPException here.
+    """
+    from app.services.storage.errors import StorageError
+
+    try:
+        return await asyncio.to_thread(func, *args, **kwargs)
+    except StorageError as exc:
+        raise HTTPException(
+            status_code=exc.http_status, detail=f"{resource}: {exc.message}"
+        )
+
+
 async def run_s3(
     func: Callable[..., Any], resource: str, *args: Any, **kwargs: Any
 ) -> Any:
-    """Run a sync S3 operation in a thread with standard error handling."""
+    """Run a sync S3 operation in a thread with standard error handling.
+
+    Handles both StorageError (from new adapters) and raw botocore
+    exceptions (from legacy code paths) for backward compatibility.
+    """
+    from app.services.storage.errors import StorageError
+
     try:
         return await asyncio.to_thread(func, *args, **kwargs)
+    except StorageError as exc:
+        raise HTTPException(
+            status_code=exc.http_status, detail=f"{resource}: {exc.message}"
+        )
     except ClientError as exc:
         raise_for_s3_error(exc, resource)
     except BotoCoreError as exc:

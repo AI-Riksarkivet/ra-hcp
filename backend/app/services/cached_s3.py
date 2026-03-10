@@ -14,16 +14,16 @@ from opentelemetry import trace
 
 from app.core.config import CacheSettings, S3Settings
 from app.services.cache_service import CacheService
-from app.services.s3_service import S3Service
+from app.services.storage.adapters.hcp import HcpStorage
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-class CachedS3Service(S3Service):
-    """S3Service with transparent Redis caching on metadata reads.
+class CachedS3Service(HcpStorage):
+    """HcpStorage with transparent Redis caching on metadata reads.
 
-    Inherits from S3Service so that ``isinstance`` checks and DI type
+    Inherits from HcpStorage so that ``isinstance`` checks and DI type
     hints continue to work. Overrides individual methods to add caching.
     """
 

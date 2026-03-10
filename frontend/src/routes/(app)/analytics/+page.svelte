@@ -3,7 +3,6 @@
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import NoTenantPlaceholder from '$lib/components/ui/no-tenant-placeholder.svelte';
 	import AnalyticsSidebar from './sections/analytics-sidebar.svelte';
-	import AnalyticsSchema from './sections/analytics-schema.svelte';
 	import AnalyticsTable from './sections/analytics-table.svelte';
 	import { Table2 } from 'lucide-svelte';
 
@@ -27,9 +26,8 @@
 	<div class="grid grid-cols-[320px_1fr] gap-6">
 		<AnalyticsSidebar {tenant} bind:selectedBucket bind:selectedPath bind:selectedTable />
 
-		<div class="space-y-6">
+		<div>
 			{#if selectedTable}
-				<AnalyticsSchema bucket={selectedBucket} path={selectedPath} table={selectedTable} />
 				<AnalyticsTable bucket={selectedBucket} path={selectedPath} table={selectedTable} />
 			{:else if selectedBucket}
 				<div class="py-12 text-center text-muted-foreground">

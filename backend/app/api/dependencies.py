@@ -21,7 +21,7 @@ from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.query_service import AuthenticatedQueryService, QueryService
 from app.schemas.lance import LanceDatasetParams
 from app.services.lance_service import LanceService
-from app.services.s3_service import S3Service
+from app.services.storage.adapters.hcp import HcpStorage
 
 logger = logging.getLogger(__name__)
 
@@ -89,14 +89,14 @@ def _derive_s3_keys(creds: HcpCredentials) -> tuple[str, str]:
 async def get_s3_service(
     request: Request,
     token: Annotated[str, Depends(oauth2_scheme)],
-) -> AsyncGenerator[S3Service, None]:
-    """Yield an S3Service keyed by the caller's credentials.
+) -> AsyncGenerator[HcpStorage, None]:
+    """Yield an HcpStorage keyed by the caller's credentials.
 
-    When Redis caching is enabled, returns a CachedS3Service that
+    When Redis caching is enabled, returns a CachedHcpStorage that
     transparently caches metadata reads and invalidates on writes.
     """
     creds = verify_token_with_credentials(token)
-    s3_cache: dict[HcpCredentials, S3Service] = request.app.state.s3_cache
+    s3_cache: dict[HcpCredentials, HcpStorage] = request.app.state.s3_cache
     if creds not in s3_cache:
         settings = get_s3_settings()
         access_key, secret_key = _derive_s3_keys(creds)
@@ -104,10 +104,10 @@ async def get_s3_service(
 
         cache: CacheService | None = getattr(request.app.state, "cache", None)
         if cache and cache.enabled:
-            from app.services.cached_s3 import CachedS3Service
+            from app.services.cached_s3 import CachedHcpStorage
 
-            logger.info("Creating CachedS3Service for user %s", creds.username)
-            s3_cache[creds] = CachedS3Service.with_credentials(
+            logger.info("Creating CachedHcpStorage for user %s", creds.username)
+            s3_cache[creds] = CachedHcpStorage.with_credentials(
                 settings,
                 access_key,
                 secret_key,
@@ -116,8 +116,8 @@ async def get_s3_service(
                 cache_settings=get_cache_settings(),
             )
         else:
-            logger.info("Creating S3Service for user %s", creds.username)
-            s3_cache[creds] = S3Service.with_credentials(
+            logger.info("Creating HcpStorage for user %s", creds.username)
+            s3_cache[creds] = HcpStorage.with_credentials(
                 settings,
                 access_key,
                 secret_key,

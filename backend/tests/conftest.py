@@ -20,7 +20,7 @@ from app.core.security import create_access_token
 from app.main import app
 from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.query_service import AuthenticatedQueryService, QueryService
-from app.services.s3_service import S3Service
+from app.services.storage.adapters.hcp import HcpStorage
 
 # Base URL for MAPI mock routes (must match mapi_settings fixture)
 HCP_BASE = "https://test.hcp.example.com:9090/mapi"
@@ -66,8 +66,8 @@ def auth_settings() -> AuthSettings:
 
 @pytest.fixture
 def mock_s3_service() -> MagicMock:
-    """A fully mocked S3Service (boto3 doesn't use httpx)."""
-    mock = MagicMock(spec=S3Service)
+    """A fully mocked HcpStorage (boto3 doesn't use httpx)."""
+    mock = MagicMock(spec=HcpStorage)
     mock.list_buckets.return_value = {"Buckets": []}
     mock.create_bucket.return_value = {}
     mock.head_bucket.return_value = {}
