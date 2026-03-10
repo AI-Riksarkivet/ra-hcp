@@ -7,6 +7,7 @@
     "deno-skills@denoland-skills": true,
     "redis-development@redis": true,
     "svelte@svelte": true,
-    "astral@astral-sh": true
+    "astral@astral-sh": true,
+    "svelte-flow@linehaulai-claude-marketplace": true
   }
 }
