@@ -19,6 +19,7 @@ Manage S3-compatible buckets on the HCP system. All endpoints require JWT authen
 | `DELETE` | `/api/v1/buckets/{bucket}` | Delete a bucket |
 | `GET` | `/api/v1/buckets/{bucket}/versioning` | Get versioning status |
 | `PUT` | `/api/v1/buckets/{bucket}/versioning` | Set versioning |
+| `GET` | `/api/v1/buckets/{bucket}/versions` | List object versions |
 | `GET` | `/api/v1/buckets/{bucket}/acl` | Get bucket ACL |
 | `PUT` | `/api/v1/buckets/{bucket}/acl` | Set bucket ACL |
 

@@ -15,6 +15,7 @@ export interface TenantInfo {
   searchConfigurationEnabled?: boolean;
   replicationConfigurationEnabled?: boolean;
   servicePlan?: string;
+  softwareVersion?: string;
 }
 
 export interface TenantStatistics {
@@ -50,22 +51,6 @@ export interface ChargebackEntry {
 export interface ChargebackReport {
   chargebackData?: ChargebackEntry[];
 }
-
-export const get_hcp_version = query(
-  z.object({}),
-  async () => {
-    try {
-      const res = await apiFetch("/api/v1/mapi/version");
-      if (res.ok) {
-        const data = await res.json();
-        return (data.version as string) ?? null;
-      }
-    } catch (err) {
-      console.error("[tenant-info.remote] version", err);
-    }
-    return null;
-  },
-);
 
 export const get_tenant = query(
   z.object({ tenant: z.string() }),

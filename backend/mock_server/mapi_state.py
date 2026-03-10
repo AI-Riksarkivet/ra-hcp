@@ -45,7 +45,7 @@ def _json(data: Any, status: int = 200) -> HttpxResponse:
 
 
 def _empty(status: int = 200) -> HttpxResponse:
-    return HttpxResponse(status_code=status)
+    return HttpxResponse(status_code=status, headers=_HCP_HEADERS)
 
 
 def _not_found() -> HttpxResponse:
