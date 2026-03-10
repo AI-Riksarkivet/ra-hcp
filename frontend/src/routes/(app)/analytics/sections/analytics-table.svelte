@@ -2,19 +2,20 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import ErrorBanner from '$lib/components/ui/error-banner.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
-	import { get_lance_rows, get_lance_schema } from '$lib/remote/lance.remote.js';
+	import { get_lance_rows, get_lance_schema, search_lance } from '$lib/remote/lance.remote.js';
 	import {
 		cellUrl,
 		type LanceField,
 		type VectorValue,
 		type BinaryCellMeta,
 	} from '$lib/types/lance.js';
-	import { Search, SlidersHorizontal } from 'lucide-svelte';
+	import { Search, SlidersHorizontal, Radar } from 'lucide-svelte';
 	import {
 		DataTable,
 		createSvelteTable,
@@ -31,16 +32,28 @@
 
 	const PAGE_SIZE = 50;
 
+	// Mode: "browse" or "search"
+	let mode = $state<'browse' | 'search'>('browse');
+
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: PAGE_SIZE });
 	let columnVisibility = $state<VisibilityState>({});
 	let filterInput = $state('');
 	let activeFilter = $state('');
 
+	// Search state
+	let searchInput = $state('');
+	let searchType = $state<'fts' | 'vector' | 'hybrid'>('fts');
+	let selectedVectorCol = $state('');
+	let searchResults = $state<Record<string, unknown>[]>([]);
+	let searchTotal = $state(0);
+	let searchError = $state<string | null>(null);
+	let searchActive = $state(false);
+
 	// Row detail dialog state
 	let detailOpen = $state(false);
 	let detailRow = $state<Record<string, unknown> | null>(null);
 
-	// Reset pagination, filter, and column visibility when the selected table changes.
+	// Reset everything when the selected table changes.
 	let resetTable = (() => {
 		let prev = '';
 		return (current: string) => {
@@ -49,6 +62,13 @@
 				columnVisibility = {};
 				filterInput = '';
 				activeFilter = '';
+				searchInput = '';
+				searchResults = [];
+				searchTotal = 0;
+				searchError = null;
+				searchActive = false;
+				selectedVectorCol = '';
+				mode = 'browse';
 			}
 			prev = current;
 		};
@@ -63,6 +83,11 @@
 		get_lance_schema({ bucket, path: path || undefined, table: tableName })
 	);
 	let fields = $derived((schemaData?.current?.fields ?? []) as LanceField[]);
+	let vectorFields = $derived(fields.filter((f) => f.is_vector));
+	let activeVectorCol = $derived(selectedVectorCol || vectorFields[0]?.name || '');
+	let hasTextFields = $derived(
+		fields.some((f) => !f.is_vector && !f.is_binary && f.type === 'string')
+	);
 
 	let rowsData = $derived(
 		get_lance_rows({
@@ -78,11 +103,93 @@
 	let total = $derived((rowsData?.current?.total ?? 0) as number);
 	let error = $derived(rowsData?.current?.error ?? null);
 
+	// Which data to display depends on mode
+	let displayRows = $derived(mode === 'search' && searchActive ? searchResults : rows);
+	let displayTotal = $derived(mode === 'search' && searchActive ? searchTotal : total);
+	let displayError = $derived(mode === 'search' && searchActive ? searchError : error);
+
 	let hiddenCount = $derived(Object.values(columnVisibility).filter((v) => v === false).length);
 
 	function applyFilter() {
 		activeFilter = filterInput.trim();
 		pagination = { pageIndex: 0, pageSize: pagination.pageSize };
+	}
+
+	async function executeSearch() {
+		const q = searchInput.trim();
+		if (!q) return;
+
+		searchError = null;
+		searchActive = true;
+
+		const searchData = search_lance({
+			bucket,
+			path: path || undefined,
+			table: tableName,
+			query: searchType !== 'vector' ? q : undefined,
+			query_type: searchType,
+			vector_column: activeVectorCol || undefined,
+			limit: 20,
+		});
+
+		// Wait for the query to resolve
+		const checkResult = () => {
+			const result = searchData?.current;
+			if (result) {
+				searchResults = (result.rows ?? []) as Record<string, unknown>[];
+				searchTotal = (result.total ?? 0) as number;
+				searchError = (result.error as string) ?? null;
+			}
+		};
+
+		// The remote function is reactive — check it after a tick
+		setTimeout(checkResult, 100);
+		// Also set up a watcher
+		const interval = setInterval(() => {
+			const result = searchData?.current;
+			if (result) {
+				searchResults = (result.rows ?? []) as Record<string, unknown>[];
+				searchTotal = (result.total ?? 0) as number;
+				searchError = (result.error as string) ?? null;
+				clearInterval(interval);
+			}
+		}, 200);
+		// Safety: clear after 10s
+		setTimeout(() => clearInterval(interval), 10000);
+	}
+
+	function findSimilar(row: Record<string, unknown>) {
+		if (vectorFields.length === 0) return;
+		const colName = activeVectorCol;
+		const vecVal = row[colName] as VectorValue | null;
+		if (!vecVal?.preview) return;
+
+		mode = 'search';
+		searchType = 'vector';
+		searchInput = `Similar to row (vector: ${colName})`;
+		searchError = null;
+		searchActive = true;
+
+		const searchData = search_lance({
+			bucket,
+			path: path || undefined,
+			table: tableName,
+			vector: JSON.stringify(vecVal.preview),
+			vector_column: colName,
+			query_type: 'vector',
+			limit: 20,
+		});
+
+		const interval = setInterval(() => {
+			const result = searchData?.current;
+			if (result) {
+				searchResults = (result.rows ?? []) as Record<string, unknown>[];
+				searchTotal = (result.total ?? 0) as number;
+				searchError = (result.error as string) ?? null;
+				clearInterval(interval);
+			}
+		}, 200);
+		setTimeout(() => clearInterval(interval), 10000);
 	}
 
 	function openDetail(row: Record<string, unknown>) {
@@ -96,10 +203,25 @@
 		return String(val);
 	}
 
-	let columns = $derived.by((): ColumnDef<Record<string, unknown>>[] => {
-		return fields.map((field): ColumnDef<Record<string, unknown>> => {
+	function makeColumns(addDistance: boolean): ColumnDef<Record<string, unknown>>[] {
+		const cols: ColumnDef<Record<string, unknown>>[] = [];
+
+		if (addDistance) {
+			cols.push({
+				id: '_distance',
+				accessorKey: '_distance',
+				header: 'Score',
+				cell: ({ row }) => {
+					const val = row.original._distance as number | undefined;
+					return val != null ? val.toFixed(4) : '';
+				},
+				meta: { cellClass: 'px-4 py-3 font-mono text-xs' },
+			});
+		}
+
+		for (const field of fields) {
 			if (field.is_binary) {
-				return {
+				cols.push({
 					id: field.name,
 					accessorKey: field.name,
 					header: field.name,
@@ -113,11 +235,9 @@
 						});
 					},
 					meta: { cellClass: 'px-4 py-3' },
-				};
-			}
-
-			if (field.is_vector) {
-				return {
+				});
+			} else if (field.is_vector) {
+				cols.push({
 					id: field.name,
 					accessorKey: field.name,
 					header: field.name,
@@ -126,28 +246,31 @@
 						return renderSnippet(vectorCell, { val });
 					},
 					meta: { cellClass: 'px-4 py-3' },
-				};
+				});
+			} else {
+				cols.push({
+					id: field.name,
+					accessorKey: field.name,
+					header: field.name,
+					cell: ({ row }) => {
+						const val = row.original[field.name];
+						if (val == null) return '';
+						if (typeof val === 'object') return JSON.stringify(val);
+						return String(val);
+					},
+					meta: { cellClass: 'max-w-[300px] truncate px-4 py-3' },
+				});
 			}
+		}
+		return cols;
+	}
 
-			return {
-				id: field.name,
-				accessorKey: field.name,
-				header: field.name,
-				cell: ({ row }) => {
-					const val = row.original[field.name];
-					if (val == null) return '';
-					if (typeof val === 'object') return JSON.stringify(val);
-					return String(val);
-				},
-				meta: { cellClass: 'max-w-[300px] truncate px-4 py-3' },
-			};
-		});
-	});
+	let columns = $derived.by(() => makeColumns(mode === 'search' && searchActive));
 
 	let tanstackTable = $derived(
 		createSvelteTable({
 			get data() {
-				return rows;
+				return displayRows;
 			},
 			get columns() {
 				return columns;
@@ -169,7 +292,7 @@
 			getCoreRowModel: getCoreRowModel(),
 			manualPagination: true,
 			get rowCount() {
-				return total;
+				return displayTotal;
 			},
 		})
 	);
@@ -210,67 +333,156 @@
 		<div class="flex items-center justify-between">
 			<Card.Title class="text-sm">
 				Data — {tableName}
-				{#if total > 0}
-					<Badge variant="secondary" class="ml-2">{total.toLocaleString()} rows</Badge>
+				{#if displayTotal > 0}
+					<Badge variant="secondary" class="ml-2"
+						>{displayTotal.toLocaleString()}
+						{mode === 'search' && searchActive ? 'results' : 'rows'}</Badge
+					>
 				{/if}
 			</Card.Title>
-			{#if fields.length > 0}
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger>
-						{#snippet child({ props })}
-							<Button variant="outline" size="sm" {...props}>
-								<SlidersHorizontal class="mr-2 h-4 w-4" />
-								Columns
-								{#if hiddenCount > 0}
-									<Badge variant="secondary" class="ml-1.5"
-										>{fields.length - hiddenCount}/{fields.length}</Badge
-									>
-								{/if}
-							</Button>
-						{/snippet}
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content align="end" class="max-h-72 w-48 overflow-y-auto">
-						{#each fields as field (field.name)}
-							<DropdownMenu.CheckboxItem
-								checked={columnVisibility[field.name] !== false}
-								onCheckedChange={(checked) => {
-									columnVisibility = { ...columnVisibility, [field.name]: checked };
-								}}
-							>
-								<span class="truncate">{field.name}</span>
-								{#if field.is_vector}
-									<Badge variant="outline" class="ml-auto text-[10px]">vec</Badge>
-								{:else if field.is_binary}
-									<Badge variant="outline" class="ml-auto text-[10px]">bin</Badge>
-								{/if}
-							</DropdownMenu.CheckboxItem>
-						{/each}
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
-			{/if}
+			<div class="flex items-center gap-2">
+				{#if fields.length > 0}
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger>
+							{#snippet child({ props })}
+								<Button variant="outline" size="sm" {...props}>
+									<SlidersHorizontal class="mr-2 h-4 w-4" />
+									Columns
+									{#if hiddenCount > 0}
+										<Badge variant="secondary" class="ml-1.5"
+											>{fields.length - hiddenCount}/{fields.length}</Badge
+										>
+									{/if}
+								</Button>
+							{/snippet}
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end" class="max-h-72 w-48 overflow-y-auto">
+							{#each fields as field (field.name)}
+								<DropdownMenu.CheckboxItem
+									checked={columnVisibility[field.name] !== false}
+									onCheckedChange={(checked) => {
+										columnVisibility = { ...columnVisibility, [field.name]: checked };
+									}}
+								>
+									<span class="truncate">{field.name}</span>
+									{#if field.is_vector}
+										<Badge variant="outline" class="ml-auto text-[10px]">vec</Badge>
+									{:else if field.is_binary}
+										<Badge variant="outline" class="ml-auto text-[10px]">bin</Badge>
+									{/if}
+								</DropdownMenu.CheckboxItem>
+							{/each}
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				{/if}
+			</div>
 		</div>
 	</Card.Header>
 	<Card.Content class="space-y-3">
-		<form
-			class="flex max-w-lg items-center gap-2"
-			onsubmit={(e) => {
-				e.preventDefault();
-				applyFilter();
-			}}
-		>
-			<div class="relative flex-1">
-				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-				<Input
-					bind:value={filterInput}
-					placeholder="Lance filter (e.g. label = 'cat' AND score > 0.5)"
-					class="pl-10 text-xs"
-				/>
-			</div>
-			<Button type="submit" variant="outline" size="sm">Filter</Button>
-		</form>
+		<Tabs.Root bind:value={mode}>
+			<Tabs.List>
+				<Tabs.Trigger value="browse">
+					<Search class="mr-1.5 h-3.5 w-3.5" />
+					Browse
+				</Tabs.Trigger>
+				<Tabs.Trigger value="search">
+					<Radar class="mr-1.5 h-3.5 w-3.5" />
+					Search
+				</Tabs.Trigger>
+			</Tabs.List>
 
-		{#if error}
-			<ErrorBanner message={String(error)} />
+			<Tabs.Content value="browse" class="space-y-3 pt-3">
+				<form
+					class="flex max-w-lg items-center gap-2"
+					onsubmit={(e) => {
+						e.preventDefault();
+						applyFilter();
+					}}
+				>
+					<div class="relative flex-1">
+						<Search
+							class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+						/>
+						<Input
+							bind:value={filterInput}
+							placeholder="Lance filter (e.g. label = 'cat' AND score > 0.5)"
+							class="pl-10 text-xs"
+						/>
+					</div>
+					<Button type="submit" variant="outline" size="sm">Filter</Button>
+				</form>
+			</Tabs.Content>
+
+			<Tabs.Content value="search" class="space-y-3 pt-3">
+				<form
+					class="flex max-w-lg items-center gap-2"
+					onsubmit={(e) => {
+						e.preventDefault();
+						executeSearch();
+					}}
+				>
+					<div class="relative flex-1">
+						<Radar class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+						<Input
+							bind:value={searchInput}
+							placeholder={searchType === 'fts'
+								? 'Full-text search...'
+								: searchType === 'hybrid'
+									? 'Hybrid search (text + vector)...'
+									: 'Vector search query...'}
+							class="pl-10 text-xs"
+						/>
+					</div>
+					<div class="flex items-center gap-1">
+						<Button
+							variant={searchType === 'fts' ? 'default' : 'outline'}
+							size="sm"
+							onclick={() => {
+								searchType = 'fts';
+							}}>FTS</Button
+						>
+						{#if vectorFields.length > 0 && hasTextFields}
+							<Button
+								variant={searchType === 'hybrid' ? 'default' : 'outline'}
+								size="sm"
+								onclick={() => {
+									searchType = 'hybrid';
+								}}>Hybrid</Button
+							>
+						{/if}
+					</div>
+					<Button type="submit" variant="outline" size="sm">Search</Button>
+				</form>
+				{#if vectorFields.length > 1}
+					<div class="flex items-center gap-2 text-xs text-muted-foreground">
+						<span>Vector column:</span>
+						{#each vectorFields as vf (vf.name)}
+							<Button
+								variant={activeVectorCol === vf.name ? 'secondary' : 'ghost'}
+								size="sm"
+								class="h-6 px-2 text-xs"
+								onclick={() => {
+									selectedVectorCol = vf.name;
+								}}
+							>
+								{vf.name}
+								{#if vf.vector_dim}
+									<Badge variant="outline" class="ml-1 text-[9px]">{vf.vector_dim}</Badge>
+								{/if}
+							</Button>
+						{/each}
+					</div>
+				{/if}
+				{#if searchActive && !searchError && searchResults.length === 0}
+					<p class="text-sm text-muted-foreground">
+						No results found. Try a different query or check that an FTS index exists.
+					</p>
+				{/if}
+			</Tabs.Content>
+		</Tabs.Root>
+
+		{#if displayError}
+			<ErrorBanner message={String(displayError)} />
 		{:else if fields.length === 0}
 			<TableSkeleton rows={5} columns={4} />
 		{:else}
@@ -283,8 +495,27 @@
 <Dialog.Root bind:open={detailOpen}>
 	<Dialog.Content class="sm:max-w-2xl">
 		<Dialog.Header>
-			<Dialog.Title>Row Detail</Dialog.Title>
-			<Dialog.Description>All fields for the selected row</Dialog.Description>
+			<div class="flex items-center justify-between">
+				<div>
+					<Dialog.Title>Row Detail</Dialog.Title>
+					<Dialog.Description>All fields for the selected row</Dialog.Description>
+				</div>
+				{#if vectorFields.length > 0 && detailRow}
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							if (detailRow) {
+								findSimilar(detailRow);
+								detailOpen = false;
+							}
+						}}
+					>
+						<Radar class="mr-2 h-4 w-4" />
+						Find Similar
+					</Button>
+				{/if}
+			</div>
 		</Dialog.Header>
 		{#if detailRow}
 			<div class="max-h-[60vh] overflow-y-auto">

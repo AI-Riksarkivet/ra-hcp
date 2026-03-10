@@ -119,18 +119,26 @@
 					<div class="grid gap-1 font-mono text-xs">
 						{#each fields as field (field.name)}
 							<div
-								class="flex items-center gap-2 rounded px-2 py-1
+								class="flex min-w-0 items-center gap-2 rounded px-2 py-1
 									{field.is_vector ? 'bg-blue-50 dark:bg-blue-950/20' : ''}"
 							>
-								<span class="font-medium">{field.name}</span>
-								<span class="text-muted-foreground">{field.type}</span>
+								<span class="truncate font-medium">{field.name}</span>
+								<span class="shrink-0 text-muted-foreground">
+									{#if field.is_vector}
+										vec[{field.vector_dim ?? '?'}]
+									{:else if field.is_binary}
+										bin
+									{:else}
+										{field.type}
+									{/if}
+								</span>
 								{#if field.is_vector}
-									<Badge variant="outline" class="ml-auto gap-1 text-xs">
+									<Badge variant="outline" class="ml-auto shrink-0 gap-1 text-xs">
 										<Waypoints class="h-3 w-3" />
-										vector{field.vector_dim ? ` [${field.vector_dim}]` : ''}
+										vector
 									</Badge>
 								{:else if field.is_binary}
-									<Badge variant="outline" class="ml-auto gap-1 text-xs text-amber-600">
+									<Badge variant="outline" class="ml-auto shrink-0 gap-1 text-xs text-amber-600">
 										binary
 									</Badge>
 								{/if}

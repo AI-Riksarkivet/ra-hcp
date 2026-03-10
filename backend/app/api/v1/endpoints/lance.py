@@ -19,6 +19,8 @@ from app.schemas.lance import (
     LanceRowsParams,
     LanceRowsResponse,
     LanceSchemaResponse,
+    LanceSearchParams,
+    LanceSearchResponse,
     LanceTableParams,
     LanceTablesResponse,
     LanceVectorParams,
@@ -107,6 +109,37 @@ async def get_vector_preview(
         )
     except Exception as exc:
         raise _handle_lance_error(exc, f"vector preview {params.table}.{params.column}")
+    return result
+
+
+@router.get("/search", response_model=LanceSearchResponse)
+async def search(
+    params: LanceSearchParams = Depends(),
+    lance: LanceService = Depends(get_lance_service),
+):
+    """Search a Lance table using FTS, vector, or hybrid search."""
+    import json
+
+    query_vector = None
+    if params.vector:
+        try:
+            query_vector = json.loads(params.vector)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid vector JSON")
+
+    try:
+        result = await asyncio.to_thread(
+            lance.search,
+            params.table,
+            query_text=params.query,
+            query_vector=query_vector,
+            vector_column=params.vector_column,
+            query_type=params.query_type,
+            limit=params.limit,
+            filter_expr=params.filter,
+        )
+    except Exception as exc:
+        raise _handle_lance_error(exc, f"search {params.table}")
     return result
 
 
