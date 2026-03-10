@@ -1,4 +1,4 @@
-"""Unit tests for CachedS3Service."""
+"""Unit tests for CachedHcpStorage."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import fakeredis
 
 from app.core.config import CacheSettings, S3Settings
 from app.services.cache_service import CacheService
-from app.services.cached_s3 import CachedS3Service
+from app.services.cached_s3 import CachedHcpStorage
 
 
 def _s3_settings() -> S3Settings:
@@ -54,14 +54,14 @@ def mock_boto_client():
 
 
 @pytest.fixture
-def s3(cache: CacheService, mock_boto_client: MagicMock) -> CachedS3Service:
-    return CachedS3Service(_s3_settings(), cache, _cache_settings())
+def s3(cache: CacheService, mock_boto_client: MagicMock) -> CachedHcpStorage:
+    return CachedHcpStorage(_s3_settings(), cache, _cache_settings())
 
 
 # ── list_buckets caching ──────────────────────────────────────────────
 
 
-def test_list_buckets_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
+def test_list_buckets_cached(s3: CachedHcpStorage, mock_boto_client: MagicMock):
     mock_boto_client.list_buckets.return_value = {"Buckets": [{"Name": "b1"}]}
 
     # First call — miss
@@ -78,7 +78,7 @@ def test_list_buckets_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
 # ── head_bucket caching ──────────────────────────────────────────────
 
 
-def test_head_bucket_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
+def test_head_bucket_cached(s3: CachedHcpStorage, mock_boto_client: MagicMock):
     mock_boto_client.head_bucket.return_value = {
         "ResponseMetadata": {"HTTPStatusCode": 200}
     }
@@ -92,7 +92,7 @@ def test_head_bucket_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
 
 
 def test_list_objects_first_page_cached(
-    s3: CachedS3Service, mock_boto_client: MagicMock
+    s3: CachedHcpStorage, mock_boto_client: MagicMock
 ):
     mock_boto_client.list_objects_v2.return_value = {
         "Contents": [{"Key": "a.txt"}],
@@ -106,7 +106,7 @@ def test_list_objects_first_page_cached(
 
 
 def test_list_objects_continuation_not_cached(
-    s3: CachedS3Service, mock_boto_client: MagicMock
+    s3: CachedHcpStorage, mock_boto_client: MagicMock
 ):
     mock_boto_client.list_objects_v2.return_value = {
         "Contents": [],
@@ -122,7 +122,7 @@ def test_list_objects_continuation_not_cached(
 # ── head_object caching ──────────────────────────────────────────────
 
 
-def test_head_object_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
+def test_head_object_cached(s3: CachedHcpStorage, mock_boto_client: MagicMock):
     mock_boto_client.head_object.return_value = {"ContentLength": 42}
 
     s3.head_object("bucket", "key.txt")
@@ -134,7 +134,7 @@ def test_head_object_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
 # ── get_object is never cached ────────────────────────────────────────
 
 
-def test_get_object_not_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
+def test_get_object_not_cached(s3: CachedHcpStorage, mock_boto_client: MagicMock):
     mock_boto_client.get_object.return_value = {"Body": b"data"}
 
     s3.get_object("bucket", "key.txt")
@@ -145,7 +145,7 @@ def test_get_object_not_cached(s3: CachedS3Service, mock_boto_client: MagicMock)
 # ── ACL caching ───────────────────────────────────────────────────────
 
 
-def test_bucket_acl_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
+def test_bucket_acl_cached(s3: CachedHcpStorage, mock_boto_client: MagicMock):
     mock_boto_client.get_bucket_acl.return_value = {"Owner": {}, "Grants": []}
 
     s3.get_bucket_acl("bucket")
@@ -153,7 +153,7 @@ def test_bucket_acl_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
     assert mock_boto_client.get_bucket_acl.call_count == 1
 
 
-def test_object_acl_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
+def test_object_acl_cached(s3: CachedHcpStorage, mock_boto_client: MagicMock):
     mock_boto_client.get_object_acl.return_value = {"Owner": {}, "Grants": []}
 
     s3.get_object_acl("bucket", "key")
@@ -164,7 +164,7 @@ def test_object_acl_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
 # ── versioning caching ───────────────────────────────────────────────
 
 
-def test_versioning_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
+def test_versioning_cached(s3: CachedHcpStorage, mock_boto_client: MagicMock):
     mock_boto_client.get_bucket_versioning.return_value = {"Status": "Enabled"}
 
     s3.get_bucket_versioning("bucket")
@@ -176,7 +176,7 @@ def test_versioning_cached(s3: CachedS3Service, mock_boto_client: MagicMock):
 
 
 def test_create_bucket_invalidates(
-    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+    s3: CachedHcpStorage, mock_boto_client: MagicMock, cache: CacheService
 ):
     mock_boto_client.list_buckets.return_value = {"Buckets": []}
     mock_boto_client.create_bucket.return_value = {}
@@ -194,7 +194,7 @@ def test_create_bucket_invalidates(
 
 
 def test_delete_object_invalidates(
-    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+    s3: CachedHcpStorage, mock_boto_client: MagicMock, cache: CacheService
 ):
     mock_boto_client.head_object.return_value = {"ContentLength": 10}
     mock_boto_client.delete_object.return_value = {}
@@ -212,7 +212,7 @@ def test_delete_object_invalidates(
 
 
 def test_put_object_invalidates(
-    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+    s3: CachedHcpStorage, mock_boto_client: MagicMock, cache: CacheService
 ):
     mock_boto_client.list_objects_v2.return_value = {
         "Contents": [],
@@ -233,7 +233,7 @@ def test_put_object_invalidates(
 
 
 def test_put_versioning_invalidates(
-    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+    s3: CachedHcpStorage, mock_boto_client: MagicMock, cache: CacheService
 ):
     mock_boto_client.get_bucket_versioning.return_value = {"Status": "Enabled"}
     mock_boto_client.put_bucket_versioning.return_value = {}
@@ -248,7 +248,7 @@ def test_put_versioning_invalidates(
 
 
 def test_put_bucket_acl_invalidates(
-    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+    s3: CachedHcpStorage, mock_boto_client: MagicMock, cache: CacheService
 ):
     mock_boto_client.get_bucket_acl.return_value = {"Owner": {}, "Grants": []}
     mock_boto_client.put_bucket_acl.return_value = {}
@@ -263,7 +263,7 @@ def test_put_bucket_acl_invalidates(
 
 
 def test_put_object_acl_invalidates(
-    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+    s3: CachedHcpStorage, mock_boto_client: MagicMock, cache: CacheService
 ):
     mock_boto_client.get_object_acl.return_value = {"Owner": {}, "Grants": []}
     mock_boto_client.put_object_acl.return_value = {}
@@ -278,7 +278,7 @@ def test_put_object_acl_invalidates(
 
 
 def test_copy_object_invalidates_dst(
-    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+    s3: CachedHcpStorage, mock_boto_client: MagicMock, cache: CacheService
 ):
     mock_boto_client.list_objects_v2.return_value = {
         "Contents": [],
@@ -297,7 +297,7 @@ def test_copy_object_invalidates_dst(
 
 
 def test_delete_objects_invalidates(
-    s3: CachedS3Service, mock_boto_client: MagicMock, cache: CacheService
+    s3: CachedHcpStorage, mock_boto_client: MagicMock, cache: CacheService
 ):
     mock_boto_client.head_object.return_value = {"ContentLength": 10}
     mock_boto_client.delete_objects.return_value = {"Deleted": [], "Errors": []}

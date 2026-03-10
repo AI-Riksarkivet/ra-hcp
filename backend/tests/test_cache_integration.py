@@ -29,7 +29,7 @@ from app.main import app
 from app.services.cache_service import CacheService
 from app.services.cached_mapi import CachedMapiService
 from app.services.mapi_service import AuthenticatedMapiService
-from app.services.s3_service import S3Service
+from app.services.storage.adapters.hcp import HcpStorage
 
 HCP_BASE = "https://test.hcp.example.com:9090/mapi"
 
@@ -92,7 +92,7 @@ async def cache_service(
 
 @pytest.fixture
 def mock_s3_service() -> MagicMock:
-    mock = MagicMock(spec=S3Service)
+    mock = MagicMock(spec=HcpStorage)
     mock.list_buckets.return_value = {
         "Buckets": [{"Name": "bucket-1"}, {"Name": "bucket-2"}],
     }

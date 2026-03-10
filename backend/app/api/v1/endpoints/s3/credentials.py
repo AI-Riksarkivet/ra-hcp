@@ -22,7 +22,7 @@ from app.schemas.s3 import (
     PresignedUrlResponse,
     S3CredentialsResponse,
 )
-from app.services.s3_service import S3Service
+from app.services.storage import StorageProtocol
 
 router = APIRouter(tags=["S3 Credentials"])
 
@@ -32,7 +32,7 @@ _ALLOWED_METHODS = {"get_object", "put_object"}
 @router.post("/presign", response_model=PresignedUrlResponse)
 async def generate_presigned_url(
     body: PresignedUrlRequest,
-    s3: S3Service = Depends(get_s3_service),
+    s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Generate a presigned URL for temporary access to an object.
 
