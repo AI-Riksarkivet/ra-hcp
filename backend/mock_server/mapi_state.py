@@ -35,8 +35,13 @@ logger = logging.getLogger("mock_server.mapi")
 # ── Response helpers ─────────────────────────────────────────────────
 
 
+MOCK_HCP_VERSION = "9.7.0"
+
+_HCP_HEADERS = {"X-HCP-SoftwareVersion": MOCK_HCP_VERSION}
+
+
 def _json(data: Any, status: int = 200) -> HttpxResponse:
-    return HttpxResponse(status_code=status, json=data)
+    return HttpxResponse(status_code=status, json=data, headers=_HCP_HEADERS)
 
 
 def _empty(status: int = 200) -> HttpxResponse:

@@ -12,6 +12,7 @@
 		FileType,
 	} from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import { get_hcp_version } from '$lib/remote/tenant-info.remote.js';
 
 	const tenantItems = [
 		{ href: '/namespaces', label: 'Namespaces', icon: Boxes },
@@ -31,7 +32,8 @@
 
 	const analyticsItems = [{ href: '/analytics', label: 'Data Explorer', icon: Table2 }] as const;
 
-	const appVersion: string = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+	let versionData = $derived(get_hcp_version({}));
+	let hcpVersion = $derived((versionData?.current as string | null) ?? null);
 </script>
 
 <Sidebar.Root collapsible="icon">
@@ -43,7 +45,9 @@
 						<Server class="h-6 w-6 shrink-0 text-primary" />
 						<div class="flex flex-col leading-tight">
 							<span class="whitespace-nowrap text-lg font-bold">RA-HCP</span>
-							<span class="text-[10px] text-muted-foreground">v{appVersion}</span>
+							{#if hcpVersion}
+								<span class="text-[10px] text-muted-foreground">HCP {hcpVersion}</span>
+							{/if}
 						</div>
 					</div>
 				</Sidebar.MenuButton>

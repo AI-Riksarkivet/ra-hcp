@@ -49,6 +49,23 @@ async def check_tenant(
     return Response(status_code=200)
 
 
+@router.get("/{tenant_name}/version")
+async def get_hcp_version(
+    tenant_name: str,
+    hcp: MapiService = Depends(get_mapi_service),
+):
+    """Return the HCP software version from the X-HCP-SoftwareVersion header.
+
+    Uses a HEAD request to the tenant endpoint — lightweight and accessible
+    to any tenant admin.
+    """
+    resp = await hcp.send(
+        "HEAD", f"/tenants/{tenant_name}", resource=f"tenant '{tenant_name}'"
+    )
+    version = resp.headers.get("X-HCP-SoftwareVersion")
+    return {"version": version}
+
+
 @router.post("/{tenant_name}", response_model=StatusResponse)
 async def modify_tenant(
     tenant_name: str,
