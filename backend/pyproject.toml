@@ -18,9 +18,15 @@ dependencies = [
     "pyjwt>=2.11.0",
     "python-multipart>=0.0.22",
     "redis[hiredis]>=5.0.0",
-    "uvicorn[standard]>=0.41.0",
-    "lancedb>=0.29",
     "pyarrow>=17.0",
+]
+
+[project.optional-dependencies]
+serve = [
+    "uvicorn[standard]>=0.41.0",
+]
+lance = [
+    "lancedb>=0.29",
     "pylance>=2.0.1",
 ]
 

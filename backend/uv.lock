@@ -339,7 +339,6 @@ dependencies = [
     { name = "boto3" },
     { name = "fastapi" },
     { name = "httpx" },
-    { name = "lancedb" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-fastapi" },
@@ -349,9 +348,16 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyjwt" },
-    { name = "pylance" },
     { name = "python-multipart" },
     { name = "redis", extra = ["hiredis"] },
+]
+
+[package.optional-dependencies]
+lance = [
+    { name = "lancedb" },
+    { name = "pylance" },
+]
+serve = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -376,7 +382,7 @@ requires-dist = [
     { name = "boto3", specifier = ">=1.42.58" },
     { name = "fastapi", specifier = ">=0.133.1" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "lancedb", specifier = ">=0.29" },
+    { name = "lancedb", marker = "extra == 'lance'", specifier = ">=0.29" },
     { name = "opentelemetry-api", specifier = ">=1.29.0" },
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.29.0" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.50b0" },
@@ -386,11 +392,12 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pydantic-settings", specifier = ">=2.13.1" },
     { name = "pyjwt", specifier = ">=2.11.0" },
-    { name = "pylance", specifier = ">=2.0.1" },
+    { name = "pylance", marker = "extra == 'lance'", specifier = ">=2.0.1" },
     { name = "python-multipart", specifier = ">=0.0.22" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.0.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.41.0" },
+    { name = "uvicorn", extras = ["standard"], marker = "extra == 'serve'", specifier = ">=0.41.0" },
 ]
+provides-extras = ["serve", "lance"]
 
 [package.metadata.requires-dev]
 dev = [

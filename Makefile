@@ -18,7 +18,7 @@ help:
 
 ## setup: install all tooling, dependencies, and git hooks
 setup: install-deno install-uv setup-hooks
-	cd backend && uv sync
+	cd backend && uv sync --extra serve --extra lance
 	cd frontend && deno install
 	@echo ""
 	@echo "For Claude Code skills, see: .claude/README.md"
@@ -59,14 +59,14 @@ quality: fmt lint
 
 # ── API ──────────────────────────────────────────────────────────────
 
-## run-api: start the HCP API server
+## run-api: start the HCP API server (with Lance support)
 ROOT_PATH ?=
 run-api:
-	cd backend && ROOT_PATH=$(ROOT_PATH) uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 $(if $(ROOT_PATH),--root-path $(ROOT_PATH))
+	cd backend && ROOT_PATH=$(ROOT_PATH) uv run --extra serve --extra lance uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 $(if $(ROOT_PATH),--root-path $(ROOT_PATH))
 
 ## run-api-mock: start mock dev server (login: admin/password)
 run-api-mock:
-	cd backend && uv run uvicorn mock_server:app --reload --host 0.0.0.0 --port 8000
+	cd backend && uv run --extra serve uvicorn mock_server:app --reload --host 0.0.0.0 --port 8000
 
 # ── Frontend ─────────────────────────────────────────────────────────
 
