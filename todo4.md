@@ -1,8 +1,16 @@
 - https://mcpmarket.com/tools/skills/shadcn-svelte , fix. styling , ui/ custom componwnt route
 - improve theming? 
+
 - improve lance viewer.. 
+
 - protect main branch and work with pr
+- skills for pr and improve /commit command
+- storybook pr for changes so user need to check and run tests manually.. ? shooild we use playwright? 
 - fix storybook in github pages width
+
 - how to support to be logined to multiple tenants in frontend...
-- do we beed multiple backends? why does backend depend on domain? 
-- 
+- do we need multiple backends? why does backend depend on domain? 
+
+- fix all bugs for github actions
+
+- fix docs for sprintdemo.. 
