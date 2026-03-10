@@ -1,4 +1,12 @@
+# Env
 .env
+.env.*
+!.env.example
+!.env.test
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Python
 __pycache__/
@@ -8,7 +16,13 @@ __pycache__/
 # Frontend
 frontend/node_modules/
 frontend/.svelte-kit/
+frontend/.deno-deploy/
 frontend/build/
+frontend/.output/
+frontend/deno.lock
+frontend/storybook-static/
+frontend/vite.config.js.timestamp-*
+frontend/vite.config.ts.timestamp-*
 
 # Docs
 site/
