@@ -1,7 +1,10 @@
-<script module>
+<script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import CopyableInput from './copyable-input.svelte';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import type { ComponentProps } from 'svelte';
+
+	type Args = ComponentProps<typeof CopyableInput>;
 
 	const { Story } = defineMeta({
 		title: 'UI/CopyableInput',
@@ -20,7 +23,7 @@
 	});
 </script>
 
-{#snippet template(args)}
+{#snippet template(args: Args)}
 	<Tooltip.Provider>
 		<CopyableInput {...args} />
 	</Tooltip.Provider>

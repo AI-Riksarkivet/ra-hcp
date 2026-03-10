@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -30,10 +29,8 @@
 		smtpEnabled: 'Enable email-based object ingestion',
 	};
 
-	let hcpDomain = $derived((page.data.hcpDomain as string) || '');
-
 	// --- NFS connection info ---
-	let nfsDomain = $derived(hcpDomain ? `nfs.${hcpDomain}` : 'nfs.<hcp-domain>');
+	let nfsDomain = `nfs.<hcp-domain>`;
 	let nfsMountPath = $derived(`/fs/${tenant}/${namespaceName}/data`);
 	let nfsMountCommand = $derived(
 		`mount -o tcp,vers=3,timeo=600,hard,intr -t nfs ${nfsDomain}:${nfsMountPath} /mnt/${namespaceName || 'hcp-data'}`

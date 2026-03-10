@@ -1,6 +1,16 @@
-<script module>
+<script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import DataTable from './data-table.svelte';
+
+	interface Namespace {
+		name: string;
+		description: string;
+		hardQuota: string;
+		softQuota: number;
+		storageUsed: number;
+		hashScheme: string;
+		tags: { tag: string[] };
+	}
 
 	const { Story } = defineMeta({
 		title: 'UI/DataTable',
@@ -8,7 +18,7 @@
 	});
 </script>
 
-<script>
+<script lang="ts">
 	import { Search, Trash2, Shield } from 'lucide-svelte';
 	import {
 		createSvelteTable,
@@ -19,6 +29,7 @@
 		renderComponent,
 		renderSnippet,
 	} from './index.js';
+	import type { ColumnDef, SortingState } from '@tanstack/table-core';
 	import DataTableHeaderButton from './data-table-header-button.svelte';
 	import DataTableCheckbox from './data-table-checkbox.svelte';
 	import DataTableActions from '../../../../routes/(app)/namespaces/data-table/data-table-actions.svelte';
@@ -28,6 +39,16 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import StorageProgressBar from '$lib/components/ui/storage-progress-bar.svelte';
 	import { toast } from 'svelte-sonner';
+
+	interface Namespace {
+		name: string;
+		description: string;
+		hardQuota: string;
+		softQuota: number;
+		storageUsed: number;
+		hashScheme: string;
+		tags: { tag: string[] };
+	}
 
 	// ─── Mock data ───────────────────────────────────────────────────
 	const NAMESPACES = [
@@ -123,7 +144,7 @@
 		},
 	];
 
-	function formatBytes(bytes) {
+	function formatBytes(bytes: number) {
 		if (bytes === 0) return '0 B';
 		const k = 1024;
 		const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -131,7 +152,7 @@
 		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 	}
 
-	function parseQuota(quota) {
+	function parseQuota(quota: string) {
 		const match = quota.match(/^([\d.]+)\s*(GB|TB)$/i);
 		if (!match) return 0;
 		const val = parseFloat(match[1]);
@@ -145,9 +166,9 @@
 	let filteredData = $derived(
 		NAMESPACES.filter((n) => n.name.toLowerCase().includes(search.toLowerCase()))
 	);
-	let sorting = $state([]);
+	let sorting: SortingState = $state([]);
 	let pagination = $state({ pageIndex: 0, pageSize: 25 });
-	let rowSelection = $state({});
+	let rowSelection: Record<string, boolean> = $state({});
 	let editingTagsNs = $state('');
 
 	let selectedKeys = $derived(
@@ -158,12 +179,12 @@
 	);
 	let selectedCount = $derived(selectedKeys.length);
 
-	function handleSaveTags(nsName, tags) {
+	function handleSaveTags(nsName: string, tags: string[]) {
 		toast.success(`Tags saved for ${nsName}: ${tags.join(', ') || '(none)'}`);
 		editingTagsNs = '';
 	}
 
-	const fullColumns = [
+	const fullColumns: ColumnDef<Namespace, unknown>[] = [
 		{
 			id: 'select',
 			header: ({ table }) =>
@@ -283,7 +304,7 @@
 	});
 
 	// ─── Empty table ─────────────────────────────────────────────────
-	let emptySorting = $state([]);
+	let emptySorting: SortingState = $state([]);
 	let emptyPagination = $state({ pageIndex: 0, pageSize: 25 });
 
 	const simpleColumns = fullColumns.slice(1, -1); // no select, no actions
@@ -321,9 +342,9 @@
 		tags: { tag: i % 4 === 0 ? ['auto', 's3'] : ['auto'] },
 	}));
 
-	let pagSorting = $state([]);
+	let pagSorting: SortingState = $state([]);
 	let pagPagination = $state({ pageIndex: 0, pageSize: 25 });
-	let pagRowSelection = $state({});
+	let pagRowSelection: Record<string, boolean> = $state({});
 
 	const paginatedTable = createSvelteTable({
 		get data() {
@@ -367,7 +388,7 @@
 	let pagSelectedCount = $derived(pagSelectedKeys.length);
 </script>
 
-{#snippet nameCellSnippet(ns)}
+{#snippet nameCellSnippet(ns: Namespace)}
 	<button
 		type="button"
 		class="text-primary underline-offset-4 hover:underline"
@@ -380,7 +401,7 @@
 	</button>
 {/snippet}
 
-{#snippet storageCellSnippet(ns)}
+{#snippet storageCellSnippet(ns: Namespace)}
 	{@const used = ns.storageUsed ?? 0}
 	{@const quota = ns.hardQuota ? parseQuota(ns.hardQuota) : null}
 	{#if used > 0 || quota}
@@ -396,7 +417,7 @@
 	{/if}
 {/snippet}
 
-{#snippet hashSchemeCellSnippet(ns)}
+{#snippet hashSchemeCellSnippet(ns: Namespace)}
 	{#if ns.hashScheme}
 		<Badge variant="secondary">{ns.hashScheme}</Badge>
 	{:else}

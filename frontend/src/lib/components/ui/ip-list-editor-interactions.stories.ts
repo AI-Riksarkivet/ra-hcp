@@ -11,7 +11,8 @@ import IpListEditorTestHarness from "./ip-list-editor-test-harness.svelte";
 
 const meta = {
   title: "Tests/IpListEditor Interactions",
-  component: IpListEditorTestHarness,
+  // deno-lint-ignore no-explicit-any -- Storybook Meta types incompatible with Svelte 5 Component
+  component: IpListEditorTestHarness as any,
   tags: ["!autodocs"],
 } satisfies Meta<IpListEditorTestHarness>;
 

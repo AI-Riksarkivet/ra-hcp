@@ -11,7 +11,8 @@ import CorsEditorTestHarness from "./cors-editor-test-harness.svelte";
 
 const meta = {
   title: "Tests/CorsEditor Interactions",
-  component: CorsEditorTestHarness,
+  // deno-lint-ignore no-explicit-any -- Storybook Meta types incompatible with Svelte 5 Component
+  component: CorsEditorTestHarness as any,
   tags: ["!autodocs"],
 } satisfies Meta<CorsEditorTestHarness>;
 

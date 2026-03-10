@@ -19,6 +19,8 @@ from app.core.tenant_routing import mapi_host_for_tenant, s3_endpoint_for_tenant
 from app.services.cache_service import CacheService
 from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.query_service import AuthenticatedQueryService, QueryService
+from app.schemas.lance import LanceDatasetParams
+from app.services.lance_service import LanceService
 from app.services.s3_service import S3Service
 
 logger = logging.getLogger(__name__)
@@ -122,3 +124,54 @@ async def get_s3_service(
                 endpoint_url=endpoint_url,
             )
     yield s3_cache[creds]
+
+
+# ── Lance per-credential cache ────────────────────────────────────────
+
+
+async def get_lance_service(
+    request: Request,
+    token: Annotated[str, Depends(oauth2_scheme)],
+    params: LanceDatasetParams = Depends(),
+) -> AsyncGenerator[LanceService, None]:
+    """Yield a LanceService for the given S3 bucket/path, keyed by credentials."""
+    creds = verify_token_with_credentials(token)
+    access_key, secret_key = _derive_s3_keys(creds)
+    settings = get_s3_settings()
+    endpoint_url = s3_endpoint_for_tenant(creds.tenant, settings.hcp_domain)
+    s3_uri = (
+        f"s3://{params.bucket}/{params.path}"
+        if params.path
+        else f"s3://{params.bucket}"
+    )
+
+    cache_key = (creds, params.bucket, params.path)
+    lance_cache: dict = request.app.state.lance_cache
+    if cache_key not in lance_cache:
+        cache: CacheService | None = getattr(request.app.state, "cache", None)
+        if cache and cache.enabled:
+            from app.services.cached_lance import CachedLanceService
+
+            logger.info(
+                "Creating CachedLanceService for %s/%s",
+                params.bucket,
+                params.path,
+            )
+            lance_cache[cache_key] = CachedLanceService.with_credentials(
+                s3_uri,
+                access_key,
+                secret_key,
+                endpoint_url,
+                cache=cache,
+                cache_settings=get_cache_settings(),
+            )
+        else:
+            logger.info(
+                "Creating LanceService for %s/%s",
+                params.bucket,
+                params.path,
+            )
+            lance_cache[cache_key] = LanceService.with_credentials(
+                s3_uri, access_key, secret_key, endpoint_url
+            )
+    yield lance_cache[cache_key]

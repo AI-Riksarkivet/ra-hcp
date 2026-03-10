@@ -743,16 +743,83 @@ def _make_query_dispatcher():
     return dispatcher
 
 
+# ── Lance mock dispatcher ────────────────────────────────────────────
+
+
+def _make_lance_dispatcher():
+    """Return a ``side_effect`` callable that routes /api/v1/lance/* mock requests."""
+    from mock_server.lance_fixtures import (
+        LANCE_ROWS,
+        LANCE_SCHEMAS,
+        LANCE_TABLES,
+        LANCE_VECTOR_PREVIEW,
+    )
+
+    def dispatcher(request: httpx.Request) -> HttpxResponse:
+        path = request.url.path.removeprefix("/api/v1/lance/").strip("/")
+        params = dict(request.url.params)
+        bucket = params.get("bucket", "")
+        path_prefix = params.get("path", "")
+        ds_key = f"{bucket}/{path_prefix}" if path_prefix else f"{bucket}/"
+
+        if path == "tables":
+            tables = LANCE_TABLES.get(ds_key, [])
+            return _json({"tables": tables})
+
+        table = params.get("table", "")
+        if not table:
+            return _json({"detail": "table parameter required"}, 400)
+
+        if path == "schema":
+            schema = LANCE_SCHEMAS.get(table)
+            if not schema:
+                return _json({"detail": f"Table {table!r} not found"}, 422)
+            return _json(schema)
+
+        if path == "rows":
+            rows = LANCE_ROWS.get(table, [])
+            offset = int(params.get("offset", "0"))
+            limit = int(params.get("limit", "50"))
+            columns_str = params.get("columns")
+            if columns_str:
+                cols = {c.strip() for c in columns_str.split(",")}
+                rows = [{k: v for k, v in r.items() if k in cols} for r in rows]
+            page = rows[offset : offset + limit]
+            return _json(
+                {
+                    "rows": page,
+                    "total": len(LANCE_ROWS.get(table, [])),
+                    "limit": limit,
+                    "offset": offset,
+                }
+            )
+
+        if path == "vector-preview":
+            column = params.get("column", "")
+            table_previews = LANCE_VECTOR_PREVIEW.get(table, {})
+            preview = table_previews.get(column, {"stats": None, "preview": []})
+            return _json(preview)
+
+        return _not_found()
+
+    return dispatcher
+
+
 # ── Route setup ──────────────────────────────────────────────────────
 
 
 def setup_mapi_routes(
     mock: respx.MockRouter, state: MockMapiState, hcp_base: str
 ) -> None:
-    """Register catch-all respx routes for MAPI and Query APIs."""
+    """Register catch-all respx routes for MAPI, Query, and Lance APIs."""
     mock.route(url__startswith=hcp_base).mock(side_effect=_make_mapi_dispatcher(state))
 
     # Query API: https://*.*/query
     mock.route(method="POST", url__regex=r"https://[^/]+/query$").mock(
         side_effect=_make_query_dispatcher()
+    )
+
+    # Lance explorer mock routes
+    mock.route(url__startswith="/api/v1/lance/").mock(
+        side_effect=_make_lance_dispatcher()
     )

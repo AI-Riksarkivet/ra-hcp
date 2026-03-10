@@ -11,7 +11,8 @@ import CopyableInputTestHarness from "./copyable-input-test-harness.svelte";
 
 const meta = {
   title: "Tests/CopyableInput Interactions",
-  component: CopyableInputTestHarness,
+  // deno-lint-ignore no-explicit-any -- Storybook Meta types incompatible with Svelte 5 Component
+  component: CopyableInputTestHarness as any,
   tags: ["!autodocs"],
 } satisfies Meta<CopyableInputTestHarness>;
 

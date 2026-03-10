@@ -1,6 +1,9 @@
-<script module>
+<script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import StorageProgressBar from './storage-progress-bar.svelte';
+	import type { ComponentProps } from 'svelte';
+
+	type Args = ComponentProps<typeof StorageProgressBar>;
 
 	const { Story } = defineMeta({
 		title: 'UI/StorageProgressBar',
@@ -15,7 +18,7 @@
 	});
 </script>
 
-{#snippet template(args)}
+{#snippet template(args: Args)}
 	<div class="w-64">
 		<StorageProgressBar {...args} />
 		<p class="mt-1 text-xs text-muted-foreground">{args.percent}% used</p>

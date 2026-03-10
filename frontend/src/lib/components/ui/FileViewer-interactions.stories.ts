@@ -14,7 +14,8 @@ import FileViewerTestHarness from "./FileViewer-test-harness.svelte";
 
 const meta = {
   title: "Tests/FileViewer Interactions",
-  component: FileViewerTestHarness,
+  // deno-lint-ignore no-explicit-any -- Storybook Meta types incompatible with Svelte 5 Component
+  component: FileViewerTestHarness as any,
   tags: ["!autodocs"],
 } satisfies Meta<FileViewerTestHarness>;
 

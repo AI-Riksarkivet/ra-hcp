@@ -2,10 +2,14 @@
 	import { cn, type WithElementRef, type WithoutChildren } from '$lib/utils.js';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { getPayloadConfigFromPayload, useChart, type TooltipPayload } from './chart-utils.js';
-	import { getTooltipContext, Tooltip as TooltipPrimitive } from 'layerchart';
-	import type { Snippet } from 'svelte';
+	import { Tooltip as TooltipPrimitive } from 'layerchart';
+	import { getContext, type Snippet } from 'svelte';
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	interface ChartTooltipContext {
+		payload: TooltipPayload[];
+	}
+
+	// deno-lint-ignore no-explicit-any -- tooltip values are untyped chart data
 	function defaultFormatter(value: any, _payload: TooltipPayload[]) {
 		return `${value}`;
 	}
@@ -32,8 +36,8 @@
 		labelKey?: string;
 		hideIndicator?: boolean;
 		labelClassName?: string;
-		labelFormatter?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
-			((value: any, payload: TooltipPayload[]) => string | number | Snippet) | null;
+		// deno-lint-ignore no-explicit-any -- tooltip values are untyped chart data
+		labelFormatter?: ((value: any, payload: TooltipPayload[]) => string | number | Snippet) | null;
 		formatter?: Snippet<
 			[
 				{
@@ -48,7 +52,9 @@
 	} = $props();
 
 	const chart = useChart();
-	const tooltipCtx = getTooltipContext();
+	// The tooltip context is expected to be provided by a parent chart wrapper
+	// that shapes the layerchart tooltip data into a recharts-compatible format.
+	const tooltipCtx: ChartTooltipContext = getContext('chart-tooltip-context');
 
 	const formattedLabel = $derived.by(() => {
 		if (hideLabel || !tooltipCtx.payload?.length) return null;
@@ -95,7 +101,7 @@
 			{@render TooltipLabel()}
 		{/if}
 		<div class="grid gap-1.5">
-			{#each tooltipCtx.payload as item, i (item.key + i)}
+			{#each tooltipCtx.payload as item, i ((item.key ?? '') + i)}
 				{@const key = `${nameKey || item.key || item.name || 'value'}`}
 				{@const itemConfig = getPayloadConfigFromPayload(chart.config, item, key)}
 				{@const indicatorColor = color || item.payload?.color || item.color}
@@ -141,9 +147,9 @@
 									{itemConfig?.label || item.name}
 								</span>
 							</div>
-							{#if item.value !== undefined}
+							{#if item.value != null}
 								<span class="text-foreground font-mono font-medium tabular-nums">
-									{item.value.toLocaleString()}
+									{String(item.value)}
 								</span>
 							{/if}
 						</div>

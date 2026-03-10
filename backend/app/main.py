@@ -120,6 +120,7 @@ async def lifespan(app: FastAPI):
         app.state.mapi = MapiService(mapi_settings)
 
     app.state.s3_cache = {}
+    app.state.lance_cache = {}
 
     mapi_settings = app.state.mapi.settings
     if cache.enabled:

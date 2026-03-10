@@ -15,7 +15,8 @@ import DataTableTestHarness from "./data-table-test-harness.svelte";
 
 const meta = {
   title: "Tests/DataTable Interactions",
-  component: DataTableTestHarness,
+  // deno-lint-ignore no-explicit-any -- Storybook Meta types incompatible with Svelte 5 Component
+  component: DataTableTestHarness as any,
   tags: ["!autodocs"],
 } satisfies Meta<DataTableTestHarness>;
 

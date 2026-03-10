@@ -1,7 +1,7 @@
 import { redirect } from "@sveltejs/kit";
 import type { LayoutServerLoad } from "./$types.js";
 import { Buffer } from "node:buffer";
-import { BACKEND_URL, HCP_DOMAIN } from "$lib/server/env.js";
+import { BACKEND_URL } from "$lib/server/env.js";
 
 function parseJwtPayload(token: string): Record<string, unknown> {
   try {
@@ -50,6 +50,5 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     username,
     tenant,
     userGUID,
-    hcpDomain: HCP_DOMAIN,
   };
 };

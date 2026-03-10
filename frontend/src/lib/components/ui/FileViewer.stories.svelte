@@ -1,8 +1,11 @@
-<script module>
+<script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import { fn } from 'storybook/test';
 	import FileViewer from './FileViewer.svelte';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import type { ComponentProps } from 'svelte';
+
+	type Args = ComponentProps<typeof FileViewer>;
 
 	const { Story } = defineMeta({
 		title: 'UI/FileViewer',
@@ -26,7 +29,7 @@
 	});
 </script>
 
-{#snippet template(args)}
+{#snippet template(args: Args)}
 	<Tooltip.Provider>
 		<FileViewer {...args} />
 	</Tooltip.Provider>
