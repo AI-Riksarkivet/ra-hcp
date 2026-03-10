@@ -57,8 +57,8 @@ class CachedLanceService(LanceService):
             opts["aws_allow_invalid_certificates"] = "true"
         instance = cls.__new__(cls)
         LanceService.__init__(instance, base_uri, storage_options=opts)
-        instance._cache = cache  # type: ignore[assignment]
-        instance._cs = cache_settings  # type: ignore[assignment]
+        instance._cache = cache
+        instance._cs = cache_settings
         return instance
 
     def _key(self, *parts: str) -> str:

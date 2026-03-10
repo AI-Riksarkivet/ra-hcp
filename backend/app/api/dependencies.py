@@ -140,6 +140,8 @@ async def get_lance_service(
     access_key, secret_key = _derive_s3_keys(creds)
     settings = get_s3_settings()
     endpoint_url = s3_endpoint_for_tenant(creds.tenant, settings.hcp_domain)
+    if not endpoint_url:
+        raise ValueError("Cannot derive S3 endpoint: hcp_domain or tenant missing")
     s3_uri = (
         f"s3://{params.bucket}/{params.path}"
         if params.path

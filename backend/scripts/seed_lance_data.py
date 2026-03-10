@@ -223,7 +223,14 @@ def main() -> None:
     # Verify
     print("\nVerifying tables:")
     try:
-        names = list(db.list_tables())
+        result = db.list_tables()
+        names: list[str] = (
+            result.tables
+            if hasattr(result, "tables")
+            else result.get("tables", [])
+            if isinstance(result, dict)
+            else list(result)
+        )
         for name in sorted(names):
             t = db.open_table(name)
             count = t.count_rows()
