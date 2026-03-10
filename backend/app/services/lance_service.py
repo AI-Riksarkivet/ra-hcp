@@ -10,9 +10,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import lancedb
-import pyarrow as pa
 from opentelemetry import trace
+
+try:
+    import lancedb
+    import pyarrow as pa
+except ImportError:
+    lancedb = None  # type: ignore[assignment]
+    pa = None  # type: ignore[assignment]
 
 from app.services.serialize_value import _clean_float, serialize_value
 

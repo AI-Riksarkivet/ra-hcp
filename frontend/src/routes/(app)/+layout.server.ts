@@ -2,6 +2,7 @@ import { redirect } from "@sveltejs/kit";
 import type { LayoutServerLoad } from "./$types.js";
 import { Buffer } from "node:buffer";
 import { BACKEND_URL } from "$lib/server/env.js";
+import { getAccessLevel } from "$lib/constants.js";
 
 function parseJwtPayload(token: string): Record<string, unknown> {
   try {
@@ -13,11 +14,11 @@ function parseJwtPayload(token: string): Record<string, unknown> {
   }
 }
 
-async function fetchUserGUID(
+async function fetchUserProfile(
   token: string,
   tenant: string,
   username: string,
-): Promise<string | undefined> {
+): Promise<{ userGUID: string | undefined; roles: string[] }> {
   try {
     const res = await fetch(
       `${BACKEND_URL}/api/v1/mapi/tenants/${tenant}/userAccounts/${
@@ -27,12 +28,15 @@ async function fetchUserGUID(
     );
     if (res.ok) {
       const data = await res.json();
-      return data.userGUID as string | undefined;
+      return {
+        userGUID: data.userGUID as string | undefined,
+        roles: (data.roles?.role as string[]) ?? [],
+      };
     }
   } catch {
-    // Non-critical — header will just hide the ID
+    // Non-critical — degrade gracefully
   }
-  return undefined;
+  return { userGUID: undefined, roles: [] };
 }
 
 export const load: LayoutServerLoad = async ({ locals }) => {
@@ -42,13 +46,16 @@ export const load: LayoutServerLoad = async ({ locals }) => {
   const claims = parseJwtPayload(locals.token);
   const username = (claims.sub as string) ?? "User";
   const tenant = claims.tenant as string | undefined;
-  const userGUID = tenant
-    ? await fetchUserGUID(locals.token, tenant, username)
-    : undefined;
+  const profile = tenant
+    ? await fetchUserProfile(locals.token, tenant, username)
+    : { userGUID: undefined, roles: [] as string[] };
+  const accessLevel = getAccessLevel(tenant, profile.roles);
   return {
     authenticated: true,
     username,
     tenant,
-    userGUID,
+    userGUID: profile.userGUID,
+    roles: profile.roles,
+    accessLevel,
   };
 };

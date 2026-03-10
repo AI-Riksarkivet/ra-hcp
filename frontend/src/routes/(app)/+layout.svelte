@@ -9,7 +9,7 @@
 
 <NavigationProgress />
 <Sidebar.Provider>
-	<AppSidebar />
+	<AppSidebar accessLevel={data.accessLevel} />
 	<Sidebar.Inset>
 		<AppHeader username={data.username} tenant={data.tenant} userGUID={data.userGUID} />
 		<div class="flex-1 overflow-y-auto p-6">

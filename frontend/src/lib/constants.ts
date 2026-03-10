@@ -79,3 +79,16 @@ export function getGroupRoles(group: GroupAccount): string[] {
   if (Array.isArray(group.roles)) return group.roles;
   return group.roles.role ?? [];
 }
+
+// ── Access Level ────────────────────────────────────────────────────
+
+export type AccessLevel = "sys-admin" | "tenant-admin" | "namespace-user";
+
+export function getAccessLevel(
+  tenant: string | undefined,
+  roles: string[],
+): AccessLevel {
+  if (!tenant) return "sys-admin";
+  if (roles.includes("ADMINISTRATOR")) return "tenant-admin";
+  return "namespace-user";
+}

@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import RetroGrid from '$lib/components/ui/magic/retro-grid/retro-grid.svelte';
 
 	let { form }: { form: { error?: string } | null } = $props();
 	let loading = $state(false);

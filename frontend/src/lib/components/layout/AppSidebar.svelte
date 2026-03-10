@@ -12,7 +12,11 @@
 		FileType,
 	} from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import { APP_VERSION } from '$lib/constants.js';
+	import { APP_VERSION, type AccessLevel } from '$lib/constants.js';
+
+	let { accessLevel }: { accessLevel: AccessLevel } = $props();
+
+	const isAdmin = $derived(accessLevel !== 'namespace-user');
 
 	const tenantItems = [
 		{ href: '/namespaces', label: 'Namespaces', icon: Boxes },
@@ -51,47 +55,49 @@
 	</Sidebar.Header>
 
 	<Sidebar.Content>
-		<Sidebar.Group>
-			<Sidebar.GroupLabel>Tenant</Sidebar.GroupLabel>
-			<Sidebar.GroupContent>
-				<Sidebar.Menu>
-					{#each tenantItems as item (item.href)}
-						{@const active = page.url.pathname.startsWith(item.href)}
-						<Sidebar.MenuItem>
-							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
-								{#snippet child({ props })}
-									<a href={item.href} {...props}>
-										<item.icon class="h-5 w-5 shrink-0" />
-										<span>{item.label}</span>
-									</a>
-								{/snippet}
-							</Sidebar.MenuButton>
-						</Sidebar.MenuItem>
-					{/each}
-				</Sidebar.Menu>
-			</Sidebar.GroupContent>
-		</Sidebar.Group>
+		{#if isAdmin}
+			<Sidebar.Group>
+				<Sidebar.GroupLabel>Tenant</Sidebar.GroupLabel>
+				<Sidebar.GroupContent>
+					<Sidebar.Menu>
+						{#each tenantItems as item (item.href)}
+							{@const active = page.url.pathname.startsWith(item.href)}
+							<Sidebar.MenuItem>
+								<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
+									{#snippet child({ props })}
+										<a href={item.href} {...props}>
+											<item.icon class="h-5 w-5 shrink-0" />
+											<span>{item.label}</span>
+										</a>
+									{/snippet}
+								</Sidebar.MenuButton>
+							</Sidebar.MenuItem>
+						{/each}
+					</Sidebar.Menu>
+				</Sidebar.GroupContent>
+			</Sidebar.Group>
 
-		<Sidebar.Group>
-			<Sidebar.GroupLabel>Search & Indexing</Sidebar.GroupLabel>
-			<Sidebar.GroupContent>
-				<Sidebar.Menu>
-					{#each searchItems as item (item.href)}
-						{@const active = page.url.pathname.startsWith(item.href)}
-						<Sidebar.MenuItem>
-							<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
-								{#snippet child({ props })}
-									<a href={item.href} {...props}>
-										<item.icon class="h-5 w-5 shrink-0" />
-										<span>{item.label}</span>
-									</a>
-								{/snippet}
-							</Sidebar.MenuButton>
-						</Sidebar.MenuItem>
-					{/each}
-				</Sidebar.Menu>
-			</Sidebar.GroupContent>
-		</Sidebar.Group>
+			<Sidebar.Group>
+				<Sidebar.GroupLabel>Search & Indexing</Sidebar.GroupLabel>
+				<Sidebar.GroupContent>
+					<Sidebar.Menu>
+						{#each searchItems as item (item.href)}
+							{@const active = page.url.pathname.startsWith(item.href)}
+							<Sidebar.MenuItem>
+								<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
+									{#snippet child({ props })}
+										<a href={item.href} {...props}>
+											<item.icon class="h-5 w-5 shrink-0" />
+											<span>{item.label}</span>
+										</a>
+									{/snippet}
+								</Sidebar.MenuButton>
+							</Sidebar.MenuItem>
+						{/each}
+					</Sidebar.Menu>
+				</Sidebar.GroupContent>
+			</Sidebar.Group>
+		{/if}
 
 		<Sidebar.Group>
 			<Sidebar.GroupLabel>Storage</Sidebar.GroupLabel>
