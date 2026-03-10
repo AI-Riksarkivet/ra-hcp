@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Chart, Svg, Spline } from 'layerchart';
 	import { ArrowDownToLine, ArrowUpFromLine, Eye, PenLine } from 'lucide-svelte';
 	import StatCard from '$lib/components/ui/stat-card.svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
@@ -29,70 +28,62 @@
 		return entries.reduce((acc, e) => acc + ((e[field] as number) ?? 0), 0);
 	}
 
-	function sparklineData(field: keyof ChargebackEntry) {
-		return entries.map((e, i) => ({
-			date: i,
-			value: (e[field] as number) ?? 0,
-		}));
+	function sparklinePath(field: keyof ChargebackEntry): string {
+		if (entries.length < 2) return '';
+		const values = entries.map((e) => (e[field] as number) ?? 0);
+		const max = Math.max(...values);
+		const min = Math.min(...values);
+		const range = max - min || 1;
+		const w = 100;
+		const h = 28;
+		const pad = 2;
+		return values
+			.map((v, i) => {
+				const x = (i / (values.length - 1)) * w;
+				const y = pad + ((max - v) / range) * (h - pad * 2);
+				return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+			})
+			.join(' ');
 	}
 
-	let metrics = $derived([
-		{
-			label: 'Bytes In',
-			value: formatBytes(sumField('bytesIn')),
-			icon: ArrowDownToLine,
-			field: 'bytesIn' as keyof ChargebackEntry,
-			color: 'hsl(var(--primary))',
-		},
-		{
-			label: 'Bytes Out',
-			value: formatBytes(sumField('bytesOut')),
-			icon: ArrowUpFromLine,
-			field: 'bytesOut' as keyof ChargebackEntry,
-			color: 'hsl(var(--primary))',
-		},
-		{
-			label: 'Reads',
-			value: sumField('reads').toLocaleString(),
-			icon: Eye,
-			field: 'reads' as keyof ChargebackEntry,
-			color: 'hsl(var(--primary))',
-		},
-		{
-			label: 'Writes',
-			value: sumField('writes').toLocaleString(),
-			icon: PenLine,
-			field: 'writes' as keyof ChargebackEntry,
-			color: 'hsl(var(--primary))',
-		},
-	]);
+	const metricsDef = [
+		{ label: 'Bytes In', field: 'bytesIn' as keyof ChargebackEntry, icon: ArrowDownToLine },
+		{ label: 'Bytes Out', field: 'bytesOut' as keyof ChargebackEntry, icon: ArrowUpFromLine },
+		{ label: 'Reads', field: 'reads' as keyof ChargebackEntry, icon: Eye },
+		{ label: 'Writes', field: 'writes' as keyof ChargebackEntry, icon: PenLine },
+	];
+
+	function formatValue(field: keyof ChargebackEntry): string {
+		const total = sumField(field);
+		if (field === 'bytesIn' || field === 'bytesOut') return formatBytes(total);
+		return total.toLocaleString();
+	}
 </script>
 
-{#await chargebackData}
+{#if !chargebackData?.current}
 	<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 		{#each Array(4) as _, i (i)}<CardSkeleton />{/each}
 	</div>
-{:then}
-	{#if entries.length > 0}
-		<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-			{#each metrics as m, i (m.field)}
-				<StatCard label={m.label} value={m.value} icon={m.icon} delay="delay-{i * 75}">
-					{#if entries.length > 1}
-						<div class="mt-2 h-[32px] w-full">
-							<Chart
-								data={sparklineData(m.field)}
-								x="date"
-								y="value"
-								padding={{ top: 4, bottom: 4, left: 0, right: 0 }}
-							>
-								<Svg>
-									<Spline class="stroke-primary fill-none" style="stroke-width: 1.5" />
-								</Svg>
-							</Chart>
-						</div>
-					{/if}
-				</StatCard>
-			{/each}
-		</div>
-	{/if}
-{/await}
+{:else if entries.length > 0}
+	<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+		{#each metricsDef as m, i (m.field)}
+			<StatCard label={m.label} value={formatValue(m.field)} icon={m.icon} delay="delay-{i * 75}">
+				{#if entries.length > 1}
+					<div class="mt-2 h-[32px] w-full">
+						<svg viewBox="0 0 100 28" preserveAspectRatio="none" class="h-full w-full">
+							<path
+								d={sparklinePath(m.field)}
+								fill="none"
+								stroke="hsl(var(--primary))"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								vector-effect="non-scaling-stroke"
+							/>
+						</svg>
+					</div>
+				{/if}
+			</StatCard>
+		{/each}
+	</div>
+{/if}
