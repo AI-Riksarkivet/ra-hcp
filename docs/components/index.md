@@ -5,8 +5,11 @@ hide:
 ---
 
 <style>
-  .md-grid { max-width: initial; }
-  .md-content { max-width: initial; }
+  .md-main__inner { max-width: 100%; }
+  .md-grid { max-width: 100%; }
+  .md-content { max-width: 100%; }
+  .md-content__inner { max-width: 100%; }
+  .md-typeset iframe { width: 100%; }
 </style>
 
 # UI Components
