@@ -1,6 +1,6 @@
 <script lang="ts">
+	import * as Card from '$lib/components/ui/card/index.js';
 	import { ArrowDownToLine, ArrowUpFromLine, Eye, PenLine } from 'lucide-svelte';
-	import StatCard from '$lib/components/ui/stat-card.svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import { formatBytes } from '$lib/utils/format.js';
 	import type { ChargebackEntry } from '$lib/utils/format.js';
@@ -34,9 +34,9 @@
 		const max = Math.max(...values);
 		const min = Math.min(...values);
 		const range = max - min || 1;
-		const w = 100;
-		const h = 28;
-		const pad = 2;
+		const w = 120;
+		const h = 40;
+		const pad = 4;
 		return values
 			.map((v, i) => {
 				const x = (i / (values.length - 1)) * w;
@@ -44,6 +44,12 @@
 				return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
 			})
 			.join(' ');
+	}
+
+	function areaPath(field: keyof ChargebackEntry): string {
+		const line = sparklinePath(field);
+		if (!line) return '';
+		return `${line} L120,40 L0,40 Z`;
 	}
 
 	const metricsDef = [
@@ -61,29 +67,45 @@
 </script>
 
 {#if !chargebackData?.current}
-	<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-		{#each Array(4) as _, i (i)}<CardSkeleton />{/each}
-	</div>
+	<CardSkeleton />
 {:else if entries.length > 0}
-	<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-		{#each metricsDef as m, i (m.field)}
-			<StatCard label={m.label} value={formatValue(m.field)} icon={m.icon} delay="delay-{i * 75}">
-				{#if entries.length > 1}
-					<div class="mt-2 h-[32px] w-full">
-						<svg viewBox="0 0 100 28" preserveAspectRatio="none" class="h-full w-full">
-							<path
-								d={sparklinePath(m.field)}
-								fill="none"
-								stroke="hsl(var(--primary))"
-								stroke-width="1.5"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								vector-effect="non-scaling-stroke"
-							/>
-						</svg>
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>I/O Activity</Card.Title>
+			<Card.Description>Namespace chargeback metrics (7 day)</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+				{#each metricsDef as m (m.field)}
+					<div class="space-y-2">
+						<div class="flex items-center gap-2 text-sm text-muted-foreground">
+							<m.icon class="h-3.5 w-3.5" />
+							{m.label}
+						</div>
+						<p class="text-xl font-semibold">{formatValue(m.field)}</p>
+						{#if entries.length > 1}
+							<svg viewBox="0 0 120 40" preserveAspectRatio="none" class="h-[40px] w-full">
+								<defs>
+									<linearGradient id="grad-{m.field}" x1="0" y1="0" x2="0" y2="1">
+										<stop offset="0%" stop-color="hsl(var(--primary))" stop-opacity="0.3" />
+										<stop offset="100%" stop-color="hsl(var(--primary))" stop-opacity="0.02" />
+									</linearGradient>
+								</defs>
+								<path d={areaPath(m.field)} fill="url(#grad-{m.field})" />
+								<path
+									d={sparklinePath(m.field)}
+									fill="none"
+									stroke="hsl(var(--primary))"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									vector-effect="non-scaling-stroke"
+								/>
+							</svg>
+						{/if}
 					</div>
-				{/if}
-			</StatCard>
-		{/each}
-	</div>
+				{/each}
+			</div>
+		</Card.Content>
+	</Card.Root>
 {/if}

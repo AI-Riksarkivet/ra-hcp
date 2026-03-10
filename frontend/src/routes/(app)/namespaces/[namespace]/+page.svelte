@@ -45,26 +45,25 @@
 					<Database class="mr-1.5 h-4 w-4" />
 					Namespace
 				</Tabs.Trigger>
-				<Tabs.Trigger value="advanced">
+				<Tabs.Trigger value="settings">
 					<Settings2 class="mr-1.5 h-4 w-4" />
-					Advanced Settings
+					Settings
 				</Tabs.Trigger>
 			</Tabs.List>
 
 			<Tabs.Content value="namespace" class="space-y-6">
 				<NsGeneralInfo {tenant} {namespaceName} />
+				<NsChargeback {tenant} {namespaceName} />
+				<NsUserAccess {tenant} {namespaceName} />
+			</Tabs.Content>
 
+			<Tabs.Content value="settings" class="space-y-6">
 				<div class="grid items-stretch gap-6 lg:grid-cols-3">
 					<NsProtocols {tenant} {namespaceName} />
 					<NsFeatures {tenant} {namespaceName} />
 					<NsTags {tenant} {namespaceName} />
 				</div>
 
-				<NsUserAccess {tenant} {namespaceName} />
-				<NsChargeback {tenant} {namespaceName} />
-			</Tabs.Content>
-
-			<Tabs.Content value="advanced" class="space-y-6">
 				<div class="grid items-stretch gap-6 lg:grid-cols-3">
 					<NsCompliance {tenant} {namespaceName} />
 					<NsReplicationCollision {tenant} {namespaceName} />
