@@ -162,6 +162,7 @@ async def get_lance_service(
                 access_key,
                 secret_key,
                 endpoint_url,
+                verify_ssl=settings.hcp_verify_ssl,
                 cache=cache,
                 cache_settings=get_cache_settings(),
             )
@@ -172,6 +173,10 @@ async def get_lance_service(
                 params.path,
             )
             lance_cache[cache_key] = LanceService.with_credentials(
-                s3_uri, access_key, secret_key, endpoint_url
+                s3_uri,
+                access_key,
+                secret_key,
+                endpoint_url,
+                verify_ssl=settings.hcp_verify_ssl,
             )
     yield lance_cache[cache_key]

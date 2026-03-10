@@ -19,6 +19,9 @@ dependencies = [
     "python-multipart>=0.0.22",
     "redis[hiredis]>=5.0.0",
     "uvicorn[standard]>=0.41.0",
+    "lancedb>=0.29",
+    "pyarrow>=17.0",
+    "pylance>=2.0.1",
 ]
 
 [dependency-groups]

@@ -55,7 +55,6 @@
 - test how openfga would work
 - fix nfs support
 - fix what different users can see and do
-- fix so we use superforms
 - fix forms and add more padding to modals
 - ~~fix dashboard~~ done (overview page redesigned)
 - add more metadata of the uploaded file — a meta tab that opens from right sidebar, about the file, who uploaded, etc.
