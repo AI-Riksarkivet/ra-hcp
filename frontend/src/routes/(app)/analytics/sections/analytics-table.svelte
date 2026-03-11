@@ -5,6 +5,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import { Slider } from '$lib/components/ui/slider/index.js';
 	import ErrorBanner from '$lib/components/custom/error-banner/error-banner.svelte';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import FileViewer from '$lib/components/custom/file-viewer/FileViewer.svelte';
@@ -46,6 +47,7 @@
 	let searchTotal = $state(0);
 	let searchError = $state<string | null>(null);
 	let searchActive = $state(false);
+	let hybridWeight = $state([0.7]);
 
 	// Row detail dialog state
 	let detailOpen = $state(false);
@@ -142,6 +144,7 @@
 			query_type: searchType,
 			vector_column: activeVectorCol || undefined,
 			limit: 20,
+			weight: searchType === 'hybrid' ? hybridWeight[0] : undefined,
 		});
 
 		// The remote function is reactive -- poll until result arrives
@@ -396,29 +399,74 @@
 		</div>
 	</Card.Header>
 	<Card.Content class="space-y-3">
-		<!-- Unified toolbar: filter (left) + search (right) -->
-		<div class="flex flex-wrap items-start gap-4">
-			<!-- Filter input (Lance SQL) -->
-			<form
-				class="flex min-w-0 flex-1 items-center gap-2"
-				onsubmit={(e) => {
-					e.preventDefault();
-					applyFilter();
-				}}
-			>
-				<div class="relative flex-1">
-					<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-					<Input
-						bind:value={filterInput}
-						placeholder="Lance filter (e.g. label = 'cat' AND score > 0.5)"
-						class="pl-10 text-xs"
-					/>
-				</div>
-				<Button type="submit" variant="outline" size="sm">Filter</Button>
-			</form>
+		<!-- Search -->
+		{#if hasTextFields || vectorFields.length > 0}
+			<div class="space-y-2.5">
+				<!-- Search mode tabs -->
+				<div class="flex items-center gap-1.5">
+					<span class="mr-1 text-xs font-medium text-muted-foreground">Search mode</span>
+					{#if hasTextFields}
+						<Button
+							variant={searchType === 'fts' ? 'default' : 'outline'}
+							size="sm"
+							class="h-7 px-3 text-xs"
+							onclick={() => {
+								searchType = 'fts';
+							}}
+						>
+							<Search class="mr-1.5 h-3 w-3" />
+							Full-Text
+						</Button>
+					{/if}
+					{#if vectorFields.length > 0}
+						<Button
+							variant={searchType === 'vector' ? 'default' : 'outline'}
+							size="sm"
+							class="h-7 px-3 text-xs"
+							onclick={() => {
+								searchType = 'vector';
+							}}
+						>
+							<Radar class="mr-1.5 h-3 w-3" />
+							Vector
+						</Button>
+					{/if}
+					{#if hasTextFields && vectorFields.length > 0}
+						<Button
+							variant={searchType === 'hybrid' ? 'default' : 'outline'}
+							size="sm"
+							class="h-7 px-3 text-xs"
+							onclick={() => {
+								searchType = 'hybrid';
+							}}
+						>
+							<Radar class="mr-1.5 h-3 w-3" />
+							Hybrid
+						</Button>
+					{/if}
 
-			<!-- Search input with mode buttons -->
-			{#if hasTextFields || vectorFields.length > 0}
+					<!-- Vector column selector (inline) -->
+					{#if vectorFields.length > 1 && (searchType === 'vector' || searchType === 'hybrid')}
+						<span class="ml-2 border-l pl-2 text-xs text-muted-foreground">on</span>
+						{#each vectorFields as vf (vf.name)}
+							<Button
+								variant={activeVectorCol === vf.name ? 'secondary' : 'ghost'}
+								size="sm"
+								class="h-7 px-2 text-xs"
+								onclick={() => {
+									selectedVectorCol = vf.name;
+								}}
+							>
+								{vf.name}
+								{#if vf.vector_dim}
+									<Badge variant="outline" class="ml-1 text-[9px]">{vf.vector_dim}</Badge>
+								{/if}
+							</Button>
+						{/each}
+					{/if}
+				</div>
+
+				<!-- Search input -->
 				<form
 					class="flex items-center gap-2"
 					onsubmit={(e) => {
@@ -426,73 +474,70 @@
 						executeSearch();
 					}}
 				>
-					<div class="relative">
-						<Radar class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<div class="relative flex-1">
+						<Search
+							class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+						/>
 						<Input
 							bind:value={searchInput}
 							placeholder={searchType === 'fts'
-								? 'Full-text search...'
+								? 'Search text across all string fields...'
 								: searchType === 'hybrid'
-									? 'Hybrid search...'
-									: 'Vector search...'}
-							class="w-56 pl-10 text-xs"
+									? 'Search with text + vector similarity...'
+									: 'Describe what to search for...'}
+							class="pl-10"
 						/>
 					</div>
-					<div class="flex items-center gap-1">
-						{#if hasTextFields}
-							<Button
-								variant={searchType === 'fts' ? 'default' : 'outline'}
-								size="sm"
-								onclick={() => {
-									searchType = 'fts';
-								}}>FTS</Button
-							>
-						{/if}
-						{#if vectorFields.length > 0}
-							<Button
-								variant={searchType === 'vector' ? 'default' : 'outline'}
-								size="sm"
-								onclick={() => {
-									searchType = 'vector';
-								}}>Vector</Button
-							>
-						{/if}
-						{#if hasTextFields && vectorFields.length > 0}
-							<Button
-								variant={searchType === 'hybrid' ? 'default' : 'outline'}
-								size="sm"
-								onclick={() => {
-									searchType = 'hybrid';
-								}}>Hybrid</Button
-							>
-						{/if}
-					</div>
-					<Button type="submit" variant="outline" size="sm">Search</Button>
-				</form>
-			{/if}
-		</div>
-
-		<!-- Vector column selector (when multiple vector columns exist) -->
-		{#if vectorFields.length > 1}
-			<div class="flex items-center gap-2 text-xs text-muted-foreground">
-				<span>Vector column:</span>
-				{#each vectorFields as vf (vf.name)}
-					<Button
-						variant={activeVectorCol === vf.name ? 'secondary' : 'ghost'}
-						size="sm"
-						class="h-6 px-2 text-xs"
-						onclick={() => {
-							selectedVectorCol = vf.name;
-						}}
-					>
-						{vf.name}
-						{#if vf.vector_dim}
-							<Badge variant="outline" class="ml-1 text-[9px]">{vf.vector_dim}</Badge>
-						{/if}
+					<Button type="submit">
+						<Search class="mr-2 h-4 w-4" />
+						Search
 					</Button>
-				{/each}
+				</form>
+
+				<!-- Hybrid weight slider -->
+				{#if searchType === 'hybrid'}
+					<div class="flex items-center gap-3 rounded-md border bg-muted/30 px-4 py-2">
+						<span class="shrink-0 text-xs font-medium">Vector</span>
+						<Slider
+							type="single"
+							bind:value={hybridWeight}
+							min={0}
+							max={1}
+							step={0.05}
+							class="flex-1"
+						/>
+						<span class="shrink-0 text-xs font-medium">FTS</span>
+						<Badge variant="secondary" class="ml-1 font-mono text-xs tabular-nums"
+							>{Math.round(hybridWeight[0] * 100)}% FTS</Badge
+						>
+					</div>
+				{/if}
 			</div>
 		{/if}
+
+		<!-- SQL filter -->
+		<form
+			class="flex items-center gap-2"
+			onsubmit={(e) => {
+				e.preventDefault();
+				applyFilter();
+			}}
+		>
+			<div class="relative flex-1">
+				<SlidersHorizontal
+					class="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+				/>
+				<Input
+					bind:value={filterInput}
+					placeholder="SQL filter — e.g. label = 'cat' AND score > 0.5"
+					class="h-8 pl-9 text-xs"
+				/>
+			</div>
+			<Button type="submit" variant="outline" size="sm" class="h-8">
+				<SlidersHorizontal class="mr-1.5 h-3 w-3" />
+				Filter
+			</Button>
+		</form>
 
 		{#if searchActive && !searchError && searchResults.length === 0}
 			<p class="text-sm text-muted-foreground">
