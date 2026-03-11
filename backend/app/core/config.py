@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 
 # App runs from backend/ so .env lives one level up.
@@ -79,6 +80,33 @@ class S3Settings(BaseSettings):
         from app.core.auth_utils import derive_s3_keys
 
         return derive_s3_keys(self.hcp_username, self.hcp_password)[1]
+
+
+class StorageSettings(BaseSettings):
+    """Backend-agnostic storage configuration.
+
+    Controls which storage adapter is used (HCP, MinIO, or generic S3).
+    HCP-specific settings are only relevant when ``storage_backend="hcp"``.
+    """
+
+    model_config = {"env_file": _ENV_FILE, "extra": "ignore"}
+
+    storage_backend: Literal["hcp", "minio", "generic"] = "hcp"
+
+    # S3-compatible settings (all backends)
+    s3_endpoint_url: str = ""
+    s3_region: str = "us-east-1"
+    s3_verify_ssl: bool = False
+    s3_addressing_style: Literal["auto", "path", "virtual"] = "auto"
+
+    # Direct credentials (MinIO / generic)
+    s3_access_key: str = ""
+    s3_secret_key: SecretStr = SecretStr("")
+
+    # HCP-specific (only when storage_backend=hcp)
+    hcp_username: str = ""
+    hcp_password: SecretStr = SecretStr("")
+    hcp_domain: str = ""
 
 
 class CacheSettings(BaseSettings):

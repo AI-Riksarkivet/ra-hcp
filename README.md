@@ -1,9 +1,11 @@
 # HCP App
 
-[![Tests](https://github.com/AI-Riksarkivet/hcp/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Riksarkivet/hcp/actions/workflows/ci.yml)
-[![Documentation](https://github.com/AI-Riksarkivet/hcp/actions/workflows/docs.yml/badge.svg)](https://github.com/AI-Riksarkivet/hcp/actions/workflows/docs.yml)
-[![CodeQL](https://github.com/AI-Riksarkivet/hcp/actions/workflows/codeql.yml/badge.svg)](https://github.com/AI-Riksarkivet/hcp/actions/workflows/codeql.yml)
-[![TruffleHog](https://github.com/AI-Riksarkivet/hcp/actions/workflows/trufflehog.yml/badge.svg)](https://github.com/AI-Riksarkivet/hcp/actions/workflows/trufflehog.yml)
+[![Tests](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/ci.yml/badge.svg)](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/ci.yml)
+[![Documentation](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/docs.yml/badge.svg)](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/docs.yml)
+[![Storybook](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/storybook.yml/badge.svg)](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/storybook.yml)
+[![CodeQL](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/codeql.yml/badge.svg)](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/codeql.yml)
+[![Scorecard](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/scorecard.yml/badge.svg)](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/scorecard.yml)
+[![TruffleHog](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/trufflehog.yml/badge.svg)](https://github.com/AI-Riksarkivet/ra-hcp/actions/workflows/trufflehog.yml)
 
 Hitachi Content Platform (HCP) application — unified web app for S3-compatible object storage and HCP Management API operations.
 
