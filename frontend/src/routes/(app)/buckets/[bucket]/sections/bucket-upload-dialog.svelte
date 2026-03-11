@@ -24,7 +24,8 @@
 	} from '$lib/remote/buckets.remote.js';
 
 	const MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100 MB
-	const PART_SIZE = 10 * 1024 * 1024; // 10 MB
+	const PART_SIZE = 25 * 1024 * 1024; // 25 MB
+	const CONCURRENT_PARTS = 6; // parallel part uploads
 
 	let {
 		open = $bindable(false),
@@ -169,22 +170,30 @@
 			uploadId = init.upload_id;
 
 			const totalParts = Math.ceil(item.file.size / PART_SIZE);
-			const parts: { PartNumber: number; ETag: string }[] = [];
+			const parts: { PartNumber: number; ETag: string }[] = new Array(totalParts);
+			let completedParts = 0;
 
-			for (let i = 0; i < totalParts; i++) {
-				const start = i * PART_SIZE;
-				const end = Math.min(start + PART_SIZE, item.file.size);
-				const blob = item.file.slice(start, end);
-				const partNumber = i + 1;
+			// Upload parts with bounded concurrency
+			const queue = Array.from({ length: totalParts }, (_, i) => i);
+			const workers = Array.from({ length: Math.min(CONCURRENT_PARTS, totalParts) }, async () => {
+				while (queue.length > 0) {
+					const i = queue.shift()!;
+					const start = i * PART_SIZE;
+					const end = Math.min(start + PART_SIZE, item.file.size);
+					const blob = item.file.slice(start, end);
+					const partNumber = i + 1;
 
-				const etag = await uploadPartXhr(bucket, item.key, uploadId, partNumber, blob);
-				parts.push({ PartNumber: partNumber, ETag: etag });
+					const etag = await uploadPartXhr(bucket, item.key, uploadId, partNumber, blob);
+					parts[i] = { PartNumber: partNumber, ETag: etag };
+					completedParts++;
 
-				selectedFiles[index] = {
-					...selectedFiles[index],
-					progress: Math.round((partNumber / totalParts) * 100),
-				};
-			}
+					selectedFiles[index] = {
+						...selectedFiles[index],
+						progress: Math.round((completedParts / totalParts) * 100),
+					};
+				}
+			});
+			await Promise.all(workers);
 
 			await complete_multipart_upload({
 				bucket,
