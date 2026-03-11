@@ -25,6 +25,7 @@
 	} from '$lib/components/ui/data-table/index.js';
 	import type { ColumnDef, PaginationState, VisibilityState } from '@tanstack/table-core';
 	import { formatBytes } from '$lib/utils/format.js';
+	import { onDestroy } from 'svelte';
 
 	let {
 		bucket,
@@ -48,6 +49,19 @@
 	let searchError = $state<string | null>(null);
 	let searchActive = $state(false);
 	let hybridWeight = $state([70]);
+
+	// Timer cleanup for search polling
+	let activeIntervals: ReturnType<typeof setInterval>[] = [];
+	let activeTimeouts: ReturnType<typeof setTimeout>[] = [];
+
+	function clearActiveTimers() {
+		activeIntervals.forEach(clearInterval);
+		activeTimeouts.forEach(clearTimeout);
+		activeIntervals = [];
+		activeTimeouts = [];
+	}
+
+	onDestroy(clearActiveTimers);
 
 	// Row detail dialog state
 	let detailOpen = $state(false);
@@ -133,6 +147,7 @@
 		const q = searchInput.trim();
 		if (!q) return;
 
+		clearActiveTimers();
 		searchError = null;
 		searchActive = true;
 
@@ -157,8 +172,9 @@
 				clearInterval(interval);
 			}
 		}, 200);
+		activeIntervals.push(interval);
 		// Safety: stop polling after 10s
-		setTimeout(() => clearInterval(interval), 10000);
+		activeTimeouts.push(setTimeout(() => clearInterval(interval), 10000));
 	}
 
 	function findSimilar(row: Record<string, unknown>) {
@@ -167,6 +183,7 @@
 		const vecVal = row[colName] as VectorValue | null;
 		if (!vecVal?.preview) return;
 
+		clearActiveTimers();
 		searchType = 'vector';
 		searchInput = `Similar to row (vector: ${colName})`;
 		searchError = null;
@@ -191,7 +208,8 @@
 				clearInterval(interval);
 			}
 		}, 200);
-		setTimeout(() => clearInterval(interval), 10000);
+		activeIntervals.push(interval);
+		activeTimeouts.push(setTimeout(() => clearInterval(interval), 10000));
 	}
 
 	function openDetail(row: Record<string, unknown>) {

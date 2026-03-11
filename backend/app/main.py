@@ -74,6 +74,20 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
             trace_id = format(ctx.trace_id, "032x") if ctx.trace_id else None
             span_id = format(ctx.span_id, "016x") if ctx.span_id else None
 
+            # Best-effort user/tenant extraction from JWT (no validation)
+            user = None
+            tenant = None
+            auth = request.headers.get("authorization", "")
+            if auth.lower().startswith("bearer "):
+                try:
+                    import jwt
+
+                    payload = jwt.decode(auth[7:], options={"verify_signature": False})
+                    user = payload.get("sub")
+                    tenant = payload.get("tenant")
+                except Exception:
+                    pass
+
             access_logger.info(
                 "%s %s %s %sms",
                 request.method,
@@ -87,6 +101,8 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
                     "query": str(request.query_params) or None,
                     "status": response.status_code,
                     "duration_ms": duration_ms,
+                    "user": user,
+                    "tenant": tenant,
                     "client_ip": request.client.host if request.client else None,
                     "trace_id": trace_id,
                     "span_id": span_id,

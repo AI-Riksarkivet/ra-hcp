@@ -6,6 +6,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { toast } from 'svelte-sonner';
+	import { useCopyFeedback } from '$lib/utils/use-copy-feedback.svelte.js';
 	import TenantSwitcher from './TenantSwitcher.svelte';
 	import type { TenantSession } from '$lib/types/session.js';
 
@@ -18,18 +19,12 @@
 
 	let { username, tenant, userGUID, sessions = [] }: Props = $props();
 
-	let copied = $state(false);
+	const { copied, copy } = useCopyFeedback();
 
 	async function copyCanonicalId() {
 		if (!userGUID) return;
-		try {
-			await navigator.clipboard.writeText(userGUID);
-			copied = true;
-			toast.success('Canonical ID copied');
-			setTimeout(() => (copied = false), 2000);
-		} catch {
-			toast.error('Failed to copy');
-		}
+		await copy(userGUID);
+		toast.success('Canonical ID copied');
 	}
 </script>
 

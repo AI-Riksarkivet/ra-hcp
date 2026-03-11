@@ -7,24 +7,19 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
+	import { useCopyFeedback } from '$lib/utils/use-copy-feedback.svelte.js';
 
 	let username = $derived(page.data.username as string);
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let userGUID = $derived(page.data.userGUID as string | undefined);
 	let roles = $derived((page.data.roles as string[]) ?? []);
 
-	let copied = $state(false);
+	const { copied, copy } = useCopyFeedback();
 
 	async function copyCanonicalId() {
 		if (!userGUID) return;
-		try {
-			await navigator.clipboard.writeText(userGUID);
-			copied = true;
-			toast.success('Canonical ID copied');
-			setTimeout(() => (copied = false), 2000);
-		} catch {
-			toast.error('Failed to copy');
-		}
+		await copy(userGUID);
+		toast.success('Canonical ID copied');
 	}
 
 	const themes = [

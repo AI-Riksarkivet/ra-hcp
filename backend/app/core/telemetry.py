@@ -32,6 +32,7 @@ _EXTRA_FIELDS = (
     "status",
     "duration_ms",
     "user",
+    "tenant",
     "client_ip",
     "trace_id",
     "span_id",
@@ -116,6 +117,22 @@ def setup_telemetry(app: FastAPI) -> None:
     logging.root.handlers.clear()
     logging.root.addHandler(handler)
     logging.root.setLevel(logging.INFO)
+    # ── Log provider (OTLP → Loki) ───────────────────────────────────
+    if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        from opentelemetry._logs import set_logger_provider
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import (
+            OTLPLogExporter,
+        )
+        from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+        log_provider = LoggerProvider(resource=_resource)
+        log_provider.add_log_record_processor(
+            BatchLogRecordProcessor(OTLPLogExporter())
+        )
+        set_logger_provider(log_provider)
+        logging.root.addHandler(LoggingHandler(logger_provider=log_provider))
+
     logging.getLogger(__name__).info(
         "Telemetry initialised (service.name=%s)", _service_name
     )

@@ -6,6 +6,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Loader2, Copy, Check } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import { useCopyFeedback } from '$lib/utils/use-copy-feedback.svelte.js';
 	import { generate_presigned_url } from '$lib/remote/buckets.remote.js';
 
 	let {
@@ -28,7 +29,7 @@
 	let expiry = $state(3600);
 	let generating = $state(false);
 	let url = $state('');
-	let copied = $state(false);
+	const { copied, copy: copyToClipboard } = useCopyFeedback();
 
 	function getDisplayName(key: string): string {
 		return key.split('/').filter(Boolean).pop() ?? key;
@@ -43,7 +44,6 @@
 		method = 'get_object';
 		expiry = 3600;
 		url = '';
-		copied = false;
 	}
 
 	$effect(() => {
@@ -70,9 +70,7 @@
 	}
 
 	function copyUrl() {
-		navigator.clipboard.writeText(url);
-		copied = true;
-		setTimeout(() => (copied = false), 2000);
+		copyToClipboard(url);
 	}
 </script>
 

@@ -7,6 +7,7 @@
 	import { HelpCircle, Info, Terminal, Copy } from 'lucide-svelte';
 	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
+	import { useCopyFeedback } from '$lib/utils/use-copy-feedback.svelte.js';
 	import {
 		get_ns_protocols,
 		update_ns_protocol,
@@ -36,11 +37,9 @@
 		`mount -o tcp,vers=3,timeo=600,hard,intr -t nfs ${nfsDomain}:${nfsMountPath} /mnt/${namespaceName || 'hcp-data'}`
 	);
 
-	let nfsCopied = $state(false);
-	async function copyNfsCommand() {
-		await navigator.clipboard.writeText(nfsMountCommand);
-		nfsCopied = true;
-		setTimeout(() => (nfsCopied = false), 2000);
+	const nfsCopy = useCopyFeedback();
+	function copyNfsCommand() {
+		nfsCopy.copy(nfsMountCommand);
 	}
 
 	// --- Protocol state ---
@@ -237,7 +236,7 @@
 							onclick={copyNfsCommand}
 							title="Copy to clipboard"
 						>
-							{#if nfsCopied}
+							{#if nfsCopy.copied}
 								<span class="text-xs text-green-600">Copied!</span>
 							{:else}
 								<Copy class="h-4 w-4" />

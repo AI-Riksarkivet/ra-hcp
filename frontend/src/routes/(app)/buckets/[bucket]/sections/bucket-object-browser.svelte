@@ -42,6 +42,7 @@
 		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
 	import DataTableActions from '../data-table/data-table-actions.svelte';
+	import { onDestroy } from 'svelte';
 	import BucketShareDialog from './bucket-share-dialog.svelte';
 	import BucketCopyDialog from './bucket-copy-dialog.svelte';
 	import BucketUploadDialog from './bucket-upload-dialog.svelte';
@@ -468,6 +469,9 @@
 	let zipDownloading = $state(false);
 	let zipProgress = $state({ total: 0, completed: 0, failed: 0 });
 	let zipTaskId = $state<string | null>(null);
+	let zipPollInterval: ReturnType<typeof setInterval> | undefined;
+
+	onDestroy(() => clearInterval(zipPollInterval));
 
 	async function startZipDownload() {
 		zipDownloading = true;
@@ -487,7 +491,8 @@
 	function pollZipStatus() {
 		if (!zipTaskId) return;
 		const tid = zipTaskId;
-		const interval = setInterval(async () => {
+		clearInterval(zipPollInterval);
+		zipPollInterval = setInterval(async () => {
 			try {
 				const res = await fetch(
 					`/api/v1/buckets/${encodeURIComponent(bucket)}/objects/download/${encodeURIComponent(tid)}`
@@ -498,7 +503,7 @@
 					contentType.includes('application/zip') ||
 					contentType.includes('application/octet-stream')
 				) {
-					clearInterval(interval);
+					clearInterval(zipPollInterval);
 					const blob = await res.blob();
 					const url = URL.createObjectURL(blob);
 					const a = document.createElement('a');
@@ -530,7 +535,7 @@
 					};
 
 					if (data.status === 'failed') {
-						clearInterval(interval);
+						clearInterval(zipPollInterval);
 						toast.error('ZIP download failed');
 						zipDownloading = false;
 						zipTaskId = null;
@@ -539,13 +544,13 @@
 				}
 
 				if (!res.ok && res.status !== 200) {
-					clearInterval(interval);
+					clearInterval(zipPollInterval);
 					toast.error('ZIP download failed');
 					zipDownloading = false;
 					zipTaskId = null;
 				}
 			} catch {
-				clearInterval(interval);
+				clearInterval(zipPollInterval);
 				toast.error('Failed to check ZIP status');
 				zipDownloading = false;
 				zipTaskId = null;

@@ -107,14 +107,18 @@ class MapiService:
         try:
             resp = await client.request(method, url, headers=headers, content=content)
         except httpx.TimeoutException:
-            logger.error("MAPI timeout: %s %s", method, url)
+            logger.error("MAPI timeout: %s %s", method, path)
             raise HTTPException(status_code=504, detail="HCP timed out")
         except httpx.ConnectError:
-            logger.error("MAPI unreachable: %s %s", method, url)
+            logger.error("MAPI unreachable: %s %s", method, path)
             raise HTTPException(status_code=502, detail="HCP unreachable")
         except httpx.TransportError as exc:
-            logger.error("MAPI transport error: %s %s — %s", method, url, exc)
+            logger.error("MAPI transport error: %s %s — %s", method, path, exc)
             raise HTTPException(status_code=502, detail="HCP connection error")
+
+        if resp.status_code >= 400:
+            logger.warning("MAPI %s %s → %s", method, path, resp.status_code)
+
         return resp
 
     # ── Connectivity check ─────────────────────────────────────────────

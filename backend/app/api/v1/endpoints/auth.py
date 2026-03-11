@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 import re
 
-from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.security import create_access_token
 from app.schemas.common import TokenResponse
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # Valid HCP tenant names: alphanumeric, may contain hyphens (not leading/trailing).
@@ -31,6 +33,7 @@ def _parse_username(raw_username: str) -> tuple[str, str | None]:
 
 @router.post("/token", response_model=TokenResponse)
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     tenant: str | None = Form(None),
 ):
@@ -53,10 +56,24 @@ async def login(
     if resolved_tenant is None:
         username, resolved_tenant = _parse_username(form_data.username)
 
+    client_ip = request.client.host if request.client else None
+
     if resolved_tenant is not None and not _TENANT_RE.match(resolved_tenant):
+        logger.warning(
+            "Login failed: invalid tenant name %r user=%s ip=%s",
+            resolved_tenant,
+            username,
+            client_ip,
+        )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Invalid tenant name",
         )
     token = create_access_token(username, form_data.password, tenant=resolved_tenant)
+    logger.info(
+        "Login success: user=%s tenant=%s ip=%s",
+        username,
+        resolved_tenant or "(system)",
+        client_ip,
+    )
     return {"access_token": token, "token_type": "bearer"}

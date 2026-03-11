@@ -6,6 +6,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { HelpCircle, Copy, Check } from 'lucide-svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
+	import { useCopyFeedback } from '$lib/utils/use-copy-feedback.svelte.js';
 	import { get_user, update_user } from '$lib/remote/users.remote.js';
 	import { AVAILABLE_ROLES, ROLE_DESCRIPTIONS, getUserRoles } from '$lib/constants.js';
 	import type { User } from '$lib/constants.js';
@@ -58,26 +59,7 @@
 	}
 
 	// Copy helper
-	let copied = $state<string | null>(null);
-
-	async function copyToClipboard(value: string, label: string) {
-		try {
-			await navigator.clipboard.writeText(value);
-		} catch {
-			const ta = document.createElement('textarea');
-			ta.value = value;
-			ta.style.position = 'fixed';
-			ta.style.opacity = '0';
-			document.body.appendChild(ta);
-			ta.select();
-			document.execCommand('copy');
-			document.body.removeChild(ta);
-		}
-		copied = label;
-		setTimeout(() => {
-			if (copied === label) copied = null;
-		}, 2000);
-	}
+	const guidCopy = useCopyFeedback();
 </script>
 
 {#await userData}
@@ -116,17 +98,17 @@
 											variant="ghost"
 											size="icon"
 											class="h-6 w-6 shrink-0"
-											onclick={() => copyToClipboard(user.userGUID!, 'guid')}
+											onclick={() => guidCopy.copy(user.userGUID!)}
 											{...props}
 										>
-											{#if copied === 'guid'}<Check class="h-3 w-3 text-emerald-500" />{:else}<Copy
+											{#if guidCopy.copied}<Check class="h-3 w-3 text-emerald-500" />{:else}<Copy
 													class="h-3 w-3"
 												/>{/if}
 										</Button>
 									{/snippet}
 								</Tooltip.Trigger>
 								<Tooltip.Content
-									>{copied === 'guid' ? 'Copied!' : 'Copy canonical ID'}</Tooltip.Content
+									>{guidCopy.copied ? 'Copied!' : 'Copy canonical ID'}</Tooltip.Content
 								>
 							</Tooltip.Root>
 						</div>
