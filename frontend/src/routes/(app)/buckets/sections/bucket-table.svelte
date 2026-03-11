@@ -124,11 +124,13 @@
 	let selectedCount = $derived(selectedKeys.length);
 
 	const del = useDelete({ entityName: 'bucket' });
+	let forceDelete = $state(false);
+	let forceBulkDelete = $state(false);
 
 	function onConfirmDelete() {
 		del.confirmDelete(() => {
 			const queries = nsData ? [bucketData, nsData] : [bucketData];
-			return delete_bucket({ bucket: del.deleteTarget, force: true }).updates(...queries);
+			return delete_bucket({ bucket: del.deleteTarget, force: forceDelete }).updates(...queries);
 		});
 	}
 
@@ -136,7 +138,7 @@
 		del.confirmBulkDelete(
 			selectedKeys,
 			(name, isLast) => {
-				const call = delete_bucket({ bucket: name, force: true });
+				const call = delete_bucket({ bucket: name, force: forceBulkDelete });
 				if (isLast) {
 					const queries = nsData ? [bucketData, nsData] : [bucketData];
 					return call.updates(...queries);
@@ -352,17 +354,21 @@
 
 <DeleteConfirmDialog
 	bind:open={del.deleteDialogOpen}
+	bind:force={forceDelete}
 	name={del.deleteTarget}
 	itemType="bucket"
-	description={`Are you sure you want to delete bucket "${del.deleteTarget}"? All objects and versions inside will be permanently removed. This action cannot be undone.`}
+	description={`Are you sure you want to delete bucket "${del.deleteTarget}"? This action cannot be undone.`}
+	showForceOption
 	loading={del.deleting}
 	onconfirm={onConfirmDelete}
 />
 
 <BulkDeleteDialog
 	bind:open={del.bulkDeleteOpen}
+	bind:force={forceBulkDelete}
 	count={selectedCount}
 	itemType="bucket"
+	showForceOption
 	loading={del.deleting}
 	onconfirm={onConfirmBulkDelete}
 />
