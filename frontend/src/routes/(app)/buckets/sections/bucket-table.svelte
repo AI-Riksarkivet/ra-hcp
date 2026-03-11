@@ -126,15 +126,22 @@
 	const del = useDelete({ entityName: 'bucket' });
 
 	function onConfirmDelete() {
-		del.confirmDelete(() => delete_bucket({ bucket: del.deleteTarget }).updates(bucketData));
+		del.confirmDelete(() => {
+			const queries = nsData ? [bucketData, nsData] : [bucketData];
+			return delete_bucket({ bucket: del.deleteTarget, force: true }).updates(...queries);
+		});
 	}
 
 	function onConfirmBulkDelete() {
 		del.confirmBulkDelete(
 			selectedKeys,
 			(name, isLast) => {
-				const call = delete_bucket({ bucket: name });
-				return isLast ? call.updates(bucketData) : call;
+				const call = delete_bucket({ bucket: name, force: true });
+				if (isLast) {
+					const queries = nsData ? [bucketData, nsData] : [bucketData];
+					return call.updates(...queries);
+				}
+				return call;
 			},
 			() => {
 				rowSelection = {};
@@ -347,6 +354,7 @@
 	bind:open={del.deleteDialogOpen}
 	name={del.deleteTarget}
 	itemType="bucket"
+	description={`Are you sure you want to delete bucket "${del.deleteTarget}"? All objects and versions inside will be permanently removed. This action cannot be undone.`}
 	loading={del.deleting}
 	onconfirm={onConfirmDelete}
 />

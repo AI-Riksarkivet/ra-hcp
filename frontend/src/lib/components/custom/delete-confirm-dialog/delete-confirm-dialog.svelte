@@ -6,12 +6,14 @@
 		open = $bindable(false),
 		name,
 		itemType,
+		description,
 		loading = false,
 		onconfirm,
 	}: {
 		open: boolean;
 		name: string;
 		itemType: string;
+		description?: string;
 		loading?: boolean;
 		onconfirm: () => void;
 	} = $props();
@@ -22,8 +24,12 @@
 		<AlertDialog.Header>
 			<AlertDialog.Title>Delete {itemType}</AlertDialog.Title>
 			<AlertDialog.Description>
-				Are you sure you want to delete {itemType} "<strong>{name}</strong>"? This action cannot be
-				undone.
+				{#if description}
+					{description}
+				{:else}
+					Are you sure you want to delete {itemType} "<strong>{name}</strong>"? This action cannot
+					be undone.
+				{/if}
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>

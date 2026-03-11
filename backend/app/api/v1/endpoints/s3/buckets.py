@@ -4,7 +4,7 @@ Endpoints:
     GET  /buckets              — list all buckets
     POST /buckets              — create a bucket
     HEAD /buckets/{bucket}     — check if bucket exists
-    DELETE /buckets/{bucket}   — delete a bucket
+    DELETE /buckets/{bucket}   — delete a bucket (force=true empties first)
     GET  /buckets/{bucket}/versioning — get versioning status
     PUT  /buckets/{bucket}/versioning — set versioning
     GET  /buckets/{bucket}/acl — get bucket ACL
@@ -14,9 +14,11 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import logging
+from typing import Optional
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.dependencies import get_s3_service
 from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error, run_s3
@@ -33,6 +35,8 @@ from app.schemas.s3 import (
     VersioningMutationResponse,
 )
 from app.services.storage import StorageProtocol
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/buckets", tags=["S3 Buckets"])
 
@@ -73,10 +77,74 @@ async def head_bucket(bucket: str, s3: StorageProtocol = Depends(get_s3_service)
 
 
 @router.delete("/{bucket}", response_model=BucketMutationResponse)
-async def delete_bucket(bucket: str, s3: StorageProtocol = Depends(get_s3_service)):
-    """Delete an S3 bucket. The bucket must be empty."""
+async def delete_bucket(
+    bucket: str,
+    force: Optional[bool] = Query(None),
+    s3: StorageProtocol = Depends(get_s3_service),
+):
+    """Delete an S3 bucket.
+
+    If ``force=true``, all objects (including versions and delete markers)
+    are removed before deleting the bucket itself.
+    """
+    if force:
+        await _empty_bucket(s3, bucket)
     await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
     return {"status": "deleted", "bucket": bucket}
+
+
+async def _empty_bucket(s3: StorageProtocol, bucket: str) -> None:
+    """Delete all objects, versions, and delete markers in *bucket*."""
+    deleted = 0
+
+    # 1. Delete all object versions and delete markers
+    key_marker: str | None = None
+    version_marker: str | None = None
+    while True:
+        result = await asyncio.to_thread(
+            s3.list_object_versions,
+            bucket,
+            None,  # prefix
+            1000,
+            key_marker,
+            version_marker,
+        )
+        items: list[tuple[str, str | None]] = []
+        for v in result.get("Versions", []):
+            items.append((v["Key"], v.get("VersionId")))
+        for dm in result.get("DeleteMarkers", []):
+            items.append((dm["Key"], dm.get("VersionId")))
+
+        for key, vid in items:
+            try:
+                await asyncio.to_thread(s3.delete_object, bucket, key, vid)
+                deleted += 1
+            except (ClientError, BotoCoreError) as exc:
+                logger.warning(
+                    "force-delete: failed to remove %s/%s: %s", bucket, key, exc
+                )
+
+        if not result.get("IsTruncated", False):
+            break
+        key_marker = result.get("NextKeyMarker")
+        version_marker = result.get("NextVersionIdMarker")
+
+    # 2. Clean up any remaining objects (non-versioned)
+    token: str | None = None
+    while True:
+        result = await asyncio.to_thread(s3.list_objects, bucket, None, 1000, token)
+        keys = [o["Key"] for o in result.get("Contents", [])]
+        if keys:
+            await asyncio.to_thread(s3.delete_objects, bucket, keys)
+            deleted += len(keys)
+        if not result.get("IsTruncated", False):
+            break
+        token = result.get("NextContinuationToken")
+
+    if deleted > 0:
+        logger.info(
+            "force-delete: removed %d objects from bucket '%s'", deleted, bucket
+        )
 
 
 # ── Bucket versioning ────────────────────────────────────────────────

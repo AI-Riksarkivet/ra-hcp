@@ -27,8 +27,11 @@ export function useDelete(opts: UseDeleteOptions) {
     try {
       await deleteFn();
       toast.success(`Deleted ${opts.entityName} "${deleteTarget}"`);
-    } catch {
-      toast.error(`Failed to delete ${opts.entityName}`);
+    } catch (err) {
+      const msg = err instanceof Error
+        ? err.message
+        : `Failed to delete ${opts.entityName}`;
+      toast.error(msg);
     } finally {
       deleting = false;
       deleteDialogOpen = false;
@@ -44,12 +47,16 @@ export function useDelete(opts: UseDeleteOptions) {
     deleting = true;
     let successCount = 0;
     let failCount = 0;
+    const errors: string[] = [];
     for (let i = 0; i < names.length; i++) {
       try {
         await deleteFn(names[i], i === names.length - 1);
         successCount++;
-      } catch {
+      } catch (err) {
         failCount++;
+        if (err instanceof Error && err.message) {
+          errors.push(`${names[i]}: ${err.message}`);
+        }
       }
     }
     if (successCount > 0) {
@@ -60,11 +67,12 @@ export function useDelete(opts: UseDeleteOptions) {
       );
     }
     if (failCount > 0) {
-      toast.error(
-        `Failed to delete ${failCount} ${opts.entityName}${
+      const summary = errors.length > 0
+        ? errors.join("\n")
+        : `Failed to delete ${failCount} ${opts.entityName}${
           failCount !== 1 ? "s" : ""
-        }`,
-      );
+        }`;
+      toast.error(summary);
     }
     onDone?.();
     deleting = false;
