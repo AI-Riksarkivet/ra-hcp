@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="zensical-0.0.25">
+      <meta name="generator" content="zensical-0.0.26">
     
     
       
@@ -1946,7 +1946,7 @@
   <p>GET  /buckets              — list all buckets
 POST /buckets              — create a bucket
 HEAD /buckets/{bucket}     — check if bucket exists
-DELETE /buckets/{bucket}   — delete a bucket
+DELETE /buckets/{bucket}   — delete a bucket (force=true empties first)
 GET  /buckets/{bucket}/versioning — get versioning status
 PUT  /buckets/{bucket}/versioning — set versioning
 GET  /buckets/{bucket}/acl — get bucket ACL
@@ -1992,11 +1992,7 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span>
-<span class="normal">44</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">44</span>
 <span class="normal">45</span>
 <span class="normal">46</span>
 <span class="normal">47</span>
@@ -2007,7 +2003,11 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 <span class="normal">52</span>
 <span class="normal">53</span>
 <span class="normal">54</span>
-<span class="normal">55</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ListBucketsResponse</span><span class="p">)</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ListBucketsResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_buckets</span><span class="p">(</span><span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;List all S3 buckets accessible to the authenticated user.&quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
@@ -2049,14 +2049,14 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">62</span>
 <span class="normal">63</span>
 <span class="normal">64</span>
-<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">201</span><span class="p">)</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">201</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_bucket</span><span class="p">(</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">CreateBucketRequest</span><span class="p">,</span>
     <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">),</span>
@@ -2090,11 +2090,11 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">&quot;</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">&quot;</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">head_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check whether a bucket exists. Returns 200 or 404.&quot;&quot;&quot;</span>
     <span class="k">await</span> <span class="n">run_s3</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">head_bucket</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
@@ -2109,7 +2109,7 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 
 
 <h3 id="app.api.v1.endpoints.s3.buckets.delete_bucket" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">delete_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">s3</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">))</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">delete_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="n">s3</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">))</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-async"><code>async</code></small>
@@ -2120,18 +2120,40 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 
     <div class="doc doc-contents ">
 
-        <p>Delete an S3 bucket. The bucket must be empty.</p>
+        <p>Delete an S3 bucket.</p>
+<p>If <code>force=true</code>, all objects (including versions and delete markers)
+are removed before deleting the bucket itself.</p>
 
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">75</span>
-<span class="normal">76</span>
-<span class="normal">77</span>
-<span class="normal">78</span>
-<span class="normal">79</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
-<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete an S3 bucket. The bucket must be empty.&quot;&quot;&quot;</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_bucket</span><span class="p">(</span>
+    <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">force</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span>
+    <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">),</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete an S3 bucket.</span>
+
+<span class="sd">    If ``force=true``, all objects (including versions and delete markers)</span>
+<span class="sd">    are removed before deleting the bucket itself.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">force</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">_empty_bucket</span><span class="p">(</span><span class="n">s3</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
     <span class="k">await</span> <span class="n">run_s3</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">delete_bucket</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;deleted&quot;</span><span class="p">,</span> <span class="s2">&quot;bucket&quot;</span><span class="p">:</span> <span class="n">bucket</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>
@@ -2160,17 +2182,17 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">85</span>
-<span class="normal">86</span>
-<span class="normal">87</span>
-<span class="normal">88</span>
-<span class="normal">89</span>
-<span class="normal">90</span>
-<span class="normal">91</span>
-<span class="normal">92</span>
-<span class="normal">93</span>
-<span class="normal">94</span>
-<span class="normal">95</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/versioning&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketVersioningResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/versioning&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketVersioningResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_bucket_versioning</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">),</span>
@@ -2207,15 +2229,15 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
-<span class="normal">102</span>
-<span class="normal">103</span>
-<span class="normal">104</span>
-<span class="normal">105</span>
-<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/versioning&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">VersioningMutationResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/versioning&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">VersioningMutationResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">put_bucket_versioning</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">PutBucketVersioningRequest</span><span class="p">,</span>
@@ -2250,14 +2272,14 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/acl&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">AclResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/acl&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">AclResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_bucket_acl</span><span class="p">(</span><span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the access control list (ACL) for a bucket.&quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_s3</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">get_bucket_acl</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
@@ -2291,20 +2313,20 @@ PUT  /buckets/{bucket}/acl — set bucket ACL</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/acl&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/acl&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">put_bucket_acl</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">AclPolicy</span><span class="p">,</span>
