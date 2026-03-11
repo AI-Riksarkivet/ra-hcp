@@ -12,34 +12,36 @@
         <meta name="author" content="AI-Riksarkivet">
       
       
-        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/components/">
+        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/architecture/frontend/">
       
       
-        <link rel="prev" href="../api/reference/content-class/">
+        <link rel="prev" href="../storage/">
       
+      
+        <link rel="next" href="../deployment/">
       
       
         
       
       
-      <link rel="icon" href="../assets/favicon.ico">
+      <link rel="icon" href="../../assets/favicon.ico">
       <meta name="generator" content="zensical-0.0.26">
     
     
       
-        <title>UI Components - ra-hcp</title>
+        <title>Frontend Architecture - ra-hcp</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../assets/stylesheets/modern/main.50057488.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.50057488.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.dfe2e883.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
       
       
 
@@ -58,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -85,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ui-components" class="md-skip">
+        <a href="#frontend-architecture" class="md-skip">
           Skip to content
         </a>
       
@@ -101,9 +103,9 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="./.." title="ra-hcp" class="md-header__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+    <a href="../.." title="ra-hcp" class="md-header__button md-logo" aria-label="ra-hcp" data-md-component="logo">
       
-  <img src="../assets/ra.svg" alt="ra-hcp">
+  <img src="../../assets/ra.svg" alt="ra-hcp">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
@@ -120,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              UI Components
+              Frontend Architecture
             
           </span>
         </div>
@@ -200,7 +202,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="./.." class="md-tabs__link">
+        <a href="../.." class="md-tabs__link">
           
   
   ra-hcp
@@ -219,7 +221,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../getting-started/" class="md-tabs__link">
+        <a href="../../getting-started/" class="md-tabs__link">
           
   
   Getting Started
@@ -234,11 +236,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../architecture/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   Architecture
@@ -257,7 +261,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../api/" class="md-tabs__link">
+        <a href="../../api/" class="md-tabs__link">
           
   
   API Guide
@@ -276,7 +280,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../api/reference/endpoints/" class="md-tabs__link">
+        <a href="../../api/reference/endpoints/" class="md-tabs__link">
           
   
   API Reference
@@ -291,13 +295,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="././" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../components/" class="md-tabs__link">
           
   
   Components
@@ -325,9 +327,7 @@
           
             
               
-                
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" hidden>
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -338,9 +338,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="./.." title="ra-hcp" class="md-nav__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+    <a href="../.." title="ra-hcp" class="md-nav__button md-logo" aria-label="ra-hcp" data-md-component="logo">
       
-  <img src="../assets/ra.svg" alt="ra-hcp">
+  <img src="../../assets/ra.svg" alt="ra-hcp">
 
     </a>
     ra-hcp
@@ -417,7 +417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -502,7 +502,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/" class="md-nav__link">
+      <a href="../../getting-started/" class="md-nav__link">
         
   
   
@@ -530,7 +530,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/concepts/" class="md-nav__link">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
         
   
   
@@ -558,7 +558,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/configuration/" class="md-nav__link">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
         
   
   
@@ -590,24 +590,29 @@
       
   
   
+    
   
   
+  
     
     
     
     
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -625,7 +630,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -643,7 +648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -671,7 +676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/backend/" class="md-nav__link">
+      <a href="../backend/" class="md-nav__link">
         
   
   
@@ -699,7 +704,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/storage/" class="md-nav__link">
+      <a href="../storage/" class="md-nav__link">
         
   
   
@@ -724,10 +729,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../architecture/frontend/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frontend
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -743,6 +775,88 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#rbac" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RBAC
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RBAC">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#access-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#protected-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protected routes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sidebar-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidebar filtering
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -755,7 +869,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/deployment/" class="md-nav__link">
+      <a href="../deployment/" class="md-nav__link">
         
   
   
@@ -840,7 +954,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/" class="md-nav__link">
+      <a href="../../api/" class="md-nav__link">
         
   
   
@@ -868,7 +982,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/authentication/" class="md-nav__link">
+      <a href="../../api/authentication/" class="md-nav__link">
         
   
   
@@ -896,7 +1010,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/s3-buckets/" class="md-nav__link">
+      <a href="../../api/s3-buckets/" class="md-nav__link">
         
   
   
@@ -924,7 +1038,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/s3-objects/" class="md-nav__link">
+      <a href="../../api/s3-objects/" class="md-nav__link">
         
   
   
@@ -952,7 +1066,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/tenants/" class="md-nav__link">
+      <a href="../../api/tenants/" class="md-nav__link">
         
   
   
@@ -980,7 +1094,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/namespaces/" class="md-nav__link">
+      <a href="../../api/namespaces/" class="md-nav__link">
         
   
   
@@ -1008,7 +1122,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/system/" class="md-nav__link">
+      <a href="../../api/system/" class="md-nav__link">
         
   
   
@@ -1093,7 +1207,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/endpoints/" class="md-nav__link">
+      <a href="../../api/reference/endpoints/" class="md-nav__link">
         
   
   
@@ -1121,7 +1235,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/common/" class="md-nav__link">
+      <a href="../../api/reference/common/" class="md-nav__link">
         
   
   
@@ -1149,7 +1263,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/s3/" class="md-nav__link">
+      <a href="../../api/reference/s3/" class="md-nav__link">
         
   
   
@@ -1177,7 +1291,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/tenant/" class="md-nav__link">
+      <a href="../../api/reference/tenant/" class="md-nav__link">
         
   
   
@@ -1205,7 +1319,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/namespace/" class="md-nav__link">
+      <a href="../../api/reference/namespace/" class="md-nav__link">
         
   
   
@@ -1233,7 +1347,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/user-account/" class="md-nav__link">
+      <a href="../../api/reference/user-account/" class="md-nav__link">
         
   
   
@@ -1261,7 +1375,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/group-account/" class="md-nav__link">
+      <a href="../../api/reference/group-account/" class="md-nav__link">
         
   
   
@@ -1289,7 +1403,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/content-class/" class="md-nav__link">
+      <a href="../../api/reference/content-class/" class="md-nav__link">
         
   
   
@@ -1321,29 +1435,24 @@
       
   
   
-    
   
   
-  
     
     
     
     
       
-        
-        
-      
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -1361,7 +1470,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1376,37 +1485,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    UI Components
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../components/" class="md-nav__link">
         
   
   
@@ -1422,38 +1504,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#component-overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Component Overview
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1474,9 +1524,7 @@
             
             
               
-                
-              
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" hidden>
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -1496,10 +1544,60 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#component-overview" class="md-nav__link">
+  <a href="#rbac" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Component Overview
+        RBAC
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="RBAC">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#access-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#protected-routes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protected routes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sidebar-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidebar filtering
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Patterns
       
     </span>
   </a>
@@ -1519,8 +1617,6 @@
               
                 
 
-  
-
 
 
   
@@ -1533,7 +1629,7 @@
   
   
     <li class="md-path__item">
-      <a href="./.." class="md-path__link">
+      <a href="../.." class="md-path__link">
         
   <span class="md-ellipsis">
     ra-hcp
@@ -1551,10 +1647,10 @@
     
     
       <li class="md-path__item">
-        <a href="././" class="md-path__link">
+        <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    Components
+    Architecture
   </span>
 
         </a>
@@ -1571,7 +1667,7 @@
                 
                   
   
-    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/components/index.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/architecture/frontend.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
     </a>
@@ -1580,108 +1676,156 @@
     
       
     
-    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/components/index.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/architecture/frontend.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-code-2" viewBox="0 0 24 24"><path d="M4 12.15V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-3.35"/><path d="M14 2v5a1 1 0 0 0 1 1h5M5 16l-3 3 3 3M9 22l3-3-3-3"/></svg>
     </a>
   
 
 
-<h1 id="ui-components">UI Components<a class="headerlink" href="#ui-components" title="Permanent link">&para;</a></h1>
-<p>The HCP App uses <a href="https://next.shadcn-svelte.com/">shadcn-svelte</a> with custom components built on top. Browse the full interactive component library below.</p>
-<p><iframe
-  src="https://ai-riksarkivet.github.io/ra-hcp/storybook/"
-  width="100%"
-  height="1000"
-  style="border: 1px solid #e0e0e0; border-radius: 8px;"
-></iframe>
-</p>
-<div class="admonition tip">
-<p class="admonition-title">Open in new tab</p>
-<p>For the best experience, <a href="https://ai-riksarkivet.github.io/ra-hcp/storybook/">open Storybook directly</a> in a new tab. Use the sidebar to navigate components and the Controls panel to interact with props.</p>
-</div>
-<hr />
-<h2 id="component-overview">Component Overview<a class="headerlink" href="#component-overview" title="Permanent link">&para;</a></h2>
+<h1 id="frontend-architecture">Frontend Architecture<a class="headerlink" href="#frontend-architecture" title="Permanent link">&para;</a></h1>
+<p>The SvelteKit frontend follows a reactive pattern with remote function abstractions and server-side RBAC:</p>
+<pre class="mermaid"><code>graph TD
+    subgraph "Pages"
+        P["SvelteKit Routes&lt;br/&gt;+page.svelte"]
+        L["Layout Server Load&lt;br/&gt;+layout.server.ts"]
+        G["Route Guards&lt;br/&gt;+page.server.ts"]
+    end
+
+    subgraph "RBAC"
+        HOOK["Server Hook&lt;br/&gt;Token extraction"]
+        AL["Access Levels&lt;br/&gt;sys-admin · tenant-admin&lt;br/&gt;namespace-user"]
+        GUARD["requireAdmin()&lt;br/&gt;Server-side redirect"]
+    end
+
+    subgraph "Components"
+        UI["UI Components&lt;br/&gt;DataTable · FormDialog&lt;br/&gt;FileViewer · etc."]
+        FEAT["Feature Components&lt;br/&gt;Namespace settings&lt;br/&gt;User management"]
+        SIDE["Sidebar&lt;br/&gt;Role-conditional sections"]
+    end
+
+    subgraph "Data Layer"
+        Q["query()&lt;br/&gt;GET requests with caching"]
+        C["command()&lt;br/&gt;POST/PUT/DELETE mutations"]
+        REM["Remote Functions&lt;br/&gt;*.remote.ts"]
+    end
+
+    subgraph "State"
+        ST["$state&lt;br/&gt;Mutable reactive state"]
+        DER["$derived&lt;br/&gt;Computed values"]
+        EFF["$effect&lt;br/&gt;Side effects"]
+    end
+
+    HOOK --&gt;|"JWT cookie"| L
+    L --&gt;|"fetch user profile"| REM
+    L --&gt;|"accessLevel"| AL
+    AL --&gt; G
+    G --&gt;|"namespace-user → /buckets"| GUARD
+    L --&gt; P
+    P --&gt; UI
+    P --&gt; FEAT
+    SIDE --&gt;|"isAdmin filter"| AL
+    FEAT --&gt; Q
+    FEAT --&gt; C
+    Q --&gt; REM
+    C --&gt; REM
+    REM --&gt;|"fetch()"| API2["FastAPI Backend"]
+    P --&gt; ST
+    P --&gt; DER
+    P --&gt; EFF
+    C --&gt;|".updates(queryData)"| Q</code></pre>
+<h2 id="rbac">RBAC<a class="headerlink" href="#rbac" title="Permanent link">&para;</a></h2>
+<p>The frontend enforces role-based access control entirely on the server side, making it impossible to bypass via client-side manipulation.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant B as Browser
+    participant H as hooks.server.ts
+    participant L as +layout.server.ts
+    participant G as +page.server.ts
+    participant A as FastAPI Backend
+
+    B-&gt;&gt;H: Request /tenant-settings
+    H-&gt;&gt;H: Extract hcp_token cookie
+    H-&gt;&gt;L: event.locals.token
+
+    alt No token
+        L--&gt;&gt;B: Redirect → /login
+    else Has token
+        L-&gt;&gt;L: Parse JWT (username, tenant)
+        L-&gt;&gt;A: GET /userAccounts/{username}?verbose=true
+        A--&gt;&gt;L: { roles: [ADMINISTRATOR, ...], userGUID }
+        L-&gt;&gt;L: getAccessLevel(tenant, roles)
+
+        alt sys-admin (no tenant)
+            L--&gt;&gt;G: accessLevel = "sys-admin"
+        else tenant-admin (has ADMINISTRATOR role)
+            L--&gt;&gt;G: accessLevel = "tenant-admin"
+        else namespace-user (other roles)
+            L--&gt;&gt;G: accessLevel = "namespace-user"
+        end
+
+        G-&gt;&gt;G: requireAdmin(accessLevel)
+
+        alt namespace-user on admin route
+            G--&gt;&gt;B: Redirect → /buckets
+        else admin or sys-admin
+            G--&gt;&gt;B: Render page
+        end
+    end</code></pre>
+<h3 id="access-levels">Access levels<a class="headerlink" href="#access-levels" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Component</th>
-<th>Description</th>
+<th>Level</th>
+<th>Condition</th>
+<th>Access</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>DataTable</strong></td>
-<td>Sortable, searchable, paginated table with row selection and bulk actions</td>
+<td><strong>sys-admin</strong></td>
+<td>No tenant in JWT</td>
+<td>Full access to all routes</td>
 </tr>
 <tr>
-<td><strong>FileViewer</strong></td>
-<td>Modal for previewing files (images, video, audio, PDF, text) with metadata</td>
+<td><strong>tenant-admin</strong></td>
+<td>Has <code>ADMINISTRATOR</code> role</td>
+<td>Full access to tenant routes</td>
 </tr>
 <tr>
-<td><strong>FormDialog</strong></td>
-<td>Reusable modal for create/edit forms with validation and error handling</td>
-</tr>
-<tr>
-<td><strong>DeleteConfirmDialog</strong></td>
-<td>Destructive action confirmation with type-to-confirm</td>
-</tr>
-<tr>
-<td><strong>BulkDeleteDialog</strong></td>
-<td>Multi-item deletion confirmation</td>
-</tr>
-<tr>
-<td><strong>StorageProgressBar</strong></td>
-<td>Quota usage bar with color-coded thresholds</td>
-</tr>
-<tr>
-<td><strong>StatCard</strong></td>
-<td>Dashboard metric card with label, value, and optional content</td>
-</tr>
-<tr>
-<td><strong>PageHeader</strong></td>
-<td>Page title with description and action buttons</td>
-</tr>
-<tr>
-<td><strong>TagInput</strong></td>
-<td>Tag/chip editor with add/remove for tenant and namespace tags</td>
-</tr>
-<tr>
-<td><strong>IpListEditor</strong></td>
-<td>IP allow/deny list editor with badge display</td>
-</tr>
-<tr>
-<td><strong>CorsEditor</strong></td>
-<td>CORS XML configuration editor with save/delete</td>
-</tr>
-<tr>
-<td><strong>CopyableInput</strong></td>
-<td>Read-only input with copy-to-clipboard, optional secret masking</td>
-</tr>
-<tr>
-<td><strong>ServiceTagBadge</strong></td>
-<td>Color-coded badges for protocol types (S3, NFS, CIFS, SMTP)</td>
-</tr>
-<tr>
-<td><strong>SaveButton</strong></td>
-<td>Form save button with dirty/saving state indicators</td>
-</tr>
-<tr>
-<td><strong>ErrorBanner</strong></td>
-<td>Dismissible error banner for API and validation errors</td>
-</tr>
-<tr>
-<td><strong>StepProgress</strong></td>
-<td>Multi-step progress indicator for wizard flows</td>
+<td><strong>namespace-user</strong></td>
+<td>Any other role set</td>
+<td>Storage routes only (buckets, access control, analytics, settings)</td>
 </tr>
 </tbody>
 </table>
-<div class="admonition info">
-<p class="admonition-title">Storybook deploys automatically</p>
-<p>Stories are co-located with components (<code>*.stories.svelte</code>) and deployed to GitHub Pages on every push to <code>main</code>. The embed above always reflects the latest code -- no manual sync needed.</p>
-</div>
+<h3 id="protected-routes">Protected routes<a class="headerlink" href="#protected-routes" title="Permanent link">&para;</a></h3>
+<p>These routes call <code>requireAdmin()</code> in their <code>+page.server.ts</code> and redirect non-admin users to <code>/buckets</code>:</p>
+<ul>
+<li><code>/namespaces</code>, <code>/namespaces/[namespace]</code></li>
+<li><code>/users</code>, <code>/users/[username]</code>, <code>/users/groups/[groupname]</code></li>
+<li><code>/tenant-settings</code></li>
+<li><code>/search</code></li>
+<li><code>/content-classes</code>, <code>/content-classes/[name]</code></li>
+</ul>
+<h3 id="sidebar-filtering">Sidebar filtering<a class="headerlink" href="#sidebar-filtering" title="Permanent link">&para;</a></h3>
+<p>The sidebar conditionally renders sections based on access level:</p>
+<ul>
+<li><strong>All users</strong>: Storage (Buckets, Access Control), Analytics (Data Explorer)</li>
+<li><strong>Admins only</strong>: Tenant (Namespaces, Users &amp; Groups, Tenant Settings), Search &amp; Indexing (Search, Content Classes)</li>
+</ul>
+<h2 id="patterns">Patterns<a class="headerlink" href="#patterns" title="Permanent link">&para;</a></h2>
+<ul>
+<li>
+<p><strong>Remote functions</strong>: All API calls are defined in <code>*.remote.ts</code> files using <code>query()</code> for reads and <code>command()</code> for mutations.</p>
+</li>
+<li>
+<p><strong>Mutation refresh</strong>: After a mutation, <code>command(...).updates(queryData)</code> automatically invalidates and refetches the relevant query data.</p>
+</li>
+<li>
+<p><strong>Svelte 5 runes</strong>: Components use <code>$state</code> for mutable state, <code>$derived</code> for computed values, and <code>$effect</code> for async side effects with cancellation.</p>
+</li>
+</ul>
 
-  
 
 
 
@@ -1691,13 +1835,7 @@
 
 
 
-  
-  
 
-
-
-
-  
 
 
 
@@ -1723,12 +1861,10 @@
   
     
       
-        
-      
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../api/reference/content-class/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Content Class">
+          <a href="../storage/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Storage Layer">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -1738,11 +1874,27 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Content Class
+                Storage Layer
               </div>
             </div>
           </a>
         
+        
+          
+          <a href="../deployment/" class="md-footer__link md-footer__link--next" aria-label="Next: Deployment">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Deployment
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
         
       </nav>
     
@@ -1777,10 +1929,10 @@
       
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../assets/javascripts/bundle.5fd3284f.min.js"></script>
+      <script src="../../assets/javascripts/bundle.5fd3284f.min.js"></script>
       
     
   </body>

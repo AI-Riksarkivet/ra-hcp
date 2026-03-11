@@ -12,34 +12,36 @@
         <meta name="author" content="AI-Riksarkivet">
       
       
-        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/components/">
+        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/architecture/storage/">
       
       
-        <link rel="prev" href="../api/reference/content-class/">
+        <link rel="prev" href="../backend/">
       
+      
+        <link rel="next" href="../frontend/">
       
       
         
       
       
-      <link rel="icon" href="../assets/favicon.ico">
+      <link rel="icon" href="../../assets/favicon.ico">
       <meta name="generator" content="zensical-0.0.26">
     
     
       
-        <title>UI Components - ra-hcp</title>
+        <title>Storage Layer Architecture - ra-hcp</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../assets/stylesheets/modern/main.50057488.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.50057488.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.dfe2e883.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
       
       
 
@@ -58,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -85,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ui-components" class="md-skip">
+        <a href="#storage-layer-architecture" class="md-skip">
           Skip to content
         </a>
       
@@ -101,9 +103,9 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="./.." title="ra-hcp" class="md-header__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+    <a href="../.." title="ra-hcp" class="md-header__button md-logo" aria-label="ra-hcp" data-md-component="logo">
       
-  <img src="../assets/ra.svg" alt="ra-hcp">
+  <img src="../../assets/ra.svg" alt="ra-hcp">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
@@ -120,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              UI Components
+              Storage Layer Architecture
             
           </span>
         </div>
@@ -200,7 +202,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="./.." class="md-tabs__link">
+        <a href="../.." class="md-tabs__link">
           
   
   ra-hcp
@@ -219,7 +221,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../getting-started/" class="md-tabs__link">
+        <a href="../../getting-started/" class="md-tabs__link">
           
   
   Getting Started
@@ -234,11 +236,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../architecture/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   Architecture
@@ -257,7 +261,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../api/" class="md-tabs__link">
+        <a href="../../api/" class="md-tabs__link">
           
   
   API Guide
@@ -276,7 +280,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../api/reference/endpoints/" class="md-tabs__link">
+        <a href="../../api/reference/endpoints/" class="md-tabs__link">
           
   
   API Reference
@@ -291,13 +295,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="././" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../components/" class="md-tabs__link">
           
   
   Components
@@ -325,9 +327,7 @@
           
             
               
-                
-              
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" hidden>
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -338,9 +338,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="./.." title="ra-hcp" class="md-nav__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+    <a href="../.." title="ra-hcp" class="md-nav__button md-logo" aria-label="ra-hcp" data-md-component="logo">
       
-  <img src="../assets/ra.svg" alt="ra-hcp">
+  <img src="../../assets/ra.svg" alt="ra-hcp">
 
     </a>
     ra-hcp
@@ -417,7 +417,7 @@
   
   
     <li class="md-nav__item">
-      <a href="./.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -502,7 +502,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/" class="md-nav__link">
+      <a href="../../getting-started/" class="md-nav__link">
         
   
   
@@ -530,7 +530,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/concepts/" class="md-nav__link">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
         
   
   
@@ -558,7 +558,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../getting-started/configuration/" class="md-nav__link">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
         
   
   
@@ -590,24 +590,29 @@
       
   
   
+    
   
   
+  
     
     
     
     
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -625,7 +630,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -643,7 +648,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -671,7 +676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/backend/" class="md-nav__link">
+      <a href="../backend/" class="md-nav__link">
         
   
   
@@ -696,10 +701,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../architecture/storage/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Layer
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -715,6 +747,82 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-storage-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new storage backend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hcp-specific-workarounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HCP-specific workarounds
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#namespace-protocol-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Namespace protocol configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -727,7 +835,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/frontend/" class="md-nav__link">
+      <a href="../frontend/" class="md-nav__link">
         
   
   
@@ -755,7 +863,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../architecture/deployment/" class="md-nav__link">
+      <a href="../deployment/" class="md-nav__link">
         
   
   
@@ -840,7 +948,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/" class="md-nav__link">
+      <a href="../../api/" class="md-nav__link">
         
   
   
@@ -868,7 +976,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/authentication/" class="md-nav__link">
+      <a href="../../api/authentication/" class="md-nav__link">
         
   
   
@@ -896,7 +1004,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/s3-buckets/" class="md-nav__link">
+      <a href="../../api/s3-buckets/" class="md-nav__link">
         
   
   
@@ -924,7 +1032,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/s3-objects/" class="md-nav__link">
+      <a href="../../api/s3-objects/" class="md-nav__link">
         
   
   
@@ -952,7 +1060,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/tenants/" class="md-nav__link">
+      <a href="../../api/tenants/" class="md-nav__link">
         
   
   
@@ -980,7 +1088,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/namespaces/" class="md-nav__link">
+      <a href="../../api/namespaces/" class="md-nav__link">
         
   
   
@@ -1008,7 +1116,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/system/" class="md-nav__link">
+      <a href="../../api/system/" class="md-nav__link">
         
   
   
@@ -1093,7 +1201,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/endpoints/" class="md-nav__link">
+      <a href="../../api/reference/endpoints/" class="md-nav__link">
         
   
   
@@ -1121,7 +1229,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/common/" class="md-nav__link">
+      <a href="../../api/reference/common/" class="md-nav__link">
         
   
   
@@ -1149,7 +1257,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/s3/" class="md-nav__link">
+      <a href="../../api/reference/s3/" class="md-nav__link">
         
   
   
@@ -1177,7 +1285,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/tenant/" class="md-nav__link">
+      <a href="../../api/reference/tenant/" class="md-nav__link">
         
   
   
@@ -1205,7 +1313,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/namespace/" class="md-nav__link">
+      <a href="../../api/reference/namespace/" class="md-nav__link">
         
   
   
@@ -1233,7 +1341,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/user-account/" class="md-nav__link">
+      <a href="../../api/reference/user-account/" class="md-nav__link">
         
   
   
@@ -1261,7 +1369,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/group-account/" class="md-nav__link">
+      <a href="../../api/reference/group-account/" class="md-nav__link">
         
   
   
@@ -1289,7 +1397,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/reference/content-class/" class="md-nav__link">
+      <a href="../../api/reference/content-class/" class="md-nav__link">
         
   
   
@@ -1321,29 +1429,24 @@
       
   
   
-    
   
   
-  
     
     
     
     
       
-        
-        
-      
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -1361,7 +1464,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1376,37 +1479,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    UI Components
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../components/" class="md-nav__link">
         
   
   
@@ -1422,38 +1498,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#component-overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Component Overview
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1474,9 +1518,7 @@
             
             
               
-                
-              
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" hidden>
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -1496,10 +1538,54 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#component-overview" class="md-nav__link">
+  <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Component Overview
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-a-new-storage-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new storage backend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hcp-specific-workarounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HCP-specific workarounds
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#namespace-protocol-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Namespace protocol configuration
       
     </span>
   </a>
@@ -1519,8 +1605,6 @@
               
                 
 
-  
-
 
 
   
@@ -1533,7 +1617,7 @@
   
   
     <li class="md-path__item">
-      <a href="./.." class="md-path__link">
+      <a href="../.." class="md-path__link">
         
   <span class="md-ellipsis">
     ra-hcp
@@ -1551,10 +1635,10 @@
     
     
       <li class="md-path__item">
-        <a href="././" class="md-path__link">
+        <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    Components
+    Architecture
   </span>
 
         </a>
@@ -1571,7 +1655,7 @@
                 
                   
   
-    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/components/index.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/architecture/storage.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
     </a>
@@ -1580,108 +1664,183 @@
     
       
     
-    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/components/index.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/architecture/storage.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-code-2" viewBox="0 0 24 24"><path d="M4 12.15V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-3.35"/><path d="M14 2v5a1 1 0 0 0 1 1h5M5 16l-3 3 3 3M9 22l3-3-3-3"/></svg>
     </a>
   
 
 
-<h1 id="ui-components">UI Components<a class="headerlink" href="#ui-components" title="Permanent link">&para;</a></h1>
-<p>The HCP App uses <a href="https://next.shadcn-svelte.com/">shadcn-svelte</a> with custom components built on top. Browse the full interactive component library below.</p>
-<p><iframe
-  src="https://ai-riksarkivet.github.io/ra-hcp/storybook/"
-  width="100%"
-  height="1000"
-  style="border: 1px solid #e0e0e0; border-radius: 8px;"
-></iframe>
-</p>
-<div class="admonition tip">
-<p class="admonition-title">Open in new tab</p>
-<p>For the best experience, <a href="https://ai-riksarkivet.github.io/ra-hcp/storybook/">open Storybook directly</a> in a new tab. Use the sidebar to navigate components and the Controls panel to interact with props.</p>
-</div>
-<hr />
-<h2 id="component-overview">Component Overview<a class="headerlink" href="#component-overview" title="Permanent link">&para;</a></h2>
+<h1 id="storage-layer-architecture">Storage Layer Architecture<a class="headerlink" href="#storage-layer-architecture" title="Permanent link">&para;</a></h1>
+<p>The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against <code>StorageProtocol</code> (structural typing) and never imports backend-specific libraries like <code>boto3</code>.</p>
+<pre class="mermaid"><code>graph TD
+    subgraph "Endpoint Code"
+        EP["S3 Endpoints&lt;br/&gt;buckets · objects · versions · multipart"]
+    end
+
+    subgraph "Contracts"
+        SP["StorageProtocol&lt;br/&gt;(Protocol — structural typing)"]
+        SB["StorageBase&lt;br/&gt;(ABC — enforced at instantiation)"]
+    end
+
+    subgraph "Adapters"
+        HCP_A["HcpStorage&lt;br/&gt;boto3 wrapper&lt;br/&gt;HCP-specific workarounds"]
+        FUTURE["MinIO / Ceph / AWS&lt;br/&gt;(future adapters)"]
+    end
+
+    subgraph "Caching"
+        CHCP["CachedHcpStorage&lt;br/&gt;Redis caching layer"]
+    end
+
+    EP --&gt;|"type-hints against"| SP
+    SP -.-&gt;|"structural match"| SB
+    SB --&gt;|"inherits"| HCP_A
+    SB -.-&gt;|"inherits"| FUTURE
+    HCP_A --&gt;|"inherits"| CHCP</code></pre>
+<h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Component</th>
+<th>Layer</th>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>StorageProtocol</code></td>
+<td><code>services/storage/protocol.py</code></td>
+<td>Structural typing interface — endpoint DI type hints use this</td>
+</tr>
+<tr>
+<td><code>StorageBase</code></td>
+<td><code>services/storage/base.py</code></td>
+<td>Abstract base class — enforces method implementation at instantiation</td>
+</tr>
+<tr>
+<td><code>HcpStorage</code></td>
+<td><code>services/storage/adapters/hcp.py</code></td>
+<td>Concrete adapter — wraps boto3 with HCP-specific workarounds</td>
+</tr>
+<tr>
+<td><code>CachedHcpStorage</code></td>
+<td><code>services/cached_s3.py</code></td>
+<td>Caching decorator — inherits from <code>HcpStorage</code>, adds Redis caching</td>
+</tr>
+<tr>
+<td><code>StorageError</code></td>
+<td><code>services/storage/errors.py</code></td>
+<td>Backend-agnostic exceptions — adapters catch library errors and re-raise</td>
+</tr>
+</tbody>
+</table>
+<h2 id="adding-a-new-storage-backend">Adding a new storage backend<a class="headerlink" href="#adding-a-new-storage-backend" title="Permanent link">&para;</a></h2>
+<p>To add support for MinIO, Ceph, or AWS S3:</p>
+<ol>
+<li>Create <code>services/storage/adapters/minio.py</code> (or similar)</li>
+<li>Inherit from <code>StorageBase</code> — the ABC enforces all required methods</li>
+<li>Catch the backend's native exceptions and re-raise as <code>StorageError</code></li>
+<li>Register the new adapter in the dependency injection layer</li>
+<li>No endpoint code changes needed — they type-hint against <code>StorageProtocol</code></li>
+</ol>
+<h2 id="storage-operations">Storage operations<a class="headerlink" href="#storage-operations" title="Permanent link">&para;</a></h2>
+<p>The storage layer supports these operation groups:</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Operations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Buckets</strong></td>
+<td>list, create, head, delete</td>
+</tr>
+<tr>
+<td><strong>Objects</strong></td>
+<td>list, put, get, head, delete, copy, bulk delete</td>
+</tr>
+<tr>
+<td><strong>Versioning</strong></td>
+<td>get/set bucket versioning, list object versions, version-aware get/delete</td>
+</tr>
+<tr>
+<td><strong>ACLs</strong></td>
+<td>get/set bucket ACL, get/set object ACL</td>
+</tr>
+<tr>
+<td><strong>Multipart uploads</strong></td>
+<td>create, upload part, complete, abort, list parts</td>
+</tr>
+<tr>
+<td><strong>Presigned URLs</strong></td>
+<td>generate for get/put operations</td>
+</tr>
+</tbody>
+</table>
+<h2 id="hcp-specific-workarounds">HCP-specific workarounds<a class="headerlink" href="#hcp-specific-workarounds" title="Permanent link">&para;</a></h2>
+<p>The <code>HcpStorage</code> adapter handles several HCP quirks that differ from standard S3:</p>
+<table>
+<thead>
+<tr>
+<th>Workaround</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Disabled S3 region redirector</td>
+<td>HCP returns non-standard redirect responses that confuse boto3</td>
+</tr>
+<tr>
+<td>Path-style addressing</td>
+<td>HCP does not support virtual-hosted bucket names</td>
+</tr>
+<tr>
+<td>Individual deletes for bulk</td>
+<td>HCP requires <code>Content-MD5</code> on multi-delete but boto3 sends CRC32 instead</td>
+</tr>
+<tr>
+<td>OTel span tracing</td>
+<td>Every storage operation is traced with bucket, key, and method attributes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="namespace-protocol-configuration">Namespace protocol configuration<a class="headerlink" href="#namespace-protocol-configuration" title="Permanent link">&para;</a></h2>
+<p>Each HCP namespace supports multiple access protocols configured independently via MAPI:</p>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Schema</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>DataTable</strong></td>
-<td>Sortable, searchable, paginated table with row selection and bulk actions</td>
+<td><strong>HTTP/REST/S3/WebDAV</strong></td>
+<td><code>HttpProtocol</code></td>
+<td>Primary data access protocols with IP-based access control</td>
 </tr>
 <tr>
-<td><strong>FileViewer</strong></td>
-<td>Modal for previewing files (images, video, audio, PDF, text) with metadata</td>
+<td><strong>NFS</strong></td>
+<td><code>NfsProtocol</code></td>
+<td>Network file system mount access</td>
 </tr>
 <tr>
-<td><strong>FormDialog</strong></td>
-<td>Reusable modal for create/edit forms with validation and error handling</td>
+<td><strong>CIFS/SMB</strong></td>
+<td><code>CifsProtocol</code></td>
+<td>Windows file sharing access</td>
 </tr>
 <tr>
-<td><strong>DeleteConfirmDialog</strong></td>
-<td>Destructive action confirmation with type-to-confirm</td>
-</tr>
-<tr>
-<td><strong>BulkDeleteDialog</strong></td>
-<td>Multi-item deletion confirmation</td>
-</tr>
-<tr>
-<td><strong>StorageProgressBar</strong></td>
-<td>Quota usage bar with color-coded thresholds</td>
-</tr>
-<tr>
-<td><strong>StatCard</strong></td>
-<td>Dashboard metric card with label, value, and optional content</td>
-</tr>
-<tr>
-<td><strong>PageHeader</strong></td>
-<td>Page title with description and action buttons</td>
-</tr>
-<tr>
-<td><strong>TagInput</strong></td>
-<td>Tag/chip editor with add/remove for tenant and namespace tags</td>
-</tr>
-<tr>
-<td><strong>IpListEditor</strong></td>
-<td>IP allow/deny list editor with badge display</td>
-</tr>
-<tr>
-<td><strong>CorsEditor</strong></td>
-<td>CORS XML configuration editor with save/delete</td>
-</tr>
-<tr>
-<td><strong>CopyableInput</strong></td>
-<td>Read-only input with copy-to-clipboard, optional secret masking</td>
-</tr>
-<tr>
-<td><strong>ServiceTagBadge</strong></td>
-<td>Color-coded badges for protocol types (S3, NFS, CIFS, SMTP)</td>
-</tr>
-<tr>
-<td><strong>SaveButton</strong></td>
-<td>Form save button with dirty/saving state indicators</td>
-</tr>
-<tr>
-<td><strong>ErrorBanner</strong></td>
-<td>Dismissible error banner for API and validation errors</td>
-</tr>
-<tr>
-<td><strong>StepProgress</strong></td>
-<td>Multi-step progress indicator for wizard flows</td>
+<td><strong>SMTP</strong></td>
+<td><code>SmtpProtocol</code></td>
+<td>Email ingestion (storing email as objects)</td>
 </tr>
 </tbody>
 </table>
-<div class="admonition info">
-<p class="admonition-title">Storybook deploys automatically</p>
-<p>Stories are co-located with components (<code>*.stories.svelte</code>) and deployed to GitHub Pages on every push to <code>main</code>. The embed above always reflects the latest code -- no manual sync needed.</p>
-</div>
-
-  
+<p>Protocol settings are managed through the namespace access endpoints (<code>/api/v1/mapi/tenants/{tenant}/namespaces/{ns}/protocols/</code>) and each includes <code>ipSettings</code> for IP-based access control.</p>
 
 
 
@@ -1691,13 +1850,8 @@
 
 
 
-  
-  
 
 
-
-
-  
 
 
 
@@ -1723,12 +1877,10 @@
   
     
       
-        
-      
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../api/reference/content-class/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Content Class">
+          <a href="../backend/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Backend">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -1738,11 +1890,27 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Content Class
+                Backend
               </div>
             </div>
           </a>
         
+        
+          
+          <a href="../frontend/" class="md-footer__link md-footer__link--next" aria-label="Next: Frontend">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Frontend
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
         
       </nav>
     
@@ -1777,10 +1945,10 @@
       
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../assets/javascripts/bundle.5fd3284f.min.js"></script>
+      <script src="../../assets/javascripts/bundle.5fd3284f.min.js"></script>
       
     
   </body>
