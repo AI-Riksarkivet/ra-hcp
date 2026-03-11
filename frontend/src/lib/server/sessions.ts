@@ -9,10 +9,17 @@ const COOKIE_PREFIX = "hcp_token__";
 const ACTIVE_COOKIE = "hcp_token";
 const SYSADMIN_SLUG = "__sysadmin";
 
-function tenantToCookieName(tenant: string | undefined): string {
-  if (!tenant) return `${COOKIE_PREFIX}${SYSADMIN_SLUG}`;
-  const safe = tenant.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return `${COOKIE_PREFIX}${safe}`;
+function sanitize(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+function sessionCookieName(
+  tenant: string | undefined,
+  username: string,
+): string {
+  const tenantPart = tenant ? sanitize(tenant) : SYSADMIN_SLUG;
+  const userPart = sanitize(username);
+  return `${COOKIE_PREFIX}${tenantPart}__${userPart}`;
 }
 
 function parseJwtPayload(token: string): Record<string, unknown> {
@@ -67,8 +74,10 @@ export function setSessionCookies(
   token: string,
   tenant: string | undefined,
 ): void {
-  const tenantCookie = tenantToCookieName(tenant);
-  cookies.set(tenantCookie, token, cookieOptions);
+  const claims = parseJwtPayload(token);
+  const username = (claims.sub as string) ?? "unknown";
+  const cookieName = sessionCookieName(tenant, username);
+  cookies.set(cookieName, token, cookieOptions);
   cookies.set(ACTIVE_COOKIE, token, cookieOptions);
 }
 
