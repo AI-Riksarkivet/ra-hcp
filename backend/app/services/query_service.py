@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import httpx
-from fastapi import HTTPException
 
 from app.core.auth_utils import get_hcp_auth_header
 from app.core.config import MapiSettings
@@ -24,6 +23,8 @@ from app.schemas.query import (
     OperationQueryRequest,
     OperationQueryResponse,
 )
+from app.services.mapi_errors import MapiResponseError, MapiTransportError
+from app.services.mapi_service import raise_for_hcp_status
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class QueryService:
 
     def __init__(self, settings: MapiSettings):
         self.settings = settings
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     # ── Client lifecycle ───────────────────────────────────────────────
 
@@ -58,13 +59,14 @@ class QueryService:
         *,
         username: str,
         password: str,
-        auth_type: Optional[str] = None,
+        auth_type: str | None = None,
     ) -> dict:
         url = query_url_for_tenant(tenant, self.settings.hcp_domain)
         if not url:
-            raise HTTPException(
-                status_code=400,
-                detail="HCP domain not configured — cannot build query URL",
+            raise MapiResponseError(
+                "HCP domain not configured — cannot build query URL",
+                http_status=400,
+                hcp_status=0,
             )
 
         client = await self._get_client()
@@ -80,15 +82,13 @@ class QueryService:
             resp = await client.post(url, headers=headers, content=json.dumps(body))
         except httpx.TimeoutException:
             logger.error("Query API timeout: POST %s", url)
-            raise HTTPException(status_code=504, detail="HCP query timed out")
+            raise MapiTransportError("HCP query timed out", http_status=504)
         except httpx.ConnectError:
             logger.error("Query API unreachable: POST %s", url)
-            raise HTTPException(status_code=502, detail="HCP query unreachable")
+            raise MapiTransportError("HCP query unreachable", http_status=502)
         except httpx.TransportError as exc:
             logger.error("Query API transport error: POST %s — %s", url, exc)
-            raise HTTPException(status_code=502, detail="HCP query connection error")
-
-        from app.api.errors import raise_for_hcp_status
+            raise MapiTransportError("HCP query connection error", http_status=502)
 
         raise_for_hcp_status(resp, "query")
 
@@ -105,7 +105,7 @@ class QueryService:
         *,
         username: str,
         password: str,
-        auth_type: Optional[str] = None,
+        auth_type: str | None = None,
     ) -> ObjectQueryResponse:
         request_body = ObjectQueryRequest(object=query)
         data = await self._post_query(
@@ -124,7 +124,7 @@ class QueryService:
         *,
         username: str,
         password: str,
-        auth_type: Optional[str] = None,
+        auth_type: str | None = None,
     ) -> OperationQueryResponse:
         request_body = OperationQueryRequest(operation=query)
         data = await self._post_query(

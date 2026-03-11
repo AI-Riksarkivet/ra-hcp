@@ -3,18 +3,23 @@
 The SvelteKit frontend follows a reactive pattern with remote function abstractions and server-side RBAC:
 
 ```mermaid
-graph TD
-    HOOK["hooks.server.ts<br/>extract JWT cookie"] --> LAYOUT["+layout.server.ts<br/>fetch user profile · set accessLevel"]
-    LAYOUT --> GUARD["+page.server.ts<br/>requireAdmin() · route guards"]
-    GUARD --> PAGE["+page.svelte<br/>components · reactive state"]
+graph LR
+    subgraph Server["Server-side (SSR)"]
+        HOOK["hooks.server.ts<br/>extract JWT"] --> LAYOUT["+layout.server.ts<br/>fetch profile · RBAC"]
+        LAYOUT --> GUARD["+page.server.ts<br/>route guards"]
+    end
 
-    PAGE --> Q["query()<br/>GET with caching"]
-    PAGE --> C["command()<br/>mutations"]
-    C -->|".updates(queryData)"| Q
+    GUARD --> PAGE["+page.svelte"]
 
-    Q --> REM["*.remote.ts"]
-    C --> REM
-    REM -->|"fetch()"| API["FastAPI Backend"]
+    subgraph Data["Data layer"]
+        direction TB
+        Q["query() — reads"]
+        C["command() — writes"]
+        C -->|".updates()"| Q
+    end
+
+    PAGE --> Data
+    Data -->|"*.remote.ts"| API["FastAPI Backend"]
 ```
 
 ## RBAC

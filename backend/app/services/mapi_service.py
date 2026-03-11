@@ -7,19 +7,61 @@ and communication with the HCP system.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+import logging
+from typing import Any
 from urllib.parse import urlencode
 
-import logging
-
 import httpx
-from fastapi import HTTPException
 from pydantic import BaseModel
 
 from app.core.auth_utils import get_hcp_auth_header
 from app.core.config import MapiSettings
+from app.services.mapi_errors import MapiResponseError, MapiTransportError
 
 logger = logging.getLogger(__name__)
+
+# ── HCP status code → (http_status, message template) ─────────────────
+_HCP_STATUS_MAP: dict[int, tuple[int, str]] = {
+    302: (404, "{resource} not found or no permission"),
+    400: (400, "{detail}"),
+    401: (401, "HCP authentication failed"),
+    403: (403, "{detail}"),
+    404: (404, "{resource} not found"),
+    405: (405, "Method not allowed for this resource"),
+    409: (409, "{resource} already exists"),
+    414: (414, "Request URI too large"),
+    415: (415, "Unsupported media type"),
+    500: (502, "HCP internal error: {detail}"),
+    503: (503, "HCP unavailable: {detail}"),
+}
+
+
+def raise_for_hcp_status(resp: httpx.Response, resource: str = "resource") -> None:
+    """Raise ``MapiResponseError`` for non-2xx HCP responses."""
+    code = resp.status_code
+    if 200 <= code < 300:
+        return
+
+    detail = resp.headers.get("X-HCP-ErrorMessage", resp.text or f"HCP returned {code}")
+    entry = _HCP_STATUS_MAP.get(code)
+    if entry:
+        http_status, template = entry
+        msg = template.format(resource=resource, detail=detail)
+    else:
+        http_status = 502
+        msg = f"Unexpected HCP status {code}: {detail}"
+
+    raise MapiResponseError(msg, http_status=http_status, hcp_status=code)
+
+
+def parse_json_response(resp: httpx.Response) -> dict:
+    """Parse JSON response body, returning empty dict on empty body."""
+    if 200 <= resp.status_code < 300 and resp.content:
+        try:
+            return resp.json()
+        except (ValueError, TypeError):
+            return {}
+    return {}
 
 
 class MapiService:
@@ -27,7 +69,7 @@ class MapiService:
 
     def __init__(self, settings: MapiSettings):
         self.settings = settings
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     # ── Client lifecycle ───────────────────────────────────────────────
 
@@ -48,8 +90,8 @@ class MapiService:
     def _build_url(
         self,
         path: str,
-        host: Optional[str] = None,
-        query: Optional[Dict[str, Any]] = None,
+        host: str | None = None,
+        query: dict[str, Any] | None = None,
     ) -> str:
         """Build full URL for a MAPI request."""
         h = host or self.settings.hcp_host
@@ -68,15 +110,15 @@ class MapiService:
         method: str,
         path: str,
         *,
-        host: Optional[str] = None,
-        body: Optional[Any] = None,
-        query: Optional[Dict[str, Any]] = None,
+        host: str | None = None,
+        body: Any | None = None,
+        query: dict[str, Any] | None = None,
         content_type: str = "application/json",
         accept: str = "application/json",
         username: str,
         password: str,
-        auth_type: Optional[str] = None,
-        raw_body: Optional[bytes] = None,
+        auth_type: str | None = None,
+        raw_body: bytes | None = None,
     ) -> httpx.Response:
         """Execute an HTTP request against the HCP management API."""
         client = await self._get_client()
@@ -108,13 +150,13 @@ class MapiService:
             resp = await client.request(method, url, headers=headers, content=content)
         except httpx.TimeoutException:
             logger.error("MAPI timeout: %s %s", method, path)
-            raise HTTPException(status_code=504, detail="HCP timed out")
+            raise MapiTransportError("HCP timed out", http_status=504)
         except httpx.ConnectError:
             logger.error("MAPI unreachable: %s %s", method, path)
-            raise HTTPException(status_code=502, detail="HCP unreachable")
+            raise MapiTransportError("HCP unreachable", http_status=502)
         except httpx.TransportError as exc:
             logger.error("MAPI transport error: %s %s — %s", method, path, exc)
-            raise HTTPException(status_code=502, detail="HCP connection error")
+            raise MapiTransportError("HCP connection error", http_status=502)
 
         if resp.status_code >= 400:
             logger.warning("MAPI %s %s → %s", method, path, resp.status_code)
@@ -158,8 +200,6 @@ class MapiService:
         self, path: str, *, resource: str = "resource", **kwargs
     ) -> dict:
         """GET + raise_for_hcp_status + parse JSON. One-liner for read endpoints."""
-        from app.api.errors import raise_for_hcp_status, parse_json_response
-
         resp = await self.get(path, **kwargs)
         raise_for_hcp_status(resp, resource)
         return parse_json_response(resp)
@@ -168,8 +208,6 @@ class MapiService:
         self, method: str, path: str, *, resource: str = "resource", **kwargs
     ) -> httpx.Response:
         """request + raise_for_hcp_status. Returns the validated response."""
-        from app.api.errors import raise_for_hcp_status
-
         resp = await self.request(method, path, **kwargs)
         raise_for_hcp_status(resp, resource)
         return resp
@@ -183,7 +221,7 @@ class AuthenticatedMapiService(MapiService):
         base: MapiService,
         username: str,
         password: str,
-        host: Optional[str] = None,
+        host: str | None = None,
     ):
         self.settings = base.settings
         self._base = base

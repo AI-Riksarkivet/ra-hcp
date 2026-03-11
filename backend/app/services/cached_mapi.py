@@ -1,4 +1,4 @@
-"""Cached MAPI service — subclasses MapiService to add Redis caching.
+"""Cached MAPI service — wraps MapiService with Redis caching via composition.
 
 GET responses are cached; PUT/POST/DELETE invalidate affected entries.
 Zero changes to endpoint files required.
@@ -7,7 +7,7 @@ Zero changes to endpoint files required.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 from urllib.parse import urlencode
 
 import httpx
@@ -37,24 +37,28 @@ _TTL_RULES: list[tuple[str, str]] = [
 ]
 
 
-class CachedMapiService(MapiService):
-    """MapiService with transparent Redis caching on GET requests."""
+class CachedMapiService:
+    """MapiService wrapper with transparent Redis caching on GET requests."""
 
     def __init__(
         self,
-        settings: MapiSettings,
+        inner: MapiService,
         cache: CacheService,
         cache_settings: CacheSettings,
     ):
-        super().__init__(settings)
+        self._inner = inner
         self._cache = cache
         self._cache_settings = cache_settings
+
+    @property
+    def settings(self) -> MapiSettings:
+        return self._inner.settings
 
     def _cache_key(
         self,
         path: str,
-        query: Optional[Dict[str, Any]],
-        host: Optional[str] = None,
+        query: dict[str, Any] | None,
+        host: str | None = None,
     ) -> str:
         prefix = f"mapi:{host}:" if host else "mapi:"
         key = f"{prefix}{path}"
@@ -78,15 +82,15 @@ class CachedMapiService(MapiService):
         method: str,
         path: str,
         *,
-        host: Optional[str] = None,
-        body: Optional[Any] = None,
-        query: Optional[Dict[str, Any]] = None,
+        host: str | None = None,
+        body: Any | None = None,
+        query: dict[str, Any] | None = None,
         content_type: str = "application/json",
         accept: str = "application/json",
         username: str,
         password: str,
-        auth_type: Optional[str] = None,
-        raw_body: Optional[bytes] = None,
+        auth_type: str | None = None,
+        raw_body: bytes | None = None,
     ) -> httpx.Response:
         is_get = method.upper() == "GET"
 
@@ -107,8 +111,8 @@ class CachedMapiService(MapiService):
                     )
                 span.set_attribute("cache.hit", False)
 
-            # Delegate to real MapiService
-            resp = await super().request(
+            # Delegate to inner MapiService
+            resp = await self._inner.request(
                 method,
                 path,
                 host=host,
@@ -143,15 +147,9 @@ class CachedMapiService(MapiService):
             return resp
 
     async def _invalidate_for_write(
-        self, path: str, host: Optional[str] = None
+        self, path: str, host: str | None = None
     ) -> None:
-        """Invalidate cache entries affected by a write to *path*.
-
-        Strategy:
-        - Invalidate the exact resource + sub-resources: ``mapi:{path}*``
-        - Invalidate the parent collection (e.g. writing to
-          ``/tenants/t1/namespaces/ns1`` invalidates ``mapi:/tenants/t1/namespaces*``)
-        """
+        """Invalidate cache entries affected by a write to *path*."""
         prefix = f"mapi:{host}:" if host else "mapi:"
         # Invalidate resource and sub-resources
         await self._cache.invalidate_pattern(f"{prefix}{path}*")
@@ -161,3 +159,29 @@ class CachedMapiService(MapiService):
         if len(parts) == 2:
             parent = parts[0]
             await self._cache.invalidate_pattern(f"{prefix}{parent}*")
+
+    # ── Forwarded convenience methods ─────────────────────────────────
+
+    async def get(self, path: str, **kwargs) -> httpx.Response:
+        return await self.request("GET", path, **kwargs)
+
+    async def put(self, path: str, **kwargs) -> httpx.Response:
+        return await self.request("PUT", path, **kwargs)
+
+    async def post(self, path: str, **kwargs) -> httpx.Response:
+        return await self.request("POST", path, **kwargs)
+
+    async def delete(self, path: str, **kwargs) -> httpx.Response:
+        return await self.request("DELETE", path, **kwargs)
+
+    async def fetch_json(self, path: str, **kwargs) -> dict:
+        return await self._inner.fetch_json(path, **kwargs)
+
+    async def send(self, method: str, path: str, **kwargs) -> httpx.Response:
+        return await self._inner.send(method, path, **kwargs)
+
+    async def close(self):
+        pass  # inner owns the client
+
+    async def ping(self) -> bool:
+        return await self._inner.ping()

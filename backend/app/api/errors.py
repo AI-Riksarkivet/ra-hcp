@@ -1,82 +1,42 @@
-"""Common response helpers for route handlers."""
+"""Common response helpers for route handlers.
+
+Translates domain exceptions (StorageError, MapiError) into
+FastAPI HTTPException responses.  This is the only place where
+service-layer errors meet the web framework.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
-from botocore.exceptions import (
-    BotoCoreError,
-    ClientError,
-    EndpointConnectionError,
-    ReadTimeoutError,
-)
 from fastapi import HTTPException
 import httpx
+
+from app.services.mapi_errors import MapiError
 
 logger = logging.getLogger(__name__)
 
 
-def raise_for_s3_error(exc: ClientError, resource: str = "resource") -> None:
-    """Translate a botocore ClientError into an HTTPException."""
-    error = exc.response.get("Error", {})
-    code = error.get("Code", "Unknown")
-    message = error.get("Message", str(exc))
-    status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 502)
-
-    mapping = {
-        "NoSuchBucket": 404,
-        "NoSuchKey": 404,
-        "BucketNotEmpty": 409,
-        "BucketAlreadyExists": 409,
-        "BucketAlreadyOwnedByYou": 409,
-        "AccessDenied": 403,
-        "InvalidBucketName": 400,
-        "InvalidArgument": 400,
-    }
-    http_status = mapping.get(code, status)
-    raise HTTPException(status_code=http_status, detail=f"{resource}: {message}")
-
-
-def raise_for_s3_transport_error(
-    exc: BotoCoreError | Exception, resource: str = "resource"
-) -> None:
-    """Translate a botocore transport/connection error into an HTTPException."""
-    logger.error("S3 transport error for %s: %s", resource, exc)
-    if isinstance(exc, EndpointConnectionError):
-        raise HTTPException(
-            status_code=502, detail=f"{resource}: S3 endpoint unreachable"
-        )
-    if isinstance(exc, ReadTimeoutError):
-        raise HTTPException(status_code=504, detail=f"{resource}: S3 read timed out")
-    raise HTTPException(status_code=502, detail=f"{resource}: S3 connection error")
-
-
 def raise_for_hcp_status(resp: httpx.Response, resource: str = "resource") -> None:
-    """Translate HCP status codes into FastAPI HTTP exceptions."""
-    code = resp.status_code
-    if 200 <= code < 300:
-        return
+    """Translate HCP status codes into FastAPI HTTP exceptions.
 
-    detail = resp.headers.get("X-HCP-ErrorMessage", resp.text or f"HCP returned {code}")
+    Delegates to the service-layer ``raise_for_hcp_status`` which raises
+    ``MapiResponseError``, then catches and re-raises as ``HTTPException``.
+    This keeps the MAPI endpoint code that directly inspects responses
+    working unchanged.
+    """
+    from app.services.mapi_service import (
+        raise_for_hcp_status as _svc_raise,
+    )
+    from app.services.mapi_errors import MapiResponseError
 
-    mapping = {
-        302: (404, f"{resource} not found or no permission"),
-        400: (400, detail),
-        401: (401, "HCP authentication failed"),
-        403: (403, detail),
-        404: (404, f"{resource} not found"),
-        405: (405, "Method not allowed for this resource"),
-        409: (409, f"{resource} already exists"),
-        414: (414, "Request URI too large"),
-        415: (415, "Unsupported media type"),
-        500: (502, f"HCP internal error: {detail}"),
-        503: (503, f"HCP unavailable: {detail}"),
-    }
-
-    status, msg = mapping.get(code, (502, f"Unexpected HCP status {code}: {detail}"))
-    raise HTTPException(status_code=status, detail=msg)
+    try:
+        _svc_raise(resp, resource)
+    except MapiResponseError as exc:
+        raise HTTPException(status_code=exc.http_status, detail=exc.message)
 
 
 def parse_json_response(resp: httpx.Response) -> dict:
@@ -107,23 +67,19 @@ async def run_storage(
         )
 
 
-async def run_s3(
-    func: Callable[..., Any], resource: str, *args: Any, **kwargs: Any
+async def run_mapi(
+    coro,
+    resource: str = "resource",
 ) -> Any:
-    """Run a sync S3 operation in a thread with standard error handling.
+    """Await a MAPI coroutine, translating MapiError → HTTPException.
 
-    Handles both StorageError (from new adapters) and raw botocore
-    exceptions (from legacy code paths) for backward compatibility.
+    Usage::
+
+        resp = await run_mapi(mapi.get("/tenants", ...), "tenants")
     """
-    from app.services.storage.errors import StorageError
-
     try:
-        return await asyncio.to_thread(func, *args, **kwargs)
-    except StorageError as exc:
+        return await coro
+    except MapiError as exc:
         raise HTTPException(
             status_code=exc.http_status, detail=f"{resource}: {exc.message}"
         )
-    except ClientError as exc:
-        raise_for_s3_error(exc, resource)
-    except BotoCoreError as exc:
-        raise_for_s3_transport_error(exc, resource)
