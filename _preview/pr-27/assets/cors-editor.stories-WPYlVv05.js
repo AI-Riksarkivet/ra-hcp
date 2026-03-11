@@ -1,0 +1,14 @@
+import{p as C,f as c,i as t,d as _,e as f,k as u}from"./iframe-CWf27PRy.js";import{i as v}from"./legacy-DQA76Hu_.js";import{c as h,d as O}from"./create-runtime-stories-Bm_4wmfQ.js";import{C as w}from"./cors-editor-BF315RVo.js";import"./preload-helper-CFVQb_FG.js";import"./button-5150YEiy.js";import"./cn-BtxYAf1B.js";import"./index-CPQfhKb5.js";import"./Icon-DITVVYAT.js";import"./label-BzU35nbr.js";import"./create-id-B_1JCdG3.js";import"./input-zTd21VHu.js";import"./card-title-BEaoXEXi.js";import"./save-button-CpqcdvQM.js";import"./loader-circle-BfbR9apL.js";import"./delete-confirm-dialog-CQ-YZHgM.js";import"./alert-dialog-description-DAFFPd1A.js";import"./scroll-lock-CcAA4XD8.js";import"./is-Hnx3UWIX.js";import"./dialog-description-Bo6IKNVW.js";import"./checkbox-ZYfyNTb_.js";import"./check-Cwr_32G2.js";import"./toast-state.svelte-BqQsY5AA.js";const{fn:l}=__STORYBOOK_MODULE_TEST__,E={title:"UI/CorsEditor",component:w,args:{corsXml:"",loading:!1,title:"CORS Configuration",description:"",onsave:l(),ondelete:l()},argTypes:{corsXml:{control:"text"},loading:{control:"boolean"},title:{control:"text"},description:{control:"text"}}},{Story:o}=O();var R=u("<!> <!> <!> <!> <!>",1);function d(m,p){C(p,!1),v();var r=R(),s=c(r);o(s,{name:"Empty",args:{corsXml:""},parameters:{__svelteCsf:{rawCode:"<CorsEditor {...args} />"}}});var i=t(s,2);o(i,{name:"With Configuration",args:{corsXml:`<CORSConfiguration>
+  <CORSRule>
+    <AllowedOrigin>https://example.com</AllowedOrigin>
+    <AllowedMethod>GET</AllowedMethod>
+    <AllowedMethod>PUT</AllowedMethod>
+    <AllowedHeader>*</AllowedHeader>
+    <MaxAgeSeconds>3600</MaxAgeSeconds>
+  </CORSRule>
+</CORSConfiguration>`},parameters:{__svelteCsf:{rawCode:"<CorsEditor {...args} />"}}});var a=t(i,2);o(a,{name:"Loading",args:{corsXml:"",loading:!0,ondelete:void 0},parameters:{__svelteCsf:{rawCode:"<CorsEditor {...args} />"}}});var n=t(a,2);o(n,{name:"Without Delete",args:{corsXml:`<CORSConfiguration>
+  <CORSRule>
+    <AllowedOrigin>*</AllowedOrigin>
+    <AllowedMethod>GET</AllowedMethod>
+  </CORSRule>
+</CORSConfiguration>`,ondelete:void 0},parameters:{__svelteCsf:{rawCode:"<CorsEditor {...args} />"}}});var g=t(n,2);o(g,{name:"Custom Title",args:{corsXml:"",title:"Namespace CORS",description:"Configure cross-origin resource sharing rules for this namespace.",ondelete:void 0},parameters:{__svelteCsf:{rawCode:"<CorsEditor {...args} />"}}}),_(m,r),f()}d.__docgen={data:[],name:"cors-editor.stories.svelte"};const e=h(d,E),q=["Empty","WithConfiguration","Loading","WithoutDelete","CustomTitle"],z={...e.Empty,tags:["svelte-csf-v5"]},F={...e.WithConfiguration,tags:["svelte-csf-v5"]},J={...e.Loading,tags:["svelte-csf-v5"]},Q={...e.WithoutDelete,tags:["svelte-csf-v5"]},V={...e.CustomTitle,tags:["svelte-csf-v5"]};export{V as CustomTitle,z as Empty,J as Loading,F as WithConfiguration,Q as WithoutDelete,q as __namedExportsOrder,E as default};
