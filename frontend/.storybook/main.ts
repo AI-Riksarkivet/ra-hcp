@@ -1,3 +1,4 @@
+import process from "node:process";
 import type { StorybookConfig } from "@storybook/sveltekit";
 
 const config: StorybookConfig = {
@@ -6,6 +7,12 @@ const config: StorybookConfig = {
   framework: {
     name: "@storybook/sveltekit",
     options: {},
+  },
+  viteFinal(config) {
+    if (process.env.STORYBOOK_BASE) {
+      config.base = process.env.STORYBOOK_BASE;
+    }
+    return config;
   },
 };
 
