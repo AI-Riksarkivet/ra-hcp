@@ -59,7 +59,8 @@ class JSONFormatter(logging.Formatter):
         return _json.dumps(entry, default=str)
 
 
-_resource = Resource.create({"service.name": "hcp-api"})
+_service_name = os.getenv("OTEL_SERVICE_NAME", "ra-hcp")
+_resource = Resource.create({"service.name": _service_name})
 
 
 def setup_telemetry(app: FastAPI) -> None:
@@ -69,7 +70,7 @@ def setup_telemetry(app: FastAPI) -> None:
     tracer_provider = TracerProvider(resource=_resource)
 
     if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
             OTLPSpanExporter,
         )
 
@@ -81,7 +82,7 @@ def setup_telemetry(app: FastAPI) -> None:
 
     # ── Metrics provider ──────────────────────────────────────────────
     if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
-        from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
+        from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
             OTLPMetricExporter,
         )
         from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
@@ -115,4 +116,6 @@ def setup_telemetry(app: FastAPI) -> None:
     logging.root.handlers.clear()
     logging.root.addHandler(handler)
     logging.root.setLevel(logging.INFO)
-    logging.getLogger(__name__).info("Telemetry initialised (service.name=hcp-api)")
+    logging.getLogger(__name__).info(
+        "Telemetry initialised (service.name=%s)", _service_name
+    )

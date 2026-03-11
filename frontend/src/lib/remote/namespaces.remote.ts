@@ -320,6 +320,24 @@ export const update_ns_versioning = command(
   },
 );
 
+export const delete_ns_versioning = command(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/versioningSettings`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to reset versioning settings",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
 // ── Namespace Statistics ──────────────────────────────────────────────
 
 export interface NsStatistics {

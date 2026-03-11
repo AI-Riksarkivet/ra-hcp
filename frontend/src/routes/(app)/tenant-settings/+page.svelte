@@ -11,6 +11,7 @@
 		Search,
 		Globe,
 		CreditCard,
+		Wrench,
 	} from 'lucide-svelte';
 	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
 	import NoTenantPlaceholder from '$lib/components/custom/no-tenant-placeholder/no-tenant-placeholder.svelte';
@@ -23,6 +24,7 @@
 	import SettingsSearchSecurity from './sections/settings-search-security.svelte';
 	import SettingsCors from './sections/settings-cors.svelte';
 	import SettingsServicePlans from './sections/settings-service-plans.svelte';
+	import SettingsOperations from './sections/settings-operations.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let activeTab = $state('general');
@@ -77,6 +79,10 @@
 					<CreditCard class="mr-1.5 h-4 w-4" />
 					Service Plans
 				</Tabs.Trigger>
+				<Tabs.Trigger value="operations">
+					<Wrench class="mr-1.5 h-4 w-4" />
+					Operations
+				</Tabs.Trigger>
 			</Tabs.List>
 
 			<Tabs.Content value="general">
@@ -113,6 +119,10 @@
 
 			<Tabs.Content value="service-plans">
 				<SettingsServicePlans {tenant} />
+			</Tabs.Content>
+
+			<Tabs.Content value="operations">
+				<SettingsOperations {tenant} />
 			</Tabs.Content>
 		</Tabs.Root>
 	{:else}
