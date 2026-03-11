@@ -4,43 +4,28 @@ The FastAPI backend is organized in layers:
 
 ```mermaid
 graph TD
-    subgraph "API Layer"
-        R["Routers<br/>api/v1/endpoints/"]
-        DEP["Dependencies<br/>api/dependencies.py"]
+    R["Routers"] --> DEP["Dependencies<br/>JWT · credentials"]
+
+    DEP --> MS["MapiService"]
+    DEP --> SP["StorageProtocol"]
+    DEP --> QS["QueryService"]
+
+    subgraph "Storage (swappable)"
+        SP --> CACHED["CachedStorage"]
+        SP --> HCP_A["HcpStorage"]
+        SP --> GEN["GenericBoto3Storage"]
     end
 
-    subgraph "Service Layer"
-        MS["MapiService"]
-        SP["StorageProtocol"]
-        CACHED["CachedStorage<br/>decorator"]
-        FAC["Factory<br/>create_storage()"]
-        HCP_A["HcpStorage"]
-        GEN["GenericBoto3Storage"]
-        QS["QueryService"]
-        CS["CacheService"]
+    subgraph "Caching (optional)"
+        CACHED --> CS["CacheService<br/>Redis"]
+        MS -.-> CS
+        QS -.-> CS
     end
 
-    subgraph "Core"
-        CFG["Config"]
-        SEC["Security<br/>JWT · OAuth2"]
-        TEL["Telemetry<br/>OpenTelemetry"]
-    end
-
-    R --> DEP
-    DEP --> MS
-    DEP -->|"type-hints"| SP
-    DEP --> FAC
-    FAC --> HCP_A
-    FAC --> GEN
-    SP -.->|"satisfies"| HCP_A
-    SP -.->|"satisfies"| GEN
-    SP -.->|"satisfies"| CACHED
-    CACHED -->|"wraps"| SP
-    CACHED --> CS
-    DEP --> QS
-    MS --> CS
-    QS --> CS
-    R --> SEC
+    MS --> HCP_EXT["HCP MAPI :9090"]
+    HCP_A --> S3_EXT["S3 Endpoint"]
+    GEN --> S3_EXT
+    QS --> HCP_EXT
 ```
 
 ## Key Design Decisions

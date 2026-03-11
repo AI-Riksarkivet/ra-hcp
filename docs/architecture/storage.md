@@ -4,34 +4,19 @@ The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints a
 
 ```mermaid
 graph TD
-    subgraph "Endpoint Code"
-        EP["S3 Endpoints<br/>buckets · objects · versions · multipart"]
-    end
+    EP["S3 Endpoints"] -->|"type-hints"| SP["StorageProtocol"]
 
-    subgraph "Contract"
-        SP["StorageProtocol<br/>(structural typing)"]
-    end
+    SP --> CACHED["CachedStorage<br/>list caching · metadata caching"]
+    SP --> HCP_A["HcpStorage<br/>overrides: list_buckets, delete_objects"]
+    SP --> GEN["GenericBoto3Storage<br/>overrides: delete_objects, ACL ops"]
 
-    subgraph "Shared Operations"
-        OPS["Boto3Operations<br/>21 S3 methods · tracing"]
-    end
+    CACHED -->|"wraps"| HCP_A
+    CACHED -->|"wraps"| GEN
 
-    subgraph "Adapters"
-        HCP_A["HcpStorage<br/>@delegates_to<br/>overrides: list_buckets, delete_objects"]
-        GEN["GenericBoto3Storage<br/>@delegates_to<br/>overrides: delete_objects, ACL ops"]
-    end
+    HCP_A -->|"delegates via @delegates_to"| OPS["Boto3Operations<br/>21 shared S3 methods"]
+    GEN -->|"delegates via @delegates_to"| OPS
 
-    subgraph "Caching"
-        CACHED["CachedStorage<br/>decorator pattern"]
-    end
-
-    EP -->|"type-hints against"| SP
-    SP -.->|"satisfies"| HCP_A
-    SP -.->|"satisfies"| GEN
-    SP -.->|"satisfies"| CACHED
-    HCP_A -->|"has-a"| OPS
-    GEN -->|"has-a"| OPS
-    CACHED -->|"wraps"| SP
+    OPS --> CLIENT["boto3 S3 Client"]
 ```
 
 ## How it works

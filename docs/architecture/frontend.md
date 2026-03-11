@@ -4,54 +4,17 @@ The SvelteKit frontend follows a reactive pattern with remote function abstracti
 
 ```mermaid
 graph TD
-    subgraph "Pages"
-        P["SvelteKit Routes<br/>+page.svelte"]
-        L["Layout Server Load<br/>+layout.server.ts"]
-        G["Route Guards<br/>+page.server.ts"]
-    end
+    HOOK["hooks.server.ts<br/>extract JWT cookie"] --> LAYOUT["+layout.server.ts<br/>fetch user profile · set accessLevel"]
+    LAYOUT --> GUARD["+page.server.ts<br/>requireAdmin() · route guards"]
+    GUARD --> PAGE["+page.svelte<br/>components · reactive state"]
 
-    subgraph "RBAC"
-        HOOK["Server Hook<br/>Token extraction"]
-        AL["Access Levels<br/>sys-admin · tenant-admin<br/>namespace-user"]
-        GUARD["requireAdmin()<br/>Server-side redirect"]
-    end
-
-    subgraph "Components"
-        UI["UI Components<br/>DataTable · FormDialog<br/>FileViewer · etc."]
-        FEAT["Feature Components<br/>Namespace settings<br/>User management"]
-        SIDE["Sidebar<br/>Role-conditional sections"]
-    end
-
-    subgraph "Data Layer"
-        Q["query()<br/>GET requests with caching"]
-        C["command()<br/>POST/PUT/DELETE mutations"]
-        REM["Remote Functions<br/>*.remote.ts"]
-    end
-
-    subgraph "State"
-        ST["$state<br/>Mutable reactive state"]
-        DER["$derived<br/>Computed values"]
-        EFF["$effect<br/>Side effects"]
-    end
-
-    HOOK -->|"JWT cookie"| L
-    L -->|"fetch user profile"| REM
-    L -->|"accessLevel"| AL
-    AL --> G
-    G -->|"namespace-user → /buckets"| GUARD
-    L --> P
-    P --> UI
-    P --> FEAT
-    SIDE -->|"isAdmin filter"| AL
-    FEAT --> Q
-    FEAT --> C
-    Q --> REM
-    C --> REM
-    REM -->|"fetch()"| API2["FastAPI Backend"]
-    P --> ST
-    P --> DER
-    P --> EFF
+    PAGE --> Q["query()<br/>GET with caching"]
+    PAGE --> C["command()<br/>mutations"]
     C -->|".updates(queryData)"| Q
+
+    Q --> REM["*.remote.ts"]
+    C --> REM
+    REM -->|"fetch()"| API["FastAPI Backend"]
 ```
 
 ## RBAC
