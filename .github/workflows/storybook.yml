@@ -35,6 +35,8 @@ jobs:
       - name: Build Storybook
         if: github.event.action != 'closed'
         working-directory: frontend
+        env:
+          STORYBOOK_BASE: /ra-hcp/_preview/pr-${{ github.event.number }}/
         run: deno task build-storybook
 
       - name: Deploy preview

@@ -57,5 +57,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     userGUID: profile.userGUID,
     roles: profile.roles,
     accessLevel,
+    sessions: locals.sessions,
   };
 };

@@ -7,6 +7,7 @@ declare global {
     // interface Error {}
     interface Locals {
       token?: string;
+      sessions: import("$lib/types/session.js").TenantSession[];
     }
     // interface PageData {}
     // interface PageState {}

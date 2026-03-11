@@ -6,14 +6,17 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import { toast } from 'svelte-sonner';
+	import TenantSwitcher from './TenantSwitcher.svelte';
+	import type { TenantSession } from '$lib/types/session.js';
 
 	interface Props {
 		username: string;
 		tenant?: string;
 		userGUID?: string;
+		sessions?: TenantSession[];
 	}
 
-	let { username, tenant, userGUID }: Props = $props();
+	let { username, tenant, userGUID, sessions = [] }: Props = $props();
 
 	let copied = $state(false);
 
@@ -36,13 +39,17 @@
 	<div class="flex flex-1 items-center gap-2">
 		<Sidebar.Trigger />
 		<Separator orientation="vertical" class="mx-2 data-[orientation=vertical]:h-4" />
-		<h1 class="text-lg font-semibold">
-			{#if tenant}
-				Tenant: {tenant}
-			{:else}
-				RA-HCP Admin Console
-			{/if}
-		</h1>
+		{#if sessions.length > 0}
+			<TenantSwitcher {sessions} currentTenant={tenant} />
+		{:else}
+			<h1 class="text-lg font-semibold">
+				{#if tenant}
+					Tenant: {tenant}
+				{:else}
+					RA-HCP Admin Console
+				{/if}
+			</h1>
+		{/if}
 	</div>
 
 	<DropdownMenu.Root>
@@ -112,15 +119,36 @@
 				{/if}
 			</DropdownMenu.Item>
 			<DropdownMenu.Separator />
-			<DropdownMenu.Item
-				variant="destructive"
-				onclick={() => {
-					window.location.href = '/logout';
-				}}
-			>
-				<LogOut class="h-4 w-4" />
-				Logout
-			</DropdownMenu.Item>
+			{#if sessions.length > 1}
+				<DropdownMenu.Item
+					variant="destructive"
+					onclick={() => {
+						window.location.href = '/logout';
+					}}
+				>
+					<LogOut class="h-4 w-4" />
+					Logout from {tenant ?? 'System'}
+				</DropdownMenu.Item>
+				<DropdownMenu.Item
+					variant="destructive"
+					onclick={() => {
+						window.location.href = '/logout?all=true';
+					}}
+				>
+					<LogOut class="h-4 w-4" />
+					Logout from all tenants
+				</DropdownMenu.Item>
+			{:else}
+				<DropdownMenu.Item
+					variant="destructive"
+					onclick={() => {
+						window.location.href = '/logout';
+					}}
+				>
+					<LogOut class="h-4 w-4" />
+					Logout
+				</DropdownMenu.Item>
+			{/if}
 		</DropdownMenu.Content>
 	</DropdownMenu.Root>
 </header>
