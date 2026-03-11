@@ -9,7 +9,7 @@ from typing import Annotated, AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, Request
 
 from app.core.auth_utils import derive_s3_keys
-from app.core.config import CacheSettings, MapiSettings, S3Settings
+from app.core.config import CacheSettings, MapiSettings, S3Settings, StorageSettings
 from app.core.security import (
     HcpCredentials,
     oauth2_scheme,
@@ -22,7 +22,7 @@ from app.services.query_service import AuthenticatedQueryService, QueryService
 from app.schemas.lance import LanceDatasetParams
 from app.services.lance_service import LanceService
 from app.services.storage import StorageProtocol
-from app.services.storage.adapters.hcp import HcpStorage
+from app.services.storage.factory import create_cached_storage, create_storage
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,11 @@ def get_s3_settings() -> S3Settings:
 @lru_cache()
 def get_cache_settings() -> CacheSettings:
     return CacheSettings()
+
+
+@lru_cache()
+def get_storage_settings() -> StorageSettings:
+    return StorageSettings()
 
 
 # ── Service access via app.state ─────────────────────────────────────
@@ -93,38 +98,63 @@ async def get_s3_service(
 ) -> AsyncGenerator[StorageProtocol, None]:
     """Yield a StorageProtocol implementation keyed by the caller's credentials.
 
-    When Redis caching is enabled, returns a CachedHcpStorage that
-    transparently caches metadata reads and invalidates on writes.
+    HCP path: per-user client keyed by HcpCredentials, keys derived from JWT.
+    MinIO/generic path: single shared client keyed by "default", uses configured creds.
     """
-    creds = verify_token_with_credentials(token)
-    s3_cache: dict[HcpCredentials, StorageProtocol] = request.app.state.s3_cache
-    if creds not in s3_cache:
-        settings = get_s3_settings()
-        access_key, secret_key = _derive_s3_keys(creds)
-        endpoint_url = s3_endpoint_for_tenant(creds.tenant, settings.hcp_domain)
+    storage_settings = get_storage_settings()
+    s3_client_cache: dict = request.app.state.s3_cache
+    cache: CacheService | None = getattr(request.app.state, "cache", None)
+    use_cache = cache is not None and cache.enabled
 
-        cache: CacheService | None = getattr(request.app.state, "cache", None)
-        if cache and cache.enabled:
-            from app.services.cached_s3 import CachedHcpStorage
+    if storage_settings.storage_backend == "hcp":
+        # HCP: per-user clients with derived credentials
+        creds = verify_token_with_credentials(token)
+        if creds not in s3_client_cache:
+            s3_settings = get_s3_settings()
+            access_key, secret_key = _derive_s3_keys(creds)
+            endpoint_url = s3_endpoint_for_tenant(creds.tenant, s3_settings.hcp_domain)
 
-            logger.info("Creating CachedHcpStorage for user %s", creds.username)
-            s3_cache[creds] = CachedHcpStorage.with_credentials(
-                settings,
-                access_key,
-                secret_key,
-                endpoint_url=endpoint_url,
-                cache=cache,
-                cache_settings=get_cache_settings(),
-            )
-        else:
-            logger.info("Creating HcpStorage for user %s", creds.username)
-            s3_cache[creds] = HcpStorage.with_credentials(
-                settings,
-                access_key,
-                secret_key,
-                endpoint_url=endpoint_url,
-            )
-    yield s3_cache[creds]
+            if use_cache:
+                s3_client_cache[creds] = create_cached_storage(
+                    storage_settings,
+                    access_key,
+                    secret_key,
+                    endpoint_url=endpoint_url,
+                    cache=cache,
+                    cache_settings=get_cache_settings(),
+                    s3_settings=s3_settings,
+                )
+            else:
+                s3_client_cache[creds] = create_storage(
+                    storage_settings,
+                    access_key,
+                    secret_key,
+                    endpoint_url=endpoint_url,
+                    s3_settings=s3_settings,
+                )
+        yield s3_client_cache[creds]
+    else:
+        # MinIO / generic: single shared client
+        cache_key = "default"
+        if cache_key not in s3_client_cache:
+            access_key = storage_settings.s3_access_key
+            secret_key = storage_settings.s3_secret_key.get_secret_value()
+
+            if use_cache:
+                s3_client_cache[cache_key] = create_cached_storage(
+                    storage_settings,
+                    access_key,
+                    secret_key,
+                    cache=cache,
+                    cache_settings=get_cache_settings(),
+                )
+            else:
+                s3_client_cache[cache_key] = create_storage(
+                    storage_settings,
+                    access_key,
+                    secret_key,
+                )
+        yield s3_client_cache[cache_key]
 
 
 # ── Lance per-credential cache ────────────────────────────────────────
