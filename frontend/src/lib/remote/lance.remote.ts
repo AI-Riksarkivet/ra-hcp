@@ -118,6 +118,7 @@ export const search_lance = query(
     query_type: z.string().optional(),
     limit: z.number().optional(),
     filter: z.string().optional(),
+    weight: z.number().optional(),
   }),
   async (
     {
@@ -130,6 +131,7 @@ export const search_lance = query(
       query_type,
       limit,
       filter,
+      weight,
     },
   ) => {
     try {
@@ -141,6 +143,7 @@ export const search_lance = query(
       if (query_type) params.set("query_type", query_type);
       if (limit) params.set("limit", String(limit));
       if (filter) params.set("filter", filter);
+      if (weight != null) params.set("weight", String(weight));
       const res = await apiFetch(`/api/v1/lance/search?${params}`);
       if (!res.ok) {
         const body = await res.text();

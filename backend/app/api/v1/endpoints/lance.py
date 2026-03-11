@@ -137,6 +137,7 @@ async def search(
             query_type=params.query_type,
             limit=params.limit,
             filter_expr=params.filter,
+            weight=params.weight,
         )
     except Exception as exc:
         raise _handle_lance_error(exc, f"search {params.table}")

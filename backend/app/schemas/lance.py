@@ -113,6 +113,9 @@ class LanceSearchParams(LanceTableParams):
     query_type: str = Field("fts", description="Search type: fts, vector, hybrid")
     limit: Annotated[int, Field(ge=1, le=100)] = 20
     filter: str | None = Field(None, description="Optional filter expression")
+    weight: Annotated[float, Field(ge=0.0, le=1.0)] | None = Field(
+        None, description="Hybrid reranker weight: 0.0=all vector, 1.0=all FTS"
+    )
 
 
 class LanceSearchResponse(BaseModel):

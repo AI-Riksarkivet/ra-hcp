@@ -319,6 +319,7 @@ class LanceService:
         query_type: str = "fts",  # "fts", "vector", "hybrid"
         limit: int = 20,
         filter_expr: str | None = None,
+        weight: float | None = None,
     ) -> dict[str, Any]:
         """Search a Lance table using FTS, vector, or hybrid search."""
         with tracer.start_as_current_span("lance.search") as span:
@@ -343,14 +344,14 @@ class LanceService:
                         raise ValueError(
                             "Hybrid search requires both query text and a vector"
                         )
-                    q = (
-                        table.search(
-                            query_type="hybrid", vector_column_name=vector_column
-                        )
-                        .vector(query_vector)
-                        .text(query_text)
-                        .limit(limit)
+                    q = table.search(
+                        query_type="hybrid", vector_column_name=vector_column
                     )
+                    q = q.vector(query_vector).text(query_text).limit(limit)
+                    if weight is not None:
+                        from lancedb.rerankers import LinearCombinationReranker
+
+                        q = q.rerank(LinearCombinationReranker(weight=weight))
                 else:
                     raise ValueError(f"Unsupported query_type: {query_type!r}")
 
