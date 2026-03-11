@@ -47,7 +47,7 @@
 	let searchTotal = $state(0);
 	let searchError = $state<string | null>(null);
 	let searchActive = $state(false);
-	let hybridWeight = $state([0.7]);
+	let hybridWeight = $state([70]);
 
 	// Row detail dialog state
 	let detailOpen = $state(false);
@@ -144,7 +144,7 @@
 			query_type: searchType,
 			vector_column: activeVectorCol || undefined,
 			limit: 20,
-			weight: searchType === 'hybrid' ? hybridWeight[0] : undefined,
+			weight: searchType === 'hybrid' ? hybridWeight[0] / 100 : undefined,
 		});
 
 		// The remote function is reactive -- poll until result arrives
@@ -502,13 +502,13 @@
 							type="single"
 							bind:value={hybridWeight}
 							min={0}
-							max={1}
-							step={0.05}
+							max={100}
+							step={5}
 							class="flex-1"
 						/>
 						<span class="shrink-0 text-xs font-medium">FTS</span>
 						<Badge variant="secondary" class="ml-1 font-mono text-xs tabular-nums"
-							>{Math.round(hybridWeight[0] * 100)}% FTS</Badge
+							>{hybridWeight[0]}% FTS</Badge
 						>
 					</div>
 				{/if}
