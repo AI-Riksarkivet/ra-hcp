@@ -78,7 +78,6 @@ export const create_namespace = command(
     searchEnabled: z.boolean().optional(),
     versioningEnabled: z.boolean().optional(),
     keepDeletionRecords: z.boolean().optional(),
-    useDeleteMarkers: z.boolean().optional(),
     optimizedFor: z.string().optional(),
     tags: z.array(z.string()).optional(),
     owner: z.string().optional(),
@@ -95,7 +94,6 @@ export const create_namespace = command(
       payload.versioningSettings = {
         enabled: body.versioningEnabled,
         keepDeletionRecords: body.keepDeletionRecords ?? false,
-        useDeleteMarkers: body.useDeleteMarkers ?? false,
       };
     }
     if (body.tags) payload.tags = { tag: body.tags };

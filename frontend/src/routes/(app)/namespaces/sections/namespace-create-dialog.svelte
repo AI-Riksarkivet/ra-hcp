@@ -26,7 +26,6 @@
 	let createOptimizedFor = $state('cloud');
 	let versioningEnabled = $state(false);
 	let keepDeletionRecords = $state(false);
-	let useDeleteMarkers = $state(false);
 
 	async function handleCreate(e: SubmitEvent) {
 		e.preventDefault();
@@ -55,7 +54,6 @@
 				searchEnabled,
 				versioningEnabled,
 				keepDeletionRecords: versioningEnabled ? keepDeletionRecords : undefined,
-				useDeleteMarkers: versioningEnabled ? useDeleteMarkers : undefined,
 				optimizedFor: createOptimizedFor || undefined,
 				tags: createTags.length > 0 ? createTags : undefined,
 				owner,
@@ -67,7 +65,6 @@
 			createOptimizedFor = 'cloud';
 			versioningEnabled = false;
 			keepDeletionRecords = false;
-			useDeleteMarkers = false;
 		} catch (err) {
 			createError = err instanceof Error ? err.message : 'Failed to create namespace';
 		} finally {
@@ -161,14 +158,6 @@
 					</div>
 					<p class="ml-9 text-xs text-muted-foreground">
 						Retain records of delete operations. Prevents namespace deletion when records exist.
-					</p>
-					<div class="flex items-center gap-2">
-						<Switch id="ns-delete-markers" bind:checked={useDeleteMarkers} />
-						<Label for="ns-delete-markers" class="text-sm">Use Delete Markers</Label>
-					</div>
-					<p class="ml-9 text-xs text-muted-foreground">
-						Create delete markers instead of permanently removing objects. Irreversible once
-						enabled.
 					</p>
 				</div>
 			</div>
