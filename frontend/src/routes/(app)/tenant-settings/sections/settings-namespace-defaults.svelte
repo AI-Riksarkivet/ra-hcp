@@ -32,7 +32,6 @@
 	let localHashScheme = $state('');
 	let localSearchEnabled = $state(false);
 	let localVersioningEnabled = $state(false);
-	let localKeepDeletionRecords = $state(false);
 	let localUseDeleteMarkers = $state(false);
 
 	$effect(() => {
@@ -44,7 +43,6 @@
 		localHashScheme = (s?.namespaceDefaults?.hashScheme as string) ?? '';
 		localSearchEnabled = (s?.namespaceDefaults?.searchEnabled as boolean) ?? false;
 		localVersioningEnabled = (s?.namespaceDefaults?.versioningEnabled as boolean) ?? false;
-		localKeepDeletionRecords = (s?.namespaceDefaults?.keepDeletionRecords as boolean) ?? false;
 		localUseDeleteMarkers = (s?.namespaceDefaults?.useDeleteMarkers as boolean) ?? false;
 	});
 
@@ -56,8 +54,6 @@
 			localSearchEnabled !== ((settings?.namespaceDefaults?.searchEnabled as boolean) ?? false) ||
 			localVersioningEnabled !==
 				((settings?.namespaceDefaults?.versioningEnabled as boolean) ?? false) ||
-			localKeepDeletionRecords !==
-				((settings?.namespaceDefaults?.keepDeletionRecords as boolean) ?? false) ||
 			localUseDeleteMarkers !==
 				((settings?.namespaceDefaults?.useDeleteMarkers as boolean) ?? false)
 	);
@@ -123,27 +119,15 @@
 					{#if localVersioningEnabled}
 						<div class="rounded-md border bg-muted/30 p-3 space-y-3">
 							<p class="text-xs font-medium text-muted-foreground">Default Versioning Settings</p>
-							<div class="flex flex-wrap gap-x-8 gap-y-3">
-								<div class="space-y-1">
-									<div class="flex items-center gap-2">
-										<Switch id="ns-keep-deletion" bind:checked={localKeepDeletionRecords} />
-										<Label for="ns-keep-deletion" class="text-sm">Keep Deletion Records</Label>
-									</div>
-									<p class="ml-9 text-xs text-muted-foreground">
-										Retain records of delete operations. Prevents namespace deletion when records
-										exist.
-									</p>
+							<div class="space-y-1">
+								<div class="flex items-center gap-2">
+									<Switch id="ns-delete-markers" bind:checked={localUseDeleteMarkers} />
+									<Label for="ns-delete-markers" class="text-sm">Use Delete Markers</Label>
 								</div>
-								<div class="space-y-1">
-									<div class="flex items-center gap-2">
-										<Switch id="ns-delete-markers" bind:checked={localUseDeleteMarkers} />
-										<Label for="ns-delete-markers" class="text-sm">Use Delete Markers</Label>
-									</div>
-									<p class="ml-9 text-xs text-muted-foreground">
-										Create delete markers instead of permanently removing objects. Irreversible once
-										enabled.
-									</p>
-								</div>
+								<p class="ml-9 text-xs text-muted-foreground">
+									Create delete markers instead of permanently removing objects. Irreversible once
+									enabled.
+								</p>
 							</div>
 						</div>
 					{/if}
@@ -162,7 +146,6 @@
 										hashScheme: localHashScheme,
 										searchEnabled: localSearchEnabled,
 										versioningEnabled: localVersioningEnabled,
-										keepDeletionRecords: localKeepDeletionRecords,
 										useDeleteMarkers: localUseDeleteMarkers,
 									},
 								}).updates(settingsData);
