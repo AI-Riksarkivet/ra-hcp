@@ -1,6 +1,19 @@
 <script lang="ts">
 	import { Slider as SliderPrimitive } from 'bits-ui';
-	import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
+	import { cn } from '$lib/utils.js';
+	import type { HTMLAttributes } from 'svelte/elements';
+
+	type SliderProps = {
+		ref?: HTMLElement | null;
+		value?: number[];
+		type?: 'single' | 'multiple';
+		orientation?: 'horizontal' | 'vertical';
+		class?: string;
+		min?: number;
+		max?: number;
+		step?: number;
+		disabled?: boolean;
+	} & Omit<HTMLAttributes<HTMLSpanElement>, 'class'>;
 
 	let {
 		ref = $bindable(null),
@@ -8,24 +21,22 @@
 		orientation = 'horizontal',
 		class: className,
 		...restProps
-	}: WithoutChildrenOrChild<SliderPrimitive.RootProps> = $props();
+	}: SliderProps = $props();
+
+	// Build combined props and cast to bypass complex discriminated union
+	// type in bits-ui that causes "too complex to represent" TS errors.
+	let rootProps = $derived({
+		orientation,
+		'data-slot': 'slider',
+		class: cn(
+			'relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col',
+			className
+		),
+		...restProps,
+	} as any);
 </script>
 
-<!--
-Discriminated Unions + Destructing (required for bindable) do not
-get along, so we shut typescript up by casting `value` to `never`.
--->
-<SliderPrimitive.Root
-	bind:ref
-	bind:value={value as never}
-	data-slot="slider"
-	{orientation}
-	class={cn(
-		'relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col',
-		className
-	)}
-	{...restProps}
->
+<SliderPrimitive.Root bind:ref bind:value={value as never} {...rootProps}>
 	{#snippet children({ thumbs })}
 		<span
 			data-orientation={orientation}
