@@ -1,30 +1,22 @@
 ---
-template: main.html
 hide:
   - toc
+  - navigation
 ---
-
-<style>
-  .md-main__inner { max-width: 100%; }
-  .md-grid { max-width: 100%; }
-  .md-content { max-width: 100%; }
-  .md-content__inner { max-width: 100%; }
-  .md-typeset iframe { width: 100%; }
-</style>
 
 # UI Components
 
 The HCP App uses [shadcn-svelte](https://next.shadcn-svelte.com/) with custom components built on top. Browse the full interactive component library below.
 
 <iframe
-  src="https://ai-riksarkivet.github.io/hcp/storybook/"
+  src="https://ai-riksarkivet.github.io/ra-hcp/storybook/"
   width="100%"
   height="1000"
   style="border: 1px solid #e0e0e0; border-radius: 8px;"
 ></iframe>
 
 !!! tip "Open in new tab"
-    For the best experience, [open Storybook directly](https://ai-riksarkivet.github.io/hcp/storybook/) in a new tab. Use the sidebar to navigate components and the Controls panel to interact with props.
+    For the best experience, [open Storybook directly](https://ai-riksarkivet.github.io/ra-hcp/storybook/) in a new tab. Use the sidebar to navigate components and the Controls panel to interact with props.
 
 ---
 
