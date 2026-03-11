@@ -11,7 +11,12 @@
 <Sidebar.Provider>
 	<AppSidebar accessLevel={data.accessLevel} />
 	<Sidebar.Inset>
-		<AppHeader username={data.username} tenant={data.tenant} userGUID={data.userGUID} />
+		<AppHeader
+			username={data.username}
+			tenant={data.tenant}
+			userGUID={data.userGUID}
+			sessions={data.sessions}
+		/>
 		<div class="flex-1 overflow-y-auto p-6">
 			{@render children()}
 		</div>

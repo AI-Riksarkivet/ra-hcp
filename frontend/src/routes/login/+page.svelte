@@ -1,12 +1,18 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Server } from 'lucide-svelte';
+	import { ArrowLeft, Server } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import RetroGrid from '$lib/components/ui/magic/retro-grid/retro-grid.svelte';
 
-	let { form }: { form: { error?: string } | null } = $props();
+	let {
+		form,
+		data,
+	}: {
+		form: { error?: string } | null;
+		data: { hasExistingSession: boolean; prefillTenant?: string };
+	} = $props();
 	let loading = $state(false);
 </script>
 
@@ -22,7 +28,13 @@
 				<Server class="h-7 w-7 text-primary" />
 			</div>
 			<h1 class="text-2xl font-bold">RA HCP Console</h1>
-			<p class="mt-1 text-sm text-muted-foreground">Sign in to your HCP tenant</p>
+			<p class="mt-1 text-sm text-muted-foreground">
+				{#if data.hasExistingSession}
+					Add another tenant session
+				{:else}
+					Sign in to your HCP tenant
+				{/if}
+			</p>
 		</div>
 
 		{#if form?.error}
@@ -47,7 +59,12 @@
 			<div class="space-y-4">
 				<div class="space-y-2">
 					<Label for="tenant">Tenant</Label>
-					<Input id="tenant" name="tenant" placeholder="Tenant name (optional)" />
+					<Input
+						id="tenant"
+						name="tenant"
+						placeholder="Tenant name (optional)"
+						value={data.prefillTenant ?? ''}
+					/>
 				</div>
 				<div class="space-y-2">
 					<Label for="username">Username</Label>
@@ -64,7 +81,7 @@
 					/>
 				</div>
 			</div>
-			<div class="mt-6">
+			<div class="mt-6 flex flex-col gap-3">
 				<Button type="submit" class="w-full" disabled={loading}>
 					{#if loading}
 						Signing in...
@@ -72,6 +89,12 @@
 						Sign in
 					{/if}
 				</Button>
+				{#if data.hasExistingSession}
+					<Button variant="ghost" class="w-full gap-2" href="/namespaces">
+						<ArrowLeft class="h-4 w-4" />
+						Back to current session
+					</Button>
+				{/if}
 			</div>
 		</form>
 	</div>

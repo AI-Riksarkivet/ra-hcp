@@ -1,12 +1,18 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { loginSchema } from "$lib/api/schemas.js";
 import type { Actions, PageServerLoad } from "./$types.js";
-import { BACKEND_URL, COOKIE_SECURE } from "$lib/server/env.js";
+import { BACKEND_URL } from "$lib/server/env.js";
+import { setSessionCookies } from "$lib/server/sessions.js";
 
-export const load: PageServerLoad = ({ locals }) => {
-  if (locals.token) {
+export const load: PageServerLoad = ({ locals, url }) => {
+  // Allow accessing login with an active session when adding another tenant
+  if (locals.token && !url.searchParams.has("add")) {
     redirect(302, "/namespaces");
   }
+  return {
+    hasExistingSession: !!locals.token,
+    prefillTenant: url.searchParams.get("tenant") ?? undefined,
+  };
 };
 
 export const actions = {
@@ -51,13 +57,7 @@ export const actions = {
 
       const tokenData = await response.json();
 
-      cookies.set("hcp_token", tokenData.access_token, {
-        path: "/",
-        httpOnly: true,
-        sameSite: "lax",
-        secure: COOKIE_SECURE,
-        maxAge: 60 * 60 * 8, // 8 hours
-      });
+      setSessionCookies(cookies, tokenData.access_token, result.data.tenant);
     } catch (err) {
       console.error("Login fetch failed:", err);
       return fail(500, {
