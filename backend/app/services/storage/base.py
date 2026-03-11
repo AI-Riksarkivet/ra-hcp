@@ -1,11 +1,10 @@
 """Abstract base class for storage adapters.
 
-StorageBase provides:
-  - @abstractmethod for every required operation (enforced at instantiation)
-  - Shared default implementations where the logic is backend-agnostic
-    (e.g. delete_objects as a loop of delete_object)
+StorageBase provides @abstractmethod for every required operation
+(enforced at instantiation).
 
-Adapters inherit from StorageBase and override the abstract methods.
+Adapters inherit from StorageBase and Boto3StorageMixin, then override
+only the methods that differ per backend.
 Endpoint code type-hints against StorageProtocol (structural typing).
 """
 
@@ -61,18 +60,8 @@ class StorageBase(ABC):
         self, bucket: str, key: str, version_id: Optional[str] = None
     ) -> dict: ...
 
-    def delete_objects(self, bucket: str, keys: List[str]) -> dict:
-        """Delete multiple objects — default loops over delete_object.
-
-        Backends that support efficient batch deletes should override this.
-        """
-        errors: list[dict] = []
-        for key in keys:
-            try:
-                self.delete_object(bucket, key)
-            except Exception as exc:
-                errors.append({"Key": key, "Code": "DeleteError", "Message": str(exc)})
-        return {"Errors": errors} if errors else {}
+    @abstractmethod
+    def delete_objects(self, bucket: str, keys: List[str]) -> dict: ...
 
     @abstractmethod
     def copy_object(

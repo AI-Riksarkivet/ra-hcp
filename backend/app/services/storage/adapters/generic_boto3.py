@@ -10,7 +10,7 @@ No HCP-specific workarounds:
 from __future__ import annotations
 
 import logging
-from typing import IO, Any, List, Optional
+from typing import Any, List
 
 import boto3
 from boto3.s3.transfer import TransferConfig
@@ -19,6 +19,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from opentelemetry import trace
 
 from app.core.config import StorageSettings
+from app.services.storage.adapters._boto3_mixin import Boto3StorageMixin
 from app.services.storage.base import StorageBase
 from app.services.storage.errors import (
     StorageOperationNotSupported,
@@ -30,11 +31,14 @@ logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-class GenericBoto3Storage(StorageBase):
+class GenericBoto3Storage(Boto3StorageMixin, StorageBase):
     """Standard boto3 S3 adapter — no vendor-specific hacks.
 
     Implements StorageProtocol via StorageBase. Call methods via
     asyncio.to_thread() from async endpoint code.
+
+    Common boto3 methods are inherited from Boto3StorageMixin.
+    Only GenericBoto3-specific overrides are defined here.
     """
 
     def __init__(self, settings: StorageSettings):
@@ -94,170 +98,7 @@ class GenericBoto3Storage(StorageBase):
         )
         return instance
 
-    # ── Bucket operations ──────────────────────────────────────────────
-
-    def list_buckets(self) -> dict:
-        with tracer.start_as_current_span("s3.list_buckets"):
-            try:
-                return self._client.list_buckets()
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def create_bucket(self, name: str) -> dict:
-        with tracer.start_as_current_span(
-            "s3.create_bucket", attributes={"s3.bucket": name}
-        ):
-            try:
-                return self._client.create_bucket(Bucket=name)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def head_bucket(self, name: str) -> dict:
-        with tracer.start_as_current_span(
-            "s3.head_bucket", attributes={"s3.bucket": name}
-        ):
-            try:
-                return self._client.head_bucket(Bucket=name)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def delete_bucket(self, name: str) -> dict:
-        with tracer.start_as_current_span(
-            "s3.delete_bucket", attributes={"s3.bucket": name}
-        ):
-            try:
-                return self._client.delete_bucket(Bucket=name)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    # ── Object operations ──────────────────────────────────────────────
-
-    def list_objects(
-        self,
-        bucket: str,
-        prefix: Optional[str] = None,
-        max_keys: int = 1000,
-        continuation_token: Optional[str] = None,
-        delimiter: Optional[str] = None,
-        fetch_owner: bool = True,
-    ) -> dict:
-        with tracer.start_as_current_span(
-            "s3.list_objects",
-            attributes={"s3.bucket": bucket, "s3.prefix": prefix or ""},
-        ):
-            try:
-                kwargs: dict[str, Any] = {"Bucket": bucket, "MaxKeys": max_keys}
-                if prefix:
-                    kwargs["Prefix"] = prefix
-                if continuation_token:
-                    kwargs["ContinuationToken"] = continuation_token
-                if delimiter:
-                    kwargs["Delimiter"] = delimiter
-                if fetch_owner:
-                    kwargs["FetchOwner"] = True
-                return self._client.list_objects_v2(**kwargs)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
-        with tracer.start_as_current_span(
-            "s3.put_object",
-            attributes={"s3.bucket": bucket, "s3.key": key},
-        ):
-            try:
-                self._client.upload_fileobj(
-                    body,
-                    bucket,
-                    key,
-                    Config=self._transfer_config,
-                )
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def get_object(
-        self, bucket: str, key: str, version_id: Optional[str] = None
-    ) -> dict:
-        with tracer.start_as_current_span(
-            "s3.get_object",
-            attributes={"s3.bucket": bucket, "s3.key": key},
-        ):
-            try:
-                kwargs: dict[str, Any] = {"Bucket": bucket, "Key": key}
-                if version_id:
-                    kwargs["VersionId"] = version_id
-                return self._client.get_object(**kwargs)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def head_object(self, bucket: str, key: str) -> dict:
-        with tracer.start_as_current_span(
-            "s3.head_object",
-            attributes={"s3.bucket": bucket, "s3.key": key},
-        ):
-            try:
-                return self._client.head_object(Bucket=bucket, Key=key)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def delete_object(
-        self, bucket: str, key: str, version_id: Optional[str] = None
-    ) -> dict:
-        with tracer.start_as_current_span(
-            "s3.delete_object",
-            attributes={"s3.bucket": bucket, "s3.key": key},
-        ):
-            try:
-                kwargs: dict[str, Any] = {"Bucket": bucket, "Key": key}
-                if version_id:
-                    kwargs["VersionId"] = version_id
-                return self._client.delete_object(**kwargs)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def copy_object(
-        self,
-        src_bucket: str,
-        src_key: str,
-        dst_bucket: str,
-        dst_key: str,
-    ) -> dict:
-        with tracer.start_as_current_span(
-            "s3.copy_object",
-            attributes={
-                "s3.bucket": dst_bucket,
-                "s3.key": dst_key,
-                "s3.source_bucket": src_bucket,
-                "s3.source_key": src_key,
-            },
-        ):
-            try:
-                return self._client.copy_object(
-                    CopySource={"Bucket": src_bucket, "Key": src_key},
-                    Bucket=dst_bucket,
-                    Key=dst_key,
-                )
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
+    # ── GenericBoto3-specific overrides ────────────────────────────────
 
     def delete_objects(self, bucket: str, keys: List[str]) -> dict:
         """Native batch delete — works on standard S3-compatible backends."""
@@ -277,35 +118,6 @@ class GenericBoto3Storage(StorageBase):
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    # ── Bucket versioning ─────────────────────────────────────────────
-
-    def get_bucket_versioning(self, bucket: str) -> dict:
-        with tracer.start_as_current_span(
-            "s3.get_bucket_versioning",
-            attributes={"s3.bucket": bucket},
-        ):
-            try:
-                return self._client.get_bucket_versioning(Bucket=bucket)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def put_bucket_versioning(self, bucket: str, status: str) -> dict:
-        with tracer.start_as_current_span(
-            "s3.put_bucket_versioning",
-            attributes={"s3.bucket": bucket, "s3.versioning_status": status},
-        ):
-            try:
-                return self._client.put_bucket_versioning(
-                    Bucket=bucket,
-                    VersioningConfiguration={"Status": status},
-                )
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
     # ── ACLs (not supported on MinIO) ─────────────────────────────────
 
     def get_bucket_acl(self, bucket: str) -> dict:
@@ -319,158 +131,3 @@ class GenericBoto3Storage(StorageBase):
 
     def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
         raise StorageOperationNotSupported("put_object_acl", "minio")
-
-    # ── Object versions ────────────────────────────────────────────
-
-    def list_object_versions(
-        self,
-        bucket: str,
-        prefix: Optional[str] = None,
-        max_keys: int = 1000,
-        key_marker: Optional[str] = None,
-        version_id_marker: Optional[str] = None,
-    ) -> dict:
-        with tracer.start_as_current_span(
-            "s3.list_object_versions",
-            attributes={"s3.bucket": bucket, "s3.prefix": prefix or ""},
-        ):
-            try:
-                kwargs: dict[str, Any] = {"Bucket": bucket, "MaxKeys": max_keys}
-                if prefix:
-                    kwargs["Prefix"] = prefix
-                if key_marker:
-                    kwargs["KeyMarker"] = key_marker
-                if version_id_marker:
-                    kwargs["VersionIdMarker"] = version_id_marker
-                return self._client.list_object_versions(**kwargs)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    # ── Presigned URLs ───────────────────────────────────────────────
-
-    def generate_presigned_url(
-        self,
-        bucket: str,
-        key: str,
-        expires_in: int = 3600,
-        method: str = "get_object",
-    ) -> str:
-        with tracer.start_as_current_span(
-            "s3.generate_presigned_url",
-            attributes={"s3.bucket": bucket, "s3.key": key, "s3.method": method},
-        ):
-            try:
-                return self._client.generate_presigned_url(
-                    method,
-                    Params={"Bucket": bucket, "Key": key},
-                    ExpiresIn=expires_in,
-                )
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    # ── Multipart uploads ────────────────────────────────────────────
-
-    def create_multipart_upload(self, bucket: str, key: str) -> dict:
-        with tracer.start_as_current_span(
-            "s3.create_multipart_upload",
-            attributes={"s3.bucket": bucket, "s3.key": key},
-        ):
-            try:
-                return self._client.create_multipart_upload(Bucket=bucket, Key=key)
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def upload_part(
-        self,
-        bucket: str,
-        key: str,
-        upload_id: str,
-        part_number: int,
-        body: IO[bytes],
-    ) -> dict:
-        with tracer.start_as_current_span(
-            "s3.upload_part",
-            attributes={
-                "s3.bucket": bucket,
-                "s3.key": key,
-                "s3.part_number": part_number,
-            },
-        ):
-            try:
-                return self._client.upload_part(
-                    Bucket=bucket,
-                    Key=key,
-                    UploadId=upload_id,
-                    PartNumber=part_number,
-                    Body=body,
-                )
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def complete_multipart_upload(
-        self,
-        bucket: str,
-        key: str,
-        upload_id: str,
-        parts: List[dict],
-    ) -> dict:
-        with tracer.start_as_current_span(
-            "s3.complete_multipart_upload",
-            attributes={"s3.bucket": bucket, "s3.key": key},
-        ):
-            try:
-                return self._client.complete_multipart_upload(
-                    Bucket=bucket,
-                    Key=key,
-                    UploadId=upload_id,
-                    MultipartUpload={"Parts": parts},
-                )
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict:
-        with tracer.start_as_current_span(
-            "s3.abort_multipart_upload",
-            attributes={"s3.bucket": bucket, "s3.key": key},
-        ):
-            try:
-                return self._client.abort_multipart_upload(
-                    Bucket=bucket, Key=key, UploadId=upload_id
-                )
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
-
-    def list_parts(
-        self,
-        bucket: str,
-        key: str,
-        upload_id: str,
-        max_parts: int = 1000,
-    ) -> dict:
-        with tracer.start_as_current_span(
-            "s3.list_parts",
-            attributes={"s3.bucket": bucket, "s3.key": key},
-        ):
-            try:
-                return self._client.list_parts(
-                    Bucket=bucket,
-                    Key=key,
-                    UploadId=upload_id,
-                    MaxParts=max_parts,
-                )
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc

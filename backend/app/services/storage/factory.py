@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-type StorageBackend = str  # "hcp" | "minio" | "generic"
-
 
 def create_storage(
     settings: StorageSettings,

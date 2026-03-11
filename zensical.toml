@@ -18,6 +18,10 @@ nav = [
   ]},
   { "Architecture" = [
     { "Overview" = "architecture/index.md" },
+    { "Backend" = "architecture/backend.md" },
+    { "Storage Layer" = "architecture/storage.md" },
+    { "Frontend" = "architecture/frontend.md" },
+    { "Deployment" = "architecture/deployment.md" },
   ]},
   { "API Guide" = [
     { "Overview" = "api/index.md" },

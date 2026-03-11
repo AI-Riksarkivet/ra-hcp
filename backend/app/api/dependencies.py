@@ -115,6 +115,7 @@ async def get_s3_service(
             endpoint_url = s3_endpoint_for_tenant(creds.tenant, s3_settings.hcp_domain)
 
             if use_cache:
+                assert cache is not None
                 s3_client_cache[creds] = create_cached_storage(
                     storage_settings,
                     access_key,
@@ -141,6 +142,7 @@ async def get_s3_service(
             secret_key = storage_settings.s3_secret_key.get_secret_value()
 
             if use_cache:
+                assert cache is not None
                 s3_client_cache[cache_key] = create_cached_storage(
                     storage_settings,
                     access_key,
