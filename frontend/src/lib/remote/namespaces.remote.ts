@@ -88,7 +88,10 @@ export const create_namespace = command(
     if (body.hashScheme) payload.hashScheme = body.hashScheme;
     if (body.searchEnabled != null) payload.searchEnabled = body.searchEnabled;
     if (body.versioningEnabled != null) {
-      payload.versioningSettings = { enabled: body.versioningEnabled };
+      payload.versioningSettings = {
+        enabled: body.versioningEnabled,
+        keepDeletionRecords: false,
+      };
     }
     if (body.tags) payload.tags = { tag: body.tags };
     if (body.owner) {
