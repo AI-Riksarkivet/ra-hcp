@@ -9,8 +9,10 @@
         <meta name="description" content="Hitachi Content Platform application — unified FastAPI service for S3-compatible object storage and HCP Management API operations.">
       
       
-        <meta name="author" content="HCP App Team">
+        <meta name="author" content="AI-Riksarkivet">
       
+      
+        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/architecture/">
       
       
         <link rel="prev" href="../getting-started/configuration/">
@@ -22,12 +24,12 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../assets/favicon.ico">
       <meta name="generator" content="zensical-0.0.26">
     
     
       
-        <title>Architecture - HCP App</title>
+        <title>Architecture - ra-hcp</title>
       
     
     
@@ -99,12 +101,11 @@
 
   
 
-<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+<header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="./.." title="HCP App" class="md-header__button md-logo" aria-label="HCP App" data-md-component="logo">
+    <a href="./.." title="ra-hcp" class="md-header__button md-logo" aria-label="ra-hcp" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+  <img src="../assets/ra.svg" alt="ra-hcp">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
@@ -115,7 +116,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            HCP App
+            ra-hcp
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -174,141 +175,26 @@
     
     <div class="md-header__source">
       
+        <a href="https://github.com/AI-Riksarkivet/hcp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AI-Riksarkivet/hcp
+  </div>
+</a>
+      
     </div>
   </nav>
-  
-    
-      
-<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
-  <div class="md-grid">
-    <ul class="md-tabs__list">
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="./.." class="md-tabs__link">
-          
-  
-  HCP App
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../getting-started/" class="md-tabs__link">
-          
-  
-  Getting Started
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-    
-  
-  
-    
-    
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="././" class="md-tabs__link">
-          
-  
-  Architecture
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../api/" class="md-tabs__link">
-          
-  
-  API Guide
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../api/reference/endpoints/" class="md-tabs__link">
-          
-  
-  API Reference
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../components/" class="md-tabs__link">
-          
-  
-  Components
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ul>
-  </div>
-</nav>
-    
   
 </header>
     
     <div class="md-container" data-md-component="container">
       
       
+        
+          
         
       
       <main class="md-main" data-md-component="main">
@@ -322,19 +208,28 @@
                     
 
 
-  
 
-
-<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="./.." title="HCP App" class="md-nav__button md-logo" aria-label="HCP App" data-md-component="logo">
+    <a href="./.." title="ra-hcp" class="md-nav__button md-logo" aria-label="ra-hcp" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+  <img src="../assets/ra.svg" alt="ra-hcp">
 
     </a>
-    HCP App
+    ra-hcp
   </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AI-Riksarkivet/hcp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AI-Riksarkivet/hcp
+  </div>
+</a>
+    </div>
   
   <ul class="md-nav__list" data-md-scrollfix>
     
@@ -347,9 +242,6 @@
     
     
     
-    
-      
-      
     
     
     <li class="md-nav__item md-nav__item--nested">
@@ -366,7 +258,7 @@
   <span class="md-ellipsis">
     
   
-    HCP App
+    ra-hcp
   
 
     
@@ -382,7 +274,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    HCP App
+    ra-hcp
   
 
           </label>
@@ -402,7 +294,7 @@
   <span class="md-ellipsis">
     
   
-    Index
+    HCP App
   
 
     
@@ -432,9 +324,6 @@
     
     
     
-    
-      
-      
     
     
     <li class="md-nav__item md-nav__item--nested">
@@ -576,21 +465,15 @@
     
     
     
-      
-        
-        
-      
-      
     
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -945,9 +828,6 @@
     
     
     
-      
-      
-    
     
     <li class="md-nav__item md-nav__item--nested">
       
@@ -1197,9 +1077,6 @@
     
     
     
-    
-      
-      
     
     
     <li class="md-nav__item md-nav__item--nested">
@@ -1478,9 +1355,6 @@
     
     
     
-    
-      
-      
     
     
     <li class="md-nav__item md-nav__item--nested">
@@ -1825,61 +1699,16 @@
           
             <div class="md-content" data-md-component="content">
               
-                
-
-
-
-  
-
-
-  <nav class="md-path" aria-label="Navigation" >
-    <ol class="md-path__list">
-      
-        
-  
-  
-    <li class="md-path__item">
-      <a href="./.." class="md-path__link">
-        
-  <span class="md-ellipsis">
-    Index
-  </span>
-
-      </a>
-    </li>
-  
-
-      
-      
-        
-  
-  
-    
-    
-      <li class="md-path__item">
-        <a href="././" class="md-path__link">
-          
-  <span class="md-ellipsis">
-    Architecture
-  </span>
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ol>
-  </nav>
-
-              
               <article class="md-content__inner md-typeset">
                 
                   
+  
+  
 
-<h1 id="architecture">Architecture</h1>
+
+<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
 <p>This page describes the overall design of the HCP application, how the backend and frontend work together, and the key architectural decisions.</p>
-<h2 id="system-overview">System Overview</h2>
+<h2 id="system-overview">System Overview<a class="headerlink" href="#system-overview" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>graph TB
     subgraph "Browser"
         FE["SvelteKit Frontend&lt;br/&gt;:5173"]
@@ -1916,7 +1745,7 @@
     S3 --&gt;|"S3 Protocol"| S3EP
     QUERY --&gt;|"HTTPS"| HCP
     CACHE --&gt;|"Redis Protocol"| REDIS</code></pre>
-<h2 id="request-flow">Request Flow</h2>
+<h2 id="request-flow">Request Flow<a class="headerlink" href="#request-flow" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>sequenceDiagram
     participant B as Browser
     participant F as SvelteKit
@@ -1943,7 +1772,7 @@
     M--&gt;&gt;A: Add X-Request-ID header
     A--&gt;&gt;F: JSON response
     F--&gt;&gt;B: Update UI reactively</code></pre>
-<h2 id="backend-architecture">Backend Architecture</h2>
+<h2 id="backend-architecture">Backend Architecture<a class="headerlink" href="#backend-architecture" title="Permanent link">&para;</a></h2>
 <p>The FastAPI backend is organized in layers:</p>
 <pre class="mermaid"><code>graph TD
     subgraph "API Layer"
@@ -1988,7 +1817,7 @@
     CQS --&gt; QS
     CQS --&gt; CS
     R --&gt; SEC</code></pre>
-<h3 id="key-design-decisions">Key Design Decisions</h3>
+<h3 id="key-design-decisions">Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
 <p><strong>Credential pass-through</strong>: The API does not store user passwords. Credentials are embedded in the JWT and forwarded to HCP on each request. HCP is the sole authority for authentication and authorization.</p>
@@ -2006,7 +1835,7 @@
 <p><strong>Sync-over-async S3</strong>: Storage operations use synchronous boto3 calls executed via <code>asyncio.to_thread()</code>. This avoids the complexity of async S3 clients while keeping the FastAPI event loop non-blocking.</p>
 </li>
 </ul>
-<h3 id="backend-router-organization">Backend Router Organization</h3>
+<h3 id="backend-router-organization">Backend Router Organization<a class="headerlink" href="#backend-router-organization" title="Permanent link">&para;</a></h3>
 <p>The API is organized into five endpoint groups, each with distinct auth requirements:</p>
 <table>
 <thead>
@@ -2050,7 +1879,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="storage-layer-architecture">Storage Layer Architecture</h2>
+<h2 id="storage-layer-architecture">Storage Layer Architecture<a class="headerlink" href="#storage-layer-architecture" title="Permanent link">&para;</a></h2>
 <p>The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against <code>StorageProtocol</code> (structural typing) and never imports backend-specific libraries like <code>boto3</code>.</p>
 <pre class="mermaid"><code>graph TD
     subgraph "Endpoint Code"
@@ -2076,7 +1905,7 @@
     SB --&gt;|"inherits"| HCP_A
     SB -.-&gt;|"inherits"| FUTURE
     HCP_A --&gt;|"inherits"| CHCP</code></pre>
-<h3 id="how-it-works">How it works</h3>
+<h3 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -2113,7 +1942,7 @@
 </tr>
 </tbody>
 </table>
-<h3 id="adding-a-new-storage-backend">Adding a new storage backend</h3>
+<h3 id="adding-a-new-storage-backend">Adding a new storage backend<a class="headerlink" href="#adding-a-new-storage-backend" title="Permanent link">&para;</a></h3>
 <p>To add support for MinIO, Ceph, or AWS S3:</p>
 <ol>
 <li>Create <code>services/storage/adapters/minio.py</code> (or similar)</li>
@@ -2122,7 +1951,7 @@
 <li>Register the new adapter in the dependency injection layer</li>
 <li>No endpoint code changes needed — they type-hint against <code>StorageProtocol</code></li>
 </ol>
-<h3 id="storage-operations">Storage operations</h3>
+<h3 id="storage-operations">Storage operations<a class="headerlink" href="#storage-operations" title="Permanent link">&para;</a></h3>
 <p>The storage layer supports these operation groups:</p>
 <table>
 <thead>
@@ -2158,7 +1987,7 @@
 </tr>
 </tbody>
 </table>
-<h3 id="hcp-specific-workarounds">HCP-specific workarounds</h3>
+<h3 id="hcp-specific-workarounds">HCP-specific workarounds<a class="headerlink" href="#hcp-specific-workarounds" title="Permanent link">&para;</a></h3>
 <p>The <code>HcpStorage</code> adapter handles several HCP quirks that differ from standard S3:</p>
 <table>
 <thead>
@@ -2186,7 +2015,7 @@
 </tr>
 </tbody>
 </table>
-<h3 id="namespace-protocol-configuration">Namespace protocol configuration</h3>
+<h3 id="namespace-protocol-configuration">Namespace protocol configuration<a class="headerlink" href="#namespace-protocol-configuration" title="Permanent link">&para;</a></h3>
 <p>Each HCP namespace supports multiple access protocols configured independently via MAPI:</p>
 <table>
 <thead>
@@ -2220,7 +2049,7 @@
 </tbody>
 </table>
 <p>Protocol settings are managed through the namespace access endpoints (<code>/api/v1/mapi/tenants/{tenant}/namespaces/{ns}/protocols/</code>) and each includes <code>ipSettings</code> for IP-based access control.</p>
-<h2 id="frontend-architecture">Frontend Architecture</h2>
+<h2 id="frontend-architecture">Frontend Architecture<a class="headerlink" href="#frontend-architecture" title="Permanent link">&para;</a></h2>
 <p>The SvelteKit frontend follows a reactive pattern with remote function abstractions and server-side RBAC:</p>
 <pre class="mermaid"><code>graph TD
     subgraph "Pages"
@@ -2271,7 +2100,7 @@
     P --&gt; DER
     P --&gt; EFF
     C --&gt;|".updates(queryData)"| Q</code></pre>
-<h3 id="frontend-rbac">Frontend RBAC</h3>
+<h3 id="frontend-rbac">Frontend RBAC<a class="headerlink" href="#frontend-rbac" title="Permanent link">&para;</a></h3>
 <p>The frontend enforces role-based access control entirely on the server side, making it impossible to bypass via client-side manipulation.</p>
 <pre class="mermaid"><code>sequenceDiagram
     participant B as Browser
@@ -2308,7 +2137,7 @@
             G--&gt;&gt;B: Render page
         end
     end</code></pre>
-<h4 id="access-levels">Access levels</h4>
+<h4 id="access-levels">Access levels<a class="headerlink" href="#access-levels" title="Permanent link">&para;</a></h4>
 <table>
 <thead>
 <tr>
@@ -2335,7 +2164,7 @@
 </tr>
 </tbody>
 </table>
-<h4 id="protected-routes">Protected routes</h4>
+<h4 id="protected-routes">Protected routes<a class="headerlink" href="#protected-routes" title="Permanent link">&para;</a></h4>
 <p>These routes call <code>requireAdmin()</code> in their <code>+page.server.ts</code> and redirect non-admin users to <code>/buckets</code>:</p>
 <ul>
 <li><code>/namespaces</code>, <code>/namespaces/[namespace]</code></li>
@@ -2344,13 +2173,13 @@
 <li><code>/search</code></li>
 <li><code>/content-classes</code>, <code>/content-classes/[name]</code></li>
 </ul>
-<h4 id="sidebar-filtering">Sidebar filtering</h4>
+<h4 id="sidebar-filtering">Sidebar filtering<a class="headerlink" href="#sidebar-filtering" title="Permanent link">&para;</a></h4>
 <p>The sidebar conditionally renders sections based on access level:</p>
 <ul>
 <li><strong>All users</strong>: Storage (Buckets, Access Control), Analytics (Data Explorer)</li>
 <li><strong>Admins only</strong>: Tenant (Namespaces, Users &amp; Groups, Tenant Settings), Search &amp; Indexing (Search, Content Classes)</li>
 </ul>
-<h3 id="frontend-patterns">Frontend Patterns</h3>
+<h3 id="frontend-patterns">Frontend Patterns<a class="headerlink" href="#frontend-patterns" title="Permanent link">&para;</a></h3>
 <ul>
 <li>
 <p><strong>Remote functions</strong>: All API calls are defined in <code>*.remote.ts</code> files using <code>query()</code> for reads and <code>command()</code> for mutations.</p>
@@ -2362,7 +2191,7 @@
 <p><strong>Svelte 5 runes</strong>: Components use <code>$state</code> for mutable state, <code>$derived</code> for computed values, and <code>$effect</code> for async side effects with cancellation.</p>
 </li>
 </ul>
-<h2 id="mock-server">Mock Server</h2>
+<h2 id="mock-server">Mock Server<a class="headerlink" href="#mock-server" title="Permanent link">&para;</a></h2>
 <p>For development without an HCP system, the backend includes a mock server:</p>
 <pre class="mermaid"><code>graph LR
     subgraph "Mock Server"
@@ -2375,7 +2204,7 @@
     FIX --&gt;|"initial data"| STATE
     DISP --&gt;|"CRUD operations"| STATE</code></pre>
 <p>The mock server implements the same interface as the real MAPI service, allowing the frontend to be developed and tested independently. Start it with <code>make run-api-mock</code>.</p>
-<h2 id="deployment">Deployment</h2>
+<h2 id="deployment">Deployment<a class="headerlink" href="#deployment" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>graph LR
     subgraph "Docker / Production"
         FE2["Frontend&lt;br/&gt;SvelteKit + Node"]
@@ -2448,67 +2277,19 @@
             </div>
           
           
-  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
-
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
-        
-          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
-  
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
-  Back to top
-</button>
         
       </main>
       
         <footer class="md-footer">
-  
-    
-      
-      <nav class="md-footer__inner md-grid" aria-label="Footer" >
-        
-          
-          <a href="../getting-started/configuration/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Configuration">
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
-            </div>
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Previous
-              </span>
-              <div class="md-ellipsis">
-                Configuration
-              </div>
-            </div>
-          </a>
-        
-        
-          
-          <a href="../api/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Next
-              </span>
-              <div class="md-ellipsis">
-                Overview
-              </div>
-            </div>
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </div>
-          </a>
-        
-      </nav>
-    
   
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2026 HCP App
+      Copyright &copy; 2026 AI-Riksarkivet
     </div>
   
   
@@ -2533,7 +2314,7 @@
       
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":[],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
       <script src="../assets/javascripts/bundle.5fd3284f.min.js"></script>
