@@ -261,6 +261,59 @@ export const update_versioning = command(
   },
 );
 
+// ── Versioning Settings (MAPI) ──────────────────────────────────────
+
+export interface VersioningSettings {
+  enabled?: boolean;
+  prune?: boolean;
+  pruneDays?: number;
+  useDeleteMarkers?: boolean;
+  keepDeletionRecords?: boolean;
+}
+
+export const get_ns_versioning = query(
+  z.object({ tenant: z.string(), name: z.string() }),
+  async ({ tenant, name }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/versioningSettings`,
+      );
+      if (res.ok) return (await res.json()) as VersioningSettings;
+    } catch (err) {
+      console.error("[namespaces.remote]", err);
+    }
+    return {} as VersioningSettings;
+  },
+);
+
+export const update_ns_versioning = command(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    body: z.record(z.string(), z.unknown()),
+  }),
+  async ({ tenant, name, body }) => {
+    const res = await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${
+        encodeURIComponent(name)
+      }/versioningSettings`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update versioning settings",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
 // ── Namespace Statistics ──────────────────────────────────────────────
 
 export interface NsStatistics {

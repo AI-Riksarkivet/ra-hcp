@@ -15,13 +15,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Annotated, Optional
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
-from app.api.dependencies import get_s3_service
+from app.api.dependencies import get_mapi_service, get_s3_service
 from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error, run_s3
+from app.core.security import oauth2_scheme, verify_token_with_credentials
 from app.schemas.s3 import (
     AclPolicy,
     AclResponse,
@@ -34,6 +35,7 @@ from app.schemas.s3 import (
     PutBucketVersioningRequest,
     VersioningMutationResponse,
 )
+from app.services.mapi_service import AuthenticatedMapiService
 from app.services.storage import StorageProtocol
 
 logger = logging.getLogger(__name__)
@@ -81,23 +83,97 @@ async def delete_bucket(
     bucket: str,
     force: Optional[bool] = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
+    token: Annotated[str, Depends(oauth2_scheme)] = "",
 ):
     """Delete an S3 bucket.
 
     If ``force=true``, all objects (including versions and delete markers)
-    are removed before deleting the bucket itself.
+    are removed before deleting the bucket itself.  When the S3 delete
+    fails with BucketNotEmpty (typically due to HCP's immutable deletion
+    records), the endpoint reconfigures the namespace via MAPI to allow
+    pruning of deletion records, then retries the delete.
     """
     if force:
+        creds = verify_token_with_credentials(token)
         await _empty_bucket(s3, bucket)
+        try:
+            await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+            return {"status": "deleted", "bucket": bucket}
+        except HTTPException as exc:
+            if exc.status_code != 409 or not creds.tenant:
+                raise
+
+        # BucketNotEmpty — likely immutable deletion records.
+        # Reconfigure namespace via MAPI so HCP can prune them.
+        logger.info(
+            "force-delete: S3 delete failed for '%s' (BucketNotEmpty), "
+            "reconfiguring namespace for deletion record cleanup",
+            bucket,
+        )
+        ns_path = f"/tenants/{creds.tenant}/namespaces/{bucket}"
+        await _prepare_namespace_for_delete(hcp, ns_path)
+
+        # Retry: S3 delete first, then MAPI namespace delete.
+        for attempt in range(3):
+            if attempt > 0:
+                await asyncio.sleep(2)
+            try:
+                await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+                return {"status": "deleted", "bucket": bucket}
+            except HTTPException as exc:
+                if exc.status_code != 409:
+                    raise
+            try:
+                await hcp.send("DELETE", ns_path, resource=f"bucket '{bucket}'")
+                return {"status": "deleted", "bucket": bucket}
+            except HTTPException:
+                logger.info(
+                    "force-delete: attempt %d for '%s' — waiting for "
+                    "HCP to prune deletion records",
+                    attempt + 1,
+                    bucket,
+                )
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"bucket '{bucket}': All objects removed but HCP is still "
+                f"cleaning up internal deletion records. "
+                f"Please try again in a few minutes."
+            ),
+        )
     await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
     return {"status": "deleted", "bucket": bucket}
 
 
-async def _empty_bucket(s3: StorageProtocol, bucket: str) -> None:
-    """Delete all objects, versions, and delete markers in *bucket*."""
-    deleted = 0
+async def _prepare_namespace_for_delete(
+    hcp: AuthenticatedMapiService, ns_path: str
+) -> None:
+    """Reconfigure an HCP namespace so deletion records can be pruned.
 
-    # 1. Delete all object versions and delete markers
+    HCP keeps immutable "deletion records" when ``keepDeletionRecords``
+    is enabled.  These prevent both S3 bucket delete and MAPI namespace
+    delete.  To allow cleanup, we disable the record-keeping, enable
+    immediate pruning, and disable search indexing.
+    """
+    try:
+        await hcp.send(
+            "POST",
+            f"{ns_path}/versioningSettings",
+            body={"keepDeletionRecords": False, "prune": True, "pruneDays": 0},
+        )
+    except HTTPException:
+        logger.warning("force-delete: failed to update versioning settings")
+    try:
+        await hcp.send("POST", ns_path, body={"searchEnabled": False})
+    except HTTPException:
+        logger.warning("force-delete: failed to disable search")
+
+
+async def _delete_all_versions(s3: StorageProtocol, bucket: str) -> int:
+    """Delete every object version and delete marker in *bucket*."""
+    deleted = 0
     key_marker: str | None = None
     version_marker: str | None = None
     while True:
@@ -128,8 +204,17 @@ async def _empty_bucket(s3: StorageProtocol, bucket: str) -> None:
             break
         key_marker = result.get("NextKeyMarker")
         version_marker = result.get("NextVersionIdMarker")
+    return deleted
 
-    # 2. Clean up any remaining objects (non-versioned)
+
+async def _empty_bucket(s3: StorageProtocol, bucket: str) -> None:
+    """Delete all objects, versions, and delete markers in *bucket*."""
+    deleted = 0
+
+    # 1. Delete all object versions and delete markers
+    deleted += await _delete_all_versions(s3, bucket)
+
+    # 2. Clean up any remaining non-versioned objects
     token: str | None = None
     while True:
         result = await asyncio.to_thread(s3.list_objects, bucket, None, 1000, token)
@@ -140,6 +225,10 @@ async def _empty_bucket(s3: StorageProtocol, bucket: str) -> None:
         if not result.get("IsTruncated", False):
             break
         token = result.get("NextContinuationToken")
+
+    # 3. Deleting non-versioned objects may have created new delete markers
+    #    on versioned buckets — clean those up too.
+    deleted += await _delete_all_versions(s3, bucket)
 
     if deleted > 0:
         logger.info(

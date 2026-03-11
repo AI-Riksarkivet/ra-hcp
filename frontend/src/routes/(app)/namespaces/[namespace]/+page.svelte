@@ -11,6 +11,7 @@
 	import NsUserAccess from './sections/ns-user-access.svelte';
 	import NsChargeback from './sections/ns-chargeback.svelte';
 	import NsCompliance from './sections/ns-compliance.svelte';
+	import NsVersioning from './sections/ns-versioning.svelte';
 	import NsRetentionClasses from './sections/ns-retention-classes.svelte';
 	import NsIndexing from './sections/ns-indexing.svelte';
 	import NsCors from './sections/ns-cors.svelte';
@@ -66,13 +67,14 @@
 
 				<div class="grid items-stretch gap-6 lg:grid-cols-3">
 					<NsCompliance {tenant} {namespaceName} />
-					<NsReplicationCollision {tenant} {namespaceName} />
+					<NsVersioning {tenant} {namespaceName} />
 					<NsRetentionClasses {tenant} {namespaceName} />
 				</div>
 
-				<div class="grid items-stretch gap-6 lg:grid-cols-2">
+				<div class="grid items-stretch gap-6 lg:grid-cols-3">
 					<NsIndexing {tenant} {namespaceName} />
 					<NsCors {tenant} {namespaceName} />
+					<NsReplicationCollision {tenant} {namespaceName} />
 				</div>
 			</Tabs.Content>
 		</Tabs.Root>
