@@ -28,7 +28,7 @@ from app.core.security import create_access_token
 from app.main import app
 from app.services.cache_service import CacheService
 from app.services.cached_mapi import CachedMapiService
-from app.services.mapi_service import AuthenticatedMapiService
+from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.storage.protocol import StorageProtocol
 
 HCP_BASE = "https://test.hcp.example.com:9090/mapi"
@@ -132,7 +132,9 @@ async def cached_client(
     this one injects CachedMapiService backed by fakeredis so we can
     verify caching behavior through the full API stack.
     """
-    cached_mapi = CachedMapiService(mapi_settings, cache_service, cache_settings)
+    inner_mapi = MapiService(mapi_settings)
+    cached_mapi = CachedMapiService(inner_mapi, cache_service, cache_settings)
+    # AuthenticatedMapiService wraps cached_mapi so requests go through cache
     auth_mapi = AuthenticatedMapiService(cached_mapi, "testuser", "testpass")
 
     async def _override_mapi():

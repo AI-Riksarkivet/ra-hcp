@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 
 from app.api.dependencies import get_s3_service
-from app.api.errors import run_s3
+from app.api.errors import run_storage
 from app.schemas.common import StatusResponse
 from app.schemas.s3 import (
     AbortMultipartUploadRequest,
@@ -39,7 +39,7 @@ async def complete_multipart_upload(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Complete a multipart upload by assembling uploaded parts."""
-    result = await run_s3(
+    result = await run_storage(
         s3.complete_multipart_upload,
         f"object '{key}'",
         bucket,
@@ -62,7 +62,7 @@ async def abort_multipart_upload(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Abort a multipart upload and discard uploaded parts."""
-    await run_s3(
+    await run_storage(
         s3.abort_multipart_upload,
         f"object '{key}'",
         bucket,
@@ -81,7 +81,7 @@ async def list_parts(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """List uploaded parts for a multipart upload."""
-    result = await run_s3(
+    result = await run_storage(
         s3.list_parts,
         f"object '{key}'",
         bucket,
@@ -111,7 +111,9 @@ async def create_multipart_upload(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Initiate a multipart upload and return an upload ID."""
-    result = await run_s3(s3.create_multipart_upload, f"object '{key}'", bucket, key)
+    result = await run_storage(
+        s3.create_multipart_upload, f"object '{key}'", bucket, key
+    )
     return CreateMultipartUploadResponse(
         bucket=bucket,
         key=key,
@@ -129,7 +131,7 @@ async def upload_part(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Upload a single part of a multipart upload."""
-    result = await run_s3(
+    result = await run_storage(
         s3.upload_part,
         f"object '{key}' part {part_number}",
         bucket,

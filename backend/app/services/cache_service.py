@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import redis as sync_redis
 import redis.asyncio as aioredis
@@ -46,13 +46,18 @@ class CacheService:
 
     def __init__(self, settings: CacheSettings):
         self._settings = settings
-        self._redis: Optional[aioredis.Redis] = None
-        self._sync_redis: Optional[sync_redis.Redis] = None
+        self._redis: aioredis.Redis | None = None
+        self._sync_redis: sync_redis.Redis | None = None
         self._enabled = False
 
     @property
     def enabled(self) -> bool:
         return self._enabled
+
+    @property
+    def has_url(self) -> bool:
+        """True when a Redis URL is configured (even if not yet connected)."""
+        return bool(self._settings.redis_url)
 
     async def connect(self) -> None:
         """Connect to Redis. If unreachable, disable caching silently."""
@@ -112,7 +117,7 @@ class CacheService:
 
     # ── Async methods (for CachedMapiService) ──────────────────────────
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         if not self._enabled:
             return None
         with tracer.start_as_current_span(
@@ -192,7 +197,7 @@ class CacheService:
 
     # ── Sync methods (for CachedStorage inside asyncio.to_thread) ───
 
-    def get_sync(self, key: str) -> Optional[Any]:
+    def get_sync(self, key: str) -> Any | None:
         if not self._enabled or self._sync_redis is None:
             return None
         with tracer.start_as_current_span(

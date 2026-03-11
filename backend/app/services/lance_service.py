@@ -8,6 +8,8 @@ limit/offset, take). All I/O is pushed to the S3 storage layer.
 from __future__ import annotations
 
 import logging
+import math
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 from opentelemetry import trace
@@ -19,7 +21,57 @@ except ImportError:
     lancedb = None  # type: ignore[assignment]
     pa = None  # type: ignore[assignment]
 
-from app.services.serialize_value import _clean_float, serialize_value
+
+# ── Value serialization (PyArrow → JSON-safe Python) ─────────────────
+
+
+def _clean_float(v: float) -> float | None:
+    """Replace NaN / Inf with None for JSON compatibility."""
+    if math.isnan(v) or math.isinf(v):
+        return None
+    return v
+
+
+def serialize_value(value: Any) -> Any:
+    """Convert a single PyArrow-deserialized value into a JSON-safe object.
+
+    Called per-cell after ``to_pylist()``. Handles:
+    - None → None
+    - bytes → {"size": N}  (content served via /cell endpoint)
+    - date/datetime/time/timedelta → ISO string
+    - dict (struct/map) → recursively serialize values
+    - list → recursively serialize items, clean NaN/Inf in float lists
+    - float → NaN/Inf → None
+    - everything else → pass through
+    """
+    if value is None:
+        return None
+
+    if isinstance(value, bytes):
+        return {"size": len(value)}
+
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+
+    if isinstance(value, time):
+        return value.isoformat()
+
+    if isinstance(value, timedelta):
+        return str(value)
+
+    if isinstance(value, dict):
+        return {k: serialize_value(v) for k, v in value.items()}
+
+    if isinstance(value, list):
+        if value and all(isinstance(x, (int, float)) for x in value):
+            return [_clean_float(float(x)) for x in value]
+        return [serialize_value(item) for item in value]
+
+    if isinstance(value, float):
+        return _clean_float(value)
+
+    return value
+
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)

@@ -188,9 +188,9 @@ class CachedStorage:
         self._cache.delete_sync(self._key("head_bucket", name))
         self._cache.delete_sync(self._key("versioning", name))
         self._cache.delete_sync(self._key("bucket_acl", name))
-        self._cache.invalidate_pattern_sync(f"s3:list_objects:{name}:*")
-        self._cache.invalidate_pattern_sync(f"s3:head_object:{name}:*")
-        self._cache.invalidate_pattern_sync(f"s3:object_acl:{name}:*")
+        self._cache.invalidate_pattern_sync(self._key("list_objects", name, "*"))
+        self._cache.invalidate_pattern_sync(self._key("head_object", name, "*"))
+        self._cache.invalidate_pattern_sync(self._key("object_acl", name, "*"))
 
     def create_bucket(self, name: str) -> dict:
         result = self._inner.create_bucket(name)
@@ -204,21 +204,21 @@ class CachedStorage:
 
     def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
         self._inner.put_object(bucket, key, body)
-        self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")
+        self._cache.invalidate_pattern_sync(self._key("list_objects", bucket, "*"))
         self._cache.delete_sync(self._key("head_object", bucket, key))
 
     def delete_object(
         self, bucket: str, key: str, version_id: str | None = None
     ) -> dict:
         result = self._inner.delete_object(bucket, key, version_id)
-        self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")
+        self._cache.invalidate_pattern_sync(self._key("list_objects", bucket, "*"))
         self._cache.delete_sync(self._key("head_object", bucket, key))
         self._cache.delete_sync(self._key("object_acl", bucket, key))
         return result
 
     def delete_objects(self, bucket: str, keys: list[str]) -> dict:
         result = self._inner.delete_objects(bucket, keys)
-        self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")
+        self._cache.invalidate_pattern_sync(self._key("list_objects", bucket, "*"))
         for k in keys:
             self._cache.delete_sync(self._key("head_object", bucket, k))
             self._cache.delete_sync(self._key("object_acl", bucket, k))
@@ -232,7 +232,7 @@ class CachedStorage:
         dst_key: str,
     ) -> dict:
         result = self._inner.copy_object(src_bucket, src_key, dst_bucket, dst_key)
-        self._cache.invalidate_pattern_sync(f"s3:list_objects:{dst_bucket}:*")
+        self._cache.invalidate_pattern_sync(self._key("list_objects", dst_bucket, "*"))
         self._cache.delete_sync(self._key("head_object", dst_bucket, dst_key))
         self._cache.delete_sync(self._key("object_acl", dst_bucket, dst_key))
         return result
@@ -275,7 +275,7 @@ class CachedStorage:
         parts: list[dict],
     ) -> dict:
         result = self._inner.complete_multipart_upload(bucket, key, upload_id, parts)
-        self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")
+        self._cache.invalidate_pattern_sync(self._key("list_objects", bucket, "*"))
         self._cache.delete_sync(self._key("head_object", bucket, key))
         return result
 

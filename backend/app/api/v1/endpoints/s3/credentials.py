@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import Annotated
 
-from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.dependencies import (
@@ -13,8 +11,8 @@ from app.api.dependencies import (
     get_s3_settings,
     get_storage_settings,
 )
+from app.api.errors import run_storage
 from app.core.auth_utils import derive_s3_keys
-from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error
 from app.core.config import StorageSettings
 from app.core.security import (
     HcpCredentials,
@@ -50,18 +48,14 @@ async def generate_presigned_url(
             status_code=422,
             detail=f"method must be one of: {', '.join(sorted(_ALLOWED_METHODS))}",
         )
-    try:
-        url = await asyncio.to_thread(
-            s3.generate_presigned_url,
-            body.bucket,
-            body.key,
-            body.expires_in,
-            body.method,
-        )
-    except ClientError as exc:
-        raise_for_s3_error(exc, f"object '{body.key}'")
-    except BotoCoreError as exc:
-        raise_for_s3_transport_error(exc, f"object '{body.key}'")
+    url = await run_storage(
+        s3.generate_presigned_url,
+        f"object '{body.key}'",
+        body.bucket,
+        body.key,
+        body.expires_in,
+        body.method,
+    )
     return PresignedUrlResponse(
         url=url,
         bucket=body.bucket,

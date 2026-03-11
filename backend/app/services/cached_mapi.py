@@ -146,9 +146,7 @@ class CachedMapiService:
 
             return resp
 
-    async def _invalidate_for_write(
-        self, path: str, host: str | None = None
-    ) -> None:
+    async def _invalidate_for_write(self, path: str, host: str | None = None) -> None:
         """Invalidate cache entries affected by a write to *path*."""
         prefix = f"mapi:{host}:" if host else "mapi:"
         # Invalidate resource and sub-resources

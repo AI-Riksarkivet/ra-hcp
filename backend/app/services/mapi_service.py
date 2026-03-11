@@ -213,8 +213,12 @@ class MapiService:
         return resp
 
 
-class AuthenticatedMapiService(MapiService):
-    """Wrapper that injects per-request credentials from the JWT."""
+class AuthenticatedMapiService:
+    """Wrapper that injects per-request credentials from the JWT.
+
+    Uses composition: wraps any service that implements the same
+    ``request()`` interface (MapiService, CachedMapiService, etc.).
+    """
 
     def __init__(
         self,
@@ -223,14 +227,14 @@ class AuthenticatedMapiService(MapiService):
         password: str,
         host: str | None = None,
     ):
-        self.settings = base.settings
         self._base = base
         self._username = username
         self._password = password
         self._host = host
 
-    async def _get_client(self):
-        return await self._base._get_client()
+    @property
+    def settings(self) -> MapiSettings:
+        return self._base.settings
 
     async def request(
         self, method, path, *, username=None, password=None, host=None, **kwargs
@@ -243,6 +247,37 @@ class AuthenticatedMapiService(MapiService):
             host=host or self._host,
             **kwargs,
         )
+
+    async def get(self, path: str, **kwargs) -> httpx.Response:
+        return await self.request("GET", path, **kwargs)
+
+    async def put(self, path: str, **kwargs) -> httpx.Response:
+        return await self.request("PUT", path, **kwargs)
+
+    async def post(self, path: str, **kwargs) -> httpx.Response:
+        return await self.request("POST", path, **kwargs)
+
+    async def delete(self, path: str, **kwargs) -> httpx.Response:
+        return await self.request("DELETE", path, **kwargs)
+
+    async def fetch_json(
+        self, path: str, *, resource: str = "resource", **kwargs
+    ) -> dict:
+        """GET + raise_for_hcp_status + parse JSON, with injected credentials."""
+        resp = await self.get(path, **kwargs)
+        raise_for_hcp_status(resp, resource)
+        return parse_json_response(resp)
+
+    async def send(
+        self, method: str, path: str, *, resource: str = "resource", **kwargs
+    ) -> httpx.Response:
+        """request + raise_for_hcp_status, with injected credentials."""
+        resp = await self.request(method, path, **kwargs)
+        raise_for_hcp_status(resp, resource)
+        return resp
+
+    async def ping(self) -> bool:
+        return await self._base.ping()
 
     async def close(self):
         pass  # base owns the client

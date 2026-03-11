@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-
 import httpx
 import pytest
-from botocore.exceptions import ClientError
 from fastapi import HTTPException
 
-from app.api.errors import parse_json_response, raise_for_hcp_status, raise_for_s3_error
+from app.api.errors import parse_json_response, raise_for_hcp_status, run_mapi
+from app.services.mapi_errors import (
+    MapiError,
+    MapiResponseError,
+    MapiTransportError,
+)
 
 
 # ── raise_for_hcp_status ────────────────────────────────────────────
@@ -105,41 +108,45 @@ def test_parse_json_response_500_returns_empty():
     assert parse_json_response(resp) == {}
 
 
-# ── raise_for_s3_error ──────────────────────────────────────────────
+# ── MapiError domain exceptions ─────────────────────────────────────
 
 
-def _make_client_error(code: str, message: str, http_status: int = 400) -> ClientError:
-    return ClientError(
-        error_response={
-            "Error": {"Code": code, "Message": message},
-            "ResponseMetadata": {"HTTPStatusCode": http_status},
-        },
-        operation_name="TestOp",
-    )
+def test_mapi_error_attributes():
+    err = MapiError("something failed", http_status=503)
+    assert str(err) == "something failed"
+    assert err.message == "something failed"
+    assert err.http_status == 503
 
 
-@pytest.mark.parametrize(
-    "code,expected_status",
-    [
-        ("NoSuchBucket", 404),
-        ("NoSuchKey", 404),
-        ("BucketNotEmpty", 409),
-        ("BucketAlreadyExists", 409),
-        ("BucketAlreadyOwnedByYou", 409),
-        ("AccessDenied", 403),
-        ("InvalidBucketName", 400),
-        ("InvalidArgument", 400),
-    ],
-)
-def test_s3_error_code_mapping(code: str, expected_status: int):
-    exc = _make_client_error(code, "test message")
+def test_mapi_transport_error_is_mapi_error():
+    err = MapiTransportError("timeout", http_status=504)
+    assert isinstance(err, MapiError)
+    assert err.http_status == 504
+
+
+def test_mapi_response_error_has_hcp_status():
+    err = MapiResponseError("not found", http_status=404, hcp_status=404)
+    assert isinstance(err, MapiError)
+    assert err.http_status == 404
+    assert err.hcp_status == 404
+
+
+# ── run_mapi ──────────────────────────────────────────────────────────
+
+
+async def test_run_mapi_success():
+    async def _ok():
+        return {"data": "ok"}
+
+    result = await run_mapi(_ok(), "test")
+    assert result == {"data": "ok"}
+
+
+async def test_run_mapi_translates_mapi_error():
+    async def _fail():
+        raise MapiTransportError("HCP unreachable", http_status=502)
+
     with pytest.raises(HTTPException) as exc_info:
-        raise_for_s3_error(exc, "test-resource")
-    assert exc_info.value.status_code == expected_status
-
-
-def test_s3_error_unknown_code_uses_http_status():
-    exc = _make_client_error("SomeNewError", "new error", http_status=503)
-    with pytest.raises(HTTPException) as exc_info:
-        raise_for_s3_error(exc, "resource")
-    assert exc_info.value.status_code == 503
+        await run_mapi(_fail(), "tenants")
+    assert exc_info.value.status_code == 502
+    assert "HCP unreachable" in exc_info.value.detail

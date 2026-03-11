@@ -137,8 +137,12 @@ class QueryService:
         return OperationQueryResponse.model_validate(data)
 
 
-class AuthenticatedQueryService(QueryService):
-    """Wrapper that injects per-request credentials from the JWT."""
+class AuthenticatedQueryService:
+    """Wrapper that injects per-request credentials from the JWT.
+
+    Uses composition: wraps any service that implements the same
+    query interface (QueryService, CachedQueryService, etc.).
+    """
 
     def __init__(
         self,
@@ -146,18 +150,13 @@ class AuthenticatedQueryService(QueryService):
         username: str,
         password: str,
     ):
-        self.settings = base.settings
         self._base = base
         self._username = username
         self._password = password
 
-    async def _get_client(self):
-        return await self._base._get_client()
-
-    async def _post_query(self, tenant, body, **kwargs):
-        kwargs["username"] = self._username
-        kwargs["password"] = self._password
-        return await self._base._post_query(tenant, body, **kwargs)
+    @property
+    def settings(self) -> MapiSettings:
+        return self._base.settings
 
     async def object_query(
         self,
@@ -168,7 +167,7 @@ class AuthenticatedQueryService(QueryService):
         password=None,
         auth_type=None,
     ):
-        return await super().object_query(
+        return await self._base.object_query(
             tenant,
             query,
             username=username or self._username,
@@ -185,7 +184,7 @@ class AuthenticatedQueryService(QueryService):
         password=None,
         auth_type=None,
     ):
-        return await super().operation_query(
+        return await self._base.operation_query(
             tenant,
             query,
             username=username or self._username,

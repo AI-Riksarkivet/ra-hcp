@@ -12,6 +12,7 @@ from app.core.config import CacheSettings, MapiSettings
 from app.schemas.query import ObjectQuery, OperationQuery
 from app.services.cache_service import CacheService
 from app.services.cached_query import CachedQueryService
+from app.services.query_service import QueryService
 
 QUERY_URL = "https://mock.hcp.example.com/query"
 
@@ -51,9 +52,10 @@ async def cache() -> AsyncGenerator[CacheService, None]:
 
 @pytest.fixture
 async def query_svc(cache: CacheService) -> AsyncGenerator[CachedQueryService, None]:
-    svc = CachedQueryService(_settings(), cache, _cache_settings())
+    inner = QueryService(_settings())
+    svc = CachedQueryService(inner, cache, _cache_settings())
     yield svc
-    await svc.close()
+    await inner.close()
 
 
 @pytest.fixture
@@ -176,7 +178,8 @@ async def test_works_without_cache(query_mock):
     await cache.connect()
     assert not cache.enabled
 
-    svc = CachedQueryService(_settings(), cache, cache_settings)
+    inner = QueryService(_settings())
+    svc = CachedQueryService(inner, cache, cache_settings)
     route = query_mock.post(QUERY_URL).respond(200, json=_OBJ_RESPONSE)
 
     r1 = await svc.object_query(
@@ -192,4 +195,5 @@ async def test_works_without_cache(query_mock):
     assert route.call_count == 2
 
     await svc.close()
+    await inner.close()
     await cache.close()

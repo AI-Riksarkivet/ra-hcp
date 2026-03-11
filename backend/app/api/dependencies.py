@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from functools import lru_cache
-from typing import Annotated, AsyncGenerator, Optional
+from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends, HTTPException, Request
 
@@ -17,8 +17,8 @@ from app.core.security import (
 )
 from app.core.tenant_routing import mapi_host_for_tenant, s3_endpoint_for_tenant
 from app.services.cache_service import CacheService
-from app.services.mapi_service import AuthenticatedMapiService, MapiService
-from app.services.query_service import AuthenticatedQueryService, QueryService
+from app.services.mapi_service import AuthenticatedMapiService
+from app.services.query_service import AuthenticatedQueryService
 from app.schemas.lance import LanceDatasetParams
 from app.services.lance_service import LanceService
 from app.services.storage import StorageProtocol
@@ -54,7 +54,7 @@ def get_storage_settings() -> StorageSettings:
 # read from request.app.state — no module-level mutable globals.
 
 
-def get_cache_service(request: Request) -> Optional[CacheService]:
+def get_cache_service(request: Request) -> CacheService | None:
     """Return the shared CacheService from app.state (or None)."""
     return getattr(request.app.state, "cache", None)
 
@@ -64,7 +64,7 @@ async def get_mapi_service(
     token: Annotated[str, Depends(oauth2_scheme)],
 ) -> AsyncGenerator[AuthenticatedMapiService, None]:
     """Yield an AuthenticatedMapiService wrapping the singleton with JWT creds."""
-    base: MapiService = request.app.state.mapi
+    base = request.app.state.mapi  # MapiService or CachedMapiService
     creds = verify_token_with_credentials(token)
     settings = get_mapi_settings()
     host = mapi_host_for_tenant(creds.tenant, settings.hcp_domain)
@@ -79,7 +79,7 @@ async def get_query_service(
     token: Annotated[str, Depends(oauth2_scheme)],
 ) -> AsyncGenerator[AuthenticatedQueryService, None]:
     """Yield an AuthenticatedQueryService wrapping the singleton with JWT creds."""
-    base: QueryService = request.app.state.query
+    base = request.app.state.query  # QueryService or CachedQueryService
     creds = verify_token_with_credentials(token)
     yield AuthenticatedQueryService(base, creds.username, creds.password)
 
@@ -190,6 +190,13 @@ async def get_lance_service(
     cache_key = (creds, params.bucket, params.path)
     lance_cache: dict = request.app.state.lance_cache
     if cache_key not in lance_cache:
+        lance = LanceService.with_credentials(
+            s3_uri,
+            access_key,
+            secret_key,
+            endpoint_url,
+            verify_ssl=settings.hcp_verify_ssl,
+        )
         cache: CacheService | None = getattr(request.app.state, "cache", None)
         if cache and cache.enabled:
             from app.services.cached_lance import CachedLanceService
@@ -199,14 +206,8 @@ async def get_lance_service(
                 params.bucket,
                 params.path,
             )
-            lance_cache[cache_key] = CachedLanceService.with_credentials(
-                s3_uri,
-                access_key,
-                secret_key,
-                endpoint_url,
-                verify_ssl=settings.hcp_verify_ssl,
-                cache=cache,
-                cache_settings=get_cache_settings(),
+            lance_cache[cache_key] = CachedLanceService(
+                lance, cache, get_cache_settings()
             )
         else:
             logger.info(
@@ -214,11 +215,5 @@ async def get_lance_service(
                 params.bucket,
                 params.path,
             )
-            lance_cache[cache_key] = LanceService.with_credentials(
-                s3_uri,
-                access_key,
-                secret_key,
-                endpoint_url,
-                verify_ssl=settings.hcp_verify_ssl,
-            )
+            lance_cache[cache_key] = lance
     yield lance_cache[cache_key]

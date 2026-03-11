@@ -6,7 +6,7 @@ from datetime import date, datetime, time, timedelta
 
 import pytest
 
-from app.services.serialize_value import _clean_float, serialize_value
+from app.services.lance_service import _clean_float, serialize_value
 
 
 # ── NaN/Inf filtering ────────────────────────────────────────────

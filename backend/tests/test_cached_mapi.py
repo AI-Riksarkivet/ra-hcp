@@ -11,6 +11,7 @@ import respx
 from app.core.config import CacheSettings, MapiSettings
 from app.services.cache_service import CacheService
 from app.services.cached_mapi import CachedMapiService
+from app.services.mapi_service import MapiService
 
 HCP_BASE = "https://test.hcp.example.com:9090/mapi"
 
@@ -50,9 +51,10 @@ async def cache() -> AsyncGenerator[CacheService, None]:
 
 @pytest.fixture
 async def mapi(cache: CacheService) -> AsyncGenerator[CachedMapiService, None]:
-    svc = CachedMapiService(_mapi_settings(), cache, _cache_settings())
+    inner = MapiService(_mapi_settings())
+    svc = CachedMapiService(inner, cache, _cache_settings())
     yield svc
-    await svc.close()
+    await inner.close()
 
 
 @pytest.fixture
@@ -188,7 +190,8 @@ async def test_works_without_cache(hcp_mock):
     await cache.connect()
     assert not cache.enabled
 
-    mapi = CachedMapiService(_mapi_settings(), cache, cache_settings)
+    inner = MapiService(_mapi_settings())
+    mapi = CachedMapiService(inner, cache, cache_settings)
     route = hcp_mock.get(f"{HCP_BASE}/tenants").respond(200, json={"name": ["t1"]})
 
     resp = await mapi.get("/tenants", username="testuser", password="testpass")
@@ -196,4 +199,5 @@ async def test_works_without_cache(hcp_mock):
     assert route.call_count == 1
 
     await mapi.close()
+    await inner.close()
     await cache.close()

@@ -6,8 +6,9 @@ import base64
 import hashlib
 from unittest.mock import MagicMock
 
-from botocore.exceptions import ClientError
 from httpx import AsyncClient
+
+from app.services.storage.errors import StorageError
 
 from app.core.config import StorageSettings
 
@@ -94,12 +95,8 @@ async def test_presign_expiry_too_large(
 async def test_presign_s3_error(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    mock_s3_service.generate_presigned_url.side_effect = ClientError(
-        error_response={
-            "Error": {"Code": "NoSuchBucket", "Message": "Not found"},
-            "ResponseMetadata": {"HTTPStatusCode": 404},
-        },
-        operation_name="GeneratePresignedUrl",
+    mock_s3_service.generate_presigned_url.side_effect = StorageError(
+        "NoSuchBucket", "Not found", 404
     )
     resp = await client.post(
         "/api/v1/presign",

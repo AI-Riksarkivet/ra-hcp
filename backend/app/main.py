@@ -20,6 +20,7 @@ from app.api.v1.router import api_router
 from app.core.config import AuthSettings
 from app.core.telemetry import setup_telemetry
 from app.services.cache_service import CacheService
+from app.services.mapi_errors import MapiError
 
 logger = logging.getLogger(__name__)
 access_logger = logging.getLogger("access")
@@ -126,27 +127,28 @@ async def lifespan(app: FastAPI):
     app.state.cache = cache
 
     mapi_settings = MapiSettings()
+    mapi = MapiService(mapi_settings)
     if cache.enabled:
         from app.services.cached_mapi import CachedMapiService
 
         logger.info("Creating CachedMapiService singleton")
-        app.state.mapi = CachedMapiService(mapi_settings, cache, cache_settings)
+        app.state.mapi = CachedMapiService(mapi, cache, cache_settings)
     else:
         logger.info("Creating MapiService singleton")
-        app.state.mapi = MapiService(mapi_settings)
+        app.state.mapi = mapi
 
     app.state.s3_cache = {}
     app.state.lance_cache = {}
 
-    mapi_settings = app.state.mapi.settings
+    query = QueryService(mapi_settings)
     if cache.enabled:
         from app.services.cached_query import CachedQueryService
 
         logger.info("Creating CachedQueryService singleton")
-        app.state.query = CachedQueryService(mapi_settings, cache, cache_settings)
+        app.state.query = CachedQueryService(query, cache, cache_settings)
     else:
         logger.info("Creating QueryService singleton")
-        app.state.query = QueryService(mapi_settings)
+        app.state.query = query
 
     yield
 
@@ -315,6 +317,20 @@ app.add_middleware(
 )
 
 
+# ── Domain exception handlers ─────────────────────────────────────────
+#
+# Translate service-layer domain exceptions into HTTP responses so that
+# endpoints don't need explicit try/except for every call.
+
+
+@app.exception_handler(MapiError)
+async def mapi_error_handler(request: Request, exc: MapiError):
+    return JSONResponse(
+        status_code=exc.http_status,
+        content={"detail": exc.message},
+    )
+
+
 # ── Global exception handler ──────────────────────────────────────────
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -367,7 +383,7 @@ async def readyz(request: Request):
 
     # Cache (required only when configured)
     cache: CacheService | None = getattr(request.app.state, "cache", None)
-    if cache is not None and cache._settings.redis_url:
+    if cache is not None and cache.has_url:
         if await cache.ping():
             checks["cache"] = "connected"
         else:

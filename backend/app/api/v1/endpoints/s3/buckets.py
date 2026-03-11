@@ -15,13 +15,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Annotated, Optional
+from typing import Annotated
 
-from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.api.dependencies import get_mapi_service, get_s3_service, get_storage_settings
-from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error, run_s3
+from app.api.errors import run_storage
 from app.core.config import StorageSettings
 from app.core.security import oauth2_scheme, verify_token_with_credentials
 from app.schemas.s3 import (
@@ -47,16 +46,7 @@ router = APIRouter(prefix="/buckets", tags=["S3 Buckets"])
 @router.get("", response_model=ListBucketsResponse)
 async def list_buckets(s3: StorageProtocol = Depends(get_s3_service)):
     """List all S3 buckets accessible to the authenticated user."""
-    try:
-        result = await asyncio.to_thread(s3.list_buckets)
-    except ClientError as exc:
-        raise_for_s3_error(exc, "buckets")
-    except (BotoCoreError, TypeError) as exc:
-        # TypeError: boto3 S3RegionRedirector passes bucket=None to
-        # head_bucket when HCP returns a redirect-like status on
-        # list_buckets (which has no bucket). This is a boto3/HCP
-        # compatibility issue.
-        raise_for_s3_transport_error(exc, "buckets")
+    result = await run_storage(s3.list_buckets, "buckets")
     buckets = [BucketInfo.model_validate(b) for b in result.get("Buckets", [])]
     owner = OwnerInfo.model_validate(result["Owner"]) if "Owner" in result else None
     return ListBucketsResponse(buckets=buckets, owner=owner)
@@ -68,21 +58,21 @@ async def create_bucket(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Create a new S3 bucket."""
-    await run_s3(s3.create_bucket, f"bucket '{body.bucket}'", body.bucket)
+    await run_storage(s3.create_bucket, f"bucket '{body.bucket}'", body.bucket)
     return {"status": "created", "bucket": body.bucket}
 
 
 @router.head("/{bucket}")
 async def head_bucket(bucket: str, s3: StorageProtocol = Depends(get_s3_service)):
     """Check whether a bucket exists. Returns 200 or 404."""
-    await run_s3(s3.head_bucket, f"bucket '{bucket}'", bucket)
+    await run_storage(s3.head_bucket, f"bucket '{bucket}'", bucket)
     return Response(status_code=200)
 
 
 @router.delete("/{bucket}", response_model=BucketMutationResponse)
 async def delete_bucket(
     bucket: str,
-    force: Optional[bool] = Query(None),
+    force: bool | None = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
     hcp: AuthenticatedMapiService = Depends(get_mapi_service),
     token: Annotated[str, Depends(oauth2_scheme)] = "",
@@ -104,10 +94,10 @@ async def delete_bucket(
             return await _force_delete_hcp(s3, hcp, bucket, token)
 
         # MinIO / generic: simple empty + delete
-        await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+        await run_storage(s3.delete_bucket, f"bucket '{bucket}'", bucket)
         return {"status": "deleted", "bucket": bucket}
 
-    await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+    await run_storage(s3.delete_bucket, f"bucket '{bucket}'", bucket)
     return {"status": "deleted", "bucket": bucket}
 
 
@@ -120,7 +110,7 @@ async def _force_delete_hcp(
     """HCP-specific force-delete with MAPI namespace reconfiguration."""
     creds = verify_token_with_credentials(token)
     try:
-        await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+        await run_storage(s3.delete_bucket, f"bucket '{bucket}'", bucket)
         return {"status": "deleted", "bucket": bucket}
     except HTTPException as exc:
         if exc.status_code != 409 or not creds.tenant:
@@ -140,7 +130,7 @@ async def _force_delete_hcp(
         if attempt > 0:
             await asyncio.sleep(2)
         try:
-            await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+            await run_storage(s3.delete_bucket, f"bucket '{bucket}'", bucket)
             return {"status": "deleted", "bucket": bucket}
         except HTTPException as exc:
             if exc.status_code != 409:
@@ -214,7 +204,7 @@ async def _delete_all_versions(s3: StorageProtocol, bucket: str) -> int:
             try:
                 await asyncio.to_thread(s3.delete_object, bucket, key, vid)
                 deleted += 1
-            except (ClientError, BotoCoreError) as exc:
+            except Exception as exc:
                 logger.warning(
                     "force-delete: failed to remove %s/%s: %s", bucket, key, exc
                 )
@@ -264,7 +254,7 @@ async def get_bucket_versioning(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Get the versioning configuration for a bucket."""
-    result = await run_s3(s3.get_bucket_versioning, f"bucket '{bucket}'", bucket)
+    result = await run_storage(s3.get_bucket_versioning, f"bucket '{bucket}'", bucket)
     return BucketVersioningResponse(
         status=result.get("Status"),
         mfa_delete=result.get("MFADelete"),
@@ -278,7 +268,9 @@ async def put_bucket_versioning(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Enable or suspend versioning on a bucket."""
-    await run_s3(s3.put_bucket_versioning, f"bucket '{bucket}'", bucket, body.status)
+    await run_storage(
+        s3.put_bucket_versioning, f"bucket '{bucket}'", bucket, body.status
+    )
     return {"status": "updated", "versioning": body.status}
 
 
@@ -288,7 +280,7 @@ async def put_bucket_versioning(
 @router.get("/{bucket}/acl", response_model=AclResponse)
 async def get_bucket_acl(bucket: str, s3: StorageProtocol = Depends(get_s3_service)):
     """Get the access control list (ACL) for a bucket."""
-    result = await run_s3(s3.get_bucket_acl, f"bucket '{bucket}'", bucket)
+    result = await run_storage(s3.get_bucket_acl, f"bucket '{bucket}'", bucket)
     return {
         "owner": result.get("Owner", {}),
         "grants": result.get("Grants", []),
@@ -302,7 +294,7 @@ async def put_bucket_acl(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Set the access control list (ACL) for a bucket."""
-    await run_s3(
+    await run_storage(
         s3.put_bucket_acl,
         f"bucket '{bucket}'",
         bucket,

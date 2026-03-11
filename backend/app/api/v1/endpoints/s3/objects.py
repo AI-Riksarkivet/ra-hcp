@@ -8,15 +8,13 @@ import tempfile
 import uuid
 import zipfile
 from pathlib import Path
-from typing import Optional
 
-from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from starlette.background import BackgroundTask as StarletteBackgroundTask
 
 from app.api.dependencies import get_cache_service, get_s3_service
-from app.api.errors import run_s3
+from app.api.errors import run_storage
 from app.schemas.s3 import (
     AclPolicy,
     AclResponse,
@@ -53,13 +51,13 @@ router = APIRouter(prefix="/buckets/{bucket}/objects", tags=["S3 Objects"])
 @router.get("", response_model=ListObjectsResponse)
 async def list_objects(
     bucket: str,
-    prefix: Optional[str] = Query(None),
+    prefix: str | None = Query(None),
     max_keys: int = Query(1000, le=1000),
-    continuation_token: Optional[str] = Query(None),
-    delimiter: Optional[str] = Query(None),
+    continuation_token: str | None = Query(None),
+    delimiter: str | None = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    result = await run_s3(
+    result = await run_storage(
         s3.list_objects,
         f"bucket '{bucket}'",
         bucket,
@@ -90,7 +88,9 @@ async def delete_objects(
     body: DeleteObjectsRequest,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    result = await run_s3(s3.delete_objects, f"bucket '{bucket}'", bucket, body.keys)
+    result = await run_storage(
+        s3.delete_objects, f"bucket '{bucket}'", bucket, body.keys
+    )
     return {
         "status": "deleted",
         "deleted": len(body.keys),
@@ -163,7 +163,7 @@ async def _build_zip(
                     try:
                         result = await asyncio.to_thread(s3.get_object, bucket, key)
                         return key, result["Body"].read()
-                    except (ClientError, BotoCoreError):
+                    except Exception:
                         return key, None
 
                 results = await asyncio.gather(*[_fetch(k) for k in batch])
@@ -207,21 +207,15 @@ async def start_zip_download(
     elif body.keys:
         keys = body.keys
     else:
-        from fastapi import HTTPException
-
         raise HTTPException(400, "Provide either 'prefix' or 'keys'")
 
     if len(keys) > MAX_ZIP_OBJECTS:
-        from fastapi import HTTPException
-
         raise HTTPException(
             400,
             f"Too many objects ({len(keys)}). Maximum is {MAX_ZIP_OBJECTS}.",
         )
 
     if len(keys) == 0:
-        from fastapi import HTTPException
-
         raise HTTPException(400, "No objects found under the given prefix")
 
     task_id = str(uuid.uuid4())
@@ -243,8 +237,6 @@ async def get_zip_download(
     cache: CacheService | None = Depends(get_cache_service),
 ):
     """Poll ZIP task status or download the completed ZIP."""
-    from fastapi import HTTPException
-
     state = await _get_task_state(task_id, cache)
     if not state:
         raise HTTPException(404, "Task not found")
@@ -310,7 +302,7 @@ async def bulk_presign(
                 s3.generate_presigned_url, bucket, key, body.expires_in
             )
             urls.append({"key": key, "url": url})
-        except (ClientError, BotoCoreError):
+        except Exception:
             continue
     return BulkPresignResponse(urls=urls, expires_in=body.expires_in)
 
@@ -324,7 +316,7 @@ async def get_object_acl(
     key: str,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    result = await run_s3(s3.get_object_acl, f"object '{key}'", bucket, key)
+    result = await run_storage(s3.get_object_acl, f"object '{key}'", bucket, key)
     return {
         "owner": result.get("Owner", {}),
         "grants": result.get("Grants", []),
@@ -338,7 +330,7 @@ async def put_object_acl(
     body: AclPolicy,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    await run_s3(
+    await run_storage(
         s3.put_object_acl,
         f"object '{key}'",
         bucket,
@@ -358,7 +350,7 @@ async def copy_object(
     body: CopyObjectRequest,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    await run_s3(
+    await run_storage(
         s3.copy_object,
         f"object '{key}'",
         body.source_bucket,
@@ -379,7 +371,7 @@ async def upload_object(
     file: UploadFile = File(...),
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    await run_s3(s3.put_object, f"object '{key}'", bucket, key, file.file)
+    await run_storage(s3.put_object, f"object '{key}'", bucket, key, file.file)
     return UploadObjectResponse(bucket=bucket, key=key)
 
 
@@ -387,10 +379,12 @@ async def upload_object(
 async def download_object(
     bucket: str,
     key: str,
-    version_id: Optional[str] = Query(None),
+    version_id: str | None = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    result = await run_s3(s3.get_object, f"object '{key}'", bucket, key, version_id)
+    result = await run_storage(
+        s3.get_object, f"object '{key}'", bucket, key, version_id
+    )
     body = result["Body"]
     return StreamingResponse(
         content=body.iter_chunks(),
@@ -408,7 +402,7 @@ async def head_object(
     key: str,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    result = await run_s3(s3.head_object, f"object '{key}'", bucket, key)
+    result = await run_storage(s3.head_object, f"object '{key}'", bucket, key)
     return HeadObjectResponse(
         content_length=result.get("ContentLength"),
         content_type=result.get("ContentType"),
@@ -421,8 +415,8 @@ async def head_object(
 async def delete_object(
     bucket: str,
     key: str,
-    version_id: Optional[str] = Query(None),
+    version_id: str | None = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    await run_s3(s3.delete_object, f"object '{key}'", bucket, key, version_id)
+    await run_storage(s3.delete_object, f"object '{key}'", bucket, key, version_id)
     return ObjectMutationResponse(status="deleted", bucket=bucket, key=key)

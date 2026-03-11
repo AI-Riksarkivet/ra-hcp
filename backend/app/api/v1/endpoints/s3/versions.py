@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, Query
 
 from app.api.dependencies import get_s3_service
-from app.api.errors import run_s3
+from app.api.errors import run_storage
 from app.schemas.s3 import (
     DeleteMarkerInfo,
     ListObjectVersionsResponse,
@@ -21,14 +19,14 @@ router = APIRouter(prefix="/buckets/{bucket}/versions", tags=["S3 Versions"])
 @router.get("", response_model=ListObjectVersionsResponse)
 async def list_object_versions(
     bucket: str,
-    prefix: Optional[str] = Query(None),
+    prefix: str | None = Query(None),
     max_keys: int = Query(1000, le=1000),
-    key_marker: Optional[str] = Query(None),
-    version_id_marker: Optional[str] = Query(None),
+    key_marker: str | None = Query(None),
+    version_id_marker: str | None = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """List all versions of objects in a bucket."""
-    result = await run_s3(
+    result = await run_storage(
         s3.list_object_versions,
         f"bucket '{bucket}'",
         bucket,

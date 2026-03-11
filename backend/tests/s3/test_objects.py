@@ -11,6 +11,8 @@ from unittest.mock import MagicMock
 from botocore.exceptions import ClientError
 from httpx import AsyncClient
 
+from app.services.storage.errors import StorageError
+
 
 async def test_list_objects_empty(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
@@ -80,12 +82,8 @@ async def test_list_objects_with_prefix(
 async def test_list_objects_bucket_not_found(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    mock_s3_service.list_objects.side_effect = ClientError(
-        error_response={
-            "Error": {"Code": "NoSuchBucket", "Message": "Not found"},
-            "ResponseMetadata": {"HTTPStatusCode": 404},
-        },
-        operation_name="ListObjectsV2",
+    mock_s3_service.list_objects.side_effect = StorageError(
+        "NoSuchBucket", "Not found", 404
     )
     resp = await client.get("/api/v1/buckets/missing/objects", headers=auth_headers)
     assert resp.status_code == 404
@@ -126,13 +124,7 @@ async def test_download_object(
 async def test_download_object_not_found(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    mock_s3_service.get_object.side_effect = ClientError(
-        error_response={
-            "Error": {"Code": "NoSuchKey", "Message": "Not found"},
-            "ResponseMetadata": {"HTTPStatusCode": 404},
-        },
-        operation_name="GetObject",
-    )
+    mock_s3_service.get_object.side_effect = StorageError("NoSuchKey", "Not found", 404)
     resp = await client.get(
         "/api/v1/buckets/my-bucket/objects/missing.txt", headers=auth_headers
     )

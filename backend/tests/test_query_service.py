@@ -7,10 +7,10 @@ from collections.abc import AsyncGenerator
 import httpx
 import pytest
 import respx
-from fastapi import HTTPException
 
 from app.core.config import MapiSettings
 from app.schemas.query import ObjectQuery, OperationQuery
+from app.services.mapi_errors import MapiResponseError, MapiTransportError
 from app.services.query_service import AuthenticatedQueryService, QueryService
 
 QUERY_URL = "https://mock.hcp.example.com/query"
@@ -161,35 +161,35 @@ async def test_operation_query_success(svc: QueryService, query_mock):
 async def test_query_hcp_error_raises(svc: QueryService, query_mock):
     query_mock.post(QUERY_URL).respond(403, text="Access denied")
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(MapiResponseError) as exc_info:
         await svc.object_query(
             "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
         )
-    assert exc_info.value.status_code == 403
+    assert exc_info.value.http_status == 403
 
 
 async def test_query_timeout_returns_504(svc: QueryService, query_mock):
     query_mock.post(QUERY_URL).mock(side_effect=httpx.TimeoutException("timeout"))
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(MapiTransportError) as exc_info:
         await svc.object_query(
             "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
         )
-    assert exc_info.value.status_code == 504
+    assert exc_info.value.http_status == 504
 
 
 async def test_query_connect_error_returns_502(svc: QueryService, query_mock):
     query_mock.post(QUERY_URL).mock(side_effect=httpx.ConnectError("unreachable"))
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(MapiTransportError) as exc_info:
         await svc.object_query(
             "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
         )
-    assert exc_info.value.status_code == 502
+    assert exc_info.value.http_status == 502
 
 
 async def test_query_no_domain_raises_400():
-    """QueryService without hcp_domain should raise 400."""
+    """QueryService without hcp_domain should raise MapiResponseError."""
     settings = MapiSettings(
         hcp_host="mock.hcp.example.com",
         hcp_domain="",
@@ -198,11 +198,11 @@ async def test_query_no_domain_raises_400():
         hcp_password="testpass",
     )
     svc = QueryService(settings)
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(MapiResponseError) as exc_info:
         await svc.object_query(
             "mock", ObjectQuery(query="*:*"), username="testuser", password="testpass"
         )
-    assert exc_info.value.status_code == 400
+    assert exc_info.value.http_status == 400
     await svc.close()
 
 
