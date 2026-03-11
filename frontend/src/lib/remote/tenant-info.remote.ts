@@ -394,6 +394,34 @@ export const delete_tenant_cors = command(
   },
 );
 
+// ── Tenant Operations (top-level POST) ──────────────────────────────
+
+export interface TenantOperations {
+  administrationAllowed?: boolean;
+  maxNamespacesPerUser?: number;
+  snmpLoggingEnabled?: boolean;
+  syslogLoggingEnabled?: boolean;
+  tenantVisibleDescription?: string;
+  tags?: Record<string, unknown>;
+}
+
+export const update_tenant = command(
+  z.object({ tenant: z.string(), body: z.record(z.string(), z.unknown()) }),
+  async ({ tenant, body }) => {
+    const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update tenant settings",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
 // ── Available Service Plans ──────────────────────────────────────────
 
 export interface ServicePlanList {

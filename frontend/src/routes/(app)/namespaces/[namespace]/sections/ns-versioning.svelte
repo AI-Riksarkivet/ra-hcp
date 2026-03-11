@@ -2,12 +2,16 @@
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
+	import { toast } from 'svelte-sonner';
 	import {
 		get_ns_versioning,
 		update_ns_versioning,
+		delete_ns_versioning,
 		type VersioningSettings,
 	} from '$lib/remote/namespaces.remote.js';
 
@@ -47,6 +51,23 @@
 			localPrune !== (versioning.prune ?? false) ||
 			localPruneDays !== (versioning.pruneDays ?? 0)
 	);
+
+	let resetOpen = $state(false);
+	let resetting = $state(false);
+
+	async function handleReset() {
+		resetting = true;
+		try {
+			if (!versioningData) return;
+			await delete_ns_versioning({ tenant, name: namespaceName }).updates(versioningData);
+			toast.success('Versioning settings reset to defaults');
+			resetOpen = false;
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to reset versioning settings');
+		} finally {
+			resetting = false;
+		}
+	}
 </script>
 
 <Card.Root class="flex h-full flex-col">
@@ -111,7 +132,10 @@
 				</p>
 			</div>
 		</Card.Content>
-		<Card.Footer>
+		<Card.Footer class="flex justify-between">
+			<Button variant="outline" size="sm" onclick={() => (resetOpen = true)}>
+				Reset to Defaults
+			</Button>
 			<SaveButton
 				{dirty}
 				saving={saver.saving}
@@ -133,3 +157,22 @@
 		</Card.Footer>
 	{/await}
 </Card.Root>
+
+<AlertDialog.Root bind:open={resetOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Reset Versioning Settings</AlertDialog.Title>
+			<AlertDialog.Description>
+				This will remove all versioning configuration for namespace "<strong>{namespaceName}</strong
+				>" and revert to no-versioning state. All settings (pruning, delete markers, deletion
+				records) will be cleared.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel disabled={resetting}>Cancel</AlertDialog.Cancel>
+			<Button variant="destructive" onclick={handleReset} disabled={resetting}>
+				{resetting ? 'Resetting...' : 'Reset'}
+			</Button>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>

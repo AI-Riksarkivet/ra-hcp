@@ -16,6 +16,11 @@ TENANTS: dict[str, dict] = {
         "namespaceQuota": "10",
         "authenticationTypes": {"authenticationType": ["LOCAL"]},
         "tags": {"tag": []},
+        "administrationAllowed": True,
+        "maxNamespacesPerUser": 100,
+        "snmpLoggingEnabled": False,
+        "syslogLoggingEnabled": False,
+        "tenantVisibleDescription": "",
     },
     "research": {
         "name": "research",
@@ -25,6 +30,11 @@ TENANTS: dict[str, dict] = {
         "namespaceQuota": "20",
         "authenticationTypes": {"authenticationType": ["LOCAL"]},
         "tags": {"tag": []},
+        "administrationAllowed": True,
+        "maxNamespacesPerUser": 100,
+        "snmpLoggingEnabled": False,
+        "syslogLoggingEnabled": False,
+        "tenantVisibleDescription": "",
     },
     "mock": {
         "name": "mock",
@@ -35,6 +45,11 @@ TENANTS: dict[str, dict] = {
         "authenticationTypes": {"authenticationType": ["LOCAL"]},
         "servicePlan": "Default",
         "tags": {"tag": []},
+        "administrationAllowed": True,
+        "maxNamespacesPerUser": 100,
+        "snmpLoggingEnabled": False,
+        "syslogLoggingEnabled": True,
+        "tenantVisibleDescription": "Mock tenant for local development and testing.",
     },
 }
 
