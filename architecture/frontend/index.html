@@ -1619,18 +1619,23 @@
 
 <h1 id="frontend-architecture">Frontend Architecture<a class="headerlink" href="#frontend-architecture" title="Permanent link">&para;</a></h1>
 <p>The SvelteKit frontend follows a reactive pattern with remote function abstractions and server-side RBAC:</p>
-<pre class="mermaid"><code>graph TD
-    HOOK["hooks.server.ts&lt;br/&gt;extract JWT cookie"] --&gt; LAYOUT["+layout.server.ts&lt;br/&gt;fetch user profile · set accessLevel"]
-    LAYOUT --&gt; GUARD["+page.server.ts&lt;br/&gt;requireAdmin() · route guards"]
-    GUARD --&gt; PAGE["+page.svelte&lt;br/&gt;components · reactive state"]
+<pre class="mermaid"><code>graph LR
+    subgraph Server["Server-side (SSR)"]
+        HOOK["hooks.server.ts&lt;br/&gt;extract JWT"] --&gt; LAYOUT["+layout.server.ts&lt;br/&gt;fetch profile · RBAC"]
+        LAYOUT --&gt; GUARD["+page.server.ts&lt;br/&gt;route guards"]
+    end
 
-    PAGE --&gt; Q["query()&lt;br/&gt;GET with caching"]
-    PAGE --&gt; C["command()&lt;br/&gt;mutations"]
-    C --&gt;|".updates(queryData)"| Q
+    GUARD --&gt; PAGE["+page.svelte"]
 
-    Q --&gt; REM["*.remote.ts"]
-    C --&gt; REM
-    REM --&gt;|"fetch()"| API["FastAPI Backend"]</code></pre>
+    subgraph Data["Data layer"]
+        direction TB
+        Q["query() — reads"]
+        C["command() — writes"]
+        C --&gt;|".updates()"| Q
+    end
+
+    PAGE --&gt; Data
+    Data --&gt;|"*.remote.ts"| API["FastAPI Backend"]</code></pre>
 <h2 id="rbac">RBAC<a class="headerlink" href="#rbac" title="Permanent link">&para;</a></h2>
 <p>The frontend enforces role-based access control entirely on the server side, making it impossible to bypass via client-side manipulation.</p>
 <pre class="mermaid"><code>sequenceDiagram
