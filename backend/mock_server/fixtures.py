@@ -503,11 +503,14 @@ def default_tenant_settings() -> dict[str, dict]:
             "ipAddressDenylist": [],
         },
         "permissions": {
-            "namespaceCreateAllowed": True,
             "namespaceDeleteAllowed": True,
+            "namespaceManageAllowed": True,
+            "namespaceUndeleteAllowed": True,
+            "erasureCodingAllowed": True,
             "replicationAllowed": True,
             "searchAllowed": True,
             "complianceAllowed": True,
+            "taggingAllowed": True,
         },
     }
 

@@ -717,9 +717,12 @@ export const delete_namespace = command(
     );
     if (!res.ok) {
       const err = await res.json().catch(() => ({
-        detail: "Failed to delete namespace",
+        detail: `Failed to delete namespace "${name}"`,
       }));
-      throw new Error(err.detail);
+      const detail = typeof err.detail === "string"
+        ? err.detail
+        : JSON.stringify(err.detail);
+      throw new Error(detail);
     }
   },
 );

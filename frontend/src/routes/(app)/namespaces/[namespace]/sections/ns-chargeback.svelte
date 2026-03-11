@@ -183,10 +183,10 @@
 									<circle
 										cx={hoveredPoint.x}
 										cy={hoveredPoint.y}
-										r="4"
+										r="2"
 										fill="hsl(var(--primary))"
 										stroke="hsl(var(--background))"
-										stroke-width="2"
+										stroke-width="1.5"
 										vector-effect="non-scaling-stroke"
 									/>
 								{/if}

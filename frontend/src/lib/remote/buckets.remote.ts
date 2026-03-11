@@ -125,17 +125,21 @@ export const create_bucket = command(
 );
 
 export const delete_bucket = command(
-  z.object({ bucket: z.string() }),
-  async ({ bucket }) => {
+  z.object({ bucket: z.string(), force: z.boolean().optional() }),
+  async ({ bucket, force }) => {
+    const qs = force ? "?force=true" : "";
     const res = await apiFetch(
-      `/api/v1/buckets/${encodeURIComponent(bucket)}`,
+      `/api/v1/buckets/${encodeURIComponent(bucket)}${qs}`,
       { method: "DELETE" },
     );
     if (!res.ok) {
       const err = await res.json().catch(() => ({
-        detail: "Failed to delete bucket",
+        detail: `Failed to delete bucket "${bucket}"`,
       }));
-      throw new Error(err.detail);
+      const detail = typeof err.detail === "string"
+        ? err.detail
+        : JSON.stringify(err.detail);
+      throw new Error(detail);
     }
   },
 );

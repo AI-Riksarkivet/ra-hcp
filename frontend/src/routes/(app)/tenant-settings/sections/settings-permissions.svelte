@@ -19,7 +19,6 @@
 	} = $props();
 
 	const PERMISSION_KEYS = [
-		'namespaceCreateAllowed',
 		'namespaceDeleteAllowed',
 		'namespaceManageAllowed',
 		'namespaceUndeleteAllowed',
@@ -31,7 +30,6 @@
 	] as const;
 
 	const PERMISSION_DESCRIPTIONS: Record<string, string> = {
-		namespaceCreateAllowed: 'Allow tenant users to create new namespaces',
 		namespaceDeleteAllowed: 'Allow tenant users to delete namespaces',
 		namespaceManageAllowed: 'Allow tenant users to modify namespace settings',
 		namespaceUndeleteAllowed: 'Allow recovery of deleted namespaces',

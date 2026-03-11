@@ -369,7 +369,7 @@
 								{ns}
 								index={i}
 								name={importNames[i]}
-								hasConflict={existingNames.has(importNames[i])}
+								hasConflict={!importDone && !importing && existingNames.has(importNames[i])}
 								disabled={importing || importDone}
 								onnamechange={handleNameChange}
 								onnsupdate={handleNsUpdate}
@@ -413,7 +413,7 @@
 							{/each}
 						</div>
 
-						{#if nameConflicts.length > 0}
+						{#if nameConflicts.length > 0 && !importing && !importDone}
 							<div
 								class="mt-2 flex items-start gap-2 rounded-md border border-amber-400 bg-amber-50 p-2 dark:bg-amber-950/30"
 							>
