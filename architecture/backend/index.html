@@ -1615,40 +1615,29 @@
 
     subgraph "Service Layer"
         MS["MapiService"]
-        CMS["CachedMapiService"]
         SP["StorageProtocol"]
-        SB["StorageBase (ABC)"]
-        HCP_A["HcpStorage&lt;br/&gt;boto3 adapter"]
-        CHCP["CachedHcpStorage"]
+        HCP_A["HcpStorage"]
+        GEN["GenericBoto3Storage"]
         QS["QueryService"]
-        CQS["CachedQueryService"]
         CS["CacheService"]
     end
 
     subgraph "Core"
-        CFG["Config&lt;br/&gt;MapiSettings · S3Settings&lt;br/&gt;CacheSettings · AuthSettings"]
+        CFG["Config"]
         SEC["Security&lt;br/&gt;JWT · OAuth2"]
-        AUTH2["Auth Utils&lt;br/&gt;S3 key derivation"]
         TEL["Telemetry&lt;br/&gt;OpenTelemetry"]
     end
 
     R --&gt; DEP
     DEP --&gt; MS
-    DEP --&gt; CMS
     DEP --&gt;|"type-hints"| SP
-    DEP --&gt;|"actual impl"| CHCP
-    SP -.-&gt;|"structural typing"| SB
-    SB --&gt;|"inherits"| HCP_A
-    HCP_A --&gt;|"inherits"| CHCP
-    CHCP --&gt; CS
-    MS --&gt; CFG
-    CMS --&gt; MS
-    CMS --&gt; CS
+    SP -.-&gt;|"satisfies"| HCP_A
+    SP -.-&gt;|"satisfies"| GEN
+    DEP --&gt; QS
+    MS --&gt; CS
+    QS --&gt; CS
     HCP_A --&gt; CFG
-    HCP_A --&gt; AUTH2
-    QS --&gt; CFG
-    CQS --&gt; QS
-    CQS --&gt; CS
+    GEN --&gt; CFG
     R --&gt; SEC</code></pre>
 <h2 id="key-design-decisions">Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1656,13 +1645,13 @@
 <p><strong>Credential pass-through</strong>: The API does not store user passwords. Credentials are embedded in the JWT and forwarded to HCP on each request. HCP is the sole authority for authentication and authorization.</p>
 </li>
 <li>
-<p><strong>Optional caching</strong>: When Redis is configured, <code>CachedMapiService</code>, <code>CachedQueryService</code>, and <code>CachedHcpStorage</code> wrap the base services with TTL-based caching. When Redis is not configured, the base services are used directly.</p>
+<p><strong>Optional caching</strong>: When Redis is configured, cached wrappers (<code>CachedMapiService</code>, <code>CachedQueryService</code>, <code>CachedHcpStorage</code>) add TTL-based caching. Without Redis, base services are used directly.</p>
 </li>
 <li>
 <p><strong>S3 credential derivation</strong>: S3 access keys are derived from HCP credentials (base64-encoded username + MD5-hashed password) per HCP convention. No separate S3 credentials need to be configured.</p>
 </li>
 <li>
-<p><strong>Backend-agnostic storage layer</strong>: The S3 data-plane uses a hybrid Protocol + ABC pattern so storage backends (HCP, MinIO, Ceph, AWS) can be swapped without touching endpoint code. See <a href="../storage/">Storage Layer Architecture</a> for details.</p>
+<p><strong>Composition-based storage</strong>: The S3 data-plane uses <code>StorageProtocol</code> (structural typing) as the contract. Adapters compose a shared <code>Boto3Operations</code> helper rather than inheriting from a base class. See <a href="../storage/">Storage Layer</a> for details.</p>
 </li>
 <li>
 <p><strong>Sync-over-async S3</strong>: Storage operations use synchronous boto3 calls executed via <code>asyncio.to_thread()</code>. This avoids the complexity of async S3 clients while keeping the FastAPI event loop non-blocking.</p>

@@ -815,41 +815,8 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#protected-routes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Protected routes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#sidebar-filtering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sidebar filtering
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Patterns
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1566,41 +1533,8 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#protected-routes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Protected routes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#sidebar-filtering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sidebar filtering
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Patterns
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1777,54 +1711,31 @@
 <tr>
 <th>Level</th>
 <th>Condition</th>
-<th>Access</th>
+<th>Visible sidebar sections</th>
+<th>Protected routes (redirects to <code>/buckets</code>)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>sys-admin</strong></td>
 <td>No tenant in JWT</td>
-<td>Full access to all routes</td>
+<td>All sections</td>
+<td>None — full access</td>
 </tr>
 <tr>
 <td><strong>tenant-admin</strong></td>
 <td>Has <code>ADMINISTRATOR</code> role</td>
-<td>Full access to tenant routes</td>
+<td>All sections</td>
+<td>None — full access to tenant</td>
 </tr>
 <tr>
 <td><strong>namespace-user</strong></td>
 <td>Any other role set</td>
-<td>Storage routes only (buckets, access control, analytics, settings)</td>
+<td>Storage, Analytics</td>
+<td><code>/namespaces</code>, <code>/users</code>, <code>/tenant-settings</code>, <code>/search</code>, <code>/content-classes</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="protected-routes">Protected routes<a class="headerlink" href="#protected-routes" title="Permanent link">&para;</a></h3>
-<p>These routes call <code>requireAdmin()</code> in their <code>+page.server.ts</code> and redirect non-admin users to <code>/buckets</code>:</p>
-<ul>
-<li><code>/namespaces</code>, <code>/namespaces/[namespace]</code></li>
-<li><code>/users</code>, <code>/users/[username]</code>, <code>/users/groups/[groupname]</code></li>
-<li><code>/tenant-settings</code></li>
-<li><code>/search</code></li>
-<li><code>/content-classes</code>, <code>/content-classes/[name]</code></li>
-</ul>
-<h3 id="sidebar-filtering">Sidebar filtering<a class="headerlink" href="#sidebar-filtering" title="Permanent link">&para;</a></h3>
-<p>The sidebar conditionally renders sections based on access level:</p>
-<ul>
-<li><strong>All users</strong>: Storage (Buckets, Access Control), Analytics (Data Explorer)</li>
-<li><strong>Admins only</strong>: Tenant (Namespaces, Users &amp; Groups, Tenant Settings), Search &amp; Indexing (Search, Content Classes)</li>
-</ul>
-<h2 id="patterns">Patterns<a class="headerlink" href="#patterns" title="Permanent link">&para;</a></h2>
-<ul>
-<li>
-<p><strong>Remote functions</strong>: All API calls are defined in <code>*.remote.ts</code> files using <code>query()</code> for reads and <code>command()</code> for mutations.</p>
-</li>
-<li>
-<p><strong>Mutation refresh</strong>: After a mutation, <code>command(...).updates(queryData)</code> automatically invalidates and refetches the relevant query data.</p>
-</li>
-<li>
-<p><strong>Svelte 5 runes</strong>: Components use <code>$state</code> for mutable state, <code>$derived</code> for computed values, and <code>$effect</code> for async side effects with cancellation.</p>
-</li>
-</ul>
 
 
 

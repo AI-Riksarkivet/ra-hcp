@@ -1613,64 +1613,45 @@
         FE["SvelteKit Frontend&lt;br/&gt;:5173"]
     end
 
-    subgraph "Backend Server"
-        API["FastAPI Backend&lt;br/&gt;:8000"]
-        MW["Middleware Stack&lt;br/&gt;CORS · GZip · RequestID"]
-        AUTH["JWT Auth&lt;br/&gt;OAuth2 Password Flow"]
+    subgraph "Backend"
+        API["FastAPI&lt;br/&gt;:8000"]
+        SVC["Services&lt;br/&gt;MAPI · S3 · Query · Cache"]
     end
 
-    subgraph "Services Layer"
-        MAPI["MapiService&lt;br/&gt;HCP Management API"]
-        S3["StorageProtocol&lt;br/&gt;Backend-agnostic S3"]
-        QUERY["QueryService&lt;br/&gt;Metadata Query"]
-        CACHE["CacheService&lt;br/&gt;Redis (optional)"]
+    subgraph "External"
+        HCP["HCP System&lt;br/&gt;:9090"]
+        S3EP["S3 Endpoint"]
+        REDIS["Redis (optional)"]
     end
 
-    subgraph "External Systems"
-        HCP["HCP System&lt;br/&gt;Management API :9090"]
-        S3EP["HCP S3 Endpoint&lt;br/&gt;Object Storage"]
-        REDIS["Redis&lt;br/&gt;(optional)"]
-    end
-
-    FE --&gt;|"REST API&lt;br/&gt;JWT Bearer"| API
-    API --&gt; MW --&gt; AUTH
-    AUTH --&gt; MAPI
-    AUTH --&gt; S3
-    AUTH --&gt; QUERY
-    MAPI --&gt; CACHE
-    S3 --&gt; CACHE
-    QUERY --&gt; CACHE
-    MAPI --&gt;|"HTTPS :9090"| HCP
-    S3 --&gt;|"S3 Protocol"| S3EP
-    QUERY --&gt;|"HTTPS"| HCP
-    CACHE --&gt;|"Redis Protocol"| REDIS</code></pre>
+    FE --&gt;|"REST + JWT"| API
+    API --&gt; SVC
+    SVC --&gt;|"HTTPS"| HCP
+    SVC --&gt;|"S3"| S3EP
+    SVC --&gt; REDIS</code></pre>
 <h2 id="request-flow">Request Flow<a class="headerlink" href="#request-flow" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>sequenceDiagram
     participant B as Browser
     participant F as SvelteKit
     participant A as FastAPI
-    participant M as Middleware
-    participant S as Service Layer
+    participant S as Services
     participant H as HCP System
 
-    B-&gt;&gt;F: User action (click, form submit)
-    F-&gt;&gt;A: HTTP request + JWT token
-    A-&gt;&gt;M: RequestID + GZip + CORS
-    M-&gt;&gt;M: Decode JWT → extract credentials
-    M-&gt;&gt;S: Forward with HCP credentials
+    B-&gt;&gt;F: User action
+    F-&gt;&gt;A: HTTP + JWT
+    A-&gt;&gt;A: Decode JWT → credentials
+    A-&gt;&gt;S: Forward request
 
-    alt Cache hit (Redis enabled)
-        S--&gt;&gt;M: Return cached response
-    else Cache miss or no Redis
-        S-&gt;&gt;H: MAPI/S3 request with credentials
-        H--&gt;&gt;S: HCP response
-        S-&gt;&gt;S: Cache response (if Redis enabled)
-        S--&gt;&gt;M: Return response
+    alt Cache hit
+        S--&gt;&gt;A: Cached response
+    else Cache miss
+        S-&gt;&gt;H: MAPI/S3 request
+        H--&gt;&gt;S: Response
+        S--&gt;&gt;A: Cache + return
     end
 
-    M--&gt;&gt;A: Add X-Request-ID header
     A--&gt;&gt;F: JSON response
-    F--&gt;&gt;B: Update UI reactively</code></pre>
+    F--&gt;&gt;B: Update UI</code></pre>
 
 
 

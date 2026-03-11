@@ -596,6 +596,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#how-hcp-differs-from-standard-s3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How HCP Differs from Standard S3
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How HCP Differs from Standard S3">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hcp-specific-s3-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HCP-Specific S3 Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s3-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S3 Compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#object-based-storage" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -763,10 +802,32 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#query-syntax-examples" class="md-nav__link">
+  <a href="#query-syntax" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Query Syntax Examples
+        Query Syntax
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#searchable-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Searchable Properties
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Examples
       
     </span>
   </a>
@@ -786,6 +847,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Authentication">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mapi-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MAPI Conventions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1688,6 +1766,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#how-hcp-differs-from-standard-s3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How HCP Differs from Standard S3
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How HCP Differs from Standard S3">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hcp-specific-s3-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HCP-Specific S3 Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#s3-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        S3 Compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#object-based-storage" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1855,10 +1972,32 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#query-syntax-examples" class="md-nav__link">
+  <a href="#query-syntax" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Query Syntax Examples
+        Query Syntax
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#searchable-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Searchable Properties
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Examples
       
     </span>
   </a>
@@ -1878,6 +2017,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Authentication">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mapi-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MAPI Conventions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1973,6 +2129,108 @@
 
 <h1 id="hcp-concepts">HCP Concepts<a class="headerlink" href="#hcp-concepts" title="Permanent link">&para;</a></h1>
 <p>This page explains the core concepts of Hitachi Content Platform (HCP) that you'll encounter when using the HCP App.</p>
+<h2 id="how-hcp-differs-from-standard-s3">How HCP Differs from Standard S3<a class="headerlink" href="#how-hcp-differs-from-standard-s3" title="Permanent link">&para;</a></h2>
+<p>If you're coming from AWS S3, MinIO, or Ceph, HCP will feel familiar on the data plane (it speaks S3) but very different on the management and compliance side.</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>AWS S3 / MinIO</th>
+<th>HCP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hierarchy</strong></td>
+<td>Flat: just buckets</td>
+<td>Multi-tenant: System → Tenants → Namespaces (= buckets)</td>
+</tr>
+<tr>
+<td><strong>Management API</strong></td>
+<td>Same S3 API for data + config</td>
+<td>Separate MAPI (REST/XML on port 9090) for all admin operations</td>
+</tr>
+<tr>
+<td><strong>Access protocols</strong></td>
+<td>S3 only</td>
+<td>S3, REST, NFS, CIFS/SMB, SMTP, WebDAV — all accessing the same data</td>
+</tr>
+<tr>
+<td><strong>Version IDs</strong></td>
+<td>UUIDs (<code>"aBcDeFgH..."</code>)</td>
+<td>Integers (<code>0</code>, <code>1</code>, <code>2</code>, ...)</td>
+</tr>
+<tr>
+<td><strong>Authentication</strong></td>
+<td>Access key + secret key (arbitrary)</td>
+<td><code>base64(username)</code> + <code>md5(password)</code> — derived from user credentials</td>
+</tr>
+<tr>
+<td><strong>Bucket addressing</strong></td>
+<td>Virtual-hosted or path-style</td>
+<td>Path-style only</td>
+</tr>
+<tr>
+<td><strong>Retention</strong></td>
+<td>S3 Object Lock (Governance/Compliance)</td>
+<td>Built-in WORM + retention classes + S3 Object Lock</td>
+</tr>
+<tr>
+<td><strong>Search</strong></td>
+<td>External (Athena, OpenSearch)</td>
+<td>Built-in Metadata Query API with Lucene-like syntax</td>
+</tr>
+<tr>
+<td><strong>Content classes</strong></td>
+<td>No equivalent</td>
+<td>Schema-based custom metadata with typed, indexed properties</td>
+</tr>
+<tr>
+<td><strong>Replication</strong></td>
+<td>Cross-region replication rules</td>
+<td>Built-in active/active geo-replication between HCP systems</td>
+</tr>
+<tr>
+<td><strong>Bulk delete</strong></td>
+<td><code>DeleteObjects</code> with CRC32</td>
+<td>Requires <code>Content-MD5</code> — this app works around it with individual deletes</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The HCP App abstracts most of these differences. The S3 data plane handles HCP quirks (path-style, credential derivation, bulk delete workaround) transparently, while MAPI operations are exposed through a unified REST API.</p>
+</div>
+<h3 id="hcp-specific-s3-headers">HCP-Specific S3 Headers<a class="headerlink" href="#hcp-specific-s3-headers" title="Permanent link">&para;</a></h3>
+<p>HCP extends the S3 API with custom headers for retention and compliance:</p>
+<table>
+<thead>
+<tr>
+<th>Header</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>X-HCP-RETENTION</code></td>
+<td>Set/get retention setting (<code>0</code> deletable, <code>-1</code> permanent, <code>-2</code> unspecified, or datetime).</td>
+</tr>
+<tr>
+<td><code>X-HCP-RETENTIONHOLD</code></td>
+<td>Set/get a simple hold (<code>true</code>/<code>false</code>). Prevents deletion regardless of retention.</td>
+</tr>
+<tr>
+<td><code>X-HCP-LABELRETENTIONHOLD</code></td>
+<td>Manage multiple named retention holds (up to 100 per object).</td>
+</tr>
+<tr>
+<td><code>X-HCP-PRIVILEGED</code></td>
+<td>Privileged delete — remove objects under retention. Requires <code>PRIVILEGED</code> permission.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="s3-compatibility">S3 Compatibility<a class="headerlink" href="#s3-compatibility" title="Permanent link">&para;</a></h3>
+<p>HCP supports: bucket CRUD, object CRUD, ACLs, CORS, versioning, multipart uploads, presigned URLs, server-side encryption, Object Lock, and AWS Signature V2/V4. <strong>Not supported</strong>: lifecycle, tagging, policy, website, logging, notifications, metrics, analytics, inventory, replication config, encryption config, public access block, client-side encryption.</p>
 <h2 id="object-based-storage">Object-Based Storage<a class="headerlink" href="#object-based-storage" title="Permanent link">&para;</a></h2>
 <p>HCP stores <strong>objects</strong> in a repository. Each object permanently associates data with metadata:</p>
 <pre class="mermaid"><code>graph LR
@@ -2261,43 +2519,147 @@
 <li><strong>Operation-based queries</strong> -- search for create, delete, purge, and dispose events for audit trails.</li>
 </ul>
 <p>The API returns metadata only (not object data). Results can be paginated and sorted.</p>
-<h3 id="query-syntax-examples">Query Syntax Examples<a class="headerlink" href="#query-syntax-examples" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code># Find large files in the finance namespace
-namespace:finance AND size:[1048576 TO *]
-
-# Find PDFs modified in 2025
-contentType:application/pdf AND changeTimeString:[2025-01-01T00:00:00Z TO 2025-12-31T23:59:59Z]
-
-# Find objects with specific custom metadata
-customMetadataContent:&quot;department.sales&quot;
-
-# Find objects on hold
-hold:true
+<h3 id="query-syntax">Query Syntax<a class="headerlink" href="#query-syntax" title="Permanent link">&para;</a></h3>
+<p>Property-based criteria use a Lucene-like syntax:</p>
+<div class="highlight"><pre><span></span><code>property:value                    # exact match
+property:(value1 value2)          # match any
+property:(+value1 -value2)        # must/must-not
+property:[start TO end]           # inclusive range
+property:{start TO end}           # exclusive range
+property:[start TO *]             # open-ended range
 </code></pre></div>
+<p>Boolean operators: <code>+criterion</code> (must match), <code>-criterion</code> (must not match), no operator (should match, affects ranking). Group with parentheses.</p>
+<p>Wildcards: <code>?</code> (single char), <code>*</code> (any chars) — valid at end/middle of terms only, never at the beginning.</p>
+<h3 id="searchable-properties">Searchable Properties<a class="headerlink" href="#searchable-properties" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td>string</td>
+<td><code>namespace-name.tenant-name</code></td>
+</tr>
+<tr>
+<td><code>objectPath</code></td>
+<td>string</td>
+<td>Full object path</td>
+</tr>
+<tr>
+<td><code>utf8Name</code></td>
+<td>string</td>
+<td>Object filename</td>
+</tr>
+<tr>
+<td><code>size</code></td>
+<td>long</td>
+<td>Object size in bytes</td>
+</tr>
+<tr>
+<td><code>contentType</code></td>
+<td>string</td>
+<td>MIME type</td>
+</tr>
+<tr>
+<td><code>ingestTimeString</code></td>
+<td>datetime</td>
+<td>Time object was stored</td>
+</tr>
+<tr>
+<td><code>changeTimeString</code></td>
+<td>datetime</td>
+<td>Time object was last modified</td>
+</tr>
+<tr>
+<td><code>retention</code></td>
+<td>string</td>
+<td>Retention setting (<code>0</code>, <code>-1</code>, <code>-2</code>, or datetime)</td>
+</tr>
+<tr>
+<td><code>retentionClass</code></td>
+<td>string</td>
+<td>Assigned retention class name</td>
+</tr>
+<tr>
+<td><code>hold</code></td>
+<td>boolean</td>
+<td>Whether object is on hold</td>
+</tr>
+<tr>
+<td><code>customMetadataContent</code></td>
+<td>text</td>
+<td>Full-text search of custom metadata XML</td>
+</tr>
+</tbody>
+</table>
+<h3 id="query-examples">Query Examples<a class="headerlink" href="#query-examples" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code># Large files (&gt;1MB) in the finance namespace
++(namespace:&quot;finance.europe&quot;) +size:[1048576 TO *]
+
+# PDFs ingested in 2025
++contentType:application/pdf +ingestTimeString:[2025-01-01T00:00:00 TO 2025-12-31T23:59:59]
+
+# Objects with custom metadata containing &quot;department&quot; but not &quot;foreign&quot;
++customMetadataContent:(+&quot;department&quot; -&quot;foreign&quot;)
+
+# Objects on hold
++hold:true
+</code></pre></div>
+<p>Pagination: use <code>count</code> (max results, 1–10,000) and <code>offset</code> (skip N, max 100,000). For &gt;100,000 results, paginate using <code>changeTimeMilliseconds</code> ranges. Response status <code>COMPLETE</code> means all results returned; <code>INCOMPLETE</code> means more pages available.</p>
 <h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
 <p>HCP uses a token-based authentication scheme:</p>
 <table>
 <thead>
 <tr>
 <th>Type</th>
-<th>Format</th>
+<th>Header format</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>HCP native</strong></td>
-<td><code>HCP base64(username):md5(password)</code></td>
+<td><code>Authorization: HCP base64(username):md5(password)</code></td>
 <td>Username is base64-encoded, password is MD5-hashed.</td>
 </tr>
 <tr>
 <td><strong>Active Directory</strong></td>
-<td><code>AD username:password</code></td>
-<td>For AD-integrated environments.</td>
+<td><code>Authorization: AD username@domain:password</code></td>
+<td>For AD-integrated environments. Plaintext credentials.</td>
 </tr>
 </tbody>
 </table>
 <p>The HCP App wraps this in a JWT-based flow -- see <a href="../../api/authentication/">Authentication</a> for details on how the API handles credential management.</p>
+<h3 id="mapi-conventions">MAPI Conventions<a class="headerlink" href="#mapi-conventions" title="Permanent link">&para;</a></h3>
+<p>The Management API (port 9090) accepts XML or JSON request/response bodies. Key query parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>verbose=true</code></td>
+<td>Return all properties (default returns only modifiable ones).</td>
+</tr>
+<tr>
+<td><code>prettyprint</code></td>
+<td>Format response for readability (testing only).</td>
+</tr>
+<tr>
+<td><code>offset</code> / <code>count</code></td>
+<td>Pagination for list endpoints.</td>
+</tr>
+</tbody>
+</table>
+<p>Response headers always include <code>X-HCP-SoftwareVersion</code>; errors include <code>X-HCP-ErrorMessage</code> with human-readable details.</p>
 <h2 id="content-classes">Content Classes<a class="headerlink" href="#content-classes" title="Permanent link">&para;</a></h2>
 <p><strong>Content classes</strong> define custom metadata schemas for object classification. They map XML elements in custom metadata to named, typed properties that can be:</p>
 <ul>

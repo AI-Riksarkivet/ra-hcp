@@ -29,7 +29,7 @@
     
     
       
-        <title>Storage Layer Architecture - ra-hcp</title>
+        <title>Storage Layer - ra-hcp</title>
       
     
     
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#storage-layer-architecture" class="md-skip">
+        <a href="#storage-layer" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Storage Layer Architecture
+              Storage Layer
             
           </span>
         </div>
@@ -1671,32 +1671,31 @@
   
 
 
-<h1 id="storage-layer-architecture">Storage Layer Architecture<a class="headerlink" href="#storage-layer-architecture" title="Permanent link">&para;</a></h1>
+<h1 id="storage-layer">Storage Layer<a class="headerlink" href="#storage-layer" title="Permanent link">&para;</a></h1>
 <p>The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against <code>StorageProtocol</code> (structural typing) and never imports backend-specific libraries like <code>boto3</code>.</p>
 <pre class="mermaid"><code>graph TD
     subgraph "Endpoint Code"
         EP["S3 Endpoints&lt;br/&gt;buckets · objects · versions · multipart"]
     end
 
-    subgraph "Contracts"
-        SP["StorageProtocol&lt;br/&gt;(Protocol — structural typing)"]
-        SB["StorageBase&lt;br/&gt;(ABC — enforced at instantiation)"]
+    subgraph "Contract"
+        SP["StorageProtocol&lt;br/&gt;(structural typing)"]
+    end
+
+    subgraph "Shared Operations"
+        OPS["Boto3Operations&lt;br/&gt;client + transfer config"]
     end
 
     subgraph "Adapters"
-        HCP_A["HcpStorage&lt;br/&gt;boto3 wrapper&lt;br/&gt;HCP-specific workarounds"]
-        FUTURE["MinIO / Ceph / AWS&lt;br/&gt;(future adapters)"]
-    end
-
-    subgraph "Caching"
-        CHCP["CachedHcpStorage&lt;br/&gt;Redis caching layer"]
+        HCP_A["HcpStorage&lt;br/&gt;HCP-specific overrides"]
+        GEN["GenericBoto3Storage&lt;br/&gt;standard S3"]
     end
 
     EP --&gt;|"type-hints against"| SP
-    SP -.-&gt;|"structural match"| SB
-    SB --&gt;|"inherits"| HCP_A
-    SB -.-&gt;|"inherits"| FUTURE
-    HCP_A --&gt;|"inherits"| CHCP</code></pre>
+    SP -.-&gt;|"satisfies"| HCP_A
+    SP -.-&gt;|"satisfies"| GEN
+    HCP_A --&gt;|"has-a"| OPS
+    GEN --&gt;|"has-a"| OPS</code></pre>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1710,22 +1709,22 @@
 <tr>
 <td><code>StorageProtocol</code></td>
 <td><code>services/storage/protocol.py</code></td>
-<td>Structural typing interface — endpoint DI type hints use this</td>
+<td>Structural typing contract — all DI type hints use this</td>
 </tr>
 <tr>
-<td><code>StorageBase</code></td>
-<td><code>services/storage/base.py</code></td>
-<td>Abstract base class — enforces method implementation at instantiation</td>
+<td><code>Boto3Operations</code></td>
+<td><code>services/storage/adapters/_boto3_mixin.py</code></td>
+<td>Shared boto3 operations — injected into adapters via composition</td>
 </tr>
 <tr>
 <td><code>HcpStorage</code></td>
 <td><code>services/storage/adapters/hcp.py</code></td>
-<td>Concrete adapter — wraps boto3 with HCP-specific workarounds</td>
+<td>HCP adapter — composes <code>Boto3Operations</code>, overrides HCP-specific behavior</td>
 </tr>
 <tr>
-<td><code>CachedHcpStorage</code></td>
-<td><code>services/cached_s3.py</code></td>
-<td>Caching decorator — inherits from <code>HcpStorage</code>, adds Redis caching</td>
+<td><code>GenericBoto3Storage</code></td>
+<td><code>services/storage/adapters/generic_boto3.py</code></td>
+<td>Generic S3 adapter — composes <code>Boto3Operations</code> for standard S3 backends</td>
 </tr>
 <tr>
 <td><code>StorageError</code></td>
@@ -1738,13 +1737,13 @@
 <p>To add support for MinIO, Ceph, or AWS S3:</p>
 <ol>
 <li>Create <code>services/storage/adapters/minio.py</code> (or similar)</li>
-<li>Inherit from <code>StorageBase</code> — the ABC enforces all required methods</li>
+<li>Compose <code>Boto3Operations</code> for shared functionality</li>
+<li>Override only the methods that differ from standard S3 behavior</li>
 <li>Catch the backend's native exceptions and re-raise as <code>StorageError</code></li>
-<li>Register the new adapter in the dependency injection layer</li>
+<li>Register the new adapter in the factory (<code>services/storage/factory.py</code>)</li>
 <li>No endpoint code changes needed — they type-hint against <code>StorageProtocol</code></li>
 </ol>
 <h2 id="storage-operations">Storage operations<a class="headerlink" href="#storage-operations" title="Permanent link">&para;</a></h2>
-<p>The storage layer supports these operation groups:</p>
 <table>
 <thead>
 <tr>

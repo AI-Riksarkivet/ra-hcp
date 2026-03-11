@@ -613,17 +613,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#with-reverse-proxy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        With Reverse Proxy
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#mock-server" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1644,17 +1633,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#with-reverse-proxy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        With Reverse Proxy
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#mock-server" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1845,10 +1823,6 @@ make<span class="w"> </span>install-uv<span class="w">      </span><span class="
 <p class="admonition-title">Warning</p>
 <p>Production mode requires valid HCP credentials. Set <code>HCP_HOST</code>, <code>HCP_USERNAME</code>, and <code>HCP_PASSWORD</code> in your <code>.env</code> file before starting. See the <a href="configuration/">Configuration</a> page for all available variables.</p>
 </div>
-<h3 id="with-reverse-proxy">With Reverse Proxy<a class="headerlink" href="#with-reverse-proxy" title="Permanent link">&para;</a></h3>
-<p>If the backend sits behind a reverse proxy, pass the <code>ROOT_PATH</code> variable:</p>
-<div class="highlight"><pre><span></span><code>make<span class="w"> </span>run-api<span class="w"> </span><span class="nv">ROOT_PATH</span><span class="o">=</span>/proxy/8000
-</code></pre></div>
 <h3 id="mock-server">Mock Server<a class="headerlink" href="#mock-server" title="Permanent link">&para;</a></h3>
 <p>Runs with a built-in mock server that simulates HCP responses. No credentials or HCP connectivity needed.</p>
 <div class="highlight"><pre><span></span><code>make<span class="w"> </span>run-api-mock

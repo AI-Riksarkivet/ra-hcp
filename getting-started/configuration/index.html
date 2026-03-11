@@ -668,6 +668,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#opentelemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenTelemetry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#application" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1593,6 +1604,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#opentelemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenTelemetry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#application" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1896,6 +1918,36 @@
 <p>The default <code>API_SECRET_KEY</code> is <strong>not secure</strong>. You must change it to a strong, random value in any production or publicly accessible deployment. Generate one with:</p>
 <div class="highlight"><pre><span></span><code>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets; print(secrets.token_urlsafe(64))&quot;</span>
 </code></pre></div>
+</div>
+<h2 id="opentelemetry">OpenTelemetry<a class="headerlink" href="#opentelemetry" title="Permanent link">&para;</a></h2>
+<p>The backend integrates OpenTelemetry for traces, metrics, and structured JSON logging. Configuration uses standard OTel environment variables.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OTEL_SERVICE_NAME</code></td>
+<td>str</td>
+<td><code>"ra-hcp"</code></td>
+<td>Service name reported in traces and metrics.</td>
+</tr>
+<tr>
+<td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code></td>
+<td>str</td>
+<td><code>""</code></td>
+<td>OTLP collector endpoint (e.g., <code>http://localhost:4318</code>). When empty, traces are printed to console and OTLP log/metric export is disabled.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>When <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> is set, the backend exports traces, metrics, and logs via OTLP/HTTP to the configured collector (e.g., Grafana Alloy, Jaeger, or the OTel Collector). Without it, traces go to console and structured JSON logs go to stderr.</p>
 </div>
 <h2 id="application">Application<a class="headerlink" href="#application" title="Permanent link">&para;</a></h2>
 <p>General application settings.</p>
