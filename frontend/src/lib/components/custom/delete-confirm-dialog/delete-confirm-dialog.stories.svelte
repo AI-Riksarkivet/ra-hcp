@@ -23,3 +23,8 @@
 <Story name="User" args={{ name: 'john.doe', itemType: 'user' }} />
 
 <Story name="Bucket" args={{ name: 'backup-2024', itemType: 'bucket' }} />
+
+<Story
+	name="Bucket with Force Option"
+	args={{ name: 'backup-2024', itemType: 'bucket', showForceOption: true }}
+/>

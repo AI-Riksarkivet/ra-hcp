@@ -23,3 +23,8 @@
 <Story name="Loading" args={{ loading: true }} />
 
 <Story name="Objects" args={{ count: 12, itemType: 'object' }} />
+
+<Story
+	name="Buckets with Force Option"
+	args={{ count: 3, itemType: 'bucket', showForceOption: true }}
+/>
