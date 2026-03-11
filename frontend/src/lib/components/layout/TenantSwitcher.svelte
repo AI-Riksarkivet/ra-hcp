@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronsUpDown, Plus } from 'lucide-svelte';
+	import { Building2, ChevronsUpDown, Plus } from 'lucide-svelte';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -36,6 +36,7 @@
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
 			<Button {...props} variant="outline" size="sm" class="gap-1.5">
+				<Building2 class="h-4 w-4 text-muted-foreground" />
 				<span class="text-sm font-medium">{currentTenant ?? 'System'}</span>
 				<ChevronsUpDown class="h-3.5 w-3.5 text-muted-foreground" />
 			</Button>
