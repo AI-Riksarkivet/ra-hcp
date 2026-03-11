@@ -773,6 +773,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="How it works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-delegates_to-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The @delegates_to pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1546,6 +1563,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="How it works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-delegates_to-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The @delegates_to pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1683,19 +1717,25 @@
     end
 
     subgraph "Shared Operations"
-        OPS["Boto3Operations&lt;br/&gt;client + transfer config"]
+        OPS["Boto3Operations&lt;br/&gt;21 S3 methods · tracing"]
     end
 
     subgraph "Adapters"
-        HCP_A["HcpStorage&lt;br/&gt;HCP-specific overrides"]
-        GEN["GenericBoto3Storage&lt;br/&gt;standard S3"]
+        HCP_A["HcpStorage&lt;br/&gt;@delegates_to&lt;br/&gt;overrides: list_buckets, delete_objects"]
+        GEN["GenericBoto3Storage&lt;br/&gt;@delegates_to&lt;br/&gt;overrides: delete_objects, ACL ops"]
+    end
+
+    subgraph "Caching"
+        CACHED["CachedStorage&lt;br/&gt;decorator pattern"]
     end
 
     EP --&gt;|"type-hints against"| SP
     SP -.-&gt;|"satisfies"| HCP_A
     SP -.-&gt;|"satisfies"| GEN
+    SP -.-&gt;|"satisfies"| CACHED
     HCP_A --&gt;|"has-a"| OPS
-    GEN --&gt;|"has-a"| OPS</code></pre>
+    GEN --&gt;|"has-a"| OPS
+    CACHED --&gt;|"wraps"| SP</code></pre>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1709,36 +1749,48 @@
 <tr>
 <td><code>StorageProtocol</code></td>
 <td><code>services/storage/protocol.py</code></td>
-<td>Structural typing contract — all DI type hints use this</td>
+<td><code>@runtime_checkable</code> Protocol — all DI type hints use this</td>
 </tr>
 <tr>
 <td><code>Boto3Operations</code></td>
-<td><code>services/storage/adapters/_boto3_mixin.py</code></td>
-<td>Shared boto3 operations — injected into adapters via composition</td>
+<td><code>services/storage/adapters/_boto3_ops.py</code></td>
+<td>Shared boto3 operations — composed into adapters, provides all 21 S3 methods</td>
 </tr>
 <tr>
 <td><code>HcpStorage</code></td>
 <td><code>services/storage/adapters/hcp.py</code></td>
-<td>HCP adapter — composes <code>Boto3Operations</code>, overrides HCP-specific behavior</td>
+<td>HCP adapter — composes <code>Boto3Operations</code>, uses <code>@delegates_to</code> for forwarding, overrides <code>list_buckets</code> and <code>delete_objects</code></td>
 </tr>
 <tr>
 <td><code>GenericBoto3Storage</code></td>
 <td><code>services/storage/adapters/generic_boto3.py</code></td>
-<td>Generic S3 adapter — composes <code>Boto3Operations</code> for standard S3 backends</td>
+<td>Generic S3 adapter — composes <code>Boto3Operations</code>, overrides <code>delete_objects</code> and ACL operations</td>
+</tr>
+<tr>
+<td><code>CachedStorage</code></td>
+<td><code>services/cached_storage.py</code></td>
+<td>Caching decorator — wraps any <code>StorageProtocol</code> implementation with TTL-based Redis caching</td>
 </tr>
 <tr>
 <td><code>StorageError</code></td>
 <td><code>services/storage/errors.py</code></td>
 <td>Backend-agnostic exceptions — adapters catch library errors and re-raise</td>
 </tr>
+<tr>
+<td><code>create_storage</code></td>
+<td><code>services/storage/factory.py</code></td>
+<td>Factory function — instantiates the correct adapter based on <code>storage_backend</code> setting</td>
+</tr>
 </tbody>
 </table>
+<h3 id="the-delegates_to-pattern">The <code>@delegates_to</code> pattern<a class="headerlink" href="#the-delegates_to-pattern" title="Permanent link">&para;</a></h3>
+<p>Adapters use a <code>@delegates_to</code> decorator that generates thin forwarding methods at class definition time for all <code>Boto3Operations</code> methods not explicitly overridden. This means adapters only define the methods they need to customize — everything else is automatically forwarded to <code>self._ops</code>.</p>
 <h2 id="adding-a-new-storage-backend">Adding a new storage backend<a class="headerlink" href="#adding-a-new-storage-backend" title="Permanent link">&para;</a></h2>
 <p>To add support for MinIO, Ceph, or AWS S3:</p>
 <ol>
 <li>Create <code>services/storage/adapters/minio.py</code> (or similar)</li>
 <li>Compose <code>Boto3Operations</code> for shared functionality</li>
-<li>Override only the methods that differ from standard S3 behavior</li>
+<li>Use <code>@delegates_to</code> and override only the methods that differ</li>
 <li>Catch the backend's native exceptions and re-raise as <code>StorageError</code></li>
 <li>Register the new adapter in the factory (<code>services/storage/factory.py</code>)</li>
 <li>No endpoint code changes needed — they type-hint against <code>StorageProtocol</code></li>

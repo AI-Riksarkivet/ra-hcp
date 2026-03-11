@@ -1616,6 +1616,8 @@
     subgraph "Service Layer"
         MS["MapiService"]
         SP["StorageProtocol"]
+        CACHED["CachedStorage&lt;br/&gt;decorator"]
+        FAC["Factory&lt;br/&gt;create_storage()"]
         HCP_A["HcpStorage"]
         GEN["GenericBoto3Storage"]
         QS["QueryService"]
@@ -1631,13 +1633,17 @@
     R --&gt; DEP
     DEP --&gt; MS
     DEP --&gt;|"type-hints"| SP
+    DEP --&gt; FAC
+    FAC --&gt; HCP_A
+    FAC --&gt; GEN
     SP -.-&gt;|"satisfies"| HCP_A
     SP -.-&gt;|"satisfies"| GEN
+    SP -.-&gt;|"satisfies"| CACHED
+    CACHED --&gt;|"wraps"| SP
+    CACHED --&gt; CS
     DEP --&gt; QS
     MS --&gt; CS
     QS --&gt; CS
-    HCP_A --&gt; CFG
-    GEN --&gt; CFG
     R --&gt; SEC</code></pre>
 <h2 id="key-design-decisions">Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1645,7 +1651,7 @@
 <p><strong>Credential pass-through</strong>: The API does not store user passwords. Credentials are embedded in the JWT and forwarded to HCP on each request. HCP is the sole authority for authentication and authorization.</p>
 </li>
 <li>
-<p><strong>Optional caching</strong>: When Redis is configured, cached wrappers (<code>CachedMapiService</code>, <code>CachedQueryService</code>, <code>CachedHcpStorage</code>) add TTL-based caching. Without Redis, base services are used directly.</p>
+<p><strong>Optional caching</strong>: When Redis is configured, <code>CachedStorage</code> wraps any storage adapter with TTL-based caching (decorator pattern). <code>CachedMapiService</code> and <code>CachedQueryService</code> do the same for MAPI and query services. Without Redis, base services are used directly.</p>
 </li>
 <li>
 <p><strong>S3 credential derivation</strong>: S3 access keys are derived from HCP credentials (base64-encoded username + MD5-hashed password) per HCP convention. No separate S3 credentials need to be configured.</p>
