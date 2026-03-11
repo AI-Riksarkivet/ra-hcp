@@ -346,17 +346,24 @@ async def healthz():
 
 @app.get("/readyz", tags=["Health"])
 async def readyz(request: Request):
-    """Readiness probe — checks HCP and Redis (if configured) are reachable."""
+    """Readiness probe — checks backend services are reachable."""
+    from app.core.config import StorageSettings
+
     checks: dict[str, str] = {}
     ready = True
 
-    # HCP (required)
-    mapi = getattr(request.app.state, "mapi", None)
-    if mapi is not None and await mapi.ping():
-        checks["hcp"] = "reachable"
+    storage_settings = StorageSettings()
+
+    # HCP MAPI check (only when backend is HCP)
+    if storage_settings.storage_backend == "hcp":
+        mapi = getattr(request.app.state, "mapi", None)
+        if mapi is not None and await mapi.ping():
+            checks["hcp"] = "reachable"
+        else:
+            checks["hcp"] = "unreachable"
+            ready = False
     else:
-        checks["hcp"] = "unreachable"
-        ready = False
+        checks["storage"] = storage_settings.storage_backend
 
     # Cache (required only when configured)
     cache: CacheService | None = getattr(request.app.state, "cache", None)

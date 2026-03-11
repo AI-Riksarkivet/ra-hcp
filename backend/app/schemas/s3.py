@@ -340,10 +340,10 @@ class ListPartsResponse(BaseModel):
 
 
 class S3CredentialsResponse(BaseModel):
-    """HCP-derived S3 credentials for the authenticated user."""
+    """S3 credentials for the authenticated user."""
 
     access_key_id: str
     secret_access_key: str
-    username: str
+    username: Optional[str] = None
     tenant: Optional[str] = None
     endpoint_url: Optional[str] = None

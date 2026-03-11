@@ -20,8 +20,9 @@ from typing import Annotated, Optional
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
-from app.api.dependencies import get_mapi_service, get_s3_service
+from app.api.dependencies import get_mapi_service, get_s3_service, get_storage_settings
 from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error, run_s3
+from app.core.config import StorageSettings
 from app.core.security import oauth2_scheme, verify_token_with_credentials
 from app.schemas.s3 import (
     AclPolicy,
@@ -85,66 +86,84 @@ async def delete_bucket(
     s3: StorageProtocol = Depends(get_s3_service),
     hcp: AuthenticatedMapiService = Depends(get_mapi_service),
     token: Annotated[str, Depends(oauth2_scheme)] = "",
+    storage_settings: StorageSettings = Depends(get_storage_settings),
 ):
     """Delete an S3 bucket.
 
     If ``force=true``, all objects (including versions and delete markers)
-    are removed before deleting the bucket itself.  When the S3 delete
-    fails with BucketNotEmpty (typically due to HCP's immutable deletion
+    are removed before deleting the bucket itself.  On HCP, when the S3
+    delete fails with BucketNotEmpty (typically due to immutable deletion
     records), the endpoint reconfigures the namespace via MAPI to allow
-    pruning of deletion records, then retries the delete.
+    pruning, then retries.  On MinIO/generic, force-delete is just
+    empty + delete (no MAPI involved).
     """
     if force:
-        creds = verify_token_with_credentials(token)
         await _empty_bucket(s3, bucket)
+
+        if storage_settings.storage_backend == "hcp":
+            return await _force_delete_hcp(s3, hcp, bucket, token)
+
+        # MinIO / generic: simple empty + delete
+        await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+        return {"status": "deleted", "bucket": bucket}
+
+    await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+    return {"status": "deleted", "bucket": bucket}
+
+
+async def _force_delete_hcp(
+    s3: StorageProtocol,
+    hcp: AuthenticatedMapiService,
+    bucket: str,
+    token: str,
+) -> dict:
+    """HCP-specific force-delete with MAPI namespace reconfiguration."""
+    creds = verify_token_with_credentials(token)
+    try:
+        await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+        return {"status": "deleted", "bucket": bucket}
+    except HTTPException as exc:
+        if exc.status_code != 409 or not creds.tenant:
+            raise
+
+    # BucketNotEmpty — likely immutable deletion records.
+    logger.info(
+        "force-delete: S3 delete failed for '%s' (BucketNotEmpty), "
+        "reconfiguring namespace for deletion record cleanup",
+        bucket,
+    )
+    ns_path = f"/tenants/{creds.tenant}/namespaces/{bucket}"
+    await _prepare_namespace_for_delete(hcp, ns_path)
+
+    # Retry: S3 delete first, then MAPI namespace delete.
+    for attempt in range(3):
+        if attempt > 0:
+            await asyncio.sleep(2)
         try:
             await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
             return {"status": "deleted", "bucket": bucket}
         except HTTPException as exc:
-            if exc.status_code != 409 or not creds.tenant:
+            if exc.status_code != 409:
                 raise
+        try:
+            await hcp.send("DELETE", ns_path, resource=f"bucket '{bucket}'")
+            return {"status": "deleted", "bucket": bucket}
+        except HTTPException:
+            logger.info(
+                "force-delete: attempt %d for '%s' — waiting for "
+                "HCP to prune deletion records",
+                attempt + 1,
+                bucket,
+            )
 
-        # BucketNotEmpty — likely immutable deletion records.
-        # Reconfigure namespace via MAPI so HCP can prune them.
-        logger.info(
-            "force-delete: S3 delete failed for '%s' (BucketNotEmpty), "
-            "reconfiguring namespace for deletion record cleanup",
-            bucket,
-        )
-        ns_path = f"/tenants/{creds.tenant}/namespaces/{bucket}"
-        await _prepare_namespace_for_delete(hcp, ns_path)
-
-        # Retry: S3 delete first, then MAPI namespace delete.
-        for attempt in range(3):
-            if attempt > 0:
-                await asyncio.sleep(2)
-            try:
-                await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
-                return {"status": "deleted", "bucket": bucket}
-            except HTTPException as exc:
-                if exc.status_code != 409:
-                    raise
-            try:
-                await hcp.send("DELETE", ns_path, resource=f"bucket '{bucket}'")
-                return {"status": "deleted", "bucket": bucket}
-            except HTTPException:
-                logger.info(
-                    "force-delete: attempt %d for '%s' — waiting for "
-                    "HCP to prune deletion records",
-                    attempt + 1,
-                    bucket,
-                )
-
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"bucket '{bucket}': All objects removed but HCP is still "
-                f"cleaning up internal deletion records. "
-                f"Please try again in a few minutes."
-            ),
-        )
-    await run_s3(s3.delete_bucket, f"bucket '{bucket}'", bucket)
-    return {"status": "deleted", "bucket": bucket}
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            f"bucket '{bucket}': All objects removed but HCP is still "
+            f"cleaning up internal deletion records. "
+            f"Please try again in a few minutes."
+        ),
+    )
 
 
 async def _prepare_namespace_for_delete(

@@ -9,6 +9,8 @@ from unittest.mock import MagicMock
 from botocore.exceptions import ClientError
 from httpx import AsyncClient
 
+from app.core.config import StorageSettings
+
 
 # ── Presigned URL endpoint ───────────────────────────────────────────
 
@@ -135,3 +137,31 @@ async def test_get_credentials(client: AsyncClient, auth_headers: dict):
 async def test_get_credentials_requires_auth(client: AsyncClient):
     resp = await client.get("/api/v1/credentials")
     assert resp.status_code == 401
+
+
+# ── MinIO/generic credentials ─────────────────────────────────────────
+
+
+async def test_get_credentials_minio_backend(client: AsyncClient, auth_headers: dict):
+    """When storage_backend=minio, /credentials returns configured keys."""
+    from app.api.dependencies import get_storage_settings
+    from app.main import app
+
+    minio_settings = StorageSettings(
+        storage_backend="minio",
+        s3_access_key="minioadmin",
+        s3_secret_key="minioadmin123",
+        s3_endpoint_url="http://localhost:9000",
+    )
+    app.dependency_overrides[get_storage_settings] = lambda: minio_settings
+    try:
+        resp = await client.get("/api/v1/credentials", headers=auth_headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["access_key_id"] == "minioadmin"
+        assert body["secret_access_key"] == "minioadmin123"
+        assert body["endpoint_url"] == "http://localhost:9000"
+        assert body["username"] is None
+        assert body["tenant"] is None
+    finally:
+        app.dependency_overrides.pop(get_storage_settings, None)

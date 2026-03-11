@@ -8,6 +8,8 @@ from unittest.mock import MagicMock
 from botocore.exceptions import ClientError
 from httpx import AsyncClient
 
+from app.core.config import StorageSettings
+
 
 async def test_list_buckets_empty(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
@@ -176,3 +178,41 @@ async def test_put_bucket_acl(
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "updated"
+
+
+# ── Force-delete on non-HCP backend ──────────────────────────────────
+
+
+async def test_force_delete_minio_no_mapi(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """On MinIO backend, force-delete empties + deletes without MAPI calls."""
+    from app.api.dependencies import get_storage_settings
+    from app.main import app
+
+    minio_settings = StorageSettings(
+        storage_backend="minio",
+        s3_endpoint_url="http://localhost:9000",
+    )
+    app.dependency_overrides[get_storage_settings] = lambda: minio_settings
+
+    # list_object_versions returns empty (bucket already empty after _empty_bucket)
+    mock_s3_service.list_object_versions.return_value = {
+        "Versions": [],
+        "DeleteMarkers": [],
+        "IsTruncated": False,
+    }
+    mock_s3_service.list_objects.return_value = {
+        "Contents": [],
+        "IsTruncated": False,
+    }
+
+    try:
+        resp = await client.delete(
+            "/api/v1/buckets/test-bucket?force=true", headers=auth_headers
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "deleted"
+        mock_s3_service.delete_bucket.assert_called_with("test-bucket")
+    finally:
+        app.dependency_overrides.pop(get_storage_settings, None)

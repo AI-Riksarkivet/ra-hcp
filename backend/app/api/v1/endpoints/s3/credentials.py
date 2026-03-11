@@ -8,9 +8,14 @@ from typing import Annotated
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.dependencies import get_s3_service, get_s3_settings
+from app.api.dependencies import (
+    get_s3_service,
+    get_s3_settings,
+    get_storage_settings,
+)
 from app.core.auth_utils import derive_s3_keys
 from app.api.errors import raise_for_s3_error, raise_for_s3_transport_error
+from app.core.config import StorageSettings
 from app.core.security import (
     HcpCredentials,
     oauth2_scheme,
@@ -69,24 +74,29 @@ async def generate_presigned_url(
 @router.get("/credentials", response_model=S3CredentialsResponse)
 async def get_s3_credentials(
     token: Annotated[str, Depends(oauth2_scheme)],
+    storage_settings: StorageSettings = Depends(get_storage_settings),
 ):
-    """Return the S3 Access Key ID and Secret Access Key for the authenticated user.
+    """Return the S3 credentials for the authenticated user.
 
-    HCP derives S3 credentials deterministically from your username and password:
-    - **Access Key ID** = base64(username)
-    - **Secret Access Key** = md5(password)
-
-    These credentials are used with any S3-compatible client (boto3, aws-cli, etc.)
-    to authenticate against HCP's S3 API.
+    HCP: derives keys from username/password (base64 + md5).
+    MinIO/generic: returns the configured S3 access key and secret key.
     """
-    creds: HcpCredentials = verify_token_with_credentials(token)
-    access_key, secret_key = derive_s3_keys(creds.username, creds.password)
-    settings = get_s3_settings()
-    endpoint_url = s3_endpoint_for_tenant(creds.tenant, settings.hcp_domain)
+    if storage_settings.storage_backend == "hcp":
+        creds: HcpCredentials = verify_token_with_credentials(token)
+        access_key, secret_key = derive_s3_keys(creds.username, creds.password)
+        s3_settings = get_s3_settings()
+        endpoint_url = s3_endpoint_for_tenant(creds.tenant, s3_settings.hcp_domain)
+        return S3CredentialsResponse(
+            access_key_id=access_key,
+            secret_access_key=secret_key,
+            username=creds.username,
+            tenant=creds.tenant,
+            endpoint_url=endpoint_url,
+        )
+
+    # MinIO / generic: return configured credentials
     return S3CredentialsResponse(
-        access_key_id=access_key,
-        secret_access_key=secret_key,
-        username=creds.username,
-        tenant=creds.tenant,
-        endpoint_url=endpoint_url,
+        access_key_id=storage_settings.s3_access_key,
+        secret_access_key=storage_settings.s3_secret_key.get_secret_value(),
+        endpoint_url=storage_settings.s3_endpoint_url or None,
     )
