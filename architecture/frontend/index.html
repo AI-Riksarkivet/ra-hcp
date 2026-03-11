@@ -1620,54 +1620,17 @@
 <h1 id="frontend-architecture">Frontend Architecture<a class="headerlink" href="#frontend-architecture" title="Permanent link">&para;</a></h1>
 <p>The SvelteKit frontend follows a reactive pattern with remote function abstractions and server-side RBAC:</p>
 <pre class="mermaid"><code>graph TD
-    subgraph "Pages"
-        P["SvelteKit Routes&lt;br/&gt;+page.svelte"]
-        L["Layout Server Load&lt;br/&gt;+layout.server.ts"]
-        G["Route Guards&lt;br/&gt;+page.server.ts"]
-    end
+    HOOK["hooks.server.ts&lt;br/&gt;extract JWT cookie"] --&gt; LAYOUT["+layout.server.ts&lt;br/&gt;fetch user profile · set accessLevel"]
+    LAYOUT --&gt; GUARD["+page.server.ts&lt;br/&gt;requireAdmin() · route guards"]
+    GUARD --&gt; PAGE["+page.svelte&lt;br/&gt;components · reactive state"]
 
-    subgraph "RBAC"
-        HOOK["Server Hook&lt;br/&gt;Token extraction"]
-        AL["Access Levels&lt;br/&gt;sys-admin · tenant-admin&lt;br/&gt;namespace-user"]
-        GUARD["requireAdmin()&lt;br/&gt;Server-side redirect"]
-    end
+    PAGE --&gt; Q["query()&lt;br/&gt;GET with caching"]
+    PAGE --&gt; C["command()&lt;br/&gt;mutations"]
+    C --&gt;|".updates(queryData)"| Q
 
-    subgraph "Components"
-        UI["UI Components&lt;br/&gt;DataTable · FormDialog&lt;br/&gt;FileViewer · etc."]
-        FEAT["Feature Components&lt;br/&gt;Namespace settings&lt;br/&gt;User management"]
-        SIDE["Sidebar&lt;br/&gt;Role-conditional sections"]
-    end
-
-    subgraph "Data Layer"
-        Q["query()&lt;br/&gt;GET requests with caching"]
-        C["command()&lt;br/&gt;POST/PUT/DELETE mutations"]
-        REM["Remote Functions&lt;br/&gt;*.remote.ts"]
-    end
-
-    subgraph "State"
-        ST["$state&lt;br/&gt;Mutable reactive state"]
-        DER["$derived&lt;br/&gt;Computed values"]
-        EFF["$effect&lt;br/&gt;Side effects"]
-    end
-
-    HOOK --&gt;|"JWT cookie"| L
-    L --&gt;|"fetch user profile"| REM
-    L --&gt;|"accessLevel"| AL
-    AL --&gt; G
-    G --&gt;|"namespace-user → /buckets"| GUARD
-    L --&gt; P
-    P --&gt; UI
-    P --&gt; FEAT
-    SIDE --&gt;|"isAdmin filter"| AL
-    FEAT --&gt; Q
-    FEAT --&gt; C
-    Q --&gt; REM
+    Q --&gt; REM["*.remote.ts"]
     C --&gt; REM
-    REM --&gt;|"fetch()"| API2["FastAPI Backend"]
-    P --&gt; ST
-    P --&gt; DER
-    P --&gt; EFF
-    C --&gt;|".updates(queryData)"| Q</code></pre>
+    REM --&gt;|"fetch()"| API["FastAPI Backend"]</code></pre>
 <h2 id="rbac">RBAC<a class="headerlink" href="#rbac" title="Permanent link">&para;</a></h2>
 <p>The frontend enforces role-based access control entirely on the server side, making it impossible to bypass via client-side manipulation.</p>
 <pre class="mermaid"><code>sequenceDiagram

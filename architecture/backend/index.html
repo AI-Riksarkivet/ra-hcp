@@ -1608,43 +1608,28 @@
 <h1 id="backend-architecture">Backend Architecture<a class="headerlink" href="#backend-architecture" title="Permanent link">&para;</a></h1>
 <p>The FastAPI backend is organized in layers:</p>
 <pre class="mermaid"><code>graph TD
-    subgraph "API Layer"
-        R["Routers&lt;br/&gt;api/v1/endpoints/"]
-        DEP["Dependencies&lt;br/&gt;api/dependencies.py"]
+    R["Routers"] --&gt; DEP["Dependencies&lt;br/&gt;JWT · credentials"]
+
+    DEP --&gt; MS["MapiService"]
+    DEP --&gt; SP["StorageProtocol"]
+    DEP --&gt; QS["QueryService"]
+
+    subgraph "Storage (swappable)"
+        SP --&gt; CACHED["CachedStorage"]
+        SP --&gt; HCP_A["HcpStorage"]
+        SP --&gt; GEN["GenericBoto3Storage"]
     end
 
-    subgraph "Service Layer"
-        MS["MapiService"]
-        SP["StorageProtocol"]
-        CACHED["CachedStorage&lt;br/&gt;decorator"]
-        FAC["Factory&lt;br/&gt;create_storage()"]
-        HCP_A["HcpStorage"]
-        GEN["GenericBoto3Storage"]
-        QS["QueryService"]
-        CS["CacheService"]
+    subgraph "Caching (optional)"
+        CACHED --&gt; CS["CacheService&lt;br/&gt;Redis"]
+        MS -.-&gt; CS
+        QS -.-&gt; CS
     end
 
-    subgraph "Core"
-        CFG["Config"]
-        SEC["Security&lt;br/&gt;JWT · OAuth2"]
-        TEL["Telemetry&lt;br/&gt;OpenTelemetry"]
-    end
-
-    R --&gt; DEP
-    DEP --&gt; MS
-    DEP --&gt;|"type-hints"| SP
-    DEP --&gt; FAC
-    FAC --&gt; HCP_A
-    FAC --&gt; GEN
-    SP -.-&gt;|"satisfies"| HCP_A
-    SP -.-&gt;|"satisfies"| GEN
-    SP -.-&gt;|"satisfies"| CACHED
-    CACHED --&gt;|"wraps"| SP
-    CACHED --&gt; CS
-    DEP --&gt; QS
-    MS --&gt; CS
-    QS --&gt; CS
-    R --&gt; SEC</code></pre>
+    MS --&gt; HCP_EXT["HCP MAPI :9090"]
+    HCP_A --&gt; S3_EXT["S3 Endpoint"]
+    GEN --&gt; S3_EXT
+    QS --&gt; HCP_EXT</code></pre>
 <h2 id="key-design-decisions">Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Permanent link">&para;</a></h2>
 <ul>
 <li>

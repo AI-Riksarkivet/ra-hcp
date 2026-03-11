@@ -1708,34 +1708,19 @@
 <h1 id="storage-layer">Storage Layer<a class="headerlink" href="#storage-layer" title="Permanent link">&para;</a></h1>
 <p>The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against <code>StorageProtocol</code> (structural typing) and never imports backend-specific libraries like <code>boto3</code>.</p>
 <pre class="mermaid"><code>graph TD
-    subgraph "Endpoint Code"
-        EP["S3 Endpoints&lt;br/&gt;buckets · objects · versions · multipart"]
-    end
+    EP["S3 Endpoints"] --&gt;|"type-hints"| SP["StorageProtocol"]
 
-    subgraph "Contract"
-        SP["StorageProtocol&lt;br/&gt;(structural typing)"]
-    end
+    SP --&gt; CACHED["CachedStorage&lt;br/&gt;list caching · metadata caching"]
+    SP --&gt; HCP_A["HcpStorage&lt;br/&gt;overrides: list_buckets, delete_objects"]
+    SP --&gt; GEN["GenericBoto3Storage&lt;br/&gt;overrides: delete_objects, ACL ops"]
 
-    subgraph "Shared Operations"
-        OPS["Boto3Operations&lt;br/&gt;21 S3 methods · tracing"]
-    end
+    CACHED --&gt;|"wraps"| HCP_A
+    CACHED --&gt;|"wraps"| GEN
 
-    subgraph "Adapters"
-        HCP_A["HcpStorage&lt;br/&gt;@delegates_to&lt;br/&gt;overrides: list_buckets, delete_objects"]
-        GEN["GenericBoto3Storage&lt;br/&gt;@delegates_to&lt;br/&gt;overrides: delete_objects, ACL ops"]
-    end
+    HCP_A --&gt;|"delegates via @delegates_to"| OPS["Boto3Operations&lt;br/&gt;21 shared S3 methods"]
+    GEN --&gt;|"delegates via @delegates_to"| OPS
 
-    subgraph "Caching"
-        CACHED["CachedStorage&lt;br/&gt;decorator pattern"]
-    end
-
-    EP --&gt;|"type-hints against"| SP
-    SP -.-&gt;|"satisfies"| HCP_A
-    SP -.-&gt;|"satisfies"| GEN
-    SP -.-&gt;|"satisfies"| CACHED
-    HCP_A --&gt;|"has-a"| OPS
-    GEN --&gt;|"has-a"| OPS
-    CACHED --&gt;|"wraps"| SP</code></pre>
+    OPS --&gt; CLIENT["boto3 S3 Client"]</code></pre>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
