@@ -183,7 +183,7 @@
 					const blob = item.file.slice(start, end);
 					const partNumber = i + 1;
 
-					const etag = await uploadPartXhr(bucket, item.key, uploadId, partNumber, blob);
+					const etag = await uploadPartXhr(bucket, item.key, uploadId!, partNumber, blob);
 					parts[i] = { PartNumber: partNumber, ETag: etag };
 					completedParts++;
 
