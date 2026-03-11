@@ -80,7 +80,9 @@ class CachedStorage:
             "cached_s3.list_objects",
             attributes={"s3.bucket": bucket, "s3.prefix": prefix or ""},
         ) as span:
-            key = self._key("list_objects", bucket, prefix or "", delimiter or "")
+            key = self._key(
+                "list_objects", bucket, prefix or "", delimiter or "", str(max_keys)
+            )
             cached = self._cache.get_sync(key)
             if cached is not None:
                 span.set_attribute("cache.hit", True)
@@ -180,16 +182,24 @@ class CachedStorage:
 
     # ── Write operations: delegate + invalidate ────────────────────────
 
+    def _invalidate_bucket(self, name: str) -> None:
+        """Invalidate all cached data for a specific bucket."""
+        self._cache.delete_sync(self._key("list_buckets"))
+        self._cache.delete_sync(self._key("head_bucket", name))
+        self._cache.delete_sync(self._key("versioning", name))
+        self._cache.delete_sync(self._key("bucket_acl", name))
+        self._cache.invalidate_pattern_sync(f"s3:list_objects:{name}:*")
+        self._cache.invalidate_pattern_sync(f"s3:head_object:{name}:*")
+        self._cache.invalidate_pattern_sync(f"s3:object_acl:{name}:*")
+
     def create_bucket(self, name: str) -> dict:
         result = self._inner.create_bucket(name)
-        self._cache.delete_sync(self._key("list_buckets"))
-        self._cache.invalidate_pattern_sync(f"s3:*:{name}*")
+        self._invalidate_bucket(name)
         return result
 
     def delete_bucket(self, name: str) -> dict:
         result = self._inner.delete_bucket(name)
-        self._cache.delete_sync(self._key("list_buckets"))
-        self._cache.invalidate_pattern_sync(f"s3:*:{name}*")
+        self._invalidate_bucket(name)
         return result
 
     def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
@@ -223,6 +233,8 @@ class CachedStorage:
     ) -> dict:
         result = self._inner.copy_object(src_bucket, src_key, dst_bucket, dst_key)
         self._cache.invalidate_pattern_sync(f"s3:list_objects:{dst_bucket}:*")
+        self._cache.delete_sync(self._key("head_object", dst_bucket, dst_key))
+        self._cache.delete_sync(self._key("object_acl", dst_bucket, dst_key))
         return result
 
     def put_bucket_versioning(self, bucket: str, status: str) -> dict:
@@ -264,6 +276,7 @@ class CachedStorage:
     ) -> dict:
         result = self._inner.complete_multipart_upload(bucket, key, upload_id, parts)
         self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")
+        self._cache.delete_sync(self._key("head_object", bucket, key))
         return result
 
     def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict:

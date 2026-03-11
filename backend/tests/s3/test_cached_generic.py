@@ -122,8 +122,17 @@ def test_create_bucket_invalidates(
 ):
     cached.create_bucket("new-bucket")
     mock_inner.create_bucket.assert_called_once_with("new-bucket")
-    mock_cache.delete_sync.assert_called_once_with("s3:list_buckets")
-    mock_cache.invalidate_pattern_sync.assert_called_once_with("s3:*:new-bucket*")
+    # Targeted invalidation: list_buckets + head_bucket + versioning + bucket_acl
+    delete_keys = [c.args[0] for c in mock_cache.delete_sync.call_args_list]
+    assert "s3:list_buckets" in delete_keys
+    assert "s3:head_bucket:new-bucket" in delete_keys
+    assert "s3:versioning:new-bucket" in delete_keys
+    assert "s3:bucket_acl:new-bucket" in delete_keys
+    # Pattern invalidation for list_objects, head_object, object_acl
+    patterns = [c.args[0] for c in mock_cache.invalidate_pattern_sync.call_args_list]
+    assert "s3:list_objects:new-bucket:*" in patterns
+    assert "s3:head_object:new-bucket:*" in patterns
+    assert "s3:object_acl:new-bucket:*" in patterns
 
 
 def test_delete_bucket_invalidates(
@@ -131,7 +140,9 @@ def test_delete_bucket_invalidates(
 ):
     cached.delete_bucket("old-bucket")
     mock_inner.delete_bucket.assert_called_once_with("old-bucket")
-    mock_cache.delete_sync.assert_called_once_with("s3:list_buckets")
+    delete_keys = [c.args[0] for c in mock_cache.delete_sync.call_args_list]
+    assert "s3:list_buckets" in delete_keys
+    assert "s3:head_bucket:old-bucket" in delete_keys
 
 
 def test_put_object_invalidates(
@@ -172,6 +183,9 @@ def test_copy_object_invalidates(
     cached.copy_object("src", "skey", "dst", "dkey")
     mock_inner.copy_object.assert_called_once()
     mock_cache.invalidate_pattern_sync.assert_called_once_with("s3:list_objects:dst:*")
+    delete_keys = [c.args[0] for c in mock_cache.delete_sync.call_args_list]
+    assert "s3:head_object:dst:dkey" in delete_keys
+    assert "s3:object_acl:dst:dkey" in delete_keys
 
 
 def test_put_bucket_versioning_invalidates(

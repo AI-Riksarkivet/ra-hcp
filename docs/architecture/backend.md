@@ -12,6 +12,8 @@ graph TD
     subgraph "Service Layer"
         MS["MapiService"]
         SP["StorageProtocol"]
+        CACHED["CachedStorage<br/>decorator"]
+        FAC["Factory<br/>create_storage()"]
         HCP_A["HcpStorage"]
         GEN["GenericBoto3Storage"]
         QS["QueryService"]
@@ -27,13 +29,17 @@ graph TD
     R --> DEP
     DEP --> MS
     DEP -->|"type-hints"| SP
+    DEP --> FAC
+    FAC --> HCP_A
+    FAC --> GEN
     SP -.->|"satisfies"| HCP_A
     SP -.->|"satisfies"| GEN
+    SP -.->|"satisfies"| CACHED
+    CACHED -->|"wraps"| SP
+    CACHED --> CS
     DEP --> QS
     MS --> CS
     QS --> CS
-    HCP_A --> CFG
-    GEN --> CFG
     R --> SEC
 ```
 
@@ -41,7 +47,7 @@ graph TD
 
 - **Credential pass-through**: The API does not store user passwords. Credentials are embedded in the JWT and forwarded to HCP on each request. HCP is the sole authority for authentication and authorization.
 
-- **Optional caching**: When Redis is configured, cached wrappers (`CachedMapiService`, `CachedQueryService`, `CachedHcpStorage`) add TTL-based caching. Without Redis, base services are used directly.
+- **Optional caching**: When Redis is configured, `CachedStorage` wraps any storage adapter with TTL-based caching (decorator pattern). `CachedMapiService` and `CachedQueryService` do the same for MAPI and query services. Without Redis, base services are used directly.
 
 - **S3 credential derivation**: S3 access keys are derived from HCP credentials (base64-encoded username + MD5-hashed password) per HCP convention. No separate S3 credentials need to be configured.
 

@@ -38,6 +38,18 @@ class StorageOperationNotSupported(StorageError):
 # ── Helpers to convert botocore exceptions ──────────────────────────
 
 
+_CLIENT_ERROR_STATUS: dict[str, int] = {
+    "NoSuchBucket": 404,
+    "NoSuchKey": 404,
+    "BucketNotEmpty": 409,
+    "BucketAlreadyExists": 409,
+    "BucketAlreadyOwnedByYou": 409,
+    "AccessDenied": 403,
+    "InvalidBucketName": 400,
+    "InvalidArgument": 400,
+}
+
+
 def from_client_error(exc: Exception) -> StorageError:
     """Convert a botocore ClientError to StorageError."""
     response = getattr(exc, "response", {})
@@ -45,18 +57,7 @@ def from_client_error(exc: Exception) -> StorageError:
     code = error.get("Code", "Unknown")
     message = error.get("Message", str(exc))
     status = response.get("ResponseMetadata", {}).get("HTTPStatusCode", 502)
-
-    _STATUS_MAP = {
-        "NoSuchBucket": 404,
-        "NoSuchKey": 404,
-        "BucketNotEmpty": 409,
-        "BucketAlreadyExists": 409,
-        "BucketAlreadyOwnedByYou": 409,
-        "AccessDenied": 403,
-        "InvalidBucketName": 400,
-        "InvalidArgument": 400,
-    }
-    http_status = _STATUS_MAP.get(code, status)
+    http_status = _CLIENT_ERROR_STATUS.get(code, status)
     return StorageError(code, message, http_status)
 
 
