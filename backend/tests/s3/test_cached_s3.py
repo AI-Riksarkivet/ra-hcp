@@ -2,46 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
-import fakeredis
 import pytest
 
 from app.core.config import CacheSettings, S3Settings
 from app.services.cache_service import CacheService
 from app.services.cached_storage import CachedStorage
-
-
-def _s3_settings() -> S3Settings:
-    return S3Settings(
-        hcp_username="testuser",
-        hcp_password="testpass",
-        hcp_verify_ssl=False,
-        s3_endpoint_url="https://s3.test.example.com",
-        s3_region="us-east-1",
-    )
-
-
-def _cache_settings() -> CacheSettings:
-    return CacheSettings(
-        redis_url="redis://localhost",
-        cache_key_prefix="test",
-        cache_s3_list_ttl=120,
-        cache_s3_meta_ttl=300,
-    )
-
-
-@pytest.fixture
-async def cache() -> AsyncGenerator[CacheService, None]:
-    settings = _cache_settings()
-    svc = CacheService(settings)
-    svc._redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
-    svc._sync_redis = fakeredis.FakeRedis(decode_responses=True)
-    svc._enabled = True
-    yield svc
-    await svc.close()
 
 
 @pytest.fixture
@@ -54,11 +22,16 @@ def mock_boto_client():
 
 
 @pytest.fixture
-def s3(cache: CacheService, mock_boto_client: MagicMock) -> CachedStorage:
+def s3(
+    cache: CacheService,
+    s3_settings: S3Settings,
+    cache_settings: CacheSettings,
+    mock_boto_client: MagicMock,
+) -> CachedStorage:
     from app.services.storage.adapters.hcp import HcpStorage
 
-    inner = HcpStorage(_s3_settings())
-    return CachedStorage(inner, cache, _cache_settings())
+    inner = HcpStorage(s3_settings)
+    return CachedStorage(inner, cache, cache_settings)
 
 
 # -- list_buckets caching --------------------------------------------------

@@ -5,8 +5,6 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 
 import pytest
-import fakeredis
-import respx
 
 from app.core.config import CacheSettings, MapiSettings
 from app.services.cache_service import CacheService
@@ -16,51 +14,14 @@ from app.services.mapi_service import MapiService
 HCP_BASE = "https://test.hcp.example.com:9090/mapi"
 
 
-def _mapi_settings() -> MapiSettings:
-    return MapiSettings(
-        hcp_host="test.hcp.example.com",
-        hcp_port=9090,
-        hcp_username="testuser",
-        hcp_password="testpass",
-        hcp_auth_type="hcp",
-        hcp_verify_ssl=False,
-        hcp_timeout=30,
-    )
-
-
-def _cache_settings() -> CacheSettings:
-    return CacheSettings(
-        redis_url="redis://localhost",
-        cache_key_prefix="test",
-        cache_default_ttl=300,
-        cache_stats_ttl=60,
-        cache_config_ttl=600,
-    )
-
-
 @pytest.fixture
-async def cache() -> AsyncGenerator[CacheService, None]:
-    settings = _cache_settings()
-    svc = CacheService(settings)
-    svc._redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
-    svc._sync_redis = fakeredis.FakeRedis(decode_responses=True)
-    svc._enabled = True
-    yield svc
-    await svc.close()
-
-
-@pytest.fixture
-async def mapi(cache: CacheService) -> AsyncGenerator[CachedMapiService, None]:
-    inner = MapiService(_mapi_settings())
-    svc = CachedMapiService(inner, cache, _cache_settings())
+async def mapi(
+    cache: CacheService, mapi_settings: MapiSettings, cache_settings: CacheSettings
+) -> AsyncGenerator[CachedMapiService, None]:
+    inner = MapiService(mapi_settings)
+    svc = CachedMapiService(inner, cache, cache_settings)
     yield svc
     await inner.close()
-
-
-@pytest.fixture
-def hcp_mock():
-    with respx.mock(assert_all_mocked=False, assert_all_called=False) as mock:
-        yield mock
 
 
 # ── Cache miss → real request → cache populated ───────────────────────
@@ -183,14 +144,14 @@ async def test_error_responses_not_cached(
 # ── Cache disabled: works without caching ─────────────────────────────
 
 
-async def test_works_without_cache(hcp_mock):
+async def test_works_without_cache(mapi_settings: MapiSettings, hcp_mock):
     """When cache is disabled, CachedMapiService still works normally."""
     cache_settings = CacheSettings(redis_url="", cache_key_prefix="test")
     cache = CacheService(cache_settings)
     await cache.connect()
     assert not cache.enabled
 
-    inner = MapiService(_mapi_settings())
+    inner = MapiService(mapi_settings)
     mapi = CachedMapiService(inner, cache, cache_settings)
     route = hcp_mock.get(f"{HCP_BASE}/tenants").respond(200, json={"name": ["t1"]})
 

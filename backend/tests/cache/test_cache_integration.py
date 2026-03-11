@@ -11,7 +11,6 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from unittest.mock import MagicMock, patch
 
-import fakeredis
 import httpx
 import pytest
 import respx
@@ -24,7 +23,6 @@ from app.api.dependencies import (
     get_s3_service,
 )
 from app.core.config import AuthSettings, CacheSettings, MapiSettings
-from app.core.security import create_access_token
 from app.main import app
 from app.services.cache_service import CacheService
 from app.services.cached_mapi import CachedMapiService
@@ -38,60 +36,8 @@ HCP_BASE = "https://test.hcp.example.com:9090/mapi"
 
 
 @pytest.fixture
-def mapi_settings() -> MapiSettings:
-    return MapiSettings(
-        hcp_host="test.hcp.example.com",
-        hcp_port=9090,
-        hcp_username="testuser",
-        hcp_password="testpass",
-        hcp_auth_type="hcp",
-        hcp_verify_ssl=False,
-        hcp_timeout=30,
-    )
-
-
-@pytest.fixture
-def cache_settings() -> CacheSettings:
-    return CacheSettings(
-        redis_url="redis://fake",
-        cache_key_prefix="test",
-        cache_default_ttl=300,
-        cache_stats_ttl=60,
-        cache_config_ttl=600,
-        cache_s3_list_ttl=120,
-        cache_s3_meta_ttl=300,
-    )
-
-
-@pytest.fixture
-def auth_settings() -> AuthSettings:
-    return AuthSettings(
-        api_secret_key="test-secret-key-for-unit-tests-min32b",
-        api_token_expire_minutes=60,
-    )
-
-
-@pytest.fixture
-def auth_headers(auth_settings: AuthSettings) -> dict[str, str]:
-    token = create_access_token("testuser", "testpass", settings=auth_settings)
-    return {"Authorization": f"Bearer {token}"}
-
-
-@pytest.fixture
-async def cache_service(
-    cache_settings: CacheSettings,
-) -> AsyncGenerator[CacheService, None]:
-    """CacheService backed by fakeredis — no real Redis needed."""
-    svc = CacheService(cache_settings)
-    svc._redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
-    svc._sync_redis = fakeredis.FakeRedis(decode_responses=True)
-    svc._enabled = True
-    yield svc
-    await svc.close()
-
-
-@pytest.fixture
 def mock_s3_service() -> MagicMock:
+    """S3 mock with populated data for cache integration tests."""
     mock = MagicMock(spec=StorageProtocol)
     mock.list_buckets.return_value = {
         "Buckets": [{"Name": "bucket-1"}, {"Name": "bucket-2"}],
@@ -112,16 +58,10 @@ def mock_s3_service() -> MagicMock:
 
 
 @pytest.fixture
-def hcp_mock():
-    with respx.mock(assert_all_mocked=False, assert_all_called=False) as mock:
-        yield mock
-
-
-@pytest.fixture
 async def cached_client(
     mapi_settings: MapiSettings,
     cache_settings: CacheSettings,
-    cache_service: CacheService,
+    cache: CacheService,
     mock_s3_service: MagicMock,
     auth_settings: AuthSettings,
     hcp_mock,
@@ -133,7 +73,7 @@ async def cached_client(
     verify caching behavior through the full API stack.
     """
     inner_mapi = MapiService(mapi_settings)
-    cached_mapi = CachedMapiService(inner_mapi, cache_service, cache_settings)
+    cached_mapi = CachedMapiService(inner_mapi, cache, cache_settings)
     # AuthenticatedMapiService wraps cached_mapi so requests go through cache
     auth_mapi = AuthenticatedMapiService(cached_mapi, "testuser", "testpass")
 
@@ -155,7 +95,7 @@ async def cached_client(
     app.dependency_overrides[get_cache_settings] = _override_cache_settings
 
     # Provide app.state so non-overridden code (e.g. health) works
-    app.state.cache = cache_service
+    app.state.cache = cache
     app.state.mapi = cached_mapi
     app.state.s3_cache = {}
 

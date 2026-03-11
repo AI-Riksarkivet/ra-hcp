@@ -8,27 +8,11 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api.dependencies import get_lance_service
-from app.core.config import AuthSettings
-from app.core.security import create_access_token
 from app.main import app
 from app.services.lance_service import LanceError, LanceService
 
 
 # ── Fixtures ─────────────────────────────────────────────────────
-
-
-@pytest.fixture
-def auth_settings() -> AuthSettings:
-    return AuthSettings(
-        api_secret_key="test-secret-key-for-unit-tests-min32b",
-        api_token_expire_minutes=60,
-    )
-
-
-@pytest.fixture
-def auth_headers(auth_settings: AuthSettings) -> dict[str, str]:
-    token = create_access_token("testuser", "testpass", settings=auth_settings)
-    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture

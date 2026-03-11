@@ -15,9 +15,12 @@ from app.api.dependencies import (
     get_query_service,
     get_s3_service,
 )
-from app.core.config import AuthSettings, MapiSettings, S3Settings
+import fakeredis
+
+from app.core.config import AuthSettings, CacheSettings, MapiSettings, S3Settings
 from app.core.security import create_access_token
 from app.main import app
+from app.services.cache_service import CacheService
 from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.query_service import AuthenticatedQueryService, QueryService
 from app.services.storage.protocol import StorageProtocol
@@ -54,11 +57,40 @@ def s3_settings() -> S3Settings:
 
 
 @pytest.fixture
+def cache_settings() -> CacheSettings:
+    return CacheSettings(
+        redis_url="redis://localhost",
+        cache_key_prefix="test",
+        cache_default_ttl=300,
+        cache_stats_ttl=60,
+        cache_config_ttl=600,
+        cache_s3_list_ttl=120,
+        cache_s3_meta_ttl=300,
+        cache_query_object_ttl=60,
+        cache_query_operation_ttl=120,
+    )
+
+
+@pytest.fixture
 def auth_settings() -> AuthSettings:
     return AuthSettings(
         api_secret_key="test-secret-key-for-unit-tests-min32b",
         api_token_expire_minutes=60,
     )
+
+
+# ── Cache service (fakeredis-backed) ─────────────────────────────────
+
+
+@pytest.fixture
+async def cache(cache_settings: CacheSettings) -> AsyncGenerator[CacheService, None]:
+    """CacheService backed by fakeredis — no real Redis needed."""
+    svc = CacheService(cache_settings)
+    svc._redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    svc._sync_redis = fakeredis.FakeRedis(decode_responses=True)
+    svc._enabled = True
+    yield svc
+    await svc.close()
 
 
 # ── Service mocks ────────────────────────────────────────────────────

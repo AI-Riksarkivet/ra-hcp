@@ -2,30 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
-
-import pytest
-import fakeredis
-
 from app.core.config import CacheSettings
 from app.services.cache_service import CacheService
-
-
-def _settings(url: str = "redis://localhost") -> CacheSettings:
-    return CacheSettings(redis_url=url, cache_key_prefix="test")
-
-
-@pytest.fixture
-async def cache() -> AsyncGenerator[CacheService, None]:
-    """CacheService backed by fakeredis."""
-    settings = _settings()
-    svc = CacheService(settings)
-    # Inject fakeredis instances directly
-    svc._redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
-    svc._sync_redis = fakeredis.FakeRedis(decode_responses=True)
-    svc._enabled = True
-    yield svc
-    await svc.close()
 
 
 # ── Basic get/set/delete ───────────────────────────────────────────────
@@ -98,7 +76,7 @@ async def test_sync_invalidate_pattern(cache: CacheService):
 
 
 async def test_disabled_when_no_url():
-    svc = CacheService(_settings(url=""))
+    svc = CacheService(CacheSettings(redis_url="", cache_key_prefix="test"))
     await svc.connect()
     assert not svc.enabled
     # All ops are no-ops

@@ -24,7 +24,7 @@ pytestmark = [
 
 
 @pytest.fixture
-async def cache():
+async def real_cache():
     settings = CacheSettings(
         redis_url=REDIS_URL,
         cache_key_prefix="integration-test",
@@ -36,16 +36,16 @@ async def cache():
     await svc.close()
 
 
-async def test_real_redis_connect(cache: CacheService):
+async def test_real_redis_connect(real_cache: CacheService):
     """CacheService connects and reports enabled with a real Redis."""
-    assert cache.enabled is True
+    assert real_cache.enabled is True
 
 
-async def test_real_redis_set_get_delete(cache: CacheService):
+async def test_real_redis_set_get_delete(real_cache: CacheService):
     """Round-trip set/get/delete against real Redis."""
-    await cache.set("hello", {"msg": "world"})
-    result = await cache.get("hello")
+    await real_cache.set("hello", {"msg": "world"})
+    result = await real_cache.get("hello")
     assert result == {"msg": "world"}
 
-    await cache.delete("hello")
-    assert await cache.get("hello") is None
+    await real_cache.delete("hello")
+    assert await real_cache.get("hello") is None

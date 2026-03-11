@@ -13,13 +13,13 @@ from app.core.auth_utils import build_hcp_auth_token, get_hcp_auth_header
 from app.core.config import MapiSettings
 from app.services.mapi_service import MapiService
 
-HCP_BASE = "https://test.hcp.local:9090/mapi"
+HCP_BASE = "https://test.hcp.example.com:9090/mapi"
 
 
 @pytest.fixture
 def settings() -> MapiSettings:
     return MapiSettings(
-        hcp_host="test.hcp.local",
+        hcp_host="test.hcp.example.com",
         hcp_port=9090,
         hcp_username="admin",
         hcp_password="secret",
@@ -64,7 +64,7 @@ def test_get_auth_header_custom_credentials():
 
 def test_build_url_simple_path(service: MapiService):
     url = service._build_url("/tenants")
-    assert url == "https://test.hcp.local:9090/mapi/tenants"
+    assert url == "https://test.hcp.example.com:9090/mapi/tenants"
 
 
 def test_build_url_with_query(service: MapiService):
