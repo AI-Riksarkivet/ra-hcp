@@ -22,7 +22,7 @@
 				username: 'admin',
 				exp: future,
 				expired: false,
-				cookieName: 'hcp_token__dev-ai',
+				cookieName: 'hcp_token__dev-ai__admin',
 				isActive: true,
 			},
 		],
@@ -39,7 +39,7 @@
 				username: 'admin',
 				exp: future,
 				expired: false,
-				cookieName: 'hcp_token__dev-ai',
+				cookieName: 'hcp_token__dev-ai__admin',
 				isActive: true,
 			},
 			{
@@ -47,7 +47,7 @@
 				username: 'admin',
 				exp: future,
 				expired: false,
-				cookieName: 'hcp_token__prod-ai',
+				cookieName: 'hcp_token__prod-ai__admin',
 				isActive: false,
 			},
 			{
@@ -55,7 +55,7 @@
 				username: 'operator',
 				exp: future,
 				expired: false,
-				cookieName: 'hcp_token__staging',
+				cookieName: 'hcp_token__staging__operator',
 				isActive: false,
 			},
 		],
@@ -72,7 +72,7 @@
 				username: 'admin',
 				exp: future,
 				expired: false,
-				cookieName: 'hcp_token__dev-ai',
+				cookieName: 'hcp_token__dev-ai__admin',
 				isActive: true,
 			},
 			{
@@ -80,7 +80,32 @@
 				username: 'admin',
 				exp: past,
 				expired: true,
-				cookieName: 'hcp_token__prod-ai',
+				cookieName: 'hcp_token__prod-ai__admin',
+				isActive: false,
+			},
+		],
+	}}
+/>
+
+<Story
+	name="Same Tenant Different Users"
+	args={{
+		currentTenant: 'dev-ai',
+		sessions: [
+			{
+				tenant: 'dev-ai',
+				username: 'admin',
+				exp: future,
+				expired: false,
+				cookieName: 'hcp_token__dev-ai__admin',
+				isActive: true,
+			},
+			{
+				tenant: 'dev-ai',
+				username: 'ser_accai_nsm',
+				exp: future,
+				expired: false,
+				cookieName: 'hcp_token__dev-ai__ser_accai_nsm',
 				isActive: false,
 			},
 		],
@@ -97,7 +122,7 @@
 				username: 'sysadmin',
 				exp: future,
 				expired: false,
-				cookieName: 'hcp_token____sysadmin',
+				cookieName: 'hcp_token____sysadmin__sysadmin',
 				isActive: true,
 			},
 			{
@@ -105,7 +130,7 @@
 				username: 'admin',
 				exp: future,
 				expired: false,
-				cookieName: 'hcp_token__dev-ai',
+				cookieName: 'hcp_token__dev-ai__admin',
 				isActive: false,
 			},
 		],
