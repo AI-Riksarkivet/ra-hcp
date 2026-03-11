@@ -10,7 +10,6 @@ No HCP-specific workarounds:
 from __future__ import annotations
 
 import logging
-from typing import Any, List
 
 import boto3
 from boto3.s3.transfer import TransferConfig
@@ -19,8 +18,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from opentelemetry import trace
 
 from app.core.config import StorageSettings
-from app.services.storage.adapters._boto3_mixin import Boto3StorageMixin
-from app.services.storage.base import StorageBase
+from app.services.storage.adapters._boto3_ops import Boto3Operations, delegates_to
 from app.services.storage.errors import (
     StorageOperationNotSupported,
     from_client_error,
@@ -31,14 +29,14 @@ logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-class GenericBoto3Storage(Boto3StorageMixin, StorageBase):
+@delegates_to("_ops", Boto3Operations)
+class GenericBoto3Storage:
     """Standard boto3 S3 adapter — no vendor-specific hacks.
 
-    Implements StorageProtocol via StorageBase. Call methods via
-    asyncio.to_thread() from async endpoint code.
-
-    Common boto3 methods are inherited from Boto3StorageMixin.
-    Only GenericBoto3-specific overrides are defined here.
+    Implements StorageProtocol via composition: a Boto3Operations instance
+    provides the shared S3 methods. The @delegates_to decorator generates
+    thin forwarding methods for protocol compliance. Only GenericBoto3-specific
+    overrides are defined here.
     """
 
     def __init__(self, settings: StorageSettings):
@@ -63,6 +61,7 @@ class GenericBoto3Storage(Boto3StorageMixin, StorageBase):
             multipart_threshold=8 * 1024 * 1024,
             multipart_chunksize=8 * 1024 * 1024,
         )
+        self._ops = Boto3Operations(self._client, self._transfer_config)
 
     @classmethod
     def with_credentials(
@@ -71,7 +70,6 @@ class GenericBoto3Storage(Boto3StorageMixin, StorageBase):
         access_key: str,
         secret_key: str,
         endpoint_url: str | None = None,
-        **kwargs: Any,
     ) -> GenericBoto3Storage:
         """Create a GenericBoto3Storage with explicit credentials."""
         instance = cls.__new__(cls)
@@ -96,11 +94,12 @@ class GenericBoto3Storage(Boto3StorageMixin, StorageBase):
             multipart_threshold=8 * 1024 * 1024,
             multipart_chunksize=8 * 1024 * 1024,
         )
+        instance._ops = Boto3Operations(instance._client, instance._transfer_config)
         return instance
 
-    # ── GenericBoto3-specific overrides ────────────────────────────────
+    # -- GenericBoto3-specific overrides ------------------------------------
 
-    def delete_objects(self, bucket: str, keys: List[str]) -> dict:
+    def delete_objects(self, bucket: str, keys: list[str]) -> dict:
         """Native batch delete — works on standard S3-compatible backends."""
         with tracer.start_as_current_span(
             "s3.delete_objects",
@@ -118,7 +117,7 @@ class GenericBoto3Storage(Boto3StorageMixin, StorageBase):
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    # ── ACLs (not supported on MinIO) ─────────────────────────────────
+    # -- ACLs (not supported on MinIO) -------------------------------------
 
     def get_bucket_acl(self, bucket: str) -> dict:
         raise StorageOperationNotSupported("get_bucket_acl", "minio")

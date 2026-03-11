@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import IO, List, Optional, Protocol, runtime_checkable
+from typing import IO, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -29,26 +29,26 @@ class StorageProtocol(Protocol):
     def list_objects(
         self,
         bucket: str,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         max_keys: int = 1000,
-        continuation_token: Optional[str] = None,
-        delimiter: Optional[str] = None,
+        continuation_token: str | None = None,
+        delimiter: str | None = None,
         fetch_owner: bool = True,
     ) -> dict: ...
 
     def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None: ...
 
     def get_object(
-        self, bucket: str, key: str, version_id: Optional[str] = None
+        self, bucket: str, key: str, version_id: str | None = None
     ) -> dict: ...
 
     def head_object(self, bucket: str, key: str) -> dict: ...
 
     def delete_object(
-        self, bucket: str, key: str, version_id: Optional[str] = None
+        self, bucket: str, key: str, version_id: str | None = None
     ) -> dict: ...
 
-    def delete_objects(self, bucket: str, keys: List[str]) -> dict: ...
+    def delete_objects(self, bucket: str, keys: list[str]) -> dict: ...
 
     def copy_object(
         self,
@@ -79,10 +79,10 @@ class StorageProtocol(Protocol):
     def list_object_versions(
         self,
         bucket: str,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         max_keys: int = 1000,
-        key_marker: Optional[str] = None,
-        version_id_marker: Optional[str] = None,
+        key_marker: str | None = None,
+        version_id_marker: str | None = None,
     ) -> dict: ...
 
     # ── Presigned URLs ───────────────────────────────────────────────
@@ -113,7 +113,7 @@ class StorageProtocol(Protocol):
         bucket: str,
         key: str,
         upload_id: str,
-        parts: List[dict],
+        parts: list[dict],
     ) -> dict: ...
 
     def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict: ...

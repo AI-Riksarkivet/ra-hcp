@@ -79,44 +79,26 @@ def create_cached_storage(
 ) -> StorageProtocol:
     """Create a cached storage adapter for the configured backend.
 
-    HCP uses CachedHcpStorage (inheritance-based, existing code).
-    MinIO/generic uses CachedStorage (composition-based wrapper).
+    All backends use CachedStorage (composition-based wrapper).
     """
-    match settings.storage_backend:
-        case "hcp":
-            from app.services.cached_s3 import CachedHcpStorage
+    from app.services.cached_storage import CachedStorage
 
-            if s3_settings is None:
-                raise ValueError("s3_settings required for HCP backend")
-            logger.info(
-                "Creating CachedHcpStorage (endpoint=%s)",
-                endpoint_url or s3_settings.endpoint_url,
-            )
-            return CachedHcpStorage.with_credentials(
-                s3_settings,
-                access_key,
-                secret_key,
-                endpoint_url=endpoint_url,
-                cache=cache,
-                cache_settings=cache_settings,
-            )
-        case "minio" | "generic":
-            from app.services.cached_storage import CachedStorage
-            from app.services.storage.adapters.generic_boto3 import (
-                GenericBoto3Storage,
-            )
-
-            logger.info(
-                "Creating CachedStorage[GenericBoto3Storage] (backend=%s, endpoint=%s)",
-                settings.storage_backend,
-                endpoint_url or settings.s3_endpoint_url,
-            )
-            inner = GenericBoto3Storage.with_credentials(
-                settings,
-                access_key,
-                secret_key,
-                endpoint_url=endpoint_url,
-            )
-            return CachedStorage(inner, cache, cache_settings)
-        case _:
-            raise ValueError(f"Unknown storage backend: {settings.storage_backend}")
+    inner = create_storage(
+        settings,
+        access_key,
+        secret_key,
+        endpoint_url,
+        s3_settings=s3_settings,
+    )
+    backend_label = {
+        "hcp": "HcpStorage",
+        "minio": "GenericBoto3Storage",
+        "generic": "GenericBoto3Storage",
+    }.get(settings.storage_backend, settings.storage_backend)
+    logger.info(
+        "Creating CachedStorage[%s] (backend=%s, endpoint=%s)",
+        backend_label,
+        settings.storage_backend,
+        endpoint_url or getattr(s3_settings, "endpoint_url", settings.s3_endpoint_url),
+    )
+    return CachedStorage(inner, cache, cache_settings)

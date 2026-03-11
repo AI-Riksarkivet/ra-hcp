@@ -10,37 +10,22 @@ graph TB
         FE["SvelteKit Frontend<br/>:5173"]
     end
 
-    subgraph "Backend Server"
-        API["FastAPI Backend<br/>:8000"]
-        MW["Middleware Stack<br/>CORS · GZip · RequestID"]
-        AUTH["JWT Auth<br/>OAuth2 Password Flow"]
+    subgraph "Backend"
+        API["FastAPI<br/>:8000"]
+        SVC["Services<br/>MAPI · S3 · Query · Cache"]
     end
 
-    subgraph "Services Layer"
-        MAPI["MapiService<br/>HCP Management API"]
-        S3["StorageProtocol<br/>Backend-agnostic S3"]
-        QUERY["QueryService<br/>Metadata Query"]
-        CACHE["CacheService<br/>Redis (optional)"]
+    subgraph "External"
+        HCP["HCP System<br/>:9090"]
+        S3EP["S3 Endpoint"]
+        REDIS["Redis (optional)"]
     end
 
-    subgraph "External Systems"
-        HCP["HCP System<br/>Management API :9090"]
-        S3EP["HCP S3 Endpoint<br/>Object Storage"]
-        REDIS["Redis<br/>(optional)"]
-    end
-
-    FE -->|"REST API<br/>JWT Bearer"| API
-    API --> MW --> AUTH
-    AUTH --> MAPI
-    AUTH --> S3
-    AUTH --> QUERY
-    MAPI --> CACHE
-    S3 --> CACHE
-    QUERY --> CACHE
-    MAPI -->|"HTTPS :9090"| HCP
-    S3 -->|"S3 Protocol"| S3EP
-    QUERY -->|"HTTPS"| HCP
-    CACHE -->|"Redis Protocol"| REDIS
+    FE -->|"REST + JWT"| API
+    API --> SVC
+    SVC -->|"HTTPS"| HCP
+    SVC -->|"S3"| S3EP
+    SVC --> REDIS
 ```
 
 ## Request Flow
@@ -50,26 +35,22 @@ sequenceDiagram
     participant B as Browser
     participant F as SvelteKit
     participant A as FastAPI
-    participant M as Middleware
-    participant S as Service Layer
+    participant S as Services
     participant H as HCP System
 
-    B->>F: User action (click, form submit)
-    F->>A: HTTP request + JWT token
-    A->>M: RequestID + GZip + CORS
-    M->>M: Decode JWT → extract credentials
-    M->>S: Forward with HCP credentials
+    B->>F: User action
+    F->>A: HTTP + JWT
+    A->>A: Decode JWT → credentials
+    A->>S: Forward request
 
-    alt Cache hit (Redis enabled)
-        S-->>M: Return cached response
-    else Cache miss or no Redis
-        S->>H: MAPI/S3 request with credentials
-        H-->>S: HCP response
-        S->>S: Cache response (if Redis enabled)
-        S-->>M: Return response
+    alt Cache hit
+        S-->>A: Cached response
+    else Cache miss
+        S->>H: MAPI/S3 request
+        H-->>S: Response
+        S-->>A: Cache + return
     end
 
-    M-->>A: Add X-Request-ID header
     A-->>F: JSON response
-    F-->>B: Update UI reactively
+    F-->>B: Update UI
 ```

@@ -1,16 +1,13 @@
 """Composition-based caching wrapper for any StorageProtocol implementation.
 
-Unlike CachedHcpStorage (which inherits from HcpStorage), this class wraps
-any StorageProtocol via the decorator pattern. One class works with any
-backend — MinIO, Ceph, AWS, or future adapters.
-
-CachedHcpStorage remains for the HCP path (zero behavior change).
+Wraps any StorageProtocol via the decorator pattern. One class works with
+any backend — HCP, MinIO, Ceph, AWS, or future adapters.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import IO, List, Optional
+from typing import IO
 
 from opentelemetry import trace
 
@@ -69,10 +66,10 @@ class CachedStorage:
     def list_objects(
         self,
         bucket: str,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         max_keys: int = 1000,
-        continuation_token: Optional[str] = None,
-        delimiter: Optional[str] = None,
+        continuation_token: str | None = None,
+        delimiter: str | None = None,
         fetch_owner: bool = True,
     ) -> dict:
         if continuation_token is not None:
@@ -157,18 +154,16 @@ class CachedStorage:
 
     # ── Uncached reads (streams / large results) ──────────────────────
 
-    def get_object(
-        self, bucket: str, key: str, version_id: Optional[str] = None
-    ) -> dict:
+    def get_object(self, bucket: str, key: str, version_id: str | None = None) -> dict:
         return self._inner.get_object(bucket, key, version_id)
 
     def list_object_versions(
         self,
         bucket: str,
-        prefix: Optional[str] = None,
+        prefix: str | None = None,
         max_keys: int = 1000,
-        key_marker: Optional[str] = None,
-        version_id_marker: Optional[str] = None,
+        key_marker: str | None = None,
+        version_id_marker: str | None = None,
     ) -> dict:
         return self._inner.list_object_versions(
             bucket, prefix, max_keys, key_marker, version_id_marker
@@ -203,7 +198,7 @@ class CachedStorage:
         self._cache.delete_sync(self._key("head_object", bucket, key))
 
     def delete_object(
-        self, bucket: str, key: str, version_id: Optional[str] = None
+        self, bucket: str, key: str, version_id: str | None = None
     ) -> dict:
         result = self._inner.delete_object(bucket, key, version_id)
         self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")
@@ -211,7 +206,7 @@ class CachedStorage:
         self._cache.delete_sync(self._key("object_acl", bucket, key))
         return result
 
-    def delete_objects(self, bucket: str, keys: List[str]) -> dict:
+    def delete_objects(self, bucket: str, keys: list[str]) -> dict:
         result = self._inner.delete_objects(bucket, keys)
         self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")
         for k in keys:
@@ -265,7 +260,7 @@ class CachedStorage:
         bucket: str,
         key: str,
         upload_id: str,
-        parts: List[dict],
+        parts: list[dict],
     ) -> dict:
         result = self._inner.complete_multipart_upload(bucket, key, upload_id, parts)
         self._cache.invalidate_pattern_sync(f"s3:list_objects:{bucket}:*")

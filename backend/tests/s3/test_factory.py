@@ -49,7 +49,7 @@ def s3_settings() -> S3Settings:
     )
 
 
-# ── Plain storage creation ───────────────────────────────────────────
+# -- Plain storage creation ------------------------------------------------
 
 
 def test_create_storage_hcp(
@@ -95,13 +95,14 @@ def test_create_storage_hcp_requires_s3_settings(
         create_storage(hcp_storage_settings, "access", "secret")
 
 
-# ── Cached storage creation ──────────────────────────────────────────
+# -- Cached storage creation -----------------------------------------------
 
 
 def test_create_cached_storage_hcp(
     hcp_storage_settings: StorageSettings, s3_settings: S3Settings
 ):
     from app.core.config import CacheSettings
+    from app.services.cached_storage import CachedStorage
 
     with patch("app.services.storage.adapters.hcp.boto3") as mock_boto3:
         mock_boto3.client.return_value = MagicMock()
@@ -113,9 +114,7 @@ def test_create_cached_storage_hcp(
             cache_settings=CacheSettings(),
             s3_settings=s3_settings,
         )
-    from app.services.cached_s3 import CachedHcpStorage
-
-    assert isinstance(storage, CachedHcpStorage)
+    assert isinstance(storage, CachedStorage)
 
 
 def test_create_cached_storage_minio(minio_storage_settings: StorageSettings):

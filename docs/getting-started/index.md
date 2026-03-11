@@ -45,14 +45,6 @@ make run-api
 !!! warning
     Production mode requires valid HCP credentials. Set `HCP_HOST`, `HCP_USERNAME`, and `HCP_PASSWORD` in your `.env` file before starting. See the [Configuration](configuration.md) page for all available variables.
 
-### With Reverse Proxy
-
-If the backend sits behind a reverse proxy, pass the `ROOT_PATH` variable:
-
-```bash
-make run-api ROOT_PATH=/proxy/8000
-```
-
 ### Mock Server
 
 Runs with a built-in mock server that simulates HCP responses. No credentials or HCP connectivity needed.

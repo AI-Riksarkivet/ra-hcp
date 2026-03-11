@@ -65,6 +65,18 @@ These variables control JWT token generation and CORS policy for the API.
     python -c "import secrets; print(secrets.token_urlsafe(64))"
     ```
 
+## OpenTelemetry
+
+The backend integrates OpenTelemetry for traces, metrics, and structured JSON logging. Configuration uses standard OTel environment variables.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `OTEL_SERVICE_NAME` | str | `"ra-hcp"` | Service name reported in traces and metrics. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | str | `""` | OTLP collector endpoint (e.g., `http://localhost:4318`). When empty, traces are printed to console and OTLP log/metric export is disabled. |
+
+!!! tip
+    When `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the backend exports traces, metrics, and logs via OTLP/HTTP to the configured collector (e.g., Grafana Alloy, Jaeger, or the OTel Collector). Without it, traces go to console and structured JSON logs go to stderr.
+
 ## Application
 
 General application settings.

@@ -1,5 +1,15 @@
 # Deployment
 
+## Containerization
+
+The project uses [Dagger](https://dagger.io/) for reproducible container builds and CI/CD pipelines (see `dagger.json` and `.dagger/`). A `docker-compose.yml` is also provided for local multi-service development:
+
+```bash
+docker compose -f .docker/docker-compose.yml up
+```
+
+This starts the backend, frontend, and Redis together with health checks and automatic service linking.
+
 ## Mock Server
 
 For development without an HCP system, the backend includes a mock server:

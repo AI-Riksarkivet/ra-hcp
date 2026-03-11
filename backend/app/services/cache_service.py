@@ -41,7 +41,7 @@ class CacheService:
     """Async Redis wrapper. Safe to call even when Redis is down.
 
     Also provides sync variants (get_sync, set_sync, etc.) for use
-    inside ``asyncio.to_thread()`` — used by CachedHcpStorage.
+    inside ``asyncio.to_thread()`` — used by CachedStorage.
     """
 
     def __init__(self, settings: CacheSettings):
@@ -190,7 +190,7 @@ class CacheService:
                 logger.warning("Cache INVALIDATE failed for %s", pattern, exc_info=True)
             return deleted
 
-    # ── Sync methods (for CachedHcpStorage inside asyncio.to_thread) ───
+    # ── Sync methods (for CachedStorage inside asyncio.to_thread) ───
 
     def get_sync(self, key: str) -> Optional[Any]:
         if not self._enabled or self._sync_redis is None:

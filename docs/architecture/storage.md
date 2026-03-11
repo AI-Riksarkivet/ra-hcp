@@ -1,4 +1,4 @@
-# Storage Layer Architecture
+# Storage Layer
 
 The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against `StorageProtocol` (structural typing) and never imports backend-specific libraries like `boto3`.
 
@@ -8,35 +8,34 @@ graph TD
         EP["S3 Endpoints<br/>buckets · objects · versions · multipart"]
     end
 
-    subgraph "Contracts"
-        SP["StorageProtocol<br/>(Protocol — structural typing)"]
-        SB["StorageBase<br/>(ABC — enforced at instantiation)"]
+    subgraph "Contract"
+        SP["StorageProtocol<br/>(structural typing)"]
+    end
+
+    subgraph "Shared Operations"
+        OPS["Boto3Operations<br/>client + transfer config"]
     end
 
     subgraph "Adapters"
-        HCP_A["HcpStorage<br/>boto3 wrapper<br/>HCP-specific workarounds"]
-        FUTURE["MinIO / Ceph / AWS<br/>(future adapters)"]
-    end
-
-    subgraph "Caching"
-        CHCP["CachedHcpStorage<br/>Redis caching layer"]
+        HCP_A["HcpStorage<br/>HCP-specific overrides"]
+        GEN["GenericBoto3Storage<br/>standard S3"]
     end
 
     EP -->|"type-hints against"| SP
-    SP -.->|"structural match"| SB
-    SB -->|"inherits"| HCP_A
-    SB -.->|"inherits"| FUTURE
-    HCP_A -->|"inherits"| CHCP
+    SP -.->|"satisfies"| HCP_A
+    SP -.->|"satisfies"| GEN
+    HCP_A -->|"has-a"| OPS
+    GEN -->|"has-a"| OPS
 ```
 
 ## How it works
 
 | Layer | File | Role |
 |-------|------|------|
-| `StorageProtocol` | `services/storage/protocol.py` | Structural typing interface — endpoint DI type hints use this |
-| `StorageBase` | `services/storage/base.py` | Abstract base class — enforces method implementation at instantiation |
-| `HcpStorage` | `services/storage/adapters/hcp.py` | Concrete adapter — wraps boto3 with HCP-specific workarounds |
-| `CachedHcpStorage` | `services/cached_s3.py` | Caching decorator — inherits from `HcpStorage`, adds Redis caching |
+| `StorageProtocol` | `services/storage/protocol.py` | Structural typing contract — all DI type hints use this |
+| `Boto3Operations` | `services/storage/adapters/_boto3_mixin.py` | Shared boto3 operations — injected into adapters via composition |
+| `HcpStorage` | `services/storage/adapters/hcp.py` | HCP adapter — composes `Boto3Operations`, overrides HCP-specific behavior |
+| `GenericBoto3Storage` | `services/storage/adapters/generic_boto3.py` | Generic S3 adapter — composes `Boto3Operations` for standard S3 backends |
 | `StorageError` | `services/storage/errors.py` | Backend-agnostic exceptions — adapters catch library errors and re-raise |
 
 ## Adding a new storage backend
@@ -44,14 +43,13 @@ graph TD
 To add support for MinIO, Ceph, or AWS S3:
 
 1. Create `services/storage/adapters/minio.py` (or similar)
-2. Inherit from `StorageBase` — the ABC enforces all required methods
-3. Catch the backend's native exceptions and re-raise as `StorageError`
-4. Register the new adapter in the dependency injection layer
-5. No endpoint code changes needed — they type-hint against `StorageProtocol`
+2. Compose `Boto3Operations` for shared functionality
+3. Override only the methods that differ from standard S3 behavior
+4. Catch the backend's native exceptions and re-raise as `StorageError`
+5. Register the new adapter in the factory (`services/storage/factory.py`)
+6. No endpoint code changes needed — they type-hint against `StorageProtocol`
 
 ## Storage operations
-
-The storage layer supports these operation groups:
 
 | Group | Operations |
 |-------|-----------|

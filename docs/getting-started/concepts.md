@@ -2,6 +2,42 @@
 
 This page explains the core concepts of Hitachi Content Platform (HCP) that you'll encounter when using the HCP App.
 
+## How HCP Differs from Standard S3
+
+If you're coming from AWS S3, MinIO, or Ceph, HCP will feel familiar on the data plane (it speaks S3) but very different on the management and compliance side.
+
+| Concept | AWS S3 / MinIO | HCP |
+|---------|---------------|-----|
+| **Hierarchy** | Flat: just buckets | Multi-tenant: System → Tenants → Namespaces (= buckets) |
+| **Management API** | Same S3 API for data + config | Separate MAPI (REST/XML on port 9090) for all admin operations |
+| **Access protocols** | S3 only | S3, REST, NFS, CIFS/SMB, SMTP, WebDAV — all accessing the same data |
+| **Version IDs** | UUIDs (`"aBcDeFgH..."`) | Integers (`0`, `1`, `2`, ...) |
+| **Authentication** | Access key + secret key (arbitrary) | `base64(username)` + `md5(password)` — derived from user credentials |
+| **Bucket addressing** | Virtual-hosted or path-style | Path-style only |
+| **Retention** | S3 Object Lock (Governance/Compliance) | Built-in WORM + retention classes + S3 Object Lock |
+| **Search** | External (Athena, OpenSearch) | Built-in Metadata Query API with Lucene-like syntax |
+| **Content classes** | No equivalent | Schema-based custom metadata with typed, indexed properties |
+| **Replication** | Cross-region replication rules | Built-in active/active geo-replication between HCP systems |
+| **Bulk delete** | `DeleteObjects` with CRC32 | Requires `Content-MD5` — this app works around it with individual deletes |
+
+!!! tip
+    The HCP App abstracts most of these differences. The S3 data plane handles HCP quirks (path-style, credential derivation, bulk delete workaround) transparently, while MAPI operations are exposed through a unified REST API.
+
+### HCP-Specific S3 Headers
+
+HCP extends the S3 API with custom headers for retention and compliance:
+
+| Header | Description |
+|--------|-------------|
+| `X-HCP-RETENTION` | Set/get retention setting (`0` deletable, `-1` permanent, `-2` unspecified, or datetime). |
+| `X-HCP-RETENTIONHOLD` | Set/get a simple hold (`true`/`false`). Prevents deletion regardless of retention. |
+| `X-HCP-LABELRETENTIONHOLD` | Manage multiple named retention holds (up to 100 per object). |
+| `X-HCP-PRIVILEGED` | Privileged delete — remove objects under retention. Requires `PRIVILEGED` permission. |
+
+### S3 Compatibility
+
+HCP supports: bucket CRUD, object CRUD, ACLs, CORS, versioning, multipart uploads, presigned URLs, server-side encryption, Object Lock, and AWS Signature V2/V4. **Not supported**: lifecycle, tagging, policy, website, logging, notifications, metrics, analytics, inventory, replication config, encryption config, public access block, client-side encryption.
+
 ## Object-Based Storage
 
 HCP stores **objects** in a repository. Each object permanently associates data with metadata:
@@ -172,32 +208,79 @@ The **Metadata Query API** lets you search for objects based on their metadata. 
 
 The API returns metadata only (not object data). Results can be paginated and sorted.
 
-### Query Syntax Examples
+### Query Syntax
+
+Property-based criteria use a Lucene-like syntax:
 
 ```
-# Find large files in the finance namespace
-namespace:finance AND size:[1048576 TO *]
-
-# Find PDFs modified in 2025
-contentType:application/pdf AND changeTimeString:[2025-01-01T00:00:00Z TO 2025-12-31T23:59:59Z]
-
-# Find objects with specific custom metadata
-customMetadataContent:"department.sales"
-
-# Find objects on hold
-hold:true
+property:value                    # exact match
+property:(value1 value2)          # match any
+property:(+value1 -value2)        # must/must-not
+property:[start TO end]           # inclusive range
+property:{start TO end}           # exclusive range
+property:[start TO *]             # open-ended range
 ```
+
+Boolean operators: `+criterion` (must match), `-criterion` (must not match), no operator (should match, affects ranking). Group with parentheses.
+
+Wildcards: `?` (single char), `*` (any chars) — valid at end/middle of terms only, never at the beginning.
+
+### Searchable Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `namespace` | string | `namespace-name.tenant-name` |
+| `objectPath` | string | Full object path |
+| `utf8Name` | string | Object filename |
+| `size` | long | Object size in bytes |
+| `contentType` | string | MIME type |
+| `ingestTimeString` | datetime | Time object was stored |
+| `changeTimeString` | datetime | Time object was last modified |
+| `retention` | string | Retention setting (`0`, `-1`, `-2`, or datetime) |
+| `retentionClass` | string | Assigned retention class name |
+| `hold` | boolean | Whether object is on hold |
+| `customMetadataContent` | text | Full-text search of custom metadata XML |
+
+### Query Examples
+
+```
+# Large files (>1MB) in the finance namespace
++(namespace:"finance.europe") +size:[1048576 TO *]
+
+# PDFs ingested in 2025
++contentType:application/pdf +ingestTimeString:[2025-01-01T00:00:00 TO 2025-12-31T23:59:59]
+
+# Objects with custom metadata containing "department" but not "foreign"
++customMetadataContent:(+"department" -"foreign")
+
+# Objects on hold
++hold:true
+```
+
+Pagination: use `count` (max results, 1–10,000) and `offset` (skip N, max 100,000). For >100,000 results, paginate using `changeTimeMilliseconds` ranges. Response status `COMPLETE` means all results returned; `INCOMPLETE` means more pages available.
 
 ## Authentication
 
 HCP uses a token-based authentication scheme:
 
-| Type | Format | Description |
-|------|--------|-------------|
-| **HCP native** | `HCP base64(username):md5(password)` | Username is base64-encoded, password is MD5-hashed. |
-| **Active Directory** | `AD username:password` | For AD-integrated environments. |
+| Type | Header format | Description |
+|------|--------------|-------------|
+| **HCP native** | `Authorization: HCP base64(username):md5(password)` | Username is base64-encoded, password is MD5-hashed. |
+| **Active Directory** | `Authorization: AD username@domain:password` | For AD-integrated environments. Plaintext credentials. |
 
 The HCP App wraps this in a JWT-based flow -- see [Authentication](../api/authentication.md) for details on how the API handles credential management.
+
+### MAPI Conventions
+
+The Management API (port 9090) accepts XML or JSON request/response bodies. Key query parameters:
+
+| Parameter | Description |
+|-----------|-------------|
+| `verbose=true` | Return all properties (default returns only modifiable ones). |
+| `prettyprint` | Format response for readability (testing only). |
+| `offset` / `count` | Pagination for list endpoints. |
+
+Response headers always include `X-HCP-SoftwareVersion`; errors include `X-HCP-ErrorMessage` with human-readable details.
 
 ## Content Classes
 

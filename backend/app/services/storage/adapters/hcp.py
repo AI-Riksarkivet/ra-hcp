@@ -10,30 +10,28 @@ HCP-specific quirks:
 
 from __future__ import annotations
 
-from typing import Any, List
-
 import boto3
 from boto3.s3.transfer import TransferConfig
+from botocore.client import BaseClient
 from botocore.config import Config as BotoConfig
 from botocore.exceptions import BotoCoreError, ClientError
 from opentelemetry import trace
 
 from app.core.config import S3Settings
-from app.services.storage.adapters._boto3_mixin import Boto3StorageMixin
-from app.services.storage.base import StorageBase
+from app.services.storage.adapters._boto3_ops import Boto3Operations, delegates_to
 from app.services.storage.errors import from_client_error, from_transport_error
 
 tracer = trace.get_tracer(__name__)
 
 
-class HcpStorage(Boto3StorageMixin, StorageBase):
+@delegates_to("_ops", Boto3Operations)
+class HcpStorage:
     """Synchronous boto3 wrapper for HCP — call methods via asyncio.to_thread().
 
-    Implements StorageProtocol. Each method wraps botocore exceptions as
-    StorageError so endpoint code doesn't need botocore imports.
-
-    Common boto3 methods are inherited from Boto3StorageMixin.
-    Only HCP-specific overrides are defined here.
+    Implements StorageProtocol via composition: a Boto3Operations instance
+    provides the 21 shared S3 methods. The @delegates_to decorator generates
+    thin forwarding methods for protocol compliance. Only HCP-specific
+    overrides are defined here.
     """
 
     _BOTO_CONFIG = BotoConfig(
@@ -47,7 +45,7 @@ class HcpStorage(Boto3StorageMixin, StorageBase):
     )
 
     @staticmethod
-    def _disable_region_redirector(client: Any) -> None:
+    def _disable_region_redirector(client: BaseClient) -> None:
         """Unregister boto3's S3 region redirect handler.
 
         HCP is not AWS and returns non-standard responses that trigger
@@ -74,6 +72,7 @@ class HcpStorage(Boto3StorageMixin, StorageBase):
             multipart_threshold=8 * 1024 * 1024,
             multipart_chunksize=8 * 1024 * 1024,
         )
+        self._ops = Boto3Operations(self._client, self._transfer_config)
 
     @classmethod
     def with_credentials(
@@ -82,7 +81,6 @@ class HcpStorage(Boto3StorageMixin, StorageBase):
         access_key: str,
         secret_key: str,
         endpoint_url: str | None = None,
-        **kwargs: Any,
     ) -> HcpStorage:
         """Create an HcpStorage with explicit credentials (no env-var fallback)."""
         instance = cls.__new__(cls)
@@ -101,9 +99,10 @@ class HcpStorage(Boto3StorageMixin, StorageBase):
             multipart_threshold=8 * 1024 * 1024,
             multipart_chunksize=8 * 1024 * 1024,
         )
+        instance._ops = Boto3Operations(instance._client, instance._transfer_config)
         return instance
 
-    # ── HCP-specific overrides ─────────────────────────────────────────
+    # -- HCP-specific overrides ---------------------------------------------
 
     def list_buckets(self) -> dict:
         """Override: also catches TypeError from residual region redirector."""
@@ -115,7 +114,7 @@ class HcpStorage(Boto3StorageMixin, StorageBase):
             except (BotoCoreError, TypeError) as exc:
                 raise from_transport_error(exc) from exc
 
-    def delete_objects(self, bucket: str, keys: List[str]) -> dict:
+    def delete_objects(self, bucket: str, keys: list[str]) -> dict:
         """Delete multiple objects individually (HCP requires Content-MD5
         for the multi-delete API but boto3 sends CRC32 instead)."""
         with tracer.start_as_current_span(
