@@ -77,6 +77,9 @@ export const create_namespace = command(
     hashScheme: z.string().optional(),
     searchEnabled: z.boolean().optional(),
     versioningEnabled: z.boolean().optional(),
+    keepDeletionRecords: z.boolean().optional(),
+    useDeleteMarkers: z.boolean().optional(),
+    optimizedFor: z.string().optional(),
     tags: z.array(z.string()).optional(),
     owner: z.string().optional(),
   }),
@@ -86,11 +89,13 @@ export const create_namespace = command(
     if (body.hardQuota) payload.hardQuota = body.hardQuota;
     if (body.softQuota != null) payload.softQuota = body.softQuota;
     if (body.hashScheme) payload.hashScheme = body.hashScheme;
+    if (body.optimizedFor) payload.optimizedFor = body.optimizedFor;
     if (body.searchEnabled != null) payload.searchEnabled = body.searchEnabled;
     if (body.versioningEnabled != null) {
       payload.versioningSettings = {
         enabled: body.versioningEnabled,
-        keepDeletionRecords: false,
+        keepDeletionRecords: body.keepDeletionRecords ?? false,
+        useDeleteMarkers: body.useDeleteMarkers ?? false,
       };
     }
     if (body.tags) payload.tags = { tag: body.tags };

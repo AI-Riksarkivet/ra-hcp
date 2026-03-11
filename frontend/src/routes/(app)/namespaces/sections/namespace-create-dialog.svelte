@@ -2,6 +2,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { toast } from 'svelte-sonner';
 	import FormDialog from '$lib/components/custom/form-dialog/form-dialog.svelte';
 	import TagInput from '$lib/components/custom/tag-input/tag-input.svelte';
@@ -22,6 +23,10 @@
 	let creating = $state(false);
 	let createHashScheme = $state('SHA-256');
 	let createTags = $state<string[]>([]);
+	let createOptimizedFor = $state('cloud');
+	let versioningEnabled = $state(false);
+	let keepDeletionRecords = $state(false);
+	let useDeleteMarkers = $state(false);
 
 	async function handleCreate(e: SubmitEvent) {
 		e.preventDefault();
@@ -39,7 +44,6 @@
 			const softQuota = softQuotaStr ? Number(softQuotaStr) : undefined;
 			const hashScheme = (formData.get('hashScheme') as string) || undefined;
 			const searchEnabled = formData.has('searchEnabled');
-			const versioningEnabled = formData.has('versioningEnabled');
 			const owner = (formData.get('owner') as string) || undefined;
 			await create_namespace({
 				tenant,
@@ -50,6 +54,9 @@
 				hashScheme,
 				searchEnabled,
 				versioningEnabled,
+				keepDeletionRecords: versioningEnabled ? keepDeletionRecords : undefined,
+				useDeleteMarkers: versioningEnabled ? useDeleteMarkers : undefined,
+				optimizedFor: createOptimizedFor || undefined,
 				tags: createTags.length > 0 ? createTags : undefined,
 				owner,
 			}).updates(nsData);
@@ -57,6 +64,10 @@
 			open = false;
 			createTags = [];
 			form.reset();
+			createOptimizedFor = 'cloud';
+			versioningEnabled = false;
+			keepDeletionRecords = false;
+			useDeleteMarkers = false;
 		} catch (err) {
 			createError = err instanceof Error ? err.message : 'Failed to create namespace';
 		} finally {
@@ -96,33 +107,71 @@
 			<Input id="ns-soft-quota" name="softQuota" type="number" min="10" max="95" placeholder="85" />
 		</div>
 	</div>
-	<div class="space-y-2">
-		<Label for="ns-hash">Hash Scheme</Label>
-		<select
-			id="ns-hash"
-			class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
-			bind:value={createHashScheme}
-		>
-			<option value="SHA-256">SHA-256</option>
-			<option value="SHA-512">SHA-512</option>
-			<option value="SHA-384">SHA-384</option>
-			<option value="SHA-1">SHA-1</option>
-			<option value="MD5">MD5</option>
-		</select>
-		<input type="hidden" name="hashScheme" value={createHashScheme} />
+	<div class="grid grid-cols-2 gap-4">
+		<div class="space-y-2">
+			<Label for="ns-hash">Hash Scheme</Label>
+			<select
+				id="ns-hash"
+				class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+				bind:value={createHashScheme}
+			>
+				<option value="SHA-256">SHA-256</option>
+				<option value="SHA-512">SHA-512</option>
+				<option value="SHA-384">SHA-384</option>
+				<option value="SHA-1">SHA-1</option>
+				<option value="MD5">MD5</option>
+			</select>
+			<input type="hidden" name="hashScheme" value={createHashScheme} />
+		</div>
+		<div class="space-y-2">
+			<Label for="ns-optimized">Optimized For</Label>
+			<select
+				id="ns-optimized"
+				class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+				bind:value={createOptimizedFor}
+			>
+				<option value="cloud">Cloud</option>
+				<option value="default">Default</option>
+			</select>
+			<p class="text-xs text-muted-foreground">Cannot be changed after creation.</p>
+		</div>
 	</div>
 	<div class="space-y-2">
 		<Label>Tags</Label>
 		<TagInput bind:tags={createTags} placeholder="e.g. lakefs, nfs, s3" />
 	</div>
-	<div class="flex gap-6">
-		<div class="flex items-center gap-2">
-			<Checkbox id="ns-search" name="searchEnabled" />
-			<Label for="ns-search">Enable Search</Label>
+	<div class="space-y-3">
+		<div class="flex gap-6">
+			<div class="flex items-center gap-2">
+				<Checkbox id="ns-search" name="searchEnabled" />
+				<Label for="ns-search">Enable Search</Label>
+			</div>
+			<div class="flex items-center gap-2">
+				<Switch id="ns-versioning" bind:checked={versioningEnabled} />
+				<Label for="ns-versioning">Enable Versioning</Label>
+			</div>
 		</div>
-		<div class="flex items-center gap-2">
-			<Checkbox id="ns-versioning" name="versioningEnabled" />
-			<Label for="ns-versioning">Enable Versioning</Label>
-		</div>
+		{#if versioningEnabled}
+			<div class="ml-6 space-y-2 rounded-md border bg-muted/30 p-3">
+				<p class="text-xs font-medium text-muted-foreground">Versioning Settings</p>
+				<div class="flex flex-col gap-2">
+					<div class="flex items-center gap-2">
+						<Switch id="ns-keep-deletion" bind:checked={keepDeletionRecords} />
+						<Label for="ns-keep-deletion" class="text-sm">Keep Deletion Records</Label>
+					</div>
+					<p class="ml-9 text-xs text-muted-foreground">
+						Retain records of delete operations. Prevents namespace deletion when records exist.
+					</p>
+					<div class="flex items-center gap-2">
+						<Switch id="ns-delete-markers" bind:checked={useDeleteMarkers} />
+						<Label for="ns-delete-markers" class="text-sm">Use Delete Markers</Label>
+					</div>
+					<p class="ml-9 text-xs text-muted-foreground">
+						Create delete markers instead of permanently removing objects. Irreversible once
+						enabled.
+					</p>
+				</div>
+			</div>
+		{/if}
 	</div>
 </FormDialog>
