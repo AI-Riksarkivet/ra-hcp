@@ -690,6 +690,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#docker-publishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Publishing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#example-env-file" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1626,6 +1637,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#docker-publishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker Publishing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#example-env-file" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1969,6 +1991,32 @@
 </tr>
 </tbody>
 </table>
+<h2 id="docker-publishing">Docker Publishing<a class="headerlink" href="#docker-publishing" title="Permanent link">&para;</a></h2>
+<p>These variables are used by the <code>make publish</code> targets to push container images to Docker Hub via the Dagger pipeline.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DOCKER_USERNAME</code></td>
+<td>str</td>
+<td><code>""</code></td>
+<td>Docker Hub username.</td>
+</tr>
+<tr>
+<td><code>DOCKER_PASSWORD</code></td>
+<td>str</td>
+<td><code>""</code></td>
+<td>Docker Hub password or access token.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="example-env-file">Example <code>.env</code> File<a class="headerlink" href="#example-env-file" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># HCP Connection</span>
 <span class="nv">HCP_DOMAIN</span><span class="o">=</span>hcp.example.com
@@ -1986,6 +2034,10 @@
 
 <span class="c1"># Auth</span>
 <span class="nv">API_SECRET_KEY</span><span class="o">=</span>replace-with-a-strong-random-value
+
+<span class="c1"># Docker publishing (optional)</span>
+<span class="nv">DOCKER_USERNAME</span><span class="o">=</span>
+<span class="nv">DOCKER_PASSWORD</span><span class="o">=</span>
 </code></pre></div>
 
 

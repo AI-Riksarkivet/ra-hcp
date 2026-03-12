@@ -777,10 +777,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#the-delegates_to-pattern" class="md-nav__link">
+  <a href="#the-boto3forwarder-pattern" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The @delegates_to pattern
+        The Boto3Forwarder pattern
       
     </span>
   </a>
@@ -1567,10 +1567,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#the-delegates_to-pattern" class="md-nav__link">
+  <a href="#the-boto3forwarder-pattern" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The @delegates_to pattern
+        The Boto3Forwarder pattern
       
     </span>
   </a>
@@ -1717,8 +1717,8 @@
     CACHED --&gt;|"wraps"| HCP_A
     CACHED --&gt;|"wraps"| GEN
 
-    HCP_A --&gt;|"delegates via @delegates_to"| OPS["Boto3Operations&lt;br/&gt;21 shared S3 methods"]
-    GEN --&gt;|"delegates via @delegates_to"| OPS
+    HCP_A --&gt;|"delegates via Boto3Forwarder"| OPS["Boto3Operations&lt;br/&gt;shared S3 methods"]
+    GEN --&gt;|"delegates via Boto3Forwarder"| OPS
 
     OPS --&gt; CLIENT["boto3 S3 Client"]</code></pre>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
@@ -1739,17 +1739,22 @@
 <tr>
 <td><code>Boto3Operations</code></td>
 <td><code>services/storage/adapters/_boto3_ops.py</code></td>
-<td>Shared boto3 operations — composed into adapters, provides all 21 S3 methods</td>
+<td>Shared boto3 operations — composed into adapters via <code>Boto3Forwarder</code></td>
+</tr>
+<tr>
+<td><code>Boto3Forwarder</code></td>
+<td><code>services/storage/adapters/_boto3_ops.py</code></td>
+<td>Typed forwarding base class — thin forwarders that delegate to <code>self._ops</code></td>
 </tr>
 <tr>
 <td><code>HcpStorage</code></td>
 <td><code>services/storage/adapters/hcp.py</code></td>
-<td>HCP adapter — composes <code>Boto3Operations</code>, uses <code>@delegates_to</code> for forwarding, overrides <code>list_buckets</code> and <code>delete_objects</code></td>
+<td>HCP adapter — composes <code>Boto3Operations</code> via <code>Boto3Forwarder</code>, overrides <code>list_buckets</code> and <code>delete_objects</code></td>
 </tr>
 <tr>
 <td><code>GenericBoto3Storage</code></td>
 <td><code>services/storage/adapters/generic_boto3.py</code></td>
-<td>Generic S3 adapter — composes <code>Boto3Operations</code>, overrides <code>delete_objects</code> and ACL operations</td>
+<td>Generic S3 adapter — composes <code>Boto3Operations</code> via <code>Boto3Forwarder</code>, overrides <code>delete_objects</code> and ACL operations</td>
 </tr>
 <tr>
 <td><code>CachedStorage</code></td>
@@ -1768,14 +1773,14 @@
 </tr>
 </tbody>
 </table>
-<h3 id="the-delegates_to-pattern">The <code>@delegates_to</code> pattern<a class="headerlink" href="#the-delegates_to-pattern" title="Permanent link">&para;</a></h3>
-<p>Adapters use a <code>@delegates_to</code> decorator that generates thin forwarding methods at class definition time for all <code>Boto3Operations</code> methods not explicitly overridden. This means adapters only define the methods they need to customize — everything else is automatically forwarded to <code>self._ops</code>.</p>
+<h3 id="the-boto3forwarder-pattern">The <code>Boto3Forwarder</code> pattern<a class="headerlink" href="#the-boto3forwarder-pattern" title="Permanent link">&para;</a></h3>
+<p>Adapters inherit from <code>Boto3Forwarder</code>, a base class with typed forwarding methods that delegate to <code>self._ops</code> (a <code>Boto3Operations</code> instance). Adapters only define the methods they need to customize — everything else is forwarded through the base class. This keeps the composition pattern while making all methods statically visible to type checkers.</p>
 <h2 id="adding-a-new-storage-backend">Adding a new storage backend<a class="headerlink" href="#adding-a-new-storage-backend" title="Permanent link">&para;</a></h2>
 <p>To add support for MinIO, Ceph, or AWS S3:</p>
 <ol>
-<li>Create <code>services/storage/adapters/minio.py</code> (or similar)</li>
-<li>Compose <code>Boto3Operations</code> for shared functionality</li>
-<li>Use <code>@delegates_to</code> and override only the methods that differ</li>
+<li>Create <code>services/storage/adapters/my_backend.py</code></li>
+<li>Inherit from <code>Boto3Forwarder</code> and compose <code>Boto3Operations</code> for shared functionality</li>
+<li>Override only the methods that differ</li>
 <li>Catch the backend's native exceptions and re-raise as <code>StorageError</code></li>
 <li>Register the new adapter in the factory (<code>services/storage/factory.py</code>)</li>
 <li>No endpoint code changes needed — they type-hint against <code>StorageProtocol</code></li>

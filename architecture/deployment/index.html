@@ -843,6 +843,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#publishing-container-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Publishing Container Images
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helm-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helm Chart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#production-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1538,6 +1560,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#publishing-container-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Publishing Container Images
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helm-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helm Chart
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#production-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1646,6 +1690,122 @@
     FIX --&gt;|"initial data"| STATE
     DISP --&gt;|"CRUD operations"| STATE</code></pre>
 <p>The mock server implements the same interface as the real MAPI service, allowing the frontend to be developed and tested independently. Start it with <code>make run-api-mock</code>.</p>
+<h2 id="publishing-container-images">Publishing Container Images<a class="headerlink" href="#publishing-container-images" title="Permanent link">&para;</a></h2>
+<p>The project uses a Dagger pipeline (<code>.dagger/publish.go</code>) to build and push images to Docker Hub. Three Make targets are available:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Publish both backend and frontend</span>
+make<span class="w"> </span>publish<span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.1.0
+
+<span class="c1"># Publish individually</span>
+make<span class="w"> </span>publish-backend<span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.1.0
+make<span class="w"> </span>publish-frontend<span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.1.0
+</code></pre></div>
+<p>Credentials are read from <code>.env</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DOCKER_USERNAME</code></td>
+<td>Docker Hub username</td>
+</tr>
+<tr>
+<td><code>DOCKER_PASSWORD</code></td>
+<td>Docker Hub password or access token</td>
+</tr>
+</tbody>
+</table>
+<p>Published images:</p>
+<table>
+<thead>
+<tr>
+<th>Image</th>
+<th>Default repository</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend</td>
+<td><code>riksarkivet/ra-hcp</code></td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td><code>riksarkivet/ra-hcp-frontend</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="helm-chart">Helm Chart<a class="headerlink" href="#helm-chart" title="Permanent link">&para;</a></h2>
+<p>A Helm chart is provided in <code>charts/helm-ra-hcp-v0.1.0/</code> for Kubernetes deployment. Install with:</p>
+<div class="highlight"><pre><span></span><code>helm<span class="w"> </span>install<span class="w"> </span>ra-hcp<span class="w"> </span>charts/helm-ra-hcp-v0.1.0<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.HCP_DOMAIN<span class="o">=</span>hcp.example.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>secret.API_SECRET_KEY<span class="o">=</span>your-secret-key
+</code></pre></div>
+<p>Key configuration values (see <code>charts/helm-ra-hcp-v0.1.0/values.yaml</code> for the full reference):</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>image.repository</code></td>
+<td><code>riksarkivet/ra-hcp</code></td>
+<td>Backend image</td>
+</tr>
+<tr>
+<td><code>image.tag</code></td>
+<td><code>""</code> (uses <code>appVersion</code>)</td>
+<td>Image tag</td>
+</tr>
+<tr>
+<td><code>service.type</code></td>
+<td><code>NodePort</code></td>
+<td>Backend service type</td>
+</tr>
+<tr>
+<td><code>service.port</code></td>
+<td><code>8000</code></td>
+<td>Backend service port</td>
+</tr>
+<tr>
+<td><code>service.nodePort</code></td>
+<td><code>30081</code></td>
+<td>Backend NodePort</td>
+</tr>
+<tr>
+<td><code>frontend.enabled</code></td>
+<td><code>false</code></td>
+<td>Enable frontend deployment</td>
+</tr>
+<tr>
+<td><code>frontend.service.nodePort</code></td>
+<td><code>30517</code></td>
+<td>Frontend NodePort</td>
+</tr>
+<tr>
+<td><code>redis.enabled</code></td>
+<td><code>false</code></td>
+<td>Enable Redis sidecar</td>
+</tr>
+<tr>
+<td><code>opentelemetry.enabled</code></td>
+<td><code>false</code></td>
+<td>Enable OTEL export</td>
+</tr>
+</tbody>
+</table>
+<p>Enable the frontend and Redis:</p>
+<div class="highlight"><pre><span></span><code>helm<span class="w"> </span>install<span class="w"> </span>ra-hcp<span class="w"> </span>charts/helm-ra-hcp-v0.1.0<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>frontend.enabled<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>redis.enabled<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.HCP_DOMAIN<span class="o">=</span>hcp.example.com
+</code></pre></div>
 <h2 id="production-architecture">Production Architecture<a class="headerlink" href="#production-architecture" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>graph LR
     subgraph "Docker / Production"
@@ -1675,7 +1835,7 @@
 </tr>
 <tr>
 <td>Backend</td>
-<td>FastAPI, Python 3.12+, uv</td>
+<td>FastAPI, Python 3.13+, uv</td>
 <td>8000</td>
 </tr>
 <tr>
