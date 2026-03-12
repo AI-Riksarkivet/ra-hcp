@@ -2,18 +2,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "hcp-app.frontendFullname" . }}
+  name: {{ include "ra-hcp.frontendFullname" . }}
   labels:
-    {{- include "hcp-app.labels" . | nindent 4 }}
+    {{- include "ra-hcp.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.frontend.replicaCount }}
   selector:
     matchLabels:
-      {{- include "hcp-app.frontendSelectorLabels" . | nindent 6 }}
+      {{- include "ra-hcp.frontendSelectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "hcp-app.frontendSelectorLabels" . | nindent 8 }}
+        {{- include "ra-hcp.frontendSelectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.podSecurityContext }}
       securityContext:
@@ -29,7 +29,7 @@ spec:
               protocol: TCP
           env:
             - name: BACKEND_URL
-              value: {{ .Values.frontend.env.BACKEND_URL | default (printf "http://%s:%v" (include "hcp-app.fullname" .) .Values.service.port) | quote }}
+              value: {{ .Values.frontend.env.BACKEND_URL | default (printf "http://%s:%v" (include "ra-hcp.fullname" .) .Values.service.port) | quote }}
           livenessProbe:
             httpGet:
               path: /
@@ -50,6 +50,16 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: deno-dir
+              mountPath: /deno-dir
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: deno-dir
+          emptyDir: {}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

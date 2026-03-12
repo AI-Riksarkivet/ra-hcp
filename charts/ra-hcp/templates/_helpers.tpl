@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "hcp-app.name" -}}
+{{- define "ra-hcp.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "hcp-app.fullname" -}}
+{{- define "ra-hcp.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,16 +24,16 @@ Create a default fully qualified app name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "hcp-app.chart" -}}
+{{- define "ra-hcp.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels.
 */}}
-{{- define "hcp-app.labels" -}}
-helm.sh/chart: {{ include "hcp-app.chart" . }}
-{{ include "hcp-app.selectorLabels" . }}
+{{- define "ra-hcp.labels" -}}
+helm.sh/chart: {{ include "ra-hcp.chart" . }}
+{{ include "ra-hcp.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -43,37 +43,37 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels.
 */}}
-{{- define "hcp-app.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "hcp-app.name" . }}
+{{- define "ra-hcp.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ra-hcp.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Redis fullname.
 */}}
-{{- define "hcp-app.redisFullname" -}}
-{{- printf "%s-redis" (include "hcp-app.fullname" .) }}
+{{- define "ra-hcp.redisFullname" -}}
+{{- printf "%s-redis" (include "ra-hcp.fullname" .) }}
 {{- end }}
 
 {{/*
 Redis selector labels.
 */}}
-{{- define "hcp-app.redisSelectorLabels" -}}
-app.kubernetes.io/name: {{ include "hcp-app.name" . }}-redis
+{{- define "ra-hcp.redisSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "ra-hcp.name" . }}-redis
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Frontend fullname.
 */}}
-{{- define "hcp-app.frontendFullname" -}}
-{{- printf "%s-frontend" (include "hcp-app.fullname" .) }}
+{{- define "ra-hcp.frontendFullname" -}}
+{{- printf "%s-frontend" (include "ra-hcp.fullname" .) }}
 {{- end }}
 
 {{/*
 Frontend selector labels.
 */}}
-{{- define "hcp-app.frontendSelectorLabels" -}}
-app.kubernetes.io/name: {{ include "hcp-app.name" . }}-frontend
+{{- define "ra-hcp.frontendSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "ra-hcp.name" . }}-frontend
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}

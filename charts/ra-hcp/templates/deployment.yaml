@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "hcp-app.fullname" . }}
+  name: {{ include "ra-hcp.fullname" . }}
   labels:
-    {{- include "hcp-app.labels" . | nindent 4 }}
+    {{- include "ra-hcp.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "hcp-app.selectorLabels" . | nindent 6 }}
+      {{- include "ra-hcp.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "hcp-app.selectorLabels" . | nindent 8 }}
+        {{- include "ra-hcp.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -58,9 +58,9 @@ spec:
             periodSeconds: 5
           envFrom:
             - configMapRef:
-                name: {{ include "hcp-app.fullname" . }}
+                name: {{ include "ra-hcp.fullname" . }}
             - secretRef:
-                name: {{ include "hcp-app.fullname" . }}
+                name: {{ include "ra-hcp.fullname" . }}
           env:
             {{- if .Values.opentelemetry.enabled }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -69,10 +69,16 @@ spec:
               value: {{ .Values.opentelemetry.protocol | quote }}
             - name: OTEL_SERVICE_NAME
               value: {{ .Values.opentelemetry.serviceName | quote }}
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: {{ .Values.opentelemetry.resourceAttributes | quote }}
+            {{- if .Values.opentelemetry.headers }}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              value: {{ .Values.opentelemetry.headers | quote }}
+            {{- end }}
             {{- end }}
             {{- if and .Values.redis.enabled (not (index .Values.env "REDIS_URL")) }}
             - name: REDIS_URL
-              value: "redis://{{ include "hcp-app.redisFullname" . }}:{{ .Values.redis.port }}/0"
+              value: "redis://{{ include "ra-hcp.redisFullname" . }}:{{ .Values.redis.port }}/0"
             {{- end }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}

@@ -1,12 +1,12 @@
 // HCP App CI/CD pipeline powered by Dagger
 //
 // Provides build, lint, type-check, and test functions for the
-// hcp-app backend (Python/FastAPI) and frontend (SvelteKit/Deno).
+// ra-hcp backend (Python/FastAPI) and frontend (SvelteKit/Deno).
 
 package main
 
 import (
-	"dagger/hcp-app/internal/dagger"
+	"dagger/ra-hcp/internal/dagger"
 )
 
 const (
@@ -17,10 +17,10 @@ const (
 	frontendDir   = "frontend"
 )
 
-type HcpApp struct{}
+type RaHcp struct{}
 
 // buildBackendDev returns a container with all backend deps (including dev) installed.
-func (m *HcpApp) buildBackendDev(source *dagger.Directory) *dagger.Container {
+func (m *RaHcp) buildBackendDev(source *dagger.Directory) *dagger.Container {
 	backend := source.Directory(backendDir)
 
 	return dag.Container().From(uvPythonImage).
@@ -31,7 +31,7 @@ func (m *HcpApp) buildBackendDev(source *dagger.Directory) *dagger.Container {
 }
 
 // buildFrontendDev returns a Deno container with frontend deps installed.
-func (m *HcpApp) buildFrontendDev(source *dagger.Directory) *dagger.Container {
+func (m *RaHcp) buildFrontendDev(source *dagger.Directory) *dagger.Container {
 	frontend := source.Directory(frontendDir)
 
 	return dag.Container().From(denoImage).
@@ -43,7 +43,7 @@ func (m *HcpApp) buildFrontendDev(source *dagger.Directory) *dagger.Container {
 }
 
 // redis returns a Redis service for integration tests.
-func (m *HcpApp) redis() *dagger.Service {
+func (m *RaHcp) redis() *dagger.Service {
 	return dag.Container().From(redisImage).
 		WithExposedPort(6379).
 		AsService()

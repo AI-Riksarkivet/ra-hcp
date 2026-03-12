@@ -5,15 +5,19 @@ import (
 	"context"
 	"strings"
 
-	"dagger/hcp-app/internal/dagger"
+	"dagger/ra-hcp/internal/dagger"
 )
 
-// daggerManagedKeys are env vars that Dagger sets for service bindings.
-// These must not be overwritten by .env file values.
-var daggerManagedKeys = map[string]bool{
+// skipKeys are env vars managed by Dagger (service bindings) or intercepted
+// by the Dagger telemetry pipeline. These must not be set from .env.
+var skipKeys = map[string]bool{
 	"REDIS_URL":   true,
 	"BACKEND_URL": true,
 }
+
+// skipPrefixes are env var prefixes that Dagger intercepts and routes
+// through its own telemetry collector, causing metric format errors.
+var skipPrefixes = []string{"OTEL_", "DAGGER_"}
 
 // applyEnvFile reads a .env file and sets each KEY=VALUE on the container.
 // Lines starting with # and empty lines are skipped. Surrounding quotes
@@ -39,7 +43,17 @@ func applyEnvFile(ctx context.Context, ctr *dagger.Container, envFile *dagger.Fi
 		if len(val) >= 2 && ((val[0] == '"' && val[len(val)-1] == '"') || (val[0] == '\'' && val[len(val)-1] == '\'')) {
 			val = val[1 : len(val)-1]
 		}
-		if key == "" || daggerManagedKeys[key] {
+		if key == "" || skipKeys[key] {
+			continue
+		}
+		skip := false
+		for _, prefix := range skipPrefixes {
+			if strings.HasPrefix(key, prefix) {
+				skip = true
+				break
+			}
+		}
+		if skip {
 			continue
 		}
 		ctr = ctr.WithEnvVariable(key, val)
@@ -48,7 +62,7 @@ func applyEnvFile(ctx context.Context, ctr *dagger.Container, envFile *dagger.Fi
 }
 
 // Serve starts the backend as a Dagger service on port 8000 with Redis.
-func (m *HcpApp) Serve(
+func (m *RaHcp) Serve(
 	ctx context.Context,
 	// +defaultPath="/"
 	source *dagger.Directory,
@@ -82,7 +96,7 @@ func (m *HcpApp) Serve(
 // ServeAll starts the full stack: Redis, backend (:8000), and frontend (:8000).
 // The frontend Deno server defaults to port 8000; use `up --ports 3000:8000`
 // to expose it on host port 3000.
-func (m *HcpApp) ServeAll(
+func (m *RaHcp) ServeAll(
 	ctx context.Context,
 	// +defaultPath="/"
 	source *dagger.Directory,
@@ -95,18 +109,8 @@ func (m *HcpApp) ServeAll(
 		return nil, err
 	}
 
-	ctr := m.BuildFrontend(source)
-
-	// Apply .env first
-	if envFile != nil {
-		ctr, err = applyEnvFile(ctx, ctr, envFile)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Dagger-managed overrides — always last
-	ctr = ctr.
+	// Frontend only needs BACKEND_URL — no .env vars needed
+	ctr := m.BuildFrontend(source).
 		WithServiceBinding("backend", backendSvc).
 		WithEnvVariable("BACKEND_URL", "http://backend:8000")
 
@@ -116,7 +120,7 @@ func (m *HcpApp) ServeAll(
 }
 
 // TestServer starts the backend and verifies it responds to a health check.
-func (m *HcpApp) TestServer(
+func (m *RaHcp) TestServer(
 	ctx context.Context,
 	// +defaultPath="/"
 	source *dagger.Directory,

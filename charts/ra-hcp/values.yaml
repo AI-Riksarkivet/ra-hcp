@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: hcp-app
+  repository: ra-hcp
   tag: "latest"  # set to "" to use appVersion from Chart.yaml
   pullPolicy: Always
 
@@ -31,14 +31,14 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
 
 # Non-sensitive environment variables
+# HCP_DOMAIN is the primary config — all tenant URLs are derived from it.
+# Credentials come from the user's login, not from env vars.
 env:
-  HCP_HOST: "admin.hcp.example.com"
+  HCP_DOMAIN: ""
   HCP_PORT: "9090"
   HCP_AUTH_TYPE: "hcp"
   HCP_VERIFY_SSL: "false"
   HCP_TIMEOUT: "60"
-  S3_ENDPOINT_URL: "https://s3.hcp.example.com"
-  S3_REGION: "us-east-1"
   REDIS_URL: ""
   CACHE_DEFAULT_TTL: "300"
   CACHE_STATS_TTL: "60"
@@ -47,24 +47,25 @@ env:
   CACHE_S3_META_TTL: "300"
   CACHE_KEY_PREFIX: "hcp"
   API_TOKEN_EXPIRE_MINUTES: "480"
+  CORS_ORIGINS: ""
   ROOT_PATH: ""
 
 # Sensitive environment variables (stored in a Secret)
 secret:
-  HCP_USERNAME: ""
-  HCP_PASSWORD: ""
   API_SECRET_KEY: "change-me-in-production"
 
 opentelemetry:
   enabled: false
-  endpoint: "http://otel-collector:4317"
-  protocol: "grpc"
-  serviceName: "hcp-app"
+  endpoint: "http://otel-collector:4318"
+  protocol: "http/protobuf"
+  serviceName: "ra-hcp"
+  resourceAttributes: "deployment.environment=dev"
+  headers: ""
 
 frontend:
   enabled: false
   image:
-    repository: hcp-app-frontend
+    repository: ra-hcp-frontend
     tag: "latest"
     pullPolicy: Always
   replicaCount: 1
@@ -86,7 +87,7 @@ redis:
   enabled: false
   image:
     repository: redis
-    tag: "7-alpine"
+    tag: "8.0.1-alpine"
     pullPolicy: IfNotPresent
   port: 6379
   resources: {}

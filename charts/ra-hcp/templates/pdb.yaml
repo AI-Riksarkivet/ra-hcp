@@ -2,9 +2,9 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "hcp-app.fullname" . }}
+  name: {{ include "ra-hcp.fullname" . }}
   labels:
-    {{- include "hcp-app.labels" . | nindent 4 }}
+    {{- include "ra-hcp.labels" . | nindent 4 }}
 spec:
   {{- if .Values.podDisruptionBudget.minAvailable }}
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
@@ -13,5 +13,5 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "hcp-app.selectorLabels" . | nindent 6 }}
+      {{- include "ra-hcp.selectorLabels" . | nindent 6 }}
 {{- end }}

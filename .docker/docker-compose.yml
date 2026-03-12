@@ -18,6 +18,8 @@ services:
       dockerfile: .docker/backend.dockerfile
     ports:
       - "8000:8000"
+    env_file:
+      - ../.env
     environment:
       REDIS_URL: redis://redis:6379
     depends_on:

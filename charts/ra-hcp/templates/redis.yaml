@@ -2,19 +2,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "hcp-app.redisFullname" . }}
+  name: {{ include "ra-hcp.redisFullname" . }}
   labels:
-    {{- include "hcp-app.labels" . | nindent 4 }}
+    {{- include "ra-hcp.labels" . | nindent 4 }}
     app.kubernetes.io/component: redis
 spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "hcp-app.redisSelectorLabels" . | nindent 6 }}
+      {{- include "ra-hcp.redisSelectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "hcp-app.redisSelectorLabels" . | nindent 8 }}
+        {{- include "ra-hcp.redisSelectorLabels" . | nindent 8 }}
     spec:
       containers:
         - name: redis
@@ -42,9 +42,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "hcp-app.redisFullname" . }}
+  name: {{ include "ra-hcp.redisFullname" . }}
   labels:
-    {{- include "hcp-app.labels" . | nindent 4 }}
+    {{- include "ra-hcp.labels" . | nindent 4 }}
     app.kubernetes.io/component: redis
 spec:
   type: ClusterIP
@@ -54,5 +54,5 @@ spec:
       protocol: TCP
       name: redis
   selector:
-    {{- include "hcp-app.redisSelectorLabels" . | nindent 4 }}
+    {{- include "ra-hcp.redisSelectorLabels" . | nindent 4 }}
 {{- end }}

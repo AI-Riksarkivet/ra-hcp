@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "hcp-app.fullname" . }}
+  name: {{ include "ra-hcp.fullname" . }}
   labels:
-    {{- include "hcp-app.labels" . | nindent 4 }}
+    {{- include "ra-hcp.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -33,14 +33,14 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "hcp-app.fullname" $ }}
+                name: {{ include "ra-hcp.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ include "hcp-app.frontendFullname" $ }}
+                name: {{ include "ra-hcp.frontendFullname" $ }}
                 port:
                   number: {{ $.Values.frontend.service.port }}
           {{- else }}
@@ -49,7 +49,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "hcp-app.fullname" $ }}
+                name: {{ include "ra-hcp.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}
