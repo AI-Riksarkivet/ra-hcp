@@ -14,14 +14,15 @@ RUN deno task build
 # ── Production stage ─────────────────────────────────────────────────
 FROM denoland/deno:2.7.1
 
-RUN groupadd --system app 2>/dev/null; useradd --system --gid app app 2>/dev/null || true
+RUN groupadd -g 1000 app 2>/dev/null || true && \
+    useradd -u 1000 -g 1000 -s /bin/sh app 2>/dev/null || true
 
 WORKDIR /app
-COPY --from=builder --chown=app:app /app/.deno-deploy /app/.deno-deploy
-COPY --from=builder --chown=app:app /app/node_modules /app/node_modules
-COPY --from=builder --chown=app:app /app/deno.json /app/deno.lock /app/package.json /app/
+COPY --from=builder --chown=1000:1000 /app/.deno-deploy /app/.deno-deploy
+COPY --from=builder --chown=1000:1000 /app/node_modules /app/node_modules
+COPY --from=builder --chown=1000:1000 /app/deno.json /app/deno.lock /app/package.json /app/
 
-USER app
+USER 1000
 
 EXPOSE 8000
 
