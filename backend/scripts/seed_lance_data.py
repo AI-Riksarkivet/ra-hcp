@@ -215,7 +215,7 @@ def main() -> None:
     print(f"Endpoint: {endpoint_url}")
 
     try:
-        import lancedb
+        import lancedb  # ty: ignore[unresolved-import]
     except ImportError:
         print("Error: lancedb not installed. Run: pip install lancedb pyarrow")
         sys.exit(1)

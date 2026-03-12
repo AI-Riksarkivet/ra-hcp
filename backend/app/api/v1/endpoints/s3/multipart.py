@@ -50,7 +50,7 @@ async def complete_multipart_upload(
         bucket,
         key,
         body.upload_id,
-        body.parts,
+        [p.model_dump() for p in body.parts],
     )
     return CompleteMultipartUploadResponse(
         bucket=bucket,

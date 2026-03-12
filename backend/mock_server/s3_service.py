@@ -198,6 +198,7 @@ class MockS3Service:
         max_keys: int = 1000,
         continuation_token: Optional[str] = None,
         delimiter: Optional[str] = None,
+        fetch_owner: bool = True,
     ) -> dict:
         self._logger.info("list_objects bucket=%s prefix=%s", bucket, prefix)
         self._require_bucket(bucket)
@@ -339,6 +340,42 @@ class MockS3Service:
         self._versioning[bucket] = status
         return {}
 
+    def list_object_versions(
+        self,
+        bucket: str,
+        prefix: Optional[str] = None,
+        max_keys: int = 1000,
+        key_marker: Optional[str] = None,
+        version_id_marker: Optional[str] = None,
+    ) -> dict:
+        self._logger.info("list_object_versions bucket=%s prefix=%s", bucket, prefix)
+        self._require_bucket(bucket)
+        # Mock: no real versioning — return current objects as single versions
+        all_keys = sorted(self._objects.get(bucket, {}).keys())
+        if prefix:
+            all_keys = [k for k in all_keys if k.startswith(prefix)]
+        if key_marker:
+            all_keys = [k for k in all_keys if k > key_marker]
+        page = all_keys[:max_keys]
+        versions = []
+        for key in page:
+            obj = self._objects[bucket][key]
+            versions.append(
+                {
+                    "Key": key,
+                    "VersionId": "null",
+                    "IsLatest": True,
+                    "Size": len(obj.data),
+                    "LastModified": obj.last_modified,
+                    "ETag": obj.etag,
+                }
+            )
+        return {
+            "Versions": versions,
+            "DeleteMarkers": [],
+            "IsTruncated": len(all_keys) > max_keys,
+        }
+
     # ── ACLs ──────────────────────────────────────────────────────────
 
     _DEFAULT_ACL = {
@@ -399,9 +436,15 @@ class MockS3Service:
 
     # ── Multipart uploads ────────────────────────────────────────────
 
-    def _require_upload(self, upload_id: str) -> dict[str, Any]:
+    def _require_upload(
+        self, upload_id: str, bucket: str | None = None, key: str | None = None
+    ) -> dict[str, Any]:
         upload = self._multipart_uploads.get(upload_id)
-        if upload is None:
+        if upload is None or (
+            bucket is not None
+            and key is not None
+            and (upload["bucket"] != bucket or upload["key"] != key)
+        ):
             from botocore.exceptions import ClientError
 
             raise ClientError(
@@ -444,7 +487,7 @@ class MockS3Service:
             part_number,
         )
         self._require_bucket(bucket)
-        upload = self._require_upload(upload_id)
+        upload = self._require_upload(upload_id, bucket, key)
         data = body.read()
         etag = f'"{hashlib.md5(data).hexdigest()}"'
         upload["parts"][part_number] = {"data": data, "etag": etag}
@@ -464,7 +507,7 @@ class MockS3Service:
             upload_id,
         )
         self._require_bucket(bucket)
-        upload = self._require_upload(upload_id)
+        upload = self._require_upload(upload_id, bucket, key)
         # Assemble parts in order
         assembled = b""
         for part in sorted(parts, key=lambda p: p["PartNumber"]):
@@ -500,7 +543,7 @@ class MockS3Service:
             upload_id,
         )
         self._require_bucket(bucket)
-        self._require_upload(upload_id)
+        self._require_upload(upload_id, bucket, key)
         del self._multipart_uploads[upload_id]
         return {}
 
@@ -515,7 +558,7 @@ class MockS3Service:
             "list_parts bucket=%s key=%s upload_id=%s", bucket, key, upload_id
         )
         self._require_bucket(bucket)
-        upload = self._require_upload(upload_id)
+        upload = self._require_upload(upload_id, bucket, key)
         parts_list = []
         for pn in sorted(upload["parts"].keys())[:max_parts]:
             part_data = upload["parts"][pn]

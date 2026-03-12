@@ -177,8 +177,11 @@ class CachedStorage:
         key: str,
         expires_in: int = 3600,
         method: str = "get_object",
+        extra_params: dict[str, str | int] | None = None,
     ) -> str:
-        return self._inner.generate_presigned_url(bucket, key, expires_in, method)
+        return self._inner.generate_presigned_url(
+            bucket, key, expires_in, method, extra_params
+        )
 
     # ── Write operations: delegate + invalidate ────────────────────────
 

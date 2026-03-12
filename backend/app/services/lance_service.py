@@ -15,10 +15,10 @@ from typing import Any
 from opentelemetry import trace
 
 try:
-    import lancedb
+    import lancedb  # ty: ignore[unresolved-import]
     import pyarrow as pa
 except ImportError:
-    lancedb = None  # type: ignore[assignment]
+    lancedb = None
     pa = None  # type: ignore[assignment]
 
 
@@ -135,7 +135,7 @@ class LanceService:
         self._base_uri = base_uri
         self._storage_options = storage_options
         try:
-            self._db = lancedb.connect(
+            self._db = lancedb.connect(  # ty: ignore[unresolved-attribute]
                 base_uri,
                 storage_options=storage_options,
             )
@@ -401,7 +401,7 @@ class LanceService:
                     )
                     q = q.vector(query_vector).text(query_text).limit(limit)
                     if weight is not None:
-                        from lancedb.rerankers import LinearCombinationReranker
+                        from lancedb.rerankers import LinearCombinationReranker  # ty: ignore[unresolved-import]
 
                         q = q.rerank(LinearCombinationReranker(weight=weight))
                 else:

@@ -39,7 +39,10 @@
 		onuploaded: () => void;
 	} = $props();
 
+	let fileIdCounter = 0;
+
 	interface FileUpload {
+		id: number;
 		file: File;
 		key: string;
 		preview: string | null;
@@ -70,7 +73,11 @@
 		for (const file of files) {
 			const preview = isImageFile(file) ? URL.createObjectURL(file) : null;
 			const key = (prefix || '') + file.name;
-			selectedFiles = [...selectedFiles, { file, key, preview, status: 'pending', progress: 0 }];
+			const id = fileIdCounter++;
+			selectedFiles = [
+				...selectedFiles,
+				{ id, file, key, preview, status: 'pending', progress: 0 },
+			];
 		}
 	}
 
@@ -128,45 +135,29 @@
 		});
 	}
 
-	function uploadPartXhr(
-		bucket: string,
-		key: string,
-		uploadId: string,
-		partNumber: number,
-		blob: Blob
-	): Promise<string> {
-		return new Promise((resolve, reject) => {
-			const formData = new FormData();
-			formData.append('file', blob);
-			const xhr = new XMLHttpRequest();
-			xhr.open(
-				'PUT',
-				`/api/v1/buckets/${encodeURIComponent(bucket)}/multipart/${encodeURIComponent(key)}?upload_id=${encodeURIComponent(uploadId)}&part_number=${partNumber}`
-			);
-			xhr.onload = () => {
-				if (xhr.status >= 200 && xhr.status < 300) {
-					try {
-						const data = JSON.parse(xhr.responseText);
-						resolve(data.etag as string);
-					} catch {
-						reject(new Error('Invalid response from part upload'));
-					}
-				} else {
-					reject(new Error(`Part ${partNumber} upload failed (HTTP ${xhr.status})`));
-				}
-			};
-			xhr.onerror = () => reject(new Error(`Part ${partNumber} network error`));
-			xhr.send(formData);
-		});
-	}
-
 	// Presigned multipart: uploads raw bytes directly to HCP/S3 via presigned URL.
 	// Requires CORS on HCP namespace: AllowedMethods: [PUT], ExposeHeaders: [ETag].
 	// If CORS is not configured, uploads will fail with a network error.
-	function presignedUploadPartXhr(presignedUrl: string, blob: Blob): Promise<string> {
+	function presignedUploadPartXhr(
+		presignedUrl: string,
+		blob: Blob,
+		onprogress?: (loaded: number, total: number) => void,
+		signal?: AbortSignal
+	): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
 			xhr.open('PUT', presignedUrl);
+			if (signal) {
+				signal.addEventListener('abort', () => {
+					xhr.abort();
+					reject(new DOMException('Upload aborted', 'AbortError'));
+				});
+			}
+			xhr.upload.onprogress = (e) => {
+				if (e.lengthComputable && onprogress) {
+					onprogress(e.loaded, e.total);
+				}
+			};
 			xhr.onload = () => {
 				if (xhr.status >= 200 && xhr.status < 300) {
 					const etag = xhr.getResponseHeader('ETag');
@@ -199,9 +190,12 @@
 			uploadId = presigned.upload_id;
 
 			const totalParts = presigned.total_parts;
+			const totalBytes = item.file.size;
 			const parts: { PartNumber: number; ETag: string }[] = new Array(totalParts);
-			let completedParts = 0;
+			// Track bytes uploaded per part for smooth progress
+			const partBytes = new Array<number>(totalParts).fill(0);
 			let aborted = false;
+			const abortController = new AbortController();
 
 			// Upload parts directly to HCP via presigned URLs with bounded concurrency
 			const queue = Array.from({ length: totalParts }, (_, i) => i);
@@ -212,22 +206,36 @@
 					const end = Math.min(start + presigned.part_size, item.file.size);
 					const blob = item.file.slice(start, end);
 
-					const presignedUrl = presigned.urls[i].url;
-					const etag = await presignedUploadPartXhr(presignedUrl, blob);
-					parts[i] = { PartNumber: i + 1, ETag: etag };
-					completedParts++;
-
-					selectedFiles[index] = {
-						...selectedFiles[index],
-						progress: Math.round((completedParts / totalParts) * 100),
-					};
+					try {
+						const presignedUrl = presigned.urls[i].url;
+						const etag = await presignedUploadPartXhr(
+							presignedUrl,
+							blob,
+							(loaded) => {
+								partBytes[i] = loaded;
+								const totalLoaded = partBytes.reduce((a, b) => a + b, 0);
+								selectedFiles[index] = {
+									...selectedFiles[index],
+									progress: Math.round((totalLoaded / totalBytes) * 100),
+								};
+							},
+							abortController.signal
+						);
+						parts[i] = { PartNumber: i + 1, ETag: etag };
+						partBytes[i] = end - start;
+					} catch (err) {
+						if (!aborted) {
+							aborted = true;
+							abortController.abort();
+						}
+						throw err;
+					}
 				}
 			});
 
 			const results = await Promise.allSettled(workers);
 			const failure = results.find((r) => r.status === 'rejected');
 			if (failure) {
-				aborted = true;
 				throw (failure as PromiseRejectedResult).reason;
 			}
 
@@ -347,7 +355,7 @@
 
 		{#if selectedFiles.length > 0}
 			<div class="max-h-64 space-y-2 overflow-y-auto">
-				{#each selectedFiles as item, i (item.key)}
+				{#each selectedFiles as item, i (item.id)}
 					<div class="flex items-center gap-3 rounded-lg border p-2">
 						{#if item.preview}<img
 								src={item.preview}

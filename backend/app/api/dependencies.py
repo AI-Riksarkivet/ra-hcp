@@ -169,7 +169,7 @@ async def get_lance_service(
 ) -> AsyncGenerator[LanceService, None]:
     """Yield a LanceService for the given S3 bucket/path, keyed by credentials."""
     try:
-        import lancedb as _  # noqa: F811, F401
+        import lancedb as _  # noqa: F811, F401  # ty: ignore[unresolved-import]
     except ImportError:
         raise HTTPException(
             status_code=501,

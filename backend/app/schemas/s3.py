@@ -338,9 +338,14 @@ class UploadPartResponse(BaseModel):
     etag: str
 
 
+class CompletePart(BaseModel):
+    PartNumber: int
+    ETag: str
+
+
 class CompleteMultipartUploadRequest(BaseModel):
     upload_id: str
-    parts: List[dict] = Field(description="List of {PartNumber, ETag} dicts")
+    parts: List[CompletePart] = Field(description="List of {PartNumber, ETag} parts")
 
 
 class CompleteMultipartUploadResponse(BaseModel):
