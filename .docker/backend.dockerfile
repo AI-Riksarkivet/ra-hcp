@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM ghcr.io/astral-sh/uv:0.10.7-python3.14-alpine AS builder
+FROM ghcr.io/astral-sh/uv:0.10.9-python3.13-trixie-slim AS builder
 
 WORKDIR /app
 
@@ -12,9 +12,9 @@ COPY backend/ .
 RUN uv sync --frozen --extra serve
 
 # ── Production stage ─────────────────────────────────────────────────
-FROM python:3.14-alpine
+FROM python:3.13-slim
 
-RUN addgroup -S app && adduser -S -G app app
+RUN addgroup --system app && adduser --system --ingroup app app
 
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv

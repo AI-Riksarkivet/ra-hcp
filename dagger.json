@@ -1,6 +1,6 @@
 {
   "name": "hcp-app",
-  "engineVersion": "v0.20.1",
+  "engineVersion": "v0.18.19",
   "sdk": {
     "source": "go"
   },
