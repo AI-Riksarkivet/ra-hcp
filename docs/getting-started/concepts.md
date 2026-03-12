@@ -291,3 +291,10 @@ Response headers always include `X-HCP-SoftwareVersion`; errors include `X-HCP-E
 - Typed as string, integer, date, or boolean
 
 Content classes are defined at the tenant level and associated with specific namespaces.
+
+For detailed coverage of content properties, indexing settings, and XPath expressions, see [Administration](../hcp-platform/administration.md).
+
+## Further Reading
+
+- **[Data Protection](../hcp-platform/data-protection.md)** — Erasure coding, service plans, compliance modes, retention deep dive, and replication deep dive.
+- **[Administration](../hcp-platform/administration.md)** — Namespace configuration, protocol details, CORS, chargeback reporting, and HCP quirks.

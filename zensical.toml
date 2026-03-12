@@ -16,6 +16,11 @@ nav = [
     { "HCP Concepts" = "getting-started/concepts.md" },
     { "Configuration" = "getting-started/configuration.md" },
   ]},
+  { "HCP Platform" = [
+    { "Overview" = "hcp-platform/index.md" },
+    { "Data Protection" = "hcp-platform/data-protection.md" },
+    { "Administration" = "hcp-platform/administration.md" },
+  ]},
   { "Architecture" = [
     { "Overview" = "architecture/index.md" },
     { "Backend" = "architecture/backend.md" },
