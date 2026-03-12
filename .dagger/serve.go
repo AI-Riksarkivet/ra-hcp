@@ -11,8 +11,12 @@ import (
 // skipKeys are env vars managed by Dagger (service bindings) or intercepted
 // by the Dagger telemetry pipeline. These must not be set from .env.
 var skipKeys = map[string]bool{
-	"REDIS_URL":   true,
-	"BACKEND_URL": true,
+	"REDIS_URL":        true,
+	"BACKEND_URL":      true,
+	"STORAGE_BACKEND":  true,
+	"S3_ENDPOINT_URL":  true,
+	"S3_ACCESS_KEY":    true,
+	"S3_SECRET_KEY":    true,
 }
 
 // skipPrefixes are env var prefixes that Dagger intercepts and routes
@@ -164,6 +168,70 @@ func (m *RaHcp) ServeAll(
 				"socat TCP-LISTEN:5174,fork,reuseaddr TCP:frontend:8000 & " +
 				"wait",
 		}).
+		AsService(), nil
+}
+
+// ServeMinio starts the backend with MinIO as storage, plus Redis.
+// No .env file needed — all config is wired by Dagger.
+func (m *RaHcp) ServeMinio(
+	ctx context.Context,
+	// +defaultPath="/"
+	source *dagger.Directory,
+	// +optional
+	envFile *dagger.File,
+) (*dagger.Service, error) {
+	redisSvc := m.redis()
+	minioSvc := m.minio()
+
+	ctr := m.BuildBackend(source)
+
+	// Apply .env if present (picks up API_SECRET_KEY, etc.)
+	if envFile != nil {
+		var err error
+		ctr, err = applyEnvFile(ctx, ctr, envFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Wire MinIO + Redis via service bindings
+	ctr = ctr.
+		WithServiceBinding("redis", redisSvc).
+		WithEnvVariable("REDIS_URL", "redis://redis:6379").
+		WithServiceBinding("minio", minioSvc).
+		WithEnvVariable("STORAGE_BACKEND", "minio").
+		WithEnvVariable("S3_ENDPOINT_URL", "http://minio:9000").
+		WithEnvVariable("S3_ACCESS_KEY", minioRootUser).
+		WithEnvVariable("S3_SECRET_KEY", minioRootPassword).
+		WithEnvVariable("S3_VERIFY_SSL", "false").
+		WithEnvVariable("S3_ADDRESSING_STYLE", "path").
+		WithEnvVariable("API_SECRET_KEY", "dagger-dev-secret")
+
+	return ctr.
+		WithExposedPort(8000).
+		AsService(), nil
+}
+
+// ServeMinioAll starts the full stack with MinIO: Redis + MinIO + backend + frontend.
+// No .env file needed. Use `up --ports 8000:8000` to access the frontend.
+func (m *RaHcp) ServeMinioAll(
+	ctx context.Context,
+	// +defaultPath="/"
+	source *dagger.Directory,
+	// +optional
+	envFile *dagger.File,
+) (*dagger.Service, error) {
+	backendSvc, err := m.ServeMinio(ctx, source, envFile)
+	if err != nil {
+		return nil, err
+	}
+
+	ctr := m.BuildFrontend(source).
+		WithServiceBinding("backend", backendSvc).
+		WithEnvVariable("BACKEND_URL", "http://backend:8000")
+
+	return ctr.
+		WithExposedPort(8000).
 		AsService(), nil
 }
 
