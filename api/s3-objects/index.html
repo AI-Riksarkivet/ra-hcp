@@ -1345,10 +1345,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#initiate-multipart-upload" class="md-nav__link">
+  <a href="#presigned-multipart-upload-recommended" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Initiate multipart upload
+        Presigned multipart upload (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#initiate-multipart-upload-proxied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initiate multipart upload (proxied)
       
     </span>
   </a>
@@ -1432,6 +1443,45 @@
     <span class="md-ellipsis">
       
         Get S3 credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cors-configuration-for-presigned-uploads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS Configuration for Presigned Uploads
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CORS Configuration for Presigned Uploads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-cors-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required CORS configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-each-setting-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What each setting does
       
     </span>
   </a>
@@ -2143,10 +2193,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#initiate-multipart-upload" class="md-nav__link">
+  <a href="#presigned-multipart-upload-recommended" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Initiate multipart upload
+        Presigned multipart upload (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#initiate-multipart-upload-proxied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initiate multipart upload (proxied)
       
     </span>
   </a>
@@ -2230,6 +2291,45 @@
     <span class="md-ellipsis">
       
         Get S3 credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cors-configuration-for-presigned-uploads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS Configuration for Presigned Uploads
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CORS Configuration for Presigned Uploads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-cors-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required CORS configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-each-setting-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What each setting does
       
     </span>
   </a>
@@ -2824,7 +2924,7 @@
 </div>
 <hr />
 <h2 id="multipart-upload">Multipart Upload<a class="headerlink" href="#multipart-upload" title="Permanent link">&para;</a></h2>
-<p>Upload large files in parts. The frontend automatically uses multipart upload for files &gt;= 100 MB, splitting them into 10 MB chunks.</p>
+<p>Upload large files in parts. The frontend automatically uses <strong>presigned multipart upload</strong> for files &gt;= 100 MB — the browser uploads parts directly to HCP/S3 via presigned URLs, bypassing the backend for data transfer.</p>
 <p><strong>Base path:</strong> <code>/api/v1/buckets/{bucket}/multipart</code></p>
 <table>
 <thead>
@@ -2837,13 +2937,18 @@
 <tbody>
 <tr>
 <td><code>POST</code></td>
+<td><code>.../multipart/{key}/presign</code></td>
+<td>Generate presigned URLs for direct upload</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
 <td><code>.../multipart/{key}</code></td>
-<td>Initiate a multipart upload</td>
+<td>Initiate a multipart upload (proxied)</td>
 </tr>
 <tr>
 <td><code>PUT</code></td>
 <td><code>.../multipart/{key}</code></td>
-<td>Upload a part</td>
+<td>Upload a part (proxied)</td>
 </tr>
 <tr>
 <td><code>POST</code></td>
@@ -2863,10 +2968,133 @@
 </tbody>
 </table>
 <hr />
-<h3 id="initiate-multipart-upload">Initiate multipart upload<a class="headerlink" href="#initiate-multipart-upload" title="Permanent link">&para;</a></h3>
+<h3 id="presigned-multipart-upload-recommended">Presigned multipart upload (recommended)<a class="headerlink" href="#presigned-multipart-upload-recommended" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>POST /api/v1/buckets/{bucket}/multipart/{key}/presign
+</code></pre></div>
+<p>Creates a multipart upload and returns presigned URLs for each part. The browser uploads parts directly to HCP/S3, bypassing the backend for data transfer. This is the recommended approach for large files.</p>
+<p><strong>Request body:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>file_size</code></td>
+<td>integer</td>
+<td>Yes</td>
+<td></td>
+<td>Total file size in bytes (must be &gt; 0)</td>
+</tr>
+<tr>
+<td><code>part_size</code></td>
+<td>integer</td>
+<td>No</td>
+<td>25 MB</td>
+<td>Part size in bytes (min 5 MB, max 5 GB)</td>
+</tr>
+<tr>
+<td><code>expires_in</code></td>
+<td>integer</td>
+<td>No</td>
+<td>3600</td>
+<td>URL expiration in seconds (min 60, max 12h)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Response:</strong> <code>PresignedMultipartResponse</code></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bucket</code></td>
+<td>string</td>
+<td>Bucket name</td>
+</tr>
+<tr>
+<td><code>key</code></td>
+<td>string</td>
+<td>Object key</td>
+</tr>
+<tr>
+<td><code>upload_id</code></td>
+<td>string</td>
+<td>Upload ID for complete/abort</td>
+</tr>
+<tr>
+<td><code>part_size</code></td>
+<td>integer</td>
+<td>Part size used</td>
+</tr>
+<tr>
+<td><code>total_parts</code></td>
+<td>integer</td>
+<td>Number of parts</td>
+</tr>
+<tr>
+<td><code>urls</code></td>
+<td>array</td>
+<td>List of <code>{ part_number, url }</code> presigned URLs</td>
+</tr>
+<tr>
+<td><code>expires_in</code></td>
+<td>integer</td>
+<td>URL expiration in seconds</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Errors:</strong></p>
+<ul>
+<li><code>400</code> — Too many parts (file_size / part_size &gt; 10,000)</li>
+<li><code>422</code> — Invalid file_size or part_size</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">CORS required</p>
+<p>Presigned multipart uploads require CORS configuration on the HCP namespace. See <a href="#cors-configuration-for-presigned-uploads">CORS Configuration for Presigned Uploads</a> below.</p>
+</div>
+<p><strong>Flow:</strong></p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant Browser
+    participant Backend
+    participant HCP as HCP S3
+
+    Browser-&gt;&gt;Backend: POST /presign {file_size, part_size}
+    Backend-&gt;&gt;HCP: CreateMultipartUpload
+    HCP--&gt;&gt;Backend: UploadId
+    Note over Backend: Generate presigned URLs&lt;br/&gt;(local HMAC signing, no network)
+    Backend--&gt;&gt;Browser: {upload_id, urls[], total_parts}
+
+    loop Each part (6 concurrent)
+        Browser-&gt;&gt;HCP: PUT presigned_url (raw bytes)
+        HCP--&gt;&gt;Browser: 200 + ETag header
+    end
+
+    Browser-&gt;&gt;Backend: POST /complete {upload_id, parts[]}
+    Backend-&gt;&gt;HCP: CompleteMultipartUpload
+    HCP--&gt;&gt;Backend: 200 + final ETag
+    Backend--&gt;&gt;Browser: {bucket, key, etag}</code></pre>
+<ol>
+<li>Client calls this endpoint → gets <code>upload_id</code> + presigned URLs</li>
+<li>Client PUTs raw bytes directly to each presigned URL (no FormData, no backend proxy)</li>
+<li>Client reads <code>ETag</code> from each response header</li>
+<li>Client calls <a href="#complete-multipart-upload">Complete</a> with the collected <code>{ PartNumber, ETag }</code> pairs</li>
+</ol>
+<hr />
+<h3 id="initiate-multipart-upload-proxied">Initiate multipart upload (proxied)<a class="headerlink" href="#initiate-multipart-upload-proxied" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>POST /api/v1/buckets/{bucket}/multipart/{key}
 </code></pre></div>
-<p>Returns an upload ID to use for subsequent part uploads.</p>
+<p>Returns an upload ID to use for subsequent proxied part uploads. For new integrations, prefer the <a href="#presigned-multipart-upload-recommended">presigned approach</a> instead.</p>
 <p><strong>Response:</strong> <code>CreateMultipartUploadResponse</code> (201 Created)</p>
 <table>
 <thead>
@@ -3175,6 +3403,56 @@
 </tbody>
 </table>
 <hr />
+<h2 id="cors-configuration-for-presigned-uploads">CORS Configuration for Presigned Uploads<a class="headerlink" href="#cors-configuration-for-presigned-uploads" title="Permanent link">&para;</a></h2>
+<p>Presigned multipart uploads send <code>PUT</code> requests directly from the browser to the HCP S3 endpoint. For this to work, the target HCP namespace must have CORS configured to:</p>
+<ol>
+<li>Allow <code>PUT</code> requests from your frontend origin</li>
+<li>Expose the <code>ETag</code> response header (needed to complete the upload)</li>
+</ol>
+<h3 id="required-cors-configuration">Required CORS configuration<a class="headerlink" href="#required-cors-configuration" title="Permanent link">&para;</a></h3>
+<p>Set this on the <strong>namespace-level</strong> CORS settings (or tenant-level as a default):</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;CORSConfiguration&gt;</span>
+<span class="w">  </span><span class="nt">&lt;CORSRule&gt;</span>
+<span class="w">    </span><span class="nt">&lt;AllowedOrigin&gt;</span>https://your-frontend-domain.com<span class="nt">&lt;/AllowedOrigin&gt;</span>
+<span class="w">    </span><span class="nt">&lt;AllowedMethod&gt;</span>GET<span class="nt">&lt;/AllowedMethod&gt;</span>
+<span class="w">    </span><span class="nt">&lt;AllowedMethod&gt;</span>PUT<span class="nt">&lt;/AllowedMethod&gt;</span>
+<span class="w">    </span><span class="nt">&lt;AllowedHeader&gt;</span>*<span class="nt">&lt;/AllowedHeader&gt;</span>
+<span class="w">    </span><span class="nt">&lt;ExposeHeader&gt;</span>ETag<span class="nt">&lt;/ExposeHeader&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/CORSRule&gt;</span>
+<span class="nt">&lt;/CORSConfiguration&gt;</span>
+</code></pre></div>
+<div class="admonition danger">
+<p class="admonition-title">Without CORS</p>
+<p>If CORS is not configured, presigned uploads will fail with a browser network error. The <code>ETag</code> header will be invisible to JavaScript, causing the complete step to fail. Both the <strong>Namespace CORS</strong> and <strong>Tenant Settings CORS</strong> pages in the UI include guidance on the required settings.</p>
+</div>
+<h3 id="what-each-setting-does">What each setting does<a class="headerlink" href="#what-each-setting-does" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Why it's needed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AllowedOrigin</code></td>
+<td>Permits cross-origin requests from your frontend to the HCP S3 endpoint</td>
+</tr>
+<tr>
+<td><code>AllowedMethod: PUT</code></td>
+<td>Allows the browser to send <code>PUT</code> requests for part uploads</td>
+</tr>
+<tr>
+<td><code>AllowedHeader: *</code></td>
+<td>Allows any request headers (content-type, etc.)</td>
+</tr>
+<tr>
+<td><code>ExposeHeader: ETag</code></td>
+<td>Makes the <code>ETag</code> response header readable by JavaScript — required for <code>complete_multipart_upload</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
 <h2 id="code-examples">Code Examples<a class="headerlink" href="#code-examples" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># List objects with prefix</span>
 curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;http://localhost:8000/api/v1/buckets/my-bucket/objects?prefix=documents/&amp;max_keys=50&quot;</span><span class="w"> </span><span class="se">\</span>
@@ -3224,12 +3502,23 @@ curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>
 <span class="w">  </span><span class="s2">&quot;http://localhost:8000/api/v1/buckets/my-bucket/objects/report.pdf?version_id=v123&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
 
-<span class="c1"># Multipart upload: initiate</span>
+<span class="c1"># Presigned multipart upload: get presigned URLs (recommended)</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>http://localhost:8000/api/v1/buckets/my-bucket/multipart/large-file.bin/presign<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;file_size&quot;: 52428800}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+
+<span class="c1"># Presigned multipart upload: upload part directly to HCP (raw bytes, no auth needed)</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>PUT<span class="w"> </span><span class="s2">&quot;PRESIGNED_URL_FROM_ABOVE&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--data-binary<span class="w"> </span>@/path/to/part1.bin
+
+<span class="c1"># Multipart upload: initiate (proxied — legacy)</span>
 curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>http://localhost:8000/api/v1/buckets/my-bucket/multipart/large-file.bin<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
 
-<span class="c1"># Multipart upload: upload part 1</span>
+<span class="c1"># Multipart upload: upload part (proxied — legacy)</span>
 curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>PUT<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span><span class="s2">&quot;http://localhost:8000/api/v1/buckets/my-bucket/multipart/large-file.bin?upload_id=UPLOAD_ID&amp;part_number=1&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
