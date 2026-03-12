@@ -268,27 +268,96 @@ Returns all object versions and delete markers for the bucket.
 
 ## Multipart Upload
 
-Upload large files in parts. The frontend automatically uses multipart upload for files >= 100 MB, splitting them into 10 MB chunks.
+Upload large files in parts. The frontend automatically uses **presigned multipart upload** for files >= 100 MB — the browser uploads parts directly to HCP/S3 via presigned URLs, bypassing the backend for data transfer.
 
 **Base path:** `/api/v1/buckets/{bucket}/multipart`
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `.../multipart/{key}` | Initiate a multipart upload |
-| `PUT` | `.../multipart/{key}` | Upload a part |
+| `POST` | `.../multipart/{key}/presign` | Generate presigned URLs for direct upload |
+| `POST` | `.../multipart/{key}` | Initiate a multipart upload (proxied) |
+| `PUT` | `.../multipart/{key}` | Upload a part (proxied) |
 | `POST` | `.../multipart/{key}/complete` | Complete the upload |
 | `POST` | `.../multipart/{key}/abort` | Abort the upload |
 | `GET` | `.../multipart/{key}/parts` | List uploaded parts |
 
 ---
 
-### Initiate multipart upload
+### Presigned multipart upload (recommended)
+
+```
+POST /api/v1/buckets/{bucket}/multipart/{key}/presign
+```
+
+Creates a multipart upload and returns presigned URLs for each part. The browser uploads parts directly to HCP/S3, bypassing the backend for data transfer. This is the recommended approach for large files.
+
+**Request body:**
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `file_size` | integer | Yes | | Total file size in bytes (must be > 0) |
+| `part_size` | integer | No | 25 MB | Part size in bytes (min 5 MB, max 5 GB) |
+| `expires_in` | integer | No | 3600 | URL expiration in seconds (min 60, max 12h) |
+
+**Response:** `PresignedMultipartResponse`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `bucket` | string | Bucket name |
+| `key` | string | Object key |
+| `upload_id` | string | Upload ID for complete/abort |
+| `part_size` | integer | Part size used |
+| `total_parts` | integer | Number of parts |
+| `urls` | array | List of `{ part_number, url }` presigned URLs |
+| `expires_in` | integer | URL expiration in seconds |
+
+**Errors:**
+
+- `400` — Too many parts (file_size / part_size > 10,000)
+- `422` — Invalid file_size or part_size
+
+!!! warning "CORS required"
+    Presigned multipart uploads require CORS configuration on the HCP namespace. See [CORS Configuration for Presigned Uploads](#cors-configuration-for-presigned-uploads) below.
+
+**Flow:**
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Backend
+    participant HCP as HCP S3
+
+    Browser->>Backend: POST /presign {file_size, part_size}
+    Backend->>HCP: CreateMultipartUpload
+    HCP-->>Backend: UploadId
+    Note over Backend: Generate presigned URLs<br/>(local HMAC signing, no network)
+    Backend-->>Browser: {upload_id, urls[], total_parts}
+
+    loop Each part (6 concurrent)
+        Browser->>HCP: PUT presigned_url (raw bytes)
+        HCP-->>Browser: 200 + ETag header
+    end
+
+    Browser->>Backend: POST /complete {upload_id, parts[]}
+    Backend->>HCP: CompleteMultipartUpload
+    HCP-->>Backend: 200 + final ETag
+    Backend-->>Browser: {bucket, key, etag}
+```
+
+1. Client calls this endpoint → gets `upload_id` + presigned URLs
+2. Client PUTs raw bytes directly to each presigned URL (no FormData, no backend proxy)
+3. Client reads `ETag` from each response header
+4. Client calls [Complete](#complete-multipart-upload) with the collected `{ PartNumber, ETag }` pairs
+
+---
+
+### Initiate multipart upload (proxied)
 
 ```
 POST /api/v1/buckets/{bucket}/multipart/{key}
 ```
 
-Returns an upload ID to use for subsequent part uploads.
+Returns an upload ID to use for subsequent proxied part uploads. For new integrations, prefer the [presigned approach](#presigned-multipart-upload-recommended) instead.
 
 **Response:** `CreateMultipartUploadResponse` (201 Created)
 
@@ -432,6 +501,43 @@ GET /api/v1/credentials
 
 ---
 
+## CORS Configuration for Presigned Uploads
+
+Presigned multipart uploads send `PUT` requests directly from the browser to the HCP S3 endpoint. For this to work, the target HCP namespace must have CORS configured to:
+
+1. Allow `PUT` requests from your frontend origin
+2. Expose the `ETag` response header (needed to complete the upload)
+
+### Required CORS configuration
+
+Set this on the **namespace-level** CORS settings (or tenant-level as a default):
+
+```xml
+<CORSConfiguration>
+  <CORSRule>
+    <AllowedOrigin>https://your-frontend-domain.com</AllowedOrigin>
+    <AllowedMethod>GET</AllowedMethod>
+    <AllowedMethod>PUT</AllowedMethod>
+    <AllowedHeader>*</AllowedHeader>
+    <ExposeHeader>ETag</ExposeHeader>
+  </CORSRule>
+</CORSConfiguration>
+```
+
+!!! danger "Without CORS"
+    If CORS is not configured, presigned uploads will fail with a browser network error. The `ETag` header will be invisible to JavaScript, causing the complete step to fail. Both the **Namespace CORS** and **Tenant Settings CORS** pages in the UI include guidance on the required settings.
+
+### What each setting does
+
+| Setting | Why it's needed |
+|---------|----------------|
+| `AllowedOrigin` | Permits cross-origin requests from your frontend to the HCP S3 endpoint |
+| `AllowedMethod: PUT` | Allows the browser to send `PUT` requests for part uploads |
+| `AllowedHeader: *` | Allows any request headers (content-type, etc.) |
+| `ExposeHeader: ETag` | Makes the `ETag` response header readable by JavaScript — required for `complete_multipart_upload` |
+
+---
+
 ## Code Examples
 
 ```bash
@@ -483,12 +589,23 @@ curl -s -X DELETE \
   "http://localhost:8000/api/v1/buckets/my-bucket/objects/report.pdf?version_id=v123" \
   -H "Authorization: Bearer $TOKEN" | jq .
 
-# Multipart upload: initiate
+# Presigned multipart upload: get presigned URLs (recommended)
+curl -s -X POST \
+  http://localhost:8000/api/v1/buckets/my-bucket/multipart/large-file.bin/presign \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"file_size": 52428800}' | jq .
+
+# Presigned multipart upload: upload part directly to HCP (raw bytes, no auth needed)
+curl -s -X PUT "PRESIGNED_URL_FROM_ABOVE" \
+  --data-binary @/path/to/part1.bin
+
+# Multipart upload: initiate (proxied — legacy)
 curl -s -X POST \
   http://localhost:8000/api/v1/buckets/my-bucket/multipart/large-file.bin \
   -H "Authorization: Bearer $TOKEN" | jq .
 
-# Multipart upload: upload part 1
+# Multipart upload: upload part (proxied — legacy)
 curl -s -X PUT \
   "http://localhost:8000/api/v1/buckets/my-bucket/multipart/large-file.bin?upload_id=UPLOAD_ID&part_number=1" \
   -H "Authorization: Bearer $TOKEN" \

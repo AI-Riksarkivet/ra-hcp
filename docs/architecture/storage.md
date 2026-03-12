@@ -55,8 +55,8 @@ To add support for MinIO, Ceph, or AWS S3:
 | **Objects** | list, put, get, head, delete, copy, bulk delete |
 | **Versioning** | get/set bucket versioning, list object versions, version-aware get/delete |
 | **ACLs** | get/set bucket ACL, get/set object ACL |
-| **Multipart uploads** | create, upload part, complete, abort, list parts |
-| **Presigned URLs** | generate for get/put operations |
+| **Multipart uploads** | create, upload part, complete, abort, list parts, presigned multipart |
+| **Presigned URLs** | generate for get/put/upload_part operations (supports `extra_params`) |
 
 ## HCP-specific workarounds
 

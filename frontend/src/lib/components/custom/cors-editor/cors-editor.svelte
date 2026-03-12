@@ -95,9 +95,29 @@
 					bind:value={localCorsXml}
 				/>
 				<p class="text-xs text-muted-foreground">
-					Define allowed origins, methods, and headers using XML CORSRule elements. Presigned
-					uploads require PUT in AllowedMethods and ETag in ExposeHeaders.
+					Define allowed origins, methods, and headers using XML CORSRule elements.
 				</p>
+				<details class="rounded-md border bg-muted/50 px-3 py-2">
+					<summary class="cursor-pointer text-xs font-medium text-muted-foreground">
+						Example: CORS for presigned uploads
+					</summary>
+					<pre class="mt-2 overflow-x-auto text-xs text-muted-foreground"><code
+							>&lt;CORSConfiguration&gt;
+  &lt;CORSRule&gt;
+    &lt;AllowedOrigin&gt;https://your-frontend.com&lt;/AllowedOrigin&gt;
+    &lt;AllowedMethod&gt;GET&lt;/AllowedMethod&gt;
+    &lt;AllowedMethod&gt;PUT&lt;/AllowedMethod&gt;
+    &lt;AllowedHeader&gt;*&lt;/AllowedHeader&gt;
+    &lt;ExposeHeader&gt;ETag&lt;/ExposeHeader&gt;
+  &lt;/CORSRule&gt;
+&lt;/CORSConfiguration&gt;</code
+						></pre>
+					<p class="mt-1 text-xs text-muted-foreground">
+						Presigned multipart uploads require <strong>PUT</strong> in AllowedMethods and
+						<strong>ETag</strong> in ExposeHeaders. Without this, browser uploads directly to HCP will
+						fail.
+					</p>
+				</details>
 			</div>
 		</Card.Content>
 		<Card.Footer class="gap-3">
