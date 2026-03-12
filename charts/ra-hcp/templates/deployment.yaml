@@ -76,7 +76,7 @@ spec:
               value: {{ .Values.opentelemetry.headers | quote }}
             {{- end }}
             {{- end }}
-            {{- if and .Values.redis.enabled (not (index .Values.env "REDIS_URL")) }}
+            {{- if and .Values.redis.enabled (not (hasKey .Values.env "REDIS_URL")) }}
             - name: REDIS_URL
               value: "redis://{{ include "ra-hcp.redisFullname" . }}:{{ .Values.redis.port }}/0"
             {{- end }}

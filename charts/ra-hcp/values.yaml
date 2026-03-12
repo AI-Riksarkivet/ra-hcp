@@ -39,7 +39,6 @@ env:
   HCP_AUTH_TYPE: "hcp"
   HCP_VERIFY_SSL: "false"
   HCP_TIMEOUT: "60"
-  REDIS_URL: ""
   CACHE_DEFAULT_TTL: "300"
   CACHE_STATS_TTL: "60"
   CACHE_CONFIG_TTL: "600"
@@ -71,7 +70,7 @@ frontend:
   replicaCount: 1
   service:
     type: ClusterIP
-    port: 3000
+    port: 5174
     targetPort: 8000
   resources: {}
     # limits:

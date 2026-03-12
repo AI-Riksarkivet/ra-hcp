@@ -8,7 +8,7 @@ export PATH := $(HOME)/.deno/bin:$(PATH)
         fmt lint quality \
         run-api run-api-mock \
         frontend-dev frontend-build storybook build-storybook \
-        checks test test-integration full-serve build
+        checks test test-integration serve-backend serve-frontend full-serve build
 
 ## help: list available targets
 help:
@@ -100,9 +100,17 @@ test:
 test-integration:
 	dagger call test-integration --source=.
 
-## full-serve: start full stack (backend + frontend + Redis) in Dagger
+## serve-backend: start backend + Redis in Dagger on :8000
+serve-backend:
+	dagger call serve --source=. up --ports 8000:8000
+
+## serve-frontend: start frontend + backend + Redis in Dagger on :5174
+serve-frontend:
+	dagger call serve-frontend --source=. up --ports 5174:5174
+
+## full-serve: start full stack in Dagger — backend on :8000, frontend on :5174
 full-serve:
-	dagger call serve-all --source=. up --ports 8000:8000
+	dagger call serve-all --source=. up --ports 8000:8000 --ports 5174:5174
 
 ## build: build backend and frontend containers in Dagger
 build:

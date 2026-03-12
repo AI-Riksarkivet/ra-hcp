@@ -31,7 +31,7 @@ services:
       context: ..
       dockerfile: .docker/frontend.dockerfile
     ports:
-      - "3000:8000"
+      - "5174:8000"
     environment:
       BACKEND_URL: http://backend:8000
     depends_on:

@@ -13,9 +13,16 @@ ra-hcp has been deployed!
   NOTE: It may take a few minutes for the LoadBalancer IP to be available.
   kubectl get --namespace {{ .Release.Namespace }} svc {{ include "ra-hcp.fullname" . }} -w
 {{- else }}
+  Backend:
   kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "ra-hcp.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
   echo "API docs: http://127.0.0.1:{{ .Values.service.port }}/docs"
   echo "Health:   http://127.0.0.1:{{ .Values.service.port }}/health"
+{{- if .Values.frontend.enabled }}
+
+  Frontend:
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "ra-hcp.frontendFullname" . }} {{ .Values.frontend.service.port }}:{{ .Values.frontend.service.port }}
+  echo "Frontend: http://127.0.0.1:{{ .Values.frontend.service.port }}"
+{{- end }}
 {{- end }}
 
 2. Check the health endpoint:
