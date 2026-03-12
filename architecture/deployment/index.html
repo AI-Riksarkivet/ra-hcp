@@ -873,6 +873,106 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Production Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health-probes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Health Probes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-isolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Isolation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Isolation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-stack-per-hcp-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One Stack Per HCP Domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-isolate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Isolate?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deploying-multiple-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deploying Multiple Environments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-production-values-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Production values file
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-hardening-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Hardening Checklist
+      
+    </span>
+  </a>
+  
 </li>
       
     </ul>
@@ -1590,6 +1690,106 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Production Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scaling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health-probes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Health Probes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-isolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Isolation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Isolation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#one-stack-per-hcp-domain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One Stack Per HCP Domain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-isolate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Isolate?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deploying-multiple-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deploying Multiple Environments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-production-values-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Production values file
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-hardening-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Hardening Checklist
+      
+    </span>
+  </a>
+  
 </li>
       
     </ul>
@@ -1807,18 +2007,39 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
 <span class="w">  </span>--set<span class="w"> </span>env.HCP_DOMAIN<span class="o">=</span>hcp.example.com
 </code></pre></div>
 <h2 id="production-architecture">Production Architecture<a class="headerlink" href="#production-architecture" title="Permanent link">&para;</a></h2>
-<pre class="mermaid"><code>graph LR
-    subgraph "Docker / Production"
-        FE2["Frontend&lt;br/&gt;SvelteKit + Node"]
-        BE["Backend&lt;br/&gt;FastAPI + uvicorn"]
-        RD["Redis&lt;br/&gt;(optional)"]
+<p>A production deployment consists of a frontend, a backend, an optional Redis cache, and the HCP system it manages. A load balancer or ingress controller sits in front and routes traffic.</p>
+<pre class="mermaid"><code>graph TB
+    USERS["Users"]
+
+    subgraph "Kubernetes Cluster"
+        ING["Ingress / Load Balancer"]
+
+        subgraph "Frontend Pods"
+            FE1["Frontend #1&lt;br/&gt;SvelteKit + Deno"]
+            FE2["Frontend #2&lt;br/&gt;SvelteKit + Deno"]
+        end
+
+        subgraph "Backend Pods"
+            BE1["Backend #1&lt;br/&gt;FastAPI + uvicorn"]
+            BE2["Backend #2&lt;br/&gt;FastAPI + uvicorn"]
+            BE3["Backend #3&lt;br/&gt;FastAPI + uvicorn"]
+        end
+
+        REDIS["Redis&lt;br/&gt;Shared cache"]
     end
 
-    LB["Load Balancer /&lt;br/&gt;Reverse Proxy"] --&gt; FE2
-    LB --&gt; BE
-    BE --&gt; RD
-    BE --&gt; HCP2["HCP System"]
-    BE --&gt; S3E["HCP S3 Endpoint"]</code></pre>
+    HCP["HCP System&lt;br/&gt;MAPI :9090 + S3 :443"]
+
+    USERS --&gt; ING
+    ING --&gt;|"/ (UI traffic)"| FE1
+    ING --&gt;|"/ (UI traffic)"| FE2
+    ING --&gt;|"/api/* (API traffic)"| BE1
+    ING --&gt;|"/api/* (API traffic)"| BE2
+    ING --&gt;|"/api/* (API traffic)"| BE3
+
+    FE1 &amp; FE2 --&gt; BE1 &amp; BE2 &amp; BE3
+    BE1 &amp; BE2 &amp; BE3 &lt;--&gt; REDIS
+    BE1 &amp; BE2 &amp; BE3 --&gt; HCP</code></pre>
 <table>
 <thead>
 <tr>
@@ -1831,7 +2052,7 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
 <tr>
 <td>Frontend</td>
 <td>SvelteKit 2 + Svelte 5, Deno</td>
-<td>5173 (dev)</td>
+<td>5173 (dev), 8000 (container)</td>
 </tr>
 <tr>
 <td>Backend</td>
@@ -1860,6 +2081,238 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
 </tr>
 </tbody>
 </table>
+<h3 id="scaling">Scaling<a class="headerlink" href="#scaling" title="Permanent link">&para;</a></h3>
+<p>Both frontend and backend are <strong>stateless</strong> and can be horizontally scaled by adding replicas:</p>
+<ul>
+<li><strong>Frontend</strong>: Each replica runs SvelteKit with SSR. No shared state — any request can go to any replica. Scale when you have many concurrent browser sessions.</li>
+<li><strong>Backend</strong>: Each replica runs FastAPI with uvicorn. All replicas connect to the same Redis and HCP system. Scale when API throughput needs increase or HCP response times are high.</li>
+<li><strong>Redis</strong>: Runs as a single instance. All backend replicas share it, so a cache fill from one replica is available to all others. For most deployments, a single Redis instance is sufficient.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="c1"># Scale backend to 5 replicas</span>
+kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span class="w"> </span>ra-hcp<span class="w"> </span>--replicas<span class="o">=</span><span class="m">5</span>
+
+<span class="c1"># Scale frontend to 3 replicas</span>
+kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span class="w"> </span>ra-hcp-frontend<span class="w"> </span>--replicas<span class="o">=</span><span class="m">3</span>
+</code></pre></div>
+<h3 id="health-probes">Health Probes<a class="headerlink" href="#health-probes" title="Permanent link">&para;</a></h3>
+<p>The backend exposes health endpoints for Kubernetes liveness and readiness probes:</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Purpose</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /healthz</code></td>
+<td>Liveness probe</td>
+<td>Always returns 200 — the process is alive</td>
+</tr>
+<tr>
+<td><code>GET /readyz</code></td>
+<td>Readiness probe</td>
+<td>Checks HCP MAPI reachability and Redis connectivity</td>
+</tr>
+<tr>
+<td><code>GET /health</code></td>
+<td>Legacy</td>
+<td>Returns cache status</td>
+</tr>
+</tbody>
+</table>
+<p>The Helm chart configures these probes automatically. A backend pod that can't reach HCP is marked unready and removed from the load balancer until connectivity is restored.</p>
+<h2 id="environment-isolation">Environment Isolation<a class="headerlink" href="#environment-isolation" title="Permanent link">&para;</a></h2>
+<h3 id="one-stack-per-hcp-domain">One Stack Per HCP Domain<a class="headerlink" href="#one-stack-per-hcp-domain" title="Permanent link">&para;</a></h3>
+<p>Each environment (development, acceptance, production) gets its <strong>own isolated deployment</strong>: its own frontend, backend, Redis, and HCP domain configuration. Environments never share components or cross-connect.</p>
+<pre class="mermaid"><code>graph TB
+    subgraph "Development (dev.hcp.example.com)"
+        direction LR
+        FE_D["Frontend&lt;br/&gt;1 replica"] --&gt; BE_D["Backend&lt;br/&gt;1 replica"]
+        BE_D --&gt; RD_D["Redis"]
+        BE_D --&gt; HCP_D["HCP Dev"]
+    end
+
+    subgraph "Acceptance (acc.hcp.example.com)"
+        direction LR
+        FE_A["Frontend&lt;br/&gt;1 replica"] --&gt; BE_A["Backend&lt;br/&gt;2 replicas"]
+        BE_A --&gt; RD_A["Redis"]
+        BE_A --&gt; HCP_A["HCP Acc"]
+    end
+
+    subgraph "Production (hcp.example.com)"
+        direction LR
+        FE_P["Frontend&lt;br/&gt;2 replicas"] --&gt; BE_P["Backend&lt;br/&gt;5 replicas"]
+        BE_P --&gt; RD_P["Redis"]
+        BE_P --&gt; HCP_P["HCP Prod"]
+    end
+
+    style Development fill:#e8f4e8,stroke:#4a4
+    style Acceptance fill:#fff3e0,stroke:#f90
+    style Production fill:#fce4ec,stroke:#c33</code></pre>
+<p>The <strong>1:1 relationship</strong> between a deployment and an HCP domain is enforced by design: the <code>HCP_DOMAIN</code> environment variable is set at startup and determines which HCP system the backend communicates with. There is no runtime domain switching.</p>
+<h3 id="why-isolate">Why Isolate?<a class="headerlink" href="#why-isolate" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>How isolation helps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Data safety</strong></td>
+<td>A dev frontend can never reach prod data — the backend only knows its configured domain</td>
+</tr>
+<tr>
+<td><strong>Independent lifecycle</strong></td>
+<td>Upgrade acceptance while production stays on the current version</td>
+</tr>
+<tr>
+<td><strong>Independent scaling</strong></td>
+<td>Production runs 5 backend replicas; development runs 1</td>
+</tr>
+<tr>
+<td><strong>Blast radius</strong></td>
+<td>A misconfiguration in dev cannot affect prod</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Clear audit trail — each environment has its own logs, traces, and cache</td>
+</tr>
+</tbody>
+</table>
+<h3 id="deploying-multiple-environments">Deploying Multiple Environments<a class="headerlink" href="#deploying-multiple-environments" title="Permanent link">&para;</a></h3>
+<p>Use separate Helm releases with environment-specific values files:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Development — minimal resources, mock-friendly</span>
+helm<span class="w"> </span>install<span class="w"> </span>hcp-dev<span class="w"> </span>charts/helm-ra-hcp-v0.1.0<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-n<span class="w"> </span>hcp-dev<span class="w"> </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-f<span class="w"> </span>values-dev.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.HCP_DOMAIN<span class="o">=</span>dev.hcp.example.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>secret.API_SECRET_KEY<span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets; print(secrets.token_urlsafe(64))&quot;</span><span class="k">)</span>
+
+<span class="c1"># Acceptance — moderate resources, SSL enabled</span>
+helm<span class="w"> </span>install<span class="w"> </span>hcp-acc<span class="w"> </span>charts/helm-ra-hcp-v0.1.0<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-n<span class="w"> </span>hcp-acc<span class="w"> </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-f<span class="w"> </span>values-acc.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.HCP_DOMAIN<span class="o">=</span>acc.hcp.example.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.HCP_VERIFY_SSL<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>secret.API_SECRET_KEY<span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets; print(secrets.token_urlsafe(64))&quot;</span><span class="k">)</span>
+
+<span class="c1"># Production — full resources, all security features</span>
+helm<span class="w"> </span>install<span class="w"> </span>hcp-prod<span class="w"> </span>charts/helm-ra-hcp-v0.1.0<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-n<span class="w"> </span>hcp-prod<span class="w"> </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-f<span class="w"> </span>values-prod.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.HCP_DOMAIN<span class="o">=</span>hcp.example.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.HCP_VERIFY_SSL<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.CORS_ORIGINS<span class="o">=</span>https://hcp-ui.example.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>secret.API_SECRET_KEY<span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets; print(secrets.token_urlsafe(64))&quot;</span><span class="k">)</span>
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Use Kubernetes namespaces</p>
+<p>Deploy each environment to its own namespace (<code>hcp-dev</code>, <code>hcp-acc</code>, <code>hcp-prod</code>). This provides network isolation, independent RBAC, and clean resource accounting.</p>
+</div>
+<h3 id="example-production-values-file">Example: Production values file<a class="headerlink" href="#example-production-values-file" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># values-prod.yaml</span>
+<span class="nt">replicaCount</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+
+<span class="nt">frontend</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">  </span><span class="nt">replicaCount</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+
+<span class="nt">redis</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="nt">ingress</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">  </span><span class="nt">className</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nginx</span>
+<span class="w">  </span><span class="nt">hosts</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-ui.example.com</span>
+<span class="w">      </span><span class="nt">paths</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/api</span>
+<span class="w">          </span><span class="nt">pathType</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Prefix</span>
+<span class="w">          </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/</span>
+<span class="w">          </span><span class="nt">pathType</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Prefix</span>
+<span class="w">          </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span>
+<span class="w">  </span><span class="nt">tls</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">secretName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-tls</span>
+<span class="w">      </span><span class="nt">hosts</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-ui.example.com</span>
+
+<span class="nt">env</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">HCP_DOMAIN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp.example.com</span>
+<span class="w">  </span><span class="nt">HCP_VERIFY_SSL</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
+<span class="w">  </span><span class="nt">CORS_ORIGINS</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://hcp-ui.example.com&quot;</span>
+
+<span class="nt">resources</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">requests</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;256Mi&quot;</span>
+<span class="w">    </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;250m&quot;</span>
+<span class="w">  </span><span class="nt">limits</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;512Mi&quot;</span>
+<span class="w">    </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1000m&quot;</span>
+</code></pre></div>
+<h2 id="security-hardening-checklist">Security Hardening Checklist<a class="headerlink" href="#security-hardening-checklist" title="Permanent link">&para;</a></h2>
+<p>Before going to production, verify these settings:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>What to check</th>
+<th>Risk if skipped</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>API_SECRET_KEY</code></td>
+<td>Set to a unique, random 64+ character value per environment</td>
+<td>JWTs can be forged — full admin access</td>
+</tr>
+<tr>
+<td><code>HCP_VERIFY_SSL</code></td>
+<td>Set to <code>true</code> in production</td>
+<td>Man-in-the-middle attacks on HCP communication</td>
+</tr>
+<tr>
+<td><code>CORS_ORIGINS</code></td>
+<td>Set to your specific frontend URL(s)</td>
+<td>Cross-origin requests from malicious sites</td>
+</tr>
+<tr>
+<td>Container security</td>
+<td>Verify <code>runAsNonRoot: true</code>, <code>readOnlyRootFilesystem: true</code>, <code>drop: ALL</code></td>
+<td>Container escape or privilege escalation</td>
+</tr>
+<tr>
+<td>Redis network</td>
+<td>Redis should only be accessible from backend pods (ClusterIP service)</td>
+<td>Cache data exposure</td>
+</tr>
+<tr>
+<td>Kubernetes namespace</td>
+<td>Each environment in its own namespace with network policies</td>
+<td>Cross-environment access</td>
+</tr>
+<tr>
+<td>Ingress TLS</td>
+<td>Terminate TLS at the ingress with a valid certificate</td>
+<td>Traffic interception</td>
+</tr>
+<tr>
+<td>HCP credentials</td>
+<td>Use dedicated service accounts, not personal admin accounts</td>
+<td>Over-privileged access, no audit trail</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">The default <code>API_SECRET_KEY</code> is <code>change-me-in-production</code></p>
+<p>This is intentionally insecure for local development. <strong>You must change it</strong> in any non-local deployment. Generate a secure key with:</p>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets; print(secrets.token_urlsafe(64))&quot;</span>
+</code></pre></div>
+</div>
 
 
 
