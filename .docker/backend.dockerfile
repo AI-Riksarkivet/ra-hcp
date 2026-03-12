@@ -5,11 +5,11 @@ WORKDIR /app
 
 # Install dependencies first (cache-friendly)
 COPY backend/pyproject.toml backend/uv.lock ./
-RUN uv sync --frozen --no-install-project --extra serve
+RUN uv sync --frozen --no-install-project --extra serve --extra lance
 
 # Copy application code
 COPY backend/ .
-RUN uv sync --frozen --extra serve
+RUN uv sync --frozen --extra serve --extra lance
 
 # ── Production stage ─────────────────────────────────────────────────
 FROM python:3.13-slim

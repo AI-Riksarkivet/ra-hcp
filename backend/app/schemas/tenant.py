@@ -120,6 +120,12 @@ class Recipient(BaseModel):
     type: Optional[str] = "GENERAL"
 
 
+class RecipientList(BaseModel):
+    """HCP-style wrapper: ``{"recipient": [...]}``."""
+
+    recipient: Optional[List[Recipient]] = None
+
+
 class EmailNotification(BaseModel):
     """Email notification configuration for a tenant."""
 
@@ -127,7 +133,7 @@ class EmailNotification(BaseModel):
 
     enabled: Optional[bool] = None
     emailTemplate: Optional[EmailTemplate] = None
-    recipients: Optional[List[Recipient]] = None
+    recipients: Optional[RecipientList] = None
 
 
 # ── Search Security ──────────────────────────────────────────────────

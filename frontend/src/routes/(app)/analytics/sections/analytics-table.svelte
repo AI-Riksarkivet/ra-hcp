@@ -159,7 +159,10 @@
 			query_type: searchType,
 			vector_column: activeVectorCol || undefined,
 			limit: 20,
-			weight: searchType === 'hybrid' ? hybridWeight[0] / 100 : undefined,
+			weight:
+				searchType === 'hybrid' && Number.isFinite(hybridWeight[0])
+					? hybridWeight[0] / 100
+					: undefined,
 		});
 
 		// The remote function is reactive -- poll until result arrives

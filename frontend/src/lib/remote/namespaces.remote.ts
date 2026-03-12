@@ -110,7 +110,12 @@ export const create_namespace = command(
       const err = await res.json().catch(() => ({
         detail: "Failed to create namespace",
       }));
-      throw new Error(err.detail);
+      const detail = typeof err.detail === "string"
+        ? err.detail
+        : Array.isArray(err.detail)
+        ? err.detail.map((e: { msg?: string }) => e.msg).join("; ")
+        : JSON.stringify(err.detail);
+      throw new Error(detail);
     }
   },
 );

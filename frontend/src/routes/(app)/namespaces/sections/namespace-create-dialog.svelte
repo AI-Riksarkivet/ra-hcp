@@ -23,7 +23,7 @@
 	let creating = $state(false);
 	let createHashScheme = $state('SHA-256');
 	let createTags = $state<string[]>([]);
-	let createOptimizedFor = $state('cloud');
+	let createOptimizedFor = $state('CLOUD');
 	let versioningEnabled = $state(false);
 	let keepDeletionRecords = $state(false);
 
@@ -62,7 +62,7 @@
 			open = false;
 			createTags = [];
 			form.reset();
-			createOptimizedFor = 'cloud';
+			createOptimizedFor = 'CLOUD';
 			versioningEnabled = false;
 			keepDeletionRecords = false;
 		} catch (err) {
@@ -127,8 +127,8 @@
 				class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
 				bind:value={createOptimizedFor}
 			>
-				<option value="cloud">Cloud</option>
-				<option value="default">Default</option>
+				<option value="CLOUD">Cloud</option>
+				<option value="ALL">All</option>
 			</select>
 			<p class="text-xs text-muted-foreground">Cannot be changed after creation.</p>
 		</div>
