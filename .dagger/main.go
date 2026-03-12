@@ -13,8 +13,12 @@ const (
 	uvPythonImage = "ghcr.io/astral-sh/uv:0.10.9-python3.13-trixie-slim"
 	denoImage     = "denoland/deno:2.7.1"
 	redisImage    = "redis:8.0.1-alpine"
+	minioImage    = "minio/minio:latest"
 	backendDir    = "backend"
 	frontendDir   = "frontend"
+
+	minioRootUser     = "minioadmin"
+	minioRootPassword = "minioadmin123"
 )
 
 type RaHcp struct{}
@@ -46,5 +50,16 @@ func (m *RaHcp) buildFrontendDev(source *dagger.Directory) *dagger.Container {
 func (m *RaHcp) redis() *dagger.Service {
 	return dag.Container().From(redisImage).
 		WithExposedPort(6379).
+		AsService()
+}
+
+// minio returns a MinIO service with a single default bucket.
+func (m *RaHcp) minio() *dagger.Service {
+	return dag.Container().From(minioImage).
+		WithEnvVariable("MINIO_ROOT_USER", minioRootUser).
+		WithEnvVariable("MINIO_ROOT_PASSWORD", minioRootPassword).
+		WithExposedPort(9000).
+		WithExposedPort(9001).
+		WithExec([]string{"minio", "server", "/data", "--console-address", ":9001"}).
 		AsService()
 }
