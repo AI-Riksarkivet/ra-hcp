@@ -707,6 +707,46 @@ export const delete_object_version = command(
 
 // ── Multipart Upload ───────────────────────────────────────────────
 
+export const presign_multipart_upload = command(
+  z.object({
+    bucket: z.string(),
+    key: z.string(),
+    file_size: z.number().positive(),
+    part_size: z.number().optional(),
+    expires_in: z.number().optional(),
+  }),
+  async ({ bucket, key, file_size, part_size, expires_in }) => {
+    const body: Record<string, unknown> = { file_size };
+    if (part_size != null) body.part_size = part_size;
+    if (expires_in != null) body.expires_in = expires_in;
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/multipart/${
+        encodeURIComponent(key)
+      }/presign`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to generate presigned multipart URLs",
+      }));
+      throw new Error(err.detail);
+    }
+    return (await res.json()) as {
+      bucket: string;
+      key: string;
+      upload_id: string;
+      part_size: number;
+      total_parts: number;
+      urls: { part_number: number; url: string }[];
+      expires_in: number;
+    };
+  },
+);
+
 export const create_multipart_upload = command(
   z.object({ bucket: z.string(), key: z.string() }),
   async ({ bucket, key }) => {

@@ -105,3 +105,82 @@ async def test_list_parts(
     assert body["parts"][0]["PartNumber"] == 1
     assert body["upload_id"] == "upload-123"
     assert body["is_truncated"] is False
+
+
+# ── Presigned multipart tests ────────────────────────────────────────
+
+
+async def test_presigned_multipart_upload(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """Presign endpoint returns correct URLs and part count."""
+    mock_s3_service.create_multipart_upload.return_value = {
+        "Bucket": "my-bucket",
+        "Key": "big-file.bin",
+        "UploadId": "upload-456",
+    }
+    mock_s3_service.generate_presigned_url.return_value = (
+        "https://s3.example.com/presigned?sig=abc"
+    )
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/multipart/big-file.bin/presign",
+        headers=auth_headers,
+        json={"file_size": 50 * 1024 * 1024, "part_size": 25 * 1024 * 1024},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["upload_id"] == "upload-456"
+    assert body["total_parts"] == 2
+    assert len(body["urls"]) == 2
+    assert body["urls"][0]["part_number"] == 1
+    assert body["urls"][1]["part_number"] == 2
+    assert body["part_size"] == 25 * 1024 * 1024
+
+
+async def test_presigned_multipart_default_part_size(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """Default part size is 25 MB when not specified."""
+    mock_s3_service.create_multipart_upload.return_value = {
+        "Bucket": "my-bucket",
+        "Key": "file.bin",
+        "UploadId": "upload-789",
+    }
+    mock_s3_service.generate_presigned_url.return_value = "https://s3.example.com/p"
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/multipart/file.bin/presign",
+        headers=auth_headers,
+        json={"file_size": 75 * 1024 * 1024},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["part_size"] == 25 * 1024 * 1024
+    assert body["total_parts"] == 3
+
+
+async def test_presigned_multipart_invalid_file_size(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """file_size=0 returns 422 validation error."""
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/multipart/file.bin/presign",
+        headers=auth_headers,
+        json={"file_size": 0},
+    )
+    assert resp.status_code == 422
+
+
+async def test_presigned_multipart_too_many_parts(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """Returns 400 when file_size/part_size exceeds 10,000 parts."""
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/multipart/file.bin/presign",
+        headers=auth_headers,
+        json={
+            "file_size": 100 * 1024 * 1024 * 1024,  # 100 GB
+            "part_size": 5 * 1024 * 1024,  # 5 MB → 20,000+ parts
+        },
+    )
+    assert resp.status_code == 400
+    assert "Too many parts" in resp.json()["detail"]

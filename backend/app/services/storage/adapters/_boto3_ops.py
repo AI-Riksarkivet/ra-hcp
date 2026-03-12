@@ -326,15 +326,19 @@ class Boto3Operations:
         key: str,
         expires_in: int = 3600,
         method: str = "get_object",
+        extra_params: dict[str, str | int] | None = None,
     ) -> str:
         with tracer.start_as_current_span(
             "s3.generate_presigned_url",
             attributes={"s3.bucket": bucket, "s3.key": key, "s3.method": method},
         ):
             try:
+                params: dict[str, Any] = {"Bucket": bucket, "Key": key}
+                if extra_params:
+                    params.update(extra_params)
                 return self._client.generate_presigned_url(
                     method,
-                    Params={"Bucket": bucket, "Key": key},
+                    Params=params,
                     ExpiresIn=expires_in,
                 )
             except ClientError as exc:
@@ -552,8 +556,11 @@ class Boto3Forwarder:
         key: str,
         expires_in: int = 3600,
         method: str = "get_object",
+        extra_params: dict[str, str | int] | None = None,
     ) -> str:
-        return self._ops.generate_presigned_url(bucket, key, expires_in, method)
+        return self._ops.generate_presigned_url(
+            bucket, key, expires_in, method, extra_params
+        )
 
     # -- Multipart uploads --------------------------------------------------
 

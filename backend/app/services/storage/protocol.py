@@ -93,6 +93,7 @@ class StorageProtocol(Protocol):
         key: str,
         expires_in: int = 3600,
         method: str = "get_object",
+        extra_params: dict[str, str | int] | None = None,
     ) -> str: ...
 
     # ── Multipart uploads ────────────────────────────────────────────

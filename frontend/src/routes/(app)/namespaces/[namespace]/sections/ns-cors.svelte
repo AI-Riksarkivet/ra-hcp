@@ -33,7 +33,7 @@
 <CorsEditor
 	corsXml={cors.cors ?? ''}
 	{loading}
-	description="Cross-Origin Resource Sharing rules controlling which external origins can access this namespace. Overrides the tenant-level CORS configuration."
+	description="Cross-Origin Resource Sharing rules controlling which external origins can access this namespace. For presigned multipart uploads, ensure PUT is in AllowedMethods and ETag is in ExposeHeaders. Overrides the tenant-level CORS configuration."
 	onsave={handleSave}
 	ondelete={handleDelete}
 />

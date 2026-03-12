@@ -7,6 +7,7 @@ import io
 import logging
 from datetime import datetime, timezone
 from typing import IO, Any, Dict, List, Optional
+from urllib.parse import quote, urlencode
 
 
 class _StoredObject:
@@ -36,6 +37,9 @@ class MockS3Service:
         self._bucket_acls: Dict[str, Dict[str, Any]] = {}
         # (bucket, key) -> ACL dict
         self._object_acls: Dict[tuple, Dict[str, Any]] = {}
+        # Multipart uploads: upload_id -> {bucket, key, parts: {part_num: bytes}}
+        self._multipart_uploads: Dict[str, Dict[str, Any]] = {}
+        self._upload_counter: int = 0
         # Cross-reference to MAPI state for namespace ↔ bucket sync
         self._mapi_state: Any = None
         # Default tenant for namespace sync (set during init)
@@ -370,6 +374,7 @@ class MockS3Service:
         key: str,
         expires_in: int = 3600,
         method: str = "get_object",
+        extra_params: dict[str, str | int] | None = None,
     ) -> str:
         self._logger.info(
             "generate_presigned_url bucket=%s key=%s method=%s expires_in=%d",
@@ -378,11 +383,154 @@ class MockS3Service:
             method,
             expires_in,
         )
-        self._require_object(bucket, key)
-        from urllib.parse import quote
-
+        self._require_bucket(bucket)
+        # Only require existing object for read operations
+        if method == "get_object":
+            self._require_object(bucket, key)
         encoded_key = quote(key, safe="")
-        return f"http://localhost:8000/presigned/{quote(bucket, safe='')}/{encoded_key}?method={method}&expires_in={expires_in}"
+        qs_params: dict[str, str] = {
+            "method": method,
+            "expires_in": str(expires_in),
+        }
+        if extra_params:
+            for k, v in extra_params.items():
+                qs_params[k] = str(v)
+        return f"http://localhost:8000/presigned/{quote(bucket, safe='')}/{encoded_key}?{urlencode(qs_params)}"
+
+    # ── Multipart uploads ────────────────────────────────────────────
+
+    def _require_upload(self, upload_id: str) -> dict[str, Any]:
+        upload = self._multipart_uploads.get(upload_id)
+        if upload is None:
+            from botocore.exceptions import ClientError
+
+            raise ClientError(
+                {
+                    "Error": {
+                        "Code": "NoSuchUpload",
+                        "Message": f"Upload ID '{upload_id}' does not exist",
+                    },
+                    "ResponseMetadata": {"HTTPStatusCode": 404},
+                },
+                "ListParts",
+            )
+        return upload
+
+    def create_multipart_upload(self, bucket: str, key: str) -> dict:
+        self._logger.info("create_multipart_upload bucket=%s key=%s", bucket, key)
+        self._require_bucket(bucket)
+        self._upload_counter += 1
+        upload_id = f"mock-upload-{self._upload_counter}"
+        self._multipart_uploads[upload_id] = {
+            "bucket": bucket,
+            "key": key,
+            "parts": {},
+        }
+        return {"Bucket": bucket, "Key": key, "UploadId": upload_id}
+
+    def upload_part(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        part_number: int,
+        body: IO[bytes],
+    ) -> dict:
+        self._logger.info(
+            "upload_part bucket=%s key=%s upload_id=%s part=%d",
+            bucket,
+            key,
+            upload_id,
+            part_number,
+        )
+        self._require_bucket(bucket)
+        upload = self._require_upload(upload_id)
+        data = body.read()
+        etag = f'"{hashlib.md5(data).hexdigest()}"'
+        upload["parts"][part_number] = {"data": data, "etag": etag}
+        return {"ETag": etag}
+
+    def complete_multipart_upload(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        parts: List[dict],
+    ) -> dict:
+        self._logger.info(
+            "complete_multipart_upload bucket=%s key=%s upload_id=%s",
+            bucket,
+            key,
+            upload_id,
+        )
+        self._require_bucket(bucket)
+        upload = self._require_upload(upload_id)
+        # Assemble parts in order
+        assembled = b""
+        for part in sorted(parts, key=lambda p: p["PartNumber"]):
+            pn = part["PartNumber"]
+            if pn not in upload["parts"]:
+                from botocore.exceptions import ClientError
+
+                raise ClientError(
+                    {
+                        "Error": {
+                            "Code": "InvalidPart",
+                            "Message": f"Part {pn} not found",
+                        },
+                        "ResponseMetadata": {"HTTPStatusCode": 400},
+                    },
+                    "CompleteMultipartUpload",
+                )
+            assembled += upload["parts"][pn]["data"]
+
+        self._objects[bucket][key] = _StoredObject(assembled)
+        del self._multipart_uploads[upload_id]
+        return {
+            "Bucket": bucket,
+            "Key": key,
+            "ETag": self._objects[bucket][key].etag,
+        }
+
+    def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict:
+        self._logger.info(
+            "abort_multipart_upload bucket=%s key=%s upload_id=%s",
+            bucket,
+            key,
+            upload_id,
+        )
+        self._require_bucket(bucket)
+        self._require_upload(upload_id)
+        del self._multipart_uploads[upload_id]
+        return {}
+
+    def list_parts(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        max_parts: int = 1000,
+    ) -> dict:
+        self._logger.info(
+            "list_parts bucket=%s key=%s upload_id=%s", bucket, key, upload_id
+        )
+        self._require_bucket(bucket)
+        upload = self._require_upload(upload_id)
+        parts_list = []
+        for pn in sorted(upload["parts"].keys())[:max_parts]:
+            part_data = upload["parts"][pn]
+            parts_list.append(
+                {
+                    "PartNumber": pn,
+                    "ETag": part_data["etag"],
+                    "Size": len(part_data["data"]),
+                    "LastModified": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+        return {
+            "Parts": parts_list,
+            "IsTruncated": len(upload["parts"]) > max_parts,
+        }
 
 
 # ── Seed data ────────────────────────────────────────────────────────

@@ -41,12 +41,19 @@ class StorageOperationNotSupported(StorageError):
 _CLIENT_ERROR_STATUS: dict[str, int] = {
     "NoSuchBucket": 404,
     "NoSuchKey": 404,
+    "NoSuchUpload": 404,
     "BucketNotEmpty": 409,
     "BucketAlreadyExists": 409,
     "BucketAlreadyOwnedByYou": 409,
     "AccessDenied": 403,
     "InvalidBucketName": 400,
     "InvalidArgument": 400,
+    "InvalidPart": 400,
+    "EntityTooSmall": 400,
+    "InvalidPartOrder": 400,
+    "RequestTimeout": 408,
+    "SlowDown": 503,
+    "ServiceUnavailable": 503,
 }
 
 

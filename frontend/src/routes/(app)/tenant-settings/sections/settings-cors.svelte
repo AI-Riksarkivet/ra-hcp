@@ -36,7 +36,7 @@
 <CorsEditor
 	corsXml={cors.cors ?? ''}
 	{loading}
-	description="Tenant-wide Cross-Origin Resource Sharing rules for browser-based S3 access. Namespace-level CORS overrides these defaults."
+	description="Tenant-wide Cross-Origin Resource Sharing rules for browser-based S3 access. For presigned multipart uploads, ensure PUT is in AllowedMethods and ETag is in ExposeHeaders. Namespace-level CORS overrides these defaults."
 	onsave={handleSave}
 	ondelete={handleDelete}
 	skeleton={skeletonSnippet}

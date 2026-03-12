@@ -1,12 +1,14 @@
 """S3 multipart upload endpoints.
 
-Route ordering: specific suffix routes (/complete, /abort, /parts) must
-come before the {key:path} catch-all routes to avoid being swallowed.
+Route ordering: specific suffix routes (/presign, /complete, /abort, /parts)
+must come before the {key:path} catch-all routes to avoid being swallowed.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+import math
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 
 from app.api.dependencies import get_s3_service
 from app.api.errors import run_storage
@@ -18,6 +20,9 @@ from app.schemas.s3 import (
     CreateMultipartUploadResponse,
     ListPartsResponse,
     PartInfo,
+    PresignedMultipartRequest,
+    PresignedMultipartResponse,
+    PresignedPartUrl,
     UploadPartResponse,
 )
 from app.services.storage import StorageProtocol
@@ -96,6 +101,59 @@ async def list_parts(
         upload_id=upload_id,
         parts=parts,
         is_truncated=result.get("IsTruncated", False),
+    )
+
+
+@router.post("/{key:path}/presign", response_model=PresignedMultipartResponse)
+async def presign_multipart_upload(
+    bucket: str,
+    key: str,
+    body: PresignedMultipartRequest,
+    s3: StorageProtocol = Depends(get_s3_service),
+):
+    """Generate presigned URLs for direct-to-storage multipart upload.
+
+    The browser uploads parts directly to HCP/S3 using the presigned URLs,
+    bypassing the backend for data transfer. The backend only handles
+    metadata operations (create, presign, complete, abort).
+
+    **CORS requirement:** The target HCP namespace must have CORS configured:
+    - ``PUT`` must be in ``AllowedMethods``
+    - ``ETag`` must be in ``ExposeHeaders``
+    """
+    total_parts = math.ceil(body.file_size / body.part_size)
+    if total_parts > 10_000:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many parts ({total_parts}). Increase part_size or reduce file_size. S3 maximum is 10,000 parts.",
+        )
+
+    result = await run_storage(
+        s3.create_multipart_upload, f"object '{key}'", bucket, key
+    )
+    upload_id = result["UploadId"]
+
+    urls: list[PresignedPartUrl] = []
+    for i in range(1, total_parts + 1):
+        url = await run_storage(
+            s3.generate_presigned_url,
+            f"presign part {i}",
+            bucket,
+            key,
+            body.expires_in,
+            "upload_part",
+            {"UploadId": upload_id, "PartNumber": i},
+        )
+        urls.append(PresignedPartUrl(part_number=i, url=url))
+
+    return PresignedMultipartResponse(
+        bucket=bucket,
+        key=key,
+        upload_id=upload_id,
+        part_size=body.part_size,
+        total_parts=total_parts,
+        urls=urls,
+        expires_in=body.expires_in,
     )
 
 

@@ -91,11 +91,12 @@
 				<Textarea
 					id="cors-xml"
 					class="min-h-[120px] font-mono"
-					placeholder="<CORSConfiguration>&#10;  <CORSRule>&#10;    <AllowedOrigin>*</AllowedOrigin>&#10;    <AllowedMethod>GET</AllowedMethod>&#10;  </CORSRule>&#10;</CORSConfiguration>"
+					placeholder="<CORSConfiguration>&#10;  <CORSRule>&#10;    <AllowedOrigin>*</AllowedOrigin>&#10;    <AllowedMethod>GET</AllowedMethod>&#10;    <AllowedMethod>PUT</AllowedMethod>&#10;    <AllowedHeader>*</AllowedHeader>&#10;    <ExposeHeader>ETag</ExposeHeader>&#10;  </CORSRule>&#10;</CORSConfiguration>"
 					bind:value={localCorsXml}
 				/>
 				<p class="text-xs text-muted-foreground">
-					Define allowed origins, methods, and headers using XML CORSRule elements.
+					Define allowed origins, methods, and headers using XML CORSRule elements. Presigned
+					uploads require PUT in AllowedMethods and ETag in ExposeHeaders.
 				</p>
 			</div>
 		</Card.Content>

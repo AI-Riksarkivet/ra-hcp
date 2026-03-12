@@ -293,6 +293,40 @@ class ListObjectVersionsResponse(BaseModel):
 # ── Multipart Upload ──────────────────────────────────────────────
 
 
+class PresignedMultipartRequest(BaseModel):
+    """Request body for presigned multipart upload."""
+
+    file_size: int = Field(..., gt=0, description="Total file size in bytes")
+    part_size: int = Field(
+        25 * 1024 * 1024,
+        ge=5 * 1024 * 1024,
+        le=5 * 1024 * 1024 * 1024,
+        description="Part size in bytes (min 5 MB, max 5 GB, default 25 MB)",
+    )
+    expires_in: int = Field(
+        3600, ge=60, le=43200, description="URL expiration in seconds (min 60, max 12h)"
+    )
+
+
+class PresignedPartUrl(BaseModel):
+    """A single presigned URL for uploading one part."""
+
+    part_number: int
+    url: str
+
+
+class PresignedMultipartResponse(BaseModel):
+    """Response containing presigned URLs for multipart upload."""
+
+    bucket: str
+    key: str
+    upload_id: str
+    part_size: int
+    total_parts: int
+    urls: List[PresignedPartUrl]
+    expires_in: int
+
+
 class CreateMultipartUploadResponse(BaseModel):
     bucket: str
     key: str

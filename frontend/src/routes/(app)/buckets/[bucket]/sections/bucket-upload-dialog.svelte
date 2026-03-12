@@ -18,7 +18,7 @@
 	import { cn } from '$lib/utils.js';
 	import { toast } from 'svelte-sonner';
 	import {
-		create_multipart_upload,
+		presign_multipart_upload,
 		complete_multipart_upload,
 		abort_multipart_upload,
 	} from '$lib/remote/buckets.remote.js';
@@ -160,31 +160,61 @@
 		});
 	}
 
+	// Presigned multipart: uploads raw bytes directly to HCP/S3 via presigned URL.
+	// Requires CORS on HCP namespace: AllowedMethods: [PUT], ExposeHeaders: [ETag].
+	// If CORS is not configured, uploads will fail with a network error.
+	function presignedUploadPartXhr(presignedUrl: string, blob: Blob): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const xhr = new XMLHttpRequest();
+			xhr.open('PUT', presignedUrl);
+			xhr.onload = () => {
+				if (xhr.status >= 200 && xhr.status < 300) {
+					const etag = xhr.getResponseHeader('ETag');
+					if (etag) {
+						resolve(etag);
+					} else {
+						reject(new Error('Missing ETag header in presigned upload response'));
+					}
+				} else {
+					reject(new Error(`Presigned part upload failed (HTTP ${xhr.status})`));
+				}
+			};
+			xhr.onerror = () => reject(new Error('Presigned part upload network error'));
+			xhr.send(blob);
+		});
+	}
+
 	async function multipartUpload(index: number): Promise<void> {
 		const item = selectedFiles[index];
 		selectedFiles[index] = { ...selectedFiles[index], status: 'uploading', progress: 0 };
 
 		let uploadId: string | null = null;
 		try {
-			const init = await create_multipart_upload({ bucket, key: item.key });
-			uploadId = init.upload_id;
+			const presigned = await presign_multipart_upload({
+				bucket,
+				key: item.key,
+				file_size: item.file.size,
+				part_size: PART_SIZE,
+			});
+			uploadId = presigned.upload_id;
 
-			const totalParts = Math.ceil(item.file.size / PART_SIZE);
+			const totalParts = presigned.total_parts;
 			const parts: { PartNumber: number; ETag: string }[] = new Array(totalParts);
 			let completedParts = 0;
+			let aborted = false;
 
-			// Upload parts with bounded concurrency
+			// Upload parts directly to HCP via presigned URLs with bounded concurrency
 			const queue = Array.from({ length: totalParts }, (_, i) => i);
 			const workers = Array.from({ length: Math.min(CONCURRENT_PARTS, totalParts) }, async () => {
-				while (queue.length > 0) {
+				while (queue.length > 0 && !aborted) {
 					const i = queue.shift()!;
-					const start = i * PART_SIZE;
-					const end = Math.min(start + PART_SIZE, item.file.size);
+					const start = i * presigned.part_size;
+					const end = Math.min(start + presigned.part_size, item.file.size);
 					const blob = item.file.slice(start, end);
-					const partNumber = i + 1;
 
-					const etag = await uploadPartXhr(bucket, item.key, uploadId!, partNumber, blob);
-					parts[i] = { PartNumber: partNumber, ETag: etag };
+					const presignedUrl = presigned.urls[i].url;
+					const etag = await presignedUploadPartXhr(presignedUrl, blob);
+					parts[i] = { PartNumber: i + 1, ETag: etag };
 					completedParts++;
 
 					selectedFiles[index] = {
@@ -193,7 +223,13 @@
 					};
 				}
 			});
-			await Promise.all(workers);
+
+			const results = await Promise.allSettled(workers);
+			const failure = results.find((r) => r.status === 'rejected');
+			if (failure) {
+				aborted = true;
+				throw (failure as PromiseRejectedResult).reason;
+			}
 
 			await complete_multipart_upload({
 				bucket,

@@ -33,6 +33,7 @@ lance = [
 [dependency-groups]
 dev = [
     "fakeredis>=2.20",
+    "moto[s3]>=5.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.25",
     "pytest-cov>=6.0",
@@ -53,4 +54,5 @@ testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
     "redis: tests requiring a real Redis connection",
+    "moto: integration tests using moto S3 mock",
 ]
