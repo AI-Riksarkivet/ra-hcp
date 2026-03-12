@@ -103,39 +103,8 @@ func (m *RaHcp) Serve(
 		AsService(), nil
 }
 
-// ServeFrontend starts the frontend as a Dagger service exposed on port 5174.
-// Internally the Deno server listens on 8000; a socat proxy maps 5174→8000.
-func (m *RaHcp) ServeFrontend(
-	ctx context.Context,
-	// +defaultPath="/"
-	source *dagger.Directory,
-	// +optional
-	// +defaultPath=".env"
-	envFile *dagger.File,
-) (*dagger.Service, error) {
-	backendSvc, err := m.Serve(ctx, source, envFile)
-	if err != nil {
-		return nil, err
-	}
-
-	frontendSvc := m.BuildFrontend(source).
-		WithServiceBinding("backend", backendSvc).
-		WithEnvVariable("BACKEND_URL", "http://backend:8000").
-		WithExposedPort(8000).
-		AsService()
-
-	// Expose frontend on 5174 via proxy
-	return dag.Container().
-		From("alpine:3.21").
-		WithExec([]string{"apk", "add", "--no-cache", "socat"}).
-		WithServiceBinding("frontend", frontendSvc).
-		WithExposedPort(5174).
-		WithExec([]string{"socat", "TCP-LISTEN:5174,fork,reuseaddr", "TCP:frontend:8000"}).
-		AsService(), nil
-}
-
-// ServeAll starts the full stack: Redis, backend (:8000), and frontend (:5174).
-// Both services are exposed via a lightweight proxy.
+// ServeAll starts the full stack: Redis + backend + frontend on port 8000.
+// The frontend proxies /api requests to the backend internally.
 func (m *RaHcp) ServeAll(
 	ctx context.Context,
 	// +defaultPath="/"
@@ -149,27 +118,10 @@ func (m *RaHcp) ServeAll(
 		return nil, err
 	}
 
-	frontendSvc := m.BuildFrontend(source).
+	return m.BuildFrontend(source).
 		WithServiceBinding("backend", backendSvc).
 		WithEnvVariable("BACKEND_URL", "http://backend:8000").
 		WithExposedPort(8000).
-		AsService()
-
-	// Proxy binds both services and maps:
-	//   host:8000 → backend:8000
-	//   host:5174 → frontend:8000 (Deno default port)
-	return dag.Container().
-		From("alpine:3.21").
-		WithExec([]string{"apk", "add", "--no-cache", "socat"}).
-		WithServiceBinding("backend", backendSvc).
-		WithServiceBinding("frontend", frontendSvc).
-		WithExposedPort(8000).
-		WithExposedPort(5174).
-		WithExec([]string{"sh", "-c",
-			"socat TCP-LISTEN:8000,fork,reuseaddr TCP:backend:8000 & " +
-				"socat TCP-LISTEN:5174,fork,reuseaddr TCP:frontend:8000 & " +
-				"wait",
-		}).
 		AsService(), nil
 }
 
