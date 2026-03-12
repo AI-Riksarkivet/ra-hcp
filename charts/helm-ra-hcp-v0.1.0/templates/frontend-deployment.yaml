@@ -50,7 +50,7 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.securityContext }}
+          {{- with .Values.frontendSecurityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
