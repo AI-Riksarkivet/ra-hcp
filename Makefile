@@ -8,7 +8,8 @@ export PATH := $(HOME)/.deno/bin:$(PATH)
         fmt lint quality \
         run-api run-api-mock \
         frontend-dev frontend-build storybook build-storybook \
-        checks test test-integration serve-backend serve-frontend full-serve build
+        checks test test-integration serve-backend serve-frontend full-serve build \
+        publish publish-backend publish-frontend
 
 ## help: list available targets
 help:
@@ -116,3 +117,30 @@ full-serve:
 build:
 	dagger call build-backend --source=.
 	dagger call build-frontend --source=.
+
+# ── Publish ──────────────────────────────────────────────────────────
+TAG ?= v0.1.0
+
+## publish: publish both backend and frontend images to Docker Hub
+publish:
+	@DOCKER_USERNAME=$$(grep '^DOCKER_USERNAME=' .env | cut -d= -f2 | tr -d '"') \
+	DOCKER_PASSWORD=$$(grep '^DOCKER_PASSWORD=' .env | cut -d= -f2 | tr -d '"') \
+	dagger call publish-all --source=. --tag=$(TAG) \
+		--docker-username=env:DOCKER_USERNAME \
+		--docker-password=env:DOCKER_PASSWORD
+
+## publish-backend: publish backend image to Docker Hub
+publish-backend:
+	@DOCKER_USERNAME=$$(grep '^DOCKER_USERNAME=' .env | cut -d= -f2 | tr -d '"') \
+	DOCKER_PASSWORD=$$(grep '^DOCKER_PASSWORD=' .env | cut -d= -f2 | tr -d '"') \
+	dagger call publish-backend --source=. --tag=$(TAG) \
+		--docker-username=env:DOCKER_USERNAME \
+		--docker-password=env:DOCKER_PASSWORD
+
+## publish-frontend: publish frontend image to Docker Hub
+publish-frontend:
+	@DOCKER_USERNAME=$$(grep '^DOCKER_USERNAME=' .env | cut -d= -f2 | tr -d '"') \
+	DOCKER_PASSWORD=$$(grep '^DOCKER_PASSWORD=' .env | cut -d= -f2 | tr -d '"') \
+	dagger call publish-frontend --source=. --tag=$(TAG) \
+		--docker-username=env:DOCKER_USERNAME \
+		--docker-password=env:DOCKER_PASSWORD

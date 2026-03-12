@@ -87,9 +87,11 @@ func (m *RaHcp) Serve(
 		}
 	}
 
-	// Disable OTEL metrics export — Dagger intercepts OTEL env vars and
-	// routes through its own collector which returns 500 for app metrics.
-	ctr = ctr.WithEnvVariable("OTEL_METRICS_EXPORTER", "none")
+	// Fully disable the OTEL SDK — Dagger v0.20.1 has a bug where it
+	// crashes (nil pointer in otel-go LogValueFromPB) when re-exporting
+	// OTEL log records from the backend. Disabling the SDK prevents any
+	// OTEL activity that triggers the engine panic.
+	ctr = ctr.WithEnvVariable("OTEL_SDK_DISABLED", "true")
 
 	// Dagger-managed overrides (service bindings) — always last
 	ctr = ctr.
