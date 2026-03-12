@@ -1,15 +1,12 @@
 """Shared boto3 method implementations for S3-compatible storage adapters.
 
 Boto3Operations is a standalone class that holds a boto3 client and
-TransferConfig, providing the 21 S3 methods that are identical across
+TransferConfig, providing the S3 methods that are identical across
 HcpStorage and GenericBoto3Storage.
 
-Each concrete adapter composes a Boto3Operations instance via the
-@delegates_to decorator, which generates thin forwarding methods so that:
-
-  - Methods are statically discoverable (isinstance works with
-    @runtime_checkable Protocol on Python 3.12+)
-  - Override methods defined directly on the adapter take precedence
+Boto3Forwarder is a typed forwarding base class: each concrete adapter
+inherits from it and composes a Boto3Operations instance (``self._ops``).
+Override methods defined directly on the adapter take precedence.
 
 Overrides per adapter:
   - HcpStorage overrides list_buckets (catches TypeError) and
@@ -449,34 +446,147 @@ class Boto3Operations:
                 raise from_transport_error(exc) from exc
 
 
-def delegates_to(ops_attr: str, ops_cls: type):
-    """Class decorator: generate forwarding methods for composition.
+class Boto3Forwarder:
+    """Typed forwarding base for composition with Boto3Operations.
 
-    For every public method on *ops_cls* that is not already defined on
-    the decorated class, creates a thin forwarder that calls
-    ``getattr(self.<ops_attr>, method_name)(*args, **kwargs)``.
+    Subclasses set ``self._ops`` to a ``Boto3Operations`` instance.
+    Every public method here is a thin, typed forwarder — the real work
+    lives in ``Boto3Operations``.  Override any method in a concrete
+    adapter to replace the default behaviour.
 
-    This makes delegated methods statically discoverable so that
-    ``isinstance(obj, StorageProtocol)`` works on Python 3.12+
-    (where ``@runtime_checkable`` uses ``inspect.getattr_static``).
+    This replaces the old ``@delegates_to`` decorator: same delegation
+    pattern, but methods are statically visible to type checkers.
     """
 
-    def decorator(cls: type) -> type:
-        for name, method in vars(ops_cls).items():
-            if name.startswith("_") or not callable(method):
-                continue
-            if name in cls.__dict__:
-                continue  # explicit override takes precedence
+    _ops: Boto3Operations
 
-            def _make(n: str):
-                def forwarder(self, *args, **kwargs):
-                    return getattr(getattr(self, ops_attr), n)(*args, **kwargs)
+    # -- Bucket operations --------------------------------------------------
 
-                forwarder.__name__ = n
-                forwarder.__qualname__ = f"{cls.__qualname__}.{n}"
-                return forwarder
+    def list_buckets(self) -> dict:
+        return self._ops.list_buckets()
 
-            setattr(cls, name, _make(name))
-        return cls
+    def create_bucket(self, name: str) -> dict:
+        return self._ops.create_bucket(name)
 
-    return decorator
+    def head_bucket(self, name: str) -> dict:
+        return self._ops.head_bucket(name)
+
+    def delete_bucket(self, name: str) -> dict:
+        return self._ops.delete_bucket(name)
+
+    # -- Object operations --------------------------------------------------
+
+    def list_objects(
+        self,
+        bucket: str,
+        prefix: str | None = None,
+        max_keys: int = 1000,
+        continuation_token: str | None = None,
+        delimiter: str | None = None,
+        fetch_owner: bool = True,
+    ) -> dict:
+        return self._ops.list_objects(
+            bucket, prefix, max_keys, continuation_token, delimiter, fetch_owner
+        )
+
+    def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
+        self._ops.put_object(bucket, key, body)
+
+    def get_object(self, bucket: str, key: str, version_id: str | None = None) -> dict:
+        return self._ops.get_object(bucket, key, version_id)
+
+    def head_object(self, bucket: str, key: str) -> dict:
+        return self._ops.head_object(bucket, key)
+
+    def delete_object(
+        self, bucket: str, key: str, version_id: str | None = None
+    ) -> dict:
+        return self._ops.delete_object(bucket, key, version_id)
+
+    def copy_object(
+        self, src_bucket: str, src_key: str, dst_bucket: str, dst_key: str
+    ) -> dict:
+        return self._ops.copy_object(src_bucket, src_key, dst_bucket, dst_key)
+
+    # -- Bucket versioning --------------------------------------------------
+
+    def get_bucket_versioning(self, bucket: str) -> dict:
+        return self._ops.get_bucket_versioning(bucket)
+
+    def put_bucket_versioning(self, bucket: str, status: str) -> dict:
+        return self._ops.put_bucket_versioning(bucket, status)
+
+    # -- ACLs ---------------------------------------------------------------
+
+    def get_bucket_acl(self, bucket: str) -> dict:
+        return self._ops.get_bucket_acl(bucket)
+
+    def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
+        return self._ops.put_bucket_acl(bucket, acl)
+
+    def get_object_acl(self, bucket: str, key: str) -> dict:
+        return self._ops.get_object_acl(bucket, key)
+
+    def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
+        return self._ops.put_object_acl(bucket, key, acl)
+
+    # -- Object versions ----------------------------------------------------
+
+    def list_object_versions(
+        self,
+        bucket: str,
+        prefix: str | None = None,
+        max_keys: int = 1000,
+        key_marker: str | None = None,
+        version_id_marker: str | None = None,
+    ) -> dict:
+        return self._ops.list_object_versions(
+            bucket, prefix, max_keys, key_marker, version_id_marker
+        )
+
+    # -- Presigned URLs -----------------------------------------------------
+
+    def generate_presigned_url(
+        self,
+        bucket: str,
+        key: str,
+        expires_in: int = 3600,
+        method: str = "get_object",
+    ) -> str:
+        return self._ops.generate_presigned_url(bucket, key, expires_in, method)
+
+    # -- Multipart uploads --------------------------------------------------
+
+    def create_multipart_upload(self, bucket: str, key: str) -> dict:
+        return self._ops.create_multipart_upload(bucket, key)
+
+    def upload_part(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        part_number: int,
+        body: IO[bytes],
+    ) -> dict:
+        return self._ops.upload_part(bucket, key, upload_id, part_number, body)
+
+    def complete_multipart_upload(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        parts: list[dict],
+    ) -> dict:
+        return self._ops.complete_multipart_upload(bucket, key, upload_id, parts)
+
+    def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict:
+        return self._ops.abort_multipart_upload(bucket, key, upload_id)
+
+    def list_parts(
+        self,
+        bucket: str,
+        key: str,
+        upload_id: str,
+        max_parts: int = 1000,
+    ) -> dict:
+        return self._ops.list_parts(bucket, key, upload_id, max_parts)

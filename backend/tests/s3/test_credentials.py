@@ -10,6 +10,8 @@ from httpx import AsyncClient
 
 from app.services.storage.errors import StorageError
 
+from pydantic import SecretStr
+
 from app.core.config import StorageSettings
 
 
@@ -147,7 +149,7 @@ async def test_get_credentials_minio_backend(client: AsyncClient, auth_headers: 
     minio_settings = StorageSettings(
         storage_backend="minio",
         s3_access_key="minioadmin",
-        s3_secret_key="minioadmin123",
+        s3_secret_key=SecretStr("minioadmin123"),
         s3_endpoint_url="http://localhost:9000",
     )
     app.dependency_overrides[get_storage_settings] = lambda: minio_settings

@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.services.cached_mapi import CachedMapiService
 from urllib.parse import urlencode
 
 import httpx
@@ -222,7 +225,7 @@ class AuthenticatedMapiService:
 
     def __init__(
         self,
-        base: MapiService,
+        base: MapiService | CachedMapiService,
         username: str,
         password: str,
         host: str | None = None,

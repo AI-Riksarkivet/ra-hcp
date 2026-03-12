@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from botocore.exceptions import ClientError
 
+from pydantic import SecretStr
+
 from app.core.config import StorageSettings
 from app.services.storage.adapters.generic_boto3 import GenericBoto3Storage
 from app.services.storage.errors import StorageError, StorageOperationNotSupported
@@ -21,7 +23,7 @@ def storage_settings() -> StorageSettings:
         s3_verify_ssl=False,
         s3_addressing_style="path",
         s3_access_key="minioadmin",
-        s3_secret_key="minioadmin123",
+        s3_secret_key=SecretStr("minioadmin123"),
     )
 
 

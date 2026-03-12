@@ -6,6 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from pydantic import SecretStr
+
 from app.core.config import S3Settings, StorageSettings
 from app.services.storage.adapters.generic_boto3 import GenericBoto3Storage
 from app.services.storage.adapters.hcp import HcpStorage
@@ -23,7 +25,7 @@ def minio_storage_settings() -> StorageSettings:
         storage_backend="minio",
         s3_endpoint_url="http://localhost:9000",
         s3_access_key="admin",
-        s3_secret_key="secret",
+        s3_secret_key=SecretStr("secret"),
         s3_addressing_style="path",
     )
 
@@ -34,7 +36,7 @@ def generic_storage_settings() -> StorageSettings:
         storage_backend="generic",
         s3_endpoint_url="http://localhost:9000",
         s3_access_key="admin",
-        s3_secret_key="secret",
+        s3_secret_key=SecretStr("secret"),
     )
 
 

@@ -18,7 +18,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from opentelemetry import trace
 
 from app.core.config import StorageSettings
-from app.services.storage.adapters._boto3_ops import Boto3Operations, delegates_to
+from app.services.storage.adapters._boto3_ops import Boto3Forwarder, Boto3Operations
 from app.services.storage.errors import (
     StorageOperationNotSupported,
     from_client_error,
@@ -29,13 +29,12 @@ logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
 
-@delegates_to("_ops", Boto3Operations)
-class GenericBoto3Storage:
+class GenericBoto3Storage(Boto3Forwarder):
     """Standard boto3 S3 adapter — no vendor-specific hacks.
 
     Implements StorageProtocol via composition: a Boto3Operations instance
-    provides the shared S3 methods. The @delegates_to decorator generates
-    thin forwarding methods for protocol compliance. Only GenericBoto3-specific
+    (``self._ops``) provides the shared S3 methods.  Boto3Forwarder supplies
+    typed forwarding methods for protocol compliance.  Only GenericBoto3-specific
     overrides are defined here.
     """
 

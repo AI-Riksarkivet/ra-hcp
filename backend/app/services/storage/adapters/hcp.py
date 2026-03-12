@@ -18,19 +18,18 @@ from botocore.exceptions import BotoCoreError, ClientError
 from opentelemetry import trace
 
 from app.core.config import S3Settings
-from app.services.storage.adapters._boto3_ops import Boto3Operations, delegates_to
+from app.services.storage.adapters._boto3_ops import Boto3Forwarder, Boto3Operations
 from app.services.storage.errors import from_client_error, from_transport_error
 
 tracer = trace.get_tracer(__name__)
 
 
-@delegates_to("_ops", Boto3Operations)
-class HcpStorage:
+class HcpStorage(Boto3Forwarder):
     """Synchronous boto3 wrapper for HCP — call methods via asyncio.to_thread().
 
     Implements StorageProtocol via composition: a Boto3Operations instance
-    provides the 21 shared S3 methods. The @delegates_to decorator generates
-    thin forwarding methods for protocol compliance. Only HCP-specific
+    (``self._ops``) provides the shared S3 methods.  Boto3Forwarder supplies
+    typed forwarding methods for protocol compliance.  Only HCP-specific
     overrides are defined here.
     """
 
