@@ -85,6 +85,15 @@ General application settings.
 |----------|------|---------|-------------|
 | `ROOT_PATH` | str | `""` | Root path prefix when the API sits behind a reverse proxy (e.g., `/proxy/8000`). |
 
+## Docker Publishing
+
+These variables are used by the `make publish` targets to push container images to Docker Hub via the Dagger pipeline.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `DOCKER_USERNAME` | str | `""` | Docker Hub username. |
+| `DOCKER_PASSWORD` | str | `""` | Docker Hub password or access token. |
+
 ## Example `.env` File
 
 ```bash
@@ -104,4 +113,8 @@ REDIS_URL=redis://localhost:6379
 
 # Auth
 API_SECRET_KEY=replace-with-a-strong-random-value
+
+# Docker publishing (optional)
+DOCKER_USERNAME=
+DOCKER_PASSWORD=
 ```

@@ -1,5 +1,8 @@
 replicaCount: 1
 
+imagePullSecrets: []
+  # - name: regcred
+
 image:
   repository: riksarkivet/ra-hcp
   tag: ""  # defaults to appVersion from Chart.yaml

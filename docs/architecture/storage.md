@@ -13,8 +13,8 @@ graph TD
     CACHED -->|"wraps"| HCP_A
     CACHED -->|"wraps"| GEN
 
-    HCP_A -->|"delegates via @delegates_to"| OPS["Boto3Operations<br/>21 shared S3 methods"]
-    GEN -->|"delegates via @delegates_to"| OPS
+    HCP_A -->|"delegates via Boto3Forwarder"| OPS["Boto3Operations<br/>shared S3 methods"]
+    GEN -->|"delegates via Boto3Forwarder"| OPS
 
     OPS --> CLIENT["boto3 S3 Client"]
 ```
@@ -24,24 +24,25 @@ graph TD
 | Layer | File | Role |
 |-------|------|------|
 | `StorageProtocol` | `services/storage/protocol.py` | `@runtime_checkable` Protocol — all DI type hints use this |
-| `Boto3Operations` | `services/storage/adapters/_boto3_ops.py` | Shared boto3 operations — composed into adapters, provides all 21 S3 methods |
-| `HcpStorage` | `services/storage/adapters/hcp.py` | HCP adapter — composes `Boto3Operations`, uses `@delegates_to` for forwarding, overrides `list_buckets` and `delete_objects` |
-| `GenericBoto3Storage` | `services/storage/adapters/generic_boto3.py` | Generic S3 adapter — composes `Boto3Operations`, overrides `delete_objects` and ACL operations |
+| `Boto3Operations` | `services/storage/adapters/_boto3_ops.py` | Shared boto3 operations — composed into adapters via `Boto3Forwarder` |
+| `Boto3Forwarder` | `services/storage/adapters/_boto3_ops.py` | Typed forwarding base class — thin forwarders that delegate to `self._ops` |
+| `HcpStorage` | `services/storage/adapters/hcp.py` | HCP adapter — composes `Boto3Operations` via `Boto3Forwarder`, overrides `list_buckets` and `delete_objects` |
+| `GenericBoto3Storage` | `services/storage/adapters/generic_boto3.py` | Generic S3 adapter — composes `Boto3Operations` via `Boto3Forwarder`, overrides `delete_objects` and ACL operations |
 | `CachedStorage` | `services/cached_storage.py` | Caching decorator — wraps any `StorageProtocol` implementation with TTL-based Redis caching |
 | `StorageError` | `services/storage/errors.py` | Backend-agnostic exceptions — adapters catch library errors and re-raise |
 | `create_storage` | `services/storage/factory.py` | Factory function — instantiates the correct adapter based on `storage_backend` setting |
 
-### The `@delegates_to` pattern
+### The `Boto3Forwarder` pattern
 
-Adapters use a `@delegates_to` decorator that generates thin forwarding methods at class definition time for all `Boto3Operations` methods not explicitly overridden. This means adapters only define the methods they need to customize — everything else is automatically forwarded to `self._ops`.
+Adapters inherit from `Boto3Forwarder`, a base class with typed forwarding methods that delegate to `self._ops` (a `Boto3Operations` instance). Adapters only define the methods they need to customize — everything else is forwarded through the base class. This keeps the composition pattern while making all methods statically visible to type checkers.
 
 ## Adding a new storage backend
 
 To add support for MinIO, Ceph, or AWS S3:
 
-1. Create `services/storage/adapters/minio.py` (or similar)
-2. Compose `Boto3Operations` for shared functionality
-3. Use `@delegates_to` and override only the methods that differ
+1. Create `services/storage/adapters/my_backend.py`
+2. Inherit from `Boto3Forwarder` and compose `Boto3Operations` for shared functionality
+3. Override only the methods that differ
 4. Catch the backend's native exceptions and re-raise as `StorageError`
 5. Register the new adapter in the factory (`services/storage/factory.py`)
 6. No endpoint code changes needed — they type-hint against `StorageProtocol`
