@@ -6,9 +6,16 @@ ra-hcp has been deployed!
   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
 {{- end }}
 {{- else if eq .Values.service.type "NodePort" }}
-  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "ra-hcp.fullname" . }})
   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
-  echo http://$NODE_IP:$NODE_PORT
+
+  Backend API:
+  echo "API docs: http://$NODE_IP:{{ .Values.service.nodePort }}/docs"
+  echo "Health:   http://$NODE_IP:{{ .Values.service.nodePort }}/health"
+{{- if .Values.frontend.enabled }}
+
+  Frontend:
+  echo "Frontend: http://$NODE_IP:{{ .Values.frontend.service.nodePort }}"
+{{- end }}
 {{- else if eq .Values.service.type "LoadBalancer" }}
   NOTE: It may take a few minutes for the LoadBalancer IP to be available.
   kubectl get --namespace {{ .Release.Namespace }} svc {{ include "ra-hcp.fullname" . }} -w

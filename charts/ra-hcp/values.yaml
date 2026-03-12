@@ -1,13 +1,14 @@
 replicaCount: 1
 
 image:
-  repository: ra-hcp
-  tag: "latest"  # set to "" to use appVersion from Chart.yaml
-  pullPolicy: Always
+  repository: riksarkivet/ra-hcp
+  tag: ""  # defaults to appVersion from Chart.yaml
+  pullPolicy: IfNotPresent
 
 service:
-  type: ClusterIP
+  type: NodePort
   port: 8000
+  nodePort: 30081
 
 ingress:
   enabled: false
@@ -64,14 +65,15 @@ opentelemetry:
 frontend:
   enabled: false
   image:
-    repository: ra-hcp-frontend
-    tag: "latest"
-    pullPolicy: Always
+    repository: riksarkivet/ra-hcp-frontend
+    tag: ""  # defaults to appVersion from Chart.yaml
+    pullPolicy: IfNotPresent
   replicaCount: 1
   service:
-    type: ClusterIP
+    type: NodePort
     port: 5174
     targetPort: 8000
+    nodePort: 30517
   resources: {}
     # limits:
     #   cpu: 500m
