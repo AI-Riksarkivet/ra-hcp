@@ -1389,6 +1389,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="IpSettings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#app.schemas.common.IpSettings.to_hcp_dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_hcp_dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1523,6 +1540,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PermissionsResponse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#app.schemas.common.dump_for_hcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;dump_for_hcp
       
     </span>
   </a>
@@ -1873,6 +1901,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="IpSettings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#app.schemas.common.IpSettings.to_hcp_dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_hcp_dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2007,6 +2052,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PermissionsResponse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#app.schemas.common.dump_for_hcp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;dump_for_hcp
       
     </span>
   </a>
@@ -2248,6 +2304,8 @@
 
 
         <p>IP address allow/deny configuration.</p>
+<p>HCP MAPI returns addresses wrapped as <code>{"ipAddress": [...]}</code>.
+We normalize to flat <code>list[str]</code> so the frontend receives plain arrays.</p>
 
 
 
@@ -2269,6 +2327,24 @@
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="app.schemas.common.IpSettings.to_hcp_dict" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">to_hcp_dict</span><span class="p">()</span></code>
+
+<a href="#app.schemas.common.IpSettings.to_hcp_dict" class="headerlink" title="Permanent link">&para;</a></h4>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Serialize with HCP's <code>{"ipAddress": [...]}</code> wrapper for POST.</p>
+
+
+    </div>
+
+</div>
 
 
 
@@ -2824,6 +2900,26 @@
 
 </div>
 
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="app.schemas.common.dump_for_hcp" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">dump_for_hcp</span><span class="p">(</span><span class="n">model</span><span class="p">)</span></code>
+
+<a href="#app.schemas.common.dump_for_hcp" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Serialize a Pydantic model for POST to HCP MAPI.</p>
+<p>Re-wraps any <code>ipSettings</code> field into HCP's
+<code>{"ipAddress": [...]}</code> format.</p>
+
+
+    </div>
+
+</div>
 
 
 
