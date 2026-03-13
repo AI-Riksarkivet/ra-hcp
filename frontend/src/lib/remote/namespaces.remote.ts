@@ -24,6 +24,30 @@ export interface NsProtocols {
   smtpEnabled?: boolean;
 }
 
+export interface IpSettings {
+  allowAddresses?: string[];
+  denyAddresses?: string[];
+  allowIfInBothLists?: boolean;
+}
+
+export interface HttpProtocolSettings {
+  httpsEnabled?: boolean;
+  httpEnabled?: boolean;
+  restEnabled?: boolean;
+  restRequiresAuthentication?: boolean;
+  hs3Enabled?: boolean;
+  hs3RequiresAuthentication?: boolean;
+  httpActiveDirectorySSOEnabled?: boolean;
+  webdavEnabled?: boolean;
+  webdavBasicAuthEnabled?: boolean;
+  ipSettings?: IpSettings;
+}
+
+export interface ProtocolIpSettings {
+  protocol: string;
+  ipSettings?: IpSettings;
+}
+
 export interface NsPermissions {
   readAllowed?: boolean;
   writeAllowed?: boolean;
@@ -173,6 +197,31 @@ export const get_ns_protocols = query(
       console.error("[namespaces.remote]", err);
     }
     return {} as NsProtocols;
+  },
+);
+
+export const get_ns_protocol_detail = query(
+  z.object({
+    tenant: z.string(),
+    name: z.string(),
+    protocol: z.enum(["http", "cifs", "nfs", "smtp"]),
+  }),
+  async ({ tenant, name, protocol }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/mapi/tenants/${tenant}/namespaces/${
+          encodeURIComponent(name)
+        }/protocols/${protocol}`,
+      );
+      if (res.ok) {
+        return (await res.json()) as Record<string, unknown> & {
+          ipSettings?: IpSettings;
+        };
+      }
+    } catch (err) {
+      console.error("[namespaces.remote]", err);
+    }
+    return {} as Record<string, unknown> & { ipSettings?: IpSettings };
   },
 );
 

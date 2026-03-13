@@ -16,7 +16,7 @@ from app.schemas.namespace import (
     Protocols,
     CorsConfiguration,
 )
-from app.schemas.common import StatusResponse, PermissionsResponse
+from app.schemas.common import StatusResponse, PermissionsResponse, dump_for_hcp
 
 router = APIRouter(tags=["Namespace: Access"])
 
@@ -78,7 +78,7 @@ async def modify_default_protocols(
     await hcp.send(
         "POST",
         f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols",
-        body=body,
+        body=dump_for_hcp(body),
     )
     return {"status": "updated"}
 
@@ -108,7 +108,7 @@ async def modify_http_protocol(
     await hcp.send(
         "POST",
         f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/http",
-        body=body,
+        body=dump_for_hcp(body),
     )
     return {"status": "updated"}
 
@@ -123,7 +123,7 @@ async def modify_cifs_protocol(
     await hcp.send(
         "POST",
         f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/cifs",
-        body=body,
+        body=dump_for_hcp(body),
     )
     return {"status": "updated"}
 
@@ -138,7 +138,7 @@ async def modify_nfs_protocol(
     await hcp.send(
         "POST",
         f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/nfs",
-        body=body,
+        body=dump_for_hcp(body),
     )
     return {"status": "updated"}
 
@@ -153,7 +153,7 @@ async def modify_smtp_protocol(
     await hcp.send(
         "POST",
         f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/smtp",
-        body=body,
+        body=dump_for_hcp(body),
     )
     return {"status": "updated"}
 

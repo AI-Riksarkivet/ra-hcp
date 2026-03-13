@@ -165,24 +165,55 @@ class IpAddressList(BaseModel):
 
 
 class IpSettings(BaseModel):
-    """IP address allow/deny configuration."""
+    """IP address allow/deny configuration.
+
+    HCP MAPI returns addresses wrapped as ``{"ipAddress": [...]}``.
+    We normalize to flat ``list[str]`` so the frontend receives plain arrays.
+    """
 
     model_config = {"populate_by_name": True}
 
-    allowAddresses: Optional[IpAddressList | List[str]] = None
-    denyAddresses: Optional[IpAddressList | List[str]] = None
-    allowIfInBothLists: Optional[bool] = None
+    allowAddresses: list[str] | None = None
+    denyAddresses: list[str] | None = None
+    allowIfInBothLists: bool | None = None
 
     @field_validator("allowAddresses", "denyAddresses", mode="before")
     @classmethod
-    def _normalize_addresses(cls, v):
+    def _normalize_addresses(cls, v: object) -> list[str] | None:
         if v is None:
-            return v
-        if isinstance(v, list):
-            return IpAddressList(ipAddress=v)
+            return None
         if isinstance(v, dict):
-            return IpAddressList(**v)
-        return v
+            # HCP wraps as {"ipAddress": ["10.0.0.1", ...]}
+            return v.get("ipAddress") or []
+        if isinstance(v, IpAddressList):
+            return v.ipAddress or []
+        if isinstance(v, list):
+            return v
+        return None
+
+    def to_hcp_dict(self) -> dict[str, Any]:
+        """Serialize with HCP's ``{"ipAddress": [...]}`` wrapper for POST."""
+        d: dict[str, Any] = {}
+        if self.allowAddresses is not None:
+            d["allowAddresses"] = {"ipAddress": self.allowAddresses}
+        if self.denyAddresses is not None:
+            d["denyAddresses"] = {"ipAddress": self.denyAddresses}
+        if self.allowIfInBothLists is not None:
+            d["allowIfInBothLists"] = self.allowIfInBothLists
+        return d
+
+
+def dump_for_hcp(model: BaseModel) -> dict[str, Any]:
+    """Serialize a Pydantic model for POST to HCP MAPI.
+
+    Re-wraps any ``ipSettings`` field into HCP's
+    ``{"ipAddress": [...]}`` format.
+    """
+    d = model.model_dump(exclude_none=True)
+    ip: IpSettings | None = getattr(model, "ipSettings", None)
+    if ip is not None:
+        d["ipSettings"] = ip.to_hcp_dict()
+    return d
 
 
 class PermissionList(BaseModel):

@@ -17,7 +17,7 @@ from app.schemas.tenant import (
     AvailableServicePlanList,
 )
 from app.schemas.namespace import NamespaceDefaults, CorsConfiguration
-from app.schemas.common import StatusResponse, PermissionsResponse
+from app.schemas.common import StatusResponse, PermissionsResponse, dump_for_hcp
 
 router = APIRouter(prefix="/tenants", tags=["Tenant Admin: Settings"])
 
@@ -88,7 +88,11 @@ async def modify_console_security(
     body: ConsoleSecurity,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    await hcp.send("POST", f"/tenants/{tenant_name}/consoleSecurity", body=body)
+    await hcp.send(
+        "POST",
+        f"/tenants/{tenant_name}/consoleSecurity",
+        body=dump_for_hcp(body),
+    )
     return {"status": "updated"}
 
 
@@ -176,7 +180,11 @@ async def modify_search_security(
     body: SearchSecurity,
     hcp: MapiService = Depends(get_mapi_service),
 ):
-    await hcp.send("POST", f"/tenants/{tenant_name}/searchSecurity", body=body)
+    await hcp.send(
+        "POST",
+        f"/tenants/{tenant_name}/searchSecurity",
+        body=dump_for_hcp(body),
+    )
     return {"status": "updated"}
 
 

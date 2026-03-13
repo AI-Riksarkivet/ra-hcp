@@ -16,6 +16,7 @@
 	import NsIndexing from './sections/ns-indexing.svelte';
 	import NsCors from './sections/ns-cors.svelte';
 	import NsReplicationCollision from './sections/ns-replication-collision.svelte';
+	import NsNetwork from './sections/ns-network.svelte';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let namespaceName = $derived(page.params.namespace ?? '');
@@ -76,6 +77,8 @@
 					<NsCors {tenant} {namespaceName} />
 					<NsReplicationCollision {tenant} {namespaceName} />
 				</div>
+
+				<NsNetwork {tenant} {namespaceName} />
 			</Tabs.Content>
 		</Tabs.Root>
 	{/if}

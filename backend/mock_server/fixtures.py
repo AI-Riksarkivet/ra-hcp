@@ -493,8 +493,11 @@ def default_tenant_settings() -> dict[str, dict]:
     """Return a fresh dict of default tenant-level settings sub-resources."""
     return {
         "consoleSecurity": {
-            "ipAddressAllowlist": [],
-            "ipAddressDenylist": [],
+            "ipSettings": {
+                "allowAddresses": [],
+                "denyAddresses": [],
+                "allowIfInBothLists": False,
+            },
         },
         "contactInfo": {
             "name": "",
@@ -516,8 +519,11 @@ def default_tenant_settings() -> dict[str, dict]:
             "versioningEnabled": False,
         },
         "searchSecurity": {
-            "ipAddressAllowlist": [],
-            "ipAddressDenylist": [],
+            "ipSettings": {
+                "allowAddresses": [],
+                "denyAddresses": [],
+                "allowIfInBothLists": False,
+            },
         },
         "permissions": {
             "namespaceDeleteAllowed": True,
