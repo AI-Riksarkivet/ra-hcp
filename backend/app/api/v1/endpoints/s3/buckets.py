@@ -9,6 +9,10 @@ Endpoints:
     PUT  /buckets/{bucket}/versioning — set versioning
     GET  /buckets/{bucket}/acl — get bucket ACL
     PUT  /buckets/{bucket}/acl — set bucket ACL
+    GET  /buckets/{bucket}/cors — get bucket CORS
+    PUT  /buckets/{bucket}/cors — set bucket CORS
+    DELETE /buckets/{bucket}/cors — delete bucket CORS
+    GET  /buckets/{bucket}/uploads — list in-progress multipart uploads
 """
 
 from __future__ import annotations
@@ -29,8 +33,12 @@ from app.schemas.s3 import (
     BucketInfo,
     BucketMutationResponse,
     BucketVersioningResponse,
+    CorsConfiguration,
+    CorsResponse,
     CreateBucketRequest,
     ListBucketsResponse,
+    ListMultipartUploadsResponse,
+    MultipartUploadInfo,
     OwnerInfo,
     PutBucketVersioningRequest,
     VersioningMutationResponse,
@@ -301,3 +309,60 @@ async def put_bucket_acl(
         body.model_dump(exclude_none=True),
     )
     return {"status": "updated"}
+
+
+# ── Bucket CORS ──────────────────────────────────────────────────────
+
+
+@router.get("/{bucket}/cors", response_model=CorsResponse)
+async def get_bucket_cors(bucket: str, s3: StorageProtocol = Depends(get_s3_service)):
+    """Get the CORS configuration for a bucket."""
+    result = await run_storage(s3.get_bucket_cors, f"bucket '{bucket}'", bucket)
+    return {"cors_rules": result.get("CORSRules", [])}
+
+
+@router.put("/{bucket}/cors", response_model=BucketMutationResponse)
+async def put_bucket_cors(
+    bucket: str,
+    body: CorsConfiguration,
+    s3: StorageProtocol = Depends(get_s3_service),
+):
+    """Set the CORS configuration for a bucket."""
+    await run_storage(
+        s3.put_bucket_cors,
+        f"bucket '{bucket}'",
+        bucket,
+        body.model_dump(exclude_none=True),
+    )
+    return {"status": "updated"}
+
+
+@router.delete("/{bucket}/cors", response_model=BucketMutationResponse)
+async def delete_bucket_cors(
+    bucket: str, s3: StorageProtocol = Depends(get_s3_service)
+):
+    """Delete the CORS configuration for a bucket."""
+    await run_storage(s3.delete_bucket_cors, f"bucket '{bucket}'", bucket)
+    return {"status": "deleted"}
+
+
+# ── List Multipart Uploads ───────────────────────────────────────────
+
+
+@router.get("/{bucket}/uploads", response_model=ListMultipartUploadsResponse)
+async def list_multipart_uploads(
+    bucket: str,
+    prefix: str | None = Query(None),
+    max_uploads: int = Query(1000, ge=1, le=1000),
+    s3: StorageProtocol = Depends(get_s3_service),
+):
+    """List in-progress multipart uploads for a bucket."""
+    result = await run_storage(
+        s3.list_multipart_uploads, f"bucket '{bucket}'", bucket, prefix, max_uploads
+    )
+    uploads = [MultipartUploadInfo.model_validate(u) for u in result.get("Uploads", [])]
+    return ListMultipartUploadsResponse(
+        bucket=bucket,
+        uploads=uploads,
+        is_truncated=result.get("IsTruncated", False),
+    )

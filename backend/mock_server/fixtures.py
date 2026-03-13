@@ -5,6 +5,8 @@ All dicts are keyed by resource name for O(1) lookups in the stateful mock.
 
 from __future__ import annotations
 
+from typing import Any
+
 # ── Tenants ──────────────────────────────────────────────────────────
 
 TENANTS: dict[str, dict] = {
@@ -893,6 +895,260 @@ MOCK_QUERY_OPERATIONS: list[dict] = [
 ]
 
 
+# ── System-level fixtures ────────────────────────────────────────────
+
+SYSTEM_NETWORK: dict = {
+    "downstreamDNSMode": "ADVANCED",
+}
+
+SYSTEM_LICENSES: list[dict] = [
+    {
+        "serialNumber": "SN-HCP-2024-001",
+        "localCapacity": 107374182400,
+        "expirationDate": "2027-12-31T23:59:59+0000",
+        "extendedCapacity": 0,
+        "feature": "HCP Storage",
+        "uploadDate": "2024-01-15T10:30:00+0000",
+    },
+    {
+        "serialNumber": "SN-HCP-2024-002",
+        "localCapacity": 53687091200,
+        "expirationDate": "2026-06-30T23:59:59+0000",
+        "extendedCapacity": 21474836480,
+        "feature": "HCP Replication",
+        "uploadDate": "2024-03-01T08:00:00+0000",
+    },
+]
+
+SYSTEM_NODE_STATISTICS: dict = {
+    "requestTime": 1710460800000,
+    "nodes": [
+        {
+            "nodeNumber": 1,
+            "frontendIpAddresses": ["10.0.1.10"],
+            "backendIpAddress": "192.168.1.10",
+            "managementIpAddresses": ["172.16.0.10"],
+            "openHttpConnections": 45,
+            "openHttpsConnections": 230,
+            "maxHttpConnections": 1000,
+            "maxHttpsConnections": 1000,
+            "cpuUser": 12.5,
+            "cpuSystem": 4.2,
+            "cpuMax": 100.0,
+            "ioWait": 1.3,
+            "swapOut": 0.0,
+            "maxFrontEndBandwidth": 10000000000,
+            "frontEndBytesRead": 52428800.0,
+            "frontEndBytesWritten": 104857600.0,
+            "maxBackEndBandwidth": 10000000000,
+            "backEndBytesRead": 209715200.0,
+            "backEndBytesWritten": 314572800.0,
+            "maxManagementPortBandwidth": 1000000000,
+            "managementBytesRead": 1048576.0,
+            "managementBytesWritten": 2097152.0,
+            "collectionTimestamp": 1710460800000,
+            "volumes": [
+                {
+                    "id": "/dev/sda1",
+                    "blocksRead": 15234.0,
+                    "blocksWritten": 8912.0,
+                    "diskUtilization": 42.5,
+                    "transferSpeed": 125.3,
+                    "totalBytes": 1099511627776,
+                    "freeBytes": 631244390400,
+                    "totalInodes": 67108864,
+                    "freeInodes": 63504384,
+                },
+                {
+                    "id": "/dev/sdb1",
+                    "blocksRead": 8456.0,
+                    "blocksWritten": 12034.0,
+                    "diskUtilization": 68.2,
+                    "transferSpeed": 98.7,
+                    "totalBytes": 2199023255552,
+                    "freeBytes": 698771456000,
+                    "totalInodes": 134217728,
+                    "freeInodes": 120795955,
+                },
+            ],
+        },
+        {
+            "nodeNumber": 2,
+            "frontendIpAddresses": ["10.0.1.11"],
+            "backendIpAddress": "192.168.1.11",
+            "managementIpAddresses": ["172.16.0.11"],
+            "openHttpConnections": 38,
+            "openHttpsConnections": 195,
+            "maxHttpConnections": 1000,
+            "maxHttpsConnections": 1000,
+            "cpuUser": 8.7,
+            "cpuSystem": 3.1,
+            "cpuMax": 100.0,
+            "ioWait": 0.8,
+            "swapOut": 0.0,
+            "maxFrontEndBandwidth": 10000000000,
+            "frontEndBytesRead": 41943040.0,
+            "frontEndBytesWritten": 83886080.0,
+            "maxBackEndBandwidth": 10000000000,
+            "backEndBytesRead": 167772160.0,
+            "backEndBytesWritten": 251658240.0,
+            "maxManagementPortBandwidth": 1000000000,
+            "managementBytesRead": 524288.0,
+            "managementBytesWritten": 1048576.0,
+            "collectionTimestamp": 1710460800000,
+            "volumes": [
+                {
+                    "id": "/dev/sda1",
+                    "blocksRead": 12890.0,
+                    "blocksWritten": 7654.0,
+                    "diskUtilization": 38.9,
+                    "transferSpeed": 110.2,
+                    "totalBytes": 1099511627776,
+                    "freeBytes": 670014898176,
+                    "totalInodes": 67108864,
+                    "freeInodes": 64424509,
+                },
+            ],
+        },
+    ],
+}
+
+SYSTEM_SERVICE_STATISTICS: dict = {
+    "requestTime": 1710460800000,
+    "services": [
+        {
+            "name": "Disposition",
+            "state": "RUNNING",
+            "startTime": 1709424000000,
+            "formattedStartTime": "2024-03-03T00:00:00+0000",
+            "performanceLevel": "MEDIUM",
+            "objectsExamined": 154230,
+            "objectsExaminedPerSecond": 12.5,
+            "objectsServiced": 1240,
+            "objectsServicedPerSecond": 0.1,
+            "objectsUnableToService": 3,
+            "objectsUnableToServicePerSecond": 0.0,
+        },
+        {
+            "name": "Protection",
+            "state": "RUNNING",
+            "startTime": 1709424000000,
+            "formattedStartTime": "2024-03-03T00:00:00+0000",
+            "performanceLevel": "HIGH",
+            "objectsExamined": 892104,
+            "objectsExaminedPerSecond": 72.3,
+            "objectsServiced": 892104,
+            "objectsServicedPerSecond": 72.3,
+            "objectsUnableToService": 0,
+            "objectsUnableToServicePerSecond": 0.0,
+        },
+        {
+            "name": "Scavenging",
+            "state": "RUNNING",
+            "startTime": 1709424000000,
+            "formattedStartTime": "2024-03-03T00:00:00+0000",
+            "performanceLevel": "LOW",
+            "objectsExamined": 45670,
+            "objectsExaminedPerSecond": 3.7,
+            "objectsServiced": 234,
+            "objectsServicedPerSecond": 0.02,
+            "objectsUnableToService": 12,
+            "objectsUnableToServicePerSecond": 0.0,
+        },
+        {
+            "name": "GarbageCollection",
+            "state": "IDLE",
+            "startTime": 1710288000000,
+            "formattedStartTime": "2024-03-13T00:00:00+0000",
+            "endTime": 1710374400000,
+            "formattedEndTime": "2024-03-14T00:00:00+0000",
+            "performanceLevel": "MEDIUM",
+            "objectsExamined": 0,
+            "objectsExaminedPerSecond": 0.0,
+            "objectsServiced": 0,
+            "objectsServicedPerSecond": 0.0,
+            "objectsUnableToService": 0,
+            "objectsUnableToServicePerSecond": 0.0,
+        },
+    ],
+}
+
+SYSTEM_USER_ACCOUNTS: dict[str, dict] = {
+    "sysadmin": {
+        "username": "sysadmin",
+        "fullName": "System Administrator",
+        "description": "Primary system administrator",
+        "localAuthentication": True,
+        "enabled": True,
+        "roles": {"role": ["ADMINISTRATOR", "SECURITY"]},
+        "userGUID": "00000000-0000-0000-0000-000000000001",
+        "userID": 1,
+    },
+    "monitor": {
+        "username": "monitor",
+        "fullName": "Monitoring Account",
+        "description": "System monitoring account",
+        "localAuthentication": True,
+        "enabled": True,
+        "roles": {"role": ["MONITOR"]},
+        "userGUID": "00000000-0000-0000-0000-000000000002",
+        "userID": 2,
+    },
+    "service": {
+        "username": "service",
+        "fullName": "Service Account",
+        "description": "Service automation account",
+        "localAuthentication": True,
+        "enabled": True,
+        "roles": {"role": ["SERVICE"]},
+        "userGUID": "00000000-0000-0000-0000-000000000003",
+        "userID": 3,
+    },
+}
+
+SYSTEM_GROUP_ACCOUNTS: dict[str, dict] = {
+    "system-admins": {
+        "groupname": "system-admins",
+        "externalGroupID": "",
+        "roles": {"role": ["ADMINISTRATOR", "SECURITY"]},
+        "allowNamespaceManagement": True,
+    },
+    "system-monitors": {
+        "groupname": "system-monitors",
+        "externalGroupID": "",
+        "roles": {"role": ["MONITOR"]},
+        "allowNamespaceManagement": False,
+    },
+}
+
+SYSTEM_SUPPORT_CREDENTIALS: dict = {
+    "applyTimeStamp": 1706745600000,
+    "createTimeStamp": 1704067200000,
+    "type": "Default",
+    "defaultKeyType": "Default",
+    "serialNumberFromPackage": 12345678,
+}
+
+SYSTEM_LOG_STATUS: dict = {
+    "readyForStreaming": False,
+    "streamingInProgress": False,
+    "started": False,
+    "error": False,
+    "content": "",
+    "selectedNodes": "",
+    "selectedContent": "",
+    "packageNodes": "",
+}
+
+SYSTEM_HEALTH_STATUS: dict = {
+    "readyForStreaming": False,
+    "streamingInProgress": False,
+    "error": False,
+    "started": False,
+    "content": "",
+}
+
+
 def default_ns_settings() -> dict[str, dict]:
     """Return a fresh dict of default namespace-level settings sub-resources."""
     return {
@@ -954,3 +1210,186 @@ def default_ns_settings() -> dict[str, dict]:
             "pruneDaysAfterDelete": 0,
         },
     }
+
+
+# ── Replication ────────────────────────────────────────────────────
+
+REPLICATION_SERVICE: dict[str, Any] = {
+    "allowTenantsToMonitorNamespaces": True,
+    "enableDNSFailover": False,
+    "enableDomainAndCertificateSynchronization": True,
+    "network": "ALL",
+    "connectivityTimeoutSeconds": 300,
+    "verification": "ON_DEMAND",
+    "status": "RUNNING",
+}
+
+REPLICATION_CERTIFICATES: list[dict[str, Any]] = [
+    {
+        "id": "cert-001",
+        "subjectDN": "CN=hcp-east.example.com,O=Example Corp,C=US",
+        "validOn": "2024-01-01T00:00:00+0000",
+        "expiresOn": "2027-01-01T00:00:00+0000",
+    },
+    {
+        "id": "cert-002",
+        "subjectDN": "CN=hcp-west.example.com,O=Example Corp,C=US",
+        "validOn": "2025-06-01T00:00:00+0000",
+        "expiresOn": "2028-06-01T00:00:00+0000",
+    },
+]
+
+REPLICATION_LINKS: dict[str, dict[str, Any]] = {
+    "east-west-primary": {
+        "name": "east-west-primary",
+        "type": "ACTIVE_ACTIVE",
+        "description": "Primary replication link between east and west data centers",
+        "connection": {
+            "remoteHost": "hcp-west.example.com",
+            "remotePort": 5748,
+            "localHost": "hcp-east.example.com",
+            "localPort": 5748,
+        },
+        "compression": True,
+        "encryption": True,
+        "priority": "OLDEST_FIRST",
+        "id": "link-uuid-001",
+        "status": "ACTIVE",
+        "statusMessage": "Link is healthy and replicating",
+        "suspended": False,
+        "failoverSettings": {
+            "local": {
+                "autoFailover": True,
+                "autoFailoverMinutes": 120,
+                "autoCompleteRecovery": False,
+            },
+            "remote": {
+                "autoFailover": True,
+                "autoFailoverMinutes": 120,
+                "autoCompleteRecovery": False,
+            },
+        },
+        "statistics": {
+            "upToDateAsOfString": "2026-03-13T10:00:00+0000",
+            "upToDateAsOfMillis": 1773500400000,
+            "bytesPending": 1048576,
+            "bytesReplicated": 107374182400,
+            "bytesPerSecond": 52428800.0,
+            "objectsPending": 15,
+            "objectsReplicated": 250000,
+            "operationsPerSecond": 120.5,
+            "errors": 0,
+            "errorsPerSecond": 0.0,
+        },
+    },
+    "east-dr-backup": {
+        "name": "east-dr-backup",
+        "type": "OUTBOUND_ONLY",
+        "description": "Disaster recovery backup link",
+        "connection": {
+            "remoteHost": "hcp-dr.example.com",
+            "remotePort": 5748,
+            "localHost": "hcp-east.example.com",
+            "localPort": 5748,
+        },
+        "compression": True,
+        "encryption": True,
+        "priority": "OLDEST_FIRST",
+        "id": "link-uuid-002",
+        "status": "ACTIVE",
+        "statusMessage": "Outbound replication active",
+        "suspended": False,
+        "statistics": {
+            "upToDateAsOfString": "2026-03-13T09:55:00+0000",
+            "upToDateAsOfMillis": 1773500100000,
+            "bytesPending": 524288,
+            "bytesReplicated": 53687091200,
+            "bytesPerSecond": 26214400.0,
+            "objectsPending": 5,
+            "objectsReplicated": 125000,
+            "operationsPerSecond": 60.2,
+            "errors": 2,
+            "errorsPerSecond": 0.001,
+        },
+    },
+}
+
+REPLICATION_LINK_CONTENT: dict[str, dict[str, Any]] = {
+    "east-west-primary": {
+        "tenants": ["tenant1"],
+        "defaultNamespaceDirectories": [],
+        "chainedLinks": [],
+    },
+    "east-dr-backup": {
+        "tenants": ["tenant1"],
+        "defaultNamespaceDirectories": [],
+        "chainedLinks": [],
+    },
+}
+
+REPLICATION_LINK_SCHEDULES: dict[str, dict[str, Any]] = {
+    "east-west-primary": {
+        "local": {
+            "scheduleOverride": "NONE",
+            "transition": [
+                {"time": "00:00", "performanceLevel": "HIGH"},
+                {"time": "08:00", "performanceLevel": "MEDIUM"},
+                {"time": "18:00", "performanceLevel": "HIGH"},
+            ],
+        },
+        "remote": {
+            "scheduleOverride": "NONE",
+            "transition": [
+                {"time": "00:00", "performanceLevel": "HIGH"},
+            ],
+        },
+    },
+    "east-dr-backup": {
+        "local": {"scheduleOverride": "NONE", "transition": []},
+        "remote": {"scheduleOverride": "NONE", "transition": []},
+    },
+}
+
+# ── Erasure Coding ─────────────────────────────────────────────────
+
+EC_TOPOLOGIES: dict[str, dict[str, Any]] = {
+    "ec-topology-1": {
+        "name": "ec-topology-1",
+        "type": "2+1",
+        "description": "Primary erasure coding topology for cost-efficient storage",
+        "erasureCodingDelay": 0,
+        "fullCopy": False,
+        "minimumObjectSize": 4096,
+        "restorePeriod": 0,
+        "id": "ec-uuid-001",
+        "state": "ACTIVE",
+        "protectionStatus": "PROTECTED",
+        "readStatus": "AVAILABLE",
+        "erasureCodedObjects": 85000,
+        "replicationLinks": [
+            {
+                "name": "east-west-primary",
+                "uuid": "link-uuid-001",
+                "hcpSystems": ["hcp-east.example.com", "hcp-west.example.com"],
+                "pausedTenantsCount": 0,
+                "state": "ACTIVE",
+            },
+        ],
+        "hcpSystems": [
+            "hcp-east.example.com",
+            "hcp-west.example.com",
+            "hcp-dr.example.com",
+        ],
+        "tenants": ["tenant1"],
+    },
+}
+
+EC_TOPOLOGY_TENANTS: dict[str, list[dict[str, Any]]] = {
+    "ec-topology-1": [
+        {
+            "name": "tenant1",
+            "uuid": "tenant-uuid-1",
+            "hcpSystems": ["hcp-east.example.com"],
+        },
+    ],
+}

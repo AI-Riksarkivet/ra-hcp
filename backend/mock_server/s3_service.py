@@ -37,6 +37,8 @@ class MockS3Service:
         self._bucket_acls: Dict[str, Dict[str, Any]] = {}
         # (bucket, key) -> ACL dict
         self._object_acls: Dict[tuple, Dict[str, Any]] = {}
+        # bucket_name -> CORS configuration dict
+        self._bucket_cors: Dict[str, Dict[str, Any]] = {}
         # Multipart uploads: upload_id -> {bucket, key, parts: {part_num: bytes}}
         self._multipart_uploads: Dict[str, Dict[str, Any]] = {}
         self._upload_counter: int = 0
@@ -185,6 +187,7 @@ class MockS3Service:
         self._objects.pop(name, None)
         self._versioning.pop(name, None)
         self._bucket_acls.pop(name, None)
+        self._bucket_cors.pop(name, None)
         # Sync: also remove MAPI namespace
         self._sync_delete_namespace(name)
         return {}
@@ -404,6 +407,72 @@ class MockS3Service:
         self._require_object(bucket, key)
         self._object_acls[(bucket, key)] = acl
         return {}
+
+    # ── CORS ───────────────────────────────────────────────────────────
+
+    def get_bucket_cors(self, bucket: str) -> dict:
+        self._logger.info("get_bucket_cors bucket=%s", bucket)
+        self._require_bucket(bucket)
+        cors = self._bucket_cors.get(bucket)
+        if cors is None:
+            from botocore.exceptions import ClientError
+
+            raise ClientError(
+                {
+                    "Error": {
+                        "Code": "NoSuchCORSConfiguration",
+                        "Message": "The CORS configuration does not exist",
+                    },
+                    "ResponseMetadata": {"HTTPStatusCode": 404},
+                },
+                "GetBucketCors",
+            )
+        return cors
+
+    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
+        self._logger.info("put_bucket_cors bucket=%s", bucket)
+        self._require_bucket(bucket)
+        self._bucket_cors[bucket] = cors_configuration
+        return {}
+
+    def delete_bucket_cors(self, bucket: str) -> dict:
+        self._logger.info("delete_bucket_cors bucket=%s", bucket)
+        self._require_bucket(bucket)
+        self._bucket_cors.pop(bucket, None)
+        return {}
+
+    # ── List multipart uploads ────────────────────────────────────────
+
+    def list_multipart_uploads(
+        self,
+        bucket: str,
+        prefix: Optional[str] = None,
+        max_uploads: int = 1000,
+    ) -> dict:
+        self._logger.info("list_multipart_uploads bucket=%s prefix=%s", bucket, prefix)
+        self._require_bucket(bucket)
+        uploads = []
+        for upload_id, info in self._multipart_uploads.items():
+            if info["bucket"] != bucket:
+                continue
+            if prefix and not info["key"].startswith(prefix):
+                continue
+            uploads.append(
+                {
+                    "Key": info["key"],
+                    "UploadId": upload_id,
+                    "Initiated": datetime.now(timezone.utc).isoformat(),
+                    "StorageClass": "STANDARD",
+                }
+            )
+            if len(uploads) >= max_uploads:
+                break
+        return {
+            "Uploads": uploads,
+            "IsTruncated": False,
+        }
+
+    # ── Presigned URLs ────────────────────────────────────────────────
 
     def generate_presigned_url(
         self,

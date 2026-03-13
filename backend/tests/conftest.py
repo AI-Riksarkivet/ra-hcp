@@ -153,6 +153,13 @@ def mock_s3_service() -> MagicMock:
     }
     mock.abort_multipart_upload.return_value = {}
     mock.list_parts.return_value = {"Parts": [], "IsTruncated": False}
+    mock.get_bucket_cors.return_value = {"CORSRules": []}
+    mock.put_bucket_cors.return_value = {}
+    mock.delete_bucket_cors.return_value = {}
+    mock.list_multipart_uploads.return_value = {
+        "Uploads": [],
+        "IsTruncated": False,
+    }
     return mock
 
 

@@ -74,6 +74,14 @@ class StorageProtocol(Protocol):
 
     def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict: ...
 
+    # ── Bucket CORS ─────────────────────────────────────────────────
+
+    def get_bucket_cors(self, bucket: str) -> dict: ...
+
+    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict: ...
+
+    def delete_bucket_cors(self, bucket: str) -> dict: ...
+
     # ── Object versions ────────────────────────────────────────────
 
     def list_object_versions(
@@ -125,4 +133,11 @@ class StorageProtocol(Protocol):
         key: str,
         upload_id: str,
         max_parts: int = 1000,
+    ) -> dict: ...
+
+    def list_multipart_uploads(
+        self,
+        bucket: str,
+        prefix: str | None = None,
+        max_uploads: int = 1000,
     ) -> dict: ...

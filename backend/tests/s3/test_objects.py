@@ -366,3 +366,48 @@ async def test_put_object_acl(
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "updated"
+
+
+# ── Create folder ─────────────────────────────────────────────────
+
+
+async def test_create_folder(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/folder",
+        headers=auth_headers,
+        json={"folder_name": "new-folder"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["bucket"] == "my-bucket"
+    assert body["key"] == "new-folder/"
+    assert body["status"] == "created"
+    mock_s3_service.put_object.assert_called_once()
+
+
+async def test_create_folder_with_trailing_slash(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/folder",
+        headers=auth_headers,
+        json={"folder_name": "already-slashed/"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["key"] == "already-slashed/"
+
+
+async def test_create_folder_nested(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/folder",
+        headers=auth_headers,
+        json={"folder_name": "parent/child"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["key"] == "parent/child/"

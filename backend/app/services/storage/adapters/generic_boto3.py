@@ -129,3 +129,14 @@ class GenericBoto3Storage(Boto3Forwarder):
 
     def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
         raise StorageOperationNotSupported("put_object_acl", "minio")
+
+    # -- Bucket CORS (not supported on MinIO) ----------------------------------
+
+    def get_bucket_cors(self, bucket: str) -> dict:
+        raise StorageOperationNotSupported("get_bucket_cors", "minio")
+
+    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
+        raise StorageOperationNotSupported("put_bucket_cors", "minio")
+
+    def delete_bucket_cors(self, bucket: str) -> dict:
+        raise StorageOperationNotSupported("delete_bucket_cors", "minio")

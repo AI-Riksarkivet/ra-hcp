@@ -3,7 +3,16 @@
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Upload, Folder, FolderOpen, Shield, History } from 'lucide-svelte';
+	import {
+		Upload,
+		Folder,
+		FolderOpen,
+		FolderPlus,
+		Shield,
+		History,
+		Globe,
+		UploadCloud,
+	} from 'lucide-svelte';
 	import {
 		formatBytes,
 		parseQuotaBytes,
@@ -20,6 +29,9 @@
 	import BucketAcl from './sections/bucket-acl.svelte';
 	import BucketObjectBrowser from './sections/bucket-object-browser.svelte';
 	import BucketVersions from './sections/bucket-versions.svelte';
+	import BucketCors from './sections/bucket-cors.svelte';
+	import BucketUploads from './sections/bucket-uploads.svelte';
+	import CreateFolderDialog from './sections/create-folder-dialog.svelte';
 
 	// --- Page params ---
 	let tenant = $derived(page.data.tenant as string | undefined);
@@ -64,6 +76,7 @@
 
 	// --- Upload dialog (controlled from header, rendered inside object browser) ---
 	let uploadOpen = $state(false);
+	let createFolderOpen = $state(false);
 </script>
 
 <svelte:head><title>{bucket} - HCP Admin Console</title></svelte:head>
@@ -98,7 +111,12 @@
 			<BucketVersioning {bucket} />
 		</div>
 		{#if activeTab === 'objects'}
-			<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>
+			<div class="flex items-center gap-2">
+				<Button variant="outline" onclick={() => (createFolderOpen = true)}
+					><FolderPlus class="h-4 w-4" />New Folder</Button
+				>
+				<Button onclick={() => (uploadOpen = true)}><Upload class="h-4 w-4" />Upload Files</Button>
+			</div>
 		{/if}
 	</div>
 
@@ -116,6 +134,14 @@
 			<Tabs.Trigger value="acl">
 				<Shield class="mr-1.5 h-4 w-4" />
 				Access Control
+			</Tabs.Trigger>
+			<Tabs.Trigger value="cors">
+				<Globe class="mr-1.5 h-4 w-4" />
+				CORS
+			</Tabs.Trigger>
+			<Tabs.Trigger value="uploads">
+				<UploadCloud class="mr-1.5 h-4 w-4" />
+				Uploads
 			</Tabs.Trigger>
 		</Tabs.List>
 
@@ -151,5 +177,20 @@
 		<Tabs.Content value="acl">
 			<BucketAcl {bucket} {tenant} />
 		</Tabs.Content>
+
+		<Tabs.Content value="cors">
+			<BucketCors {bucket} />
+		</Tabs.Content>
+
+		<Tabs.Content value="uploads">
+			<BucketUploads {bucket} />
+		</Tabs.Content>
 	</Tabs.Root>
 </div>
+
+<CreateFolderDialog
+	bind:open={createFolderOpen}
+	{bucket}
+	{prefix}
+	oncreated={() => navigatePrefix(prefix)}
+/>

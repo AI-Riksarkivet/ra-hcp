@@ -10,6 +10,16 @@
 		Search,
 		Shield,
 		FileType,
+		Network,
+		KeyRound,
+		HardDrive,
+		Activity,
+		FileDown,
+		HeartPulse,
+		Building2,
+		Headset,
+		RefreshCw,
+		Layers,
 	} from 'lucide-svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import { APP_VERSION, type AccessLevel } from '$lib/constants.js';
@@ -17,6 +27,7 @@
 	let { accessLevel }: { accessLevel: AccessLevel } = $props();
 
 	const isAdmin = $derived(accessLevel !== 'namespace-user');
+	const isSysAdmin = $derived(accessLevel === 'sys-admin');
 
 	const tenantItems = [
 		{ href: '/namespaces', label: 'Namespaces', icon: Boxes },
@@ -35,6 +46,21 @@
 	] as const;
 
 	const analyticsItems = [{ href: '/analytics', label: 'Data Explorer', icon: Table2 }] as const;
+
+	const systemItems = [
+		{ href: '/system/network', label: 'Network', icon: Network },
+		{ href: '/system/licenses', label: 'Licenses', icon: KeyRound },
+		{ href: '/system/nodes', label: 'Nodes', icon: HardDrive },
+		{ href: '/system/services', label: 'Services', icon: Activity },
+		{ href: '/system/logs', label: 'Logs', icon: FileDown },
+		{ href: '/system/health', label: 'Health', icon: HeartPulse },
+		{ href: '/system/tenants', label: 'Tenants', icon: Building2 },
+		{ href: '/system/users', label: 'Users', icon: Users },
+		{ href: '/system/groups', label: 'Groups', icon: Shield },
+		{ href: '/system/replication', label: 'Replication', icon: RefreshCw },
+		{ href: '/system/erasure-coding', label: 'Erasure Coding', icon: Layers },
+		{ href: '/system/support', label: 'Support', icon: Headset },
+	] as const;
 </script>
 
 <Sidebar.Root collapsible="icon">
@@ -140,5 +166,28 @@
 				</Sidebar.Menu>
 			</Sidebar.GroupContent>
 		</Sidebar.Group>
+
+		{#if isSysAdmin}
+			<Sidebar.Group>
+				<Sidebar.GroupLabel>System</Sidebar.GroupLabel>
+				<Sidebar.GroupContent>
+					<Sidebar.Menu>
+						{#each systemItems as item (item.href)}
+							{@const active = page.url.pathname.startsWith(item.href)}
+							<Sidebar.MenuItem>
+								<Sidebar.MenuButton isActive={active} tooltipContent={item.label}>
+									{#snippet child({ props })}
+										<a href={item.href} {...props}>
+											<item.icon class="h-5 w-5 shrink-0" />
+											<span>{item.label}</span>
+										</a>
+									{/snippet}
+								</Sidebar.MenuButton>
+							</Sidebar.MenuItem>
+						{/each}
+					</Sidebar.Menu>
+				</Sidebar.GroupContent>
+			</Sidebar.Group>
+		{/if}
 	</Sidebar.Content>
 </Sidebar.Root>

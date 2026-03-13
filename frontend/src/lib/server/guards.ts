@@ -6,3 +6,9 @@ export function requireAdmin(accessLevel: AccessLevel) {
     redirect(302, "/buckets");
   }
 }
+
+export function requireSysAdmin(accessLevel: AccessLevel) {
+  if (accessLevel !== "sys-admin") {
+    redirect(302, "/buckets");
+  }
+}

@@ -15,13 +15,29 @@ from httpx import Response as HttpxResponse
 from .fixtures import (
     AVAILABLE_SERVICE_PLANS,
     CONTENT_CLASSES,
+    EC_TOPOLOGIES,
+    EC_TOPOLOGY_TENANTS,
     GROUP_ACCOUNTS,
     MOCK_QUERY_OBJECTS,
     MOCK_QUERY_OPERATIONS,
     NAMESPACES,
     NS_CHARGEBACK,
     NS_STATISTICS,
+    REPLICATION_CERTIFICATES,
+    REPLICATION_LINK_CONTENT,
+    REPLICATION_LINK_SCHEDULES,
+    REPLICATION_LINKS,
+    REPLICATION_SERVICE,
     RETENTION_CLASSES,
+    SYSTEM_GROUP_ACCOUNTS,
+    SYSTEM_HEALTH_STATUS,
+    SYSTEM_LICENSES,
+    SYSTEM_LOG_STATUS,
+    SYSTEM_NETWORK,
+    SYSTEM_NODE_STATISTICS,
+    SYSTEM_SERVICE_STATISTICS,
+    SYSTEM_SUPPORT_CREDENTIALS,
+    SYSTEM_USER_ACCOUNTS,
     TENANT_CHARGEBACK,
     TENANT_STATISTICS,
     TENANTS,
@@ -209,6 +225,21 @@ class MockMapiState:
         self.tenant_settings: dict[str, dict[str, dict]] = {}
         self.ns_settings: dict[tuple, dict[str, dict]] = {}
         self.data_access_perms: dict[tuple, dict] = {}
+        # System-level state (not tenant-scoped)
+        self.system_network: dict = {}
+        self.system_licenses: list[dict] = []
+        self.system_user_accounts: dict[str, dict] = {}
+        self.system_group_accounts: dict[str, dict] = {}
+        self.system_support_credentials: dict = {}
+        self.system_log_status: dict = {}
+        self.system_health_status: dict = {}
+        self.replication_service: dict = {}
+        self.replication_certificates: list[dict] = []
+        self.replication_links: dict[str, dict] = {}
+        self.replication_link_content: dict[str, dict] = {}
+        self.replication_link_schedules: dict[str, dict] = {}
+        self.ec_topologies: dict[str, dict] = {}
+        self.ec_topology_tenants: dict[str, list[dict]] = {}
         # Cross-reference to S3 service for namespace ↔ bucket sync
         self._s3_service: Any = None
 
@@ -339,6 +370,20 @@ def seed_mapi_state(state: MockMapiState) -> None:
     state.group_accounts = copy.deepcopy(GROUP_ACCOUNTS)
     state.content_classes = copy.deepcopy(CONTENT_CLASSES)
     state.retention_classes = copy.deepcopy(RETENTION_CLASSES)
+    state.system_network = copy.deepcopy(SYSTEM_NETWORK)
+    state.system_licenses = copy.deepcopy(SYSTEM_LICENSES)
+    state.system_user_accounts = copy.deepcopy(SYSTEM_USER_ACCOUNTS)
+    state.system_group_accounts = copy.deepcopy(SYSTEM_GROUP_ACCOUNTS)
+    state.system_support_credentials = copy.deepcopy(SYSTEM_SUPPORT_CREDENTIALS)
+    state.system_log_status = copy.deepcopy(SYSTEM_LOG_STATUS)
+    state.system_health_status = copy.deepcopy(SYSTEM_HEALTH_STATUS)
+    state.replication_service = copy.deepcopy(REPLICATION_SERVICE)
+    state.replication_certificates = copy.deepcopy(REPLICATION_CERTIFICATES)
+    state.replication_links = copy.deepcopy(REPLICATION_LINKS)
+    state.replication_link_content = copy.deepcopy(REPLICATION_LINK_CONTENT)
+    state.replication_link_schedules = copy.deepcopy(REPLICATION_LINK_SCHEDULES)
+    state.ec_topologies = copy.deepcopy(EC_TOPOLOGIES)
+    state.ec_topology_tenants = copy.deepcopy(EC_TOPOLOGY_TENANTS)
     for tenant in TENANTS:
         state.tenant_settings[tenant] = default_tenant_settings()
     for tenant, ns_map in NAMESPACES.items():
@@ -517,6 +562,423 @@ def _handle_namespaces(
     return _not_found()
 
 
+# ── Replication & Erasure Coding handlers ─────────────────────────────
+
+
+def _handle_replication(
+    state: MockMapiState,
+    method: str,
+    segments: list[str],
+    body: dict,
+    request: httpx.Request,
+) -> HttpxResponse:
+    """Handle /services/replication/... routes."""
+    n = len(segments)
+
+    # /services/replication (service settings)
+    if n == 0:
+        if method == "GET":
+            return _json(state.replication_service)
+        if method == "POST":
+            state.replication_service.update(body)
+            return _empty()
+        return _not_allowed()
+
+    # /services/replication/certificates
+    if segments[0] == "certificates":
+        if n == 1:
+            if method == "GET":
+                verbose = request.url.params.get("verbose", "false") == "true"
+                if verbose:
+                    return _json({"certificate": state.replication_certificates})
+                return _json(
+                    {
+                        "certificate": [
+                            c.get("id") for c in state.replication_certificates
+                        ]
+                    }
+                )
+            if method == "PUT":
+                new_id = f"cert-{len(state.replication_certificates) + 1:03d}"
+                state.replication_certificates.append(
+                    {
+                        "id": new_id,
+                        "subjectDN": "CN=uploaded-cert",
+                        "validOn": "2026-01-01T00:00:00+0000",
+                        "expiresOn": "2029-01-01T00:00:00+0000",
+                    }
+                )
+                return _empty()
+            return _not_allowed()
+        if n == 2:
+            cert_id = segments[1]
+            if cert_id == "server":
+                if method == "GET":
+                    return HttpxResponse(
+                        status_code=200,
+                        content=b"-----BEGIN CERTIFICATE-----\nMOCK_SERVER_CERT\n-----END CERTIFICATE-----",
+                        headers={**_HCP_HEADERS, "Content-Type": "text/plain"},
+                    )
+                return _not_allowed()
+            cert = next(
+                (c for c in state.replication_certificates if c.get("id") == cert_id),
+                None,
+            )
+            if method == "GET":
+                return _json(cert) if cert else _not_found()
+            if method == "DELETE":
+                if cert:
+                    state.replication_certificates.remove(cert)
+                    return _empty()
+                return _not_found()
+        return _not_found()
+
+    # /services/replication/links
+    if segments[0] == "links":
+        if n == 1:
+            verbose = request.url.params.get("verbose", "false") == "true"
+            if method == "GET":
+                if verbose:
+                    return _json(list(state.replication_links.values()))
+                return _json({"name": list(state.replication_links.keys())})
+            if method == "PUT":
+                link_name = body.get("name", "")
+                if link_name in state.replication_links:
+                    return _json({"message": f"{link_name} already exists"}, 409)
+                body.setdefault(
+                    "id", f"link-uuid-{len(state.replication_links) + 1:03d}"
+                )
+                body.setdefault("status", "ACTIVE")
+                body.setdefault("suspended", False)
+                body.setdefault("statistics", {})
+                state.replication_links[link_name] = body
+                state.replication_link_content[link_name] = {
+                    "tenants": [],
+                    "defaultNamespaceDirectories": [],
+                    "chainedLinks": [],
+                }
+                state.replication_link_schedules[link_name] = {
+                    "local": {"scheduleOverride": "NONE", "transition": []},
+                    "remote": {"scheduleOverride": "NONE", "transition": []},
+                }
+                return _empty()
+            return _not_allowed()
+
+        link_name = segments[1]
+        link = state.replication_links.get(link_name)
+
+        if n == 2:
+            if method == "GET":
+                return _json(link) if link else _not_found()
+            if method == "HEAD":
+                return _empty(200 if link else 404)
+            if method == "POST":
+                if not link:
+                    return _not_found()
+                # Check for action query params
+                params = dict(request.url.params)
+                if "suspend" in params:
+                    link["suspended"] = True
+                    link["status"] = "SUSPENDED"
+                    return _empty()
+                if "resume" in params:
+                    link["suspended"] = False
+                    link["status"] = "ACTIVE"
+                    return _empty()
+                if (
+                    "failOver" in params
+                    or "failBack" in params
+                    or "beginRecover" in params
+                    or "completeRecovery" in params
+                ):
+                    return _empty()
+                # Regular update
+                link.update(body)
+                return _empty()
+            if method == "DELETE":
+                if not link:
+                    return _not_found()
+                del state.replication_links[link_name]
+                state.replication_link_content.pop(link_name, None)
+                state.replication_link_schedules.pop(link_name, None)
+                return _empty()
+            return _not_allowed()
+
+        if not link:
+            return _not_found()
+
+        # /services/replication/links/{name}/content
+        if segments[2] == "content":
+            content = state.replication_link_content.setdefault(
+                link_name,
+                {"tenants": [], "defaultNamespaceDirectories": [], "chainedLinks": []},
+            )
+            if n == 3:
+                return _json(content) if method == "GET" else _not_allowed()
+
+            sub = segments[3]
+            if sub == "tenants":
+                if n == 4:
+                    if method == "GET":
+                        return _json({"tenants": content.get("tenants", [])})
+                    return _not_allowed()
+                if n == 5:
+                    tenant_name = segments[4]
+                    if method == "PUT":
+                        tenants = content.setdefault("tenants", [])
+                        if tenant_name not in tenants:
+                            tenants.append(tenant_name)
+                        return _empty()
+                    if method == "GET":
+                        return _json({"tenant": tenant_name})
+                    if method == "POST":
+                        return _empty()  # pause/resume
+                    if method == "DELETE":
+                        tenants = content.get("tenants", [])
+                        if tenant_name in tenants:
+                            tenants.remove(tenant_name)
+                        return _empty()
+
+            if sub == "defaultNamespaceDirectories":
+                if n == 4:
+                    return (
+                        _json(
+                            {
+                                "defaultNamespaceDirectories": content.get(
+                                    "defaultNamespaceDirectories", []
+                                )
+                            }
+                        )
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+                if n == 5:
+                    dir_name = segments[4]
+                    if method == "PUT":
+                        dirs = content.setdefault("defaultNamespaceDirectories", [])
+                        if dir_name not in dirs:
+                            dirs.append(dir_name)
+                        return _empty()
+                    if method == "DELETE":
+                        dirs = content.get("defaultNamespaceDirectories", [])
+                        if dir_name in dirs:
+                            dirs.remove(dir_name)
+                        return _empty()
+
+            if sub == "chainedLinks":
+                if n == 4:
+                    return (
+                        _json({"chainedLinks": content.get("chainedLinks", [])})
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+                if n == 5:
+                    chained = segments[4]
+                    if method == "PUT":
+                        chains = content.setdefault("chainedLinks", [])
+                        if chained not in chains:
+                            chains.append(chained)
+                        return _empty()
+                    if method == "DELETE":
+                        chains = content.get("chainedLinks", [])
+                        if chained in chains:
+                            chains.remove(chained)
+                        return _empty()
+
+            return _not_found()
+
+        # /services/replication/links/{name}/schedule
+        if segments[2] == "schedule" and n == 3:
+            schedule = state.replication_link_schedules.get(link_name, {})
+            if method == "GET":
+                return _json(schedule)
+            if method == "POST":
+                state.replication_link_schedules[link_name] = body
+                return _empty()
+            return _not_allowed()
+
+        # /services/replication/links/{name}/localCandidates
+        if segments[2] == "localCandidates":
+            candidates = {
+                "tenants": list(state.tenants.keys()),
+                "defaultNamespaceDirectories": [],
+                "chainedLinks": list(state.replication_links.keys()),
+            }
+            if n == 3:
+                return _json(candidates) if method == "GET" else _not_allowed()
+            if n == 4:
+                sub = segments[3]
+                if sub == "tenants":
+                    return (
+                        _json({"tenants": candidates["tenants"]})
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+                if sub == "defaultNamespaceDirectories":
+                    return (
+                        _json(
+                            {
+                                "defaultNamespaceDirectories": candidates[
+                                    "defaultNamespaceDirectories"
+                                ]
+                            }
+                        )
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+                if sub == "chainedLinks":
+                    return (
+                        _json({"chainedLinks": candidates["chainedLinks"]})
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+
+        # /services/replication/links/{name}/remoteCandidates
+        if segments[2] == "remoteCandidates":
+            remote_candidates = {
+                "tenants": ["remote-tenant1"],
+                "defaultNamespaceDirectories": [],
+                "chainedLinks": [],
+            }
+            if n == 3:
+                return _json(remote_candidates) if method == "GET" else _not_allowed()
+            if n == 4:
+                sub = segments[3]
+                if sub == "tenants":
+                    return (
+                        _json({"tenants": remote_candidates["tenants"]})
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+                if sub == "defaultNamespaceDirectories":
+                    return (
+                        _json(
+                            {
+                                "defaultNamespaceDirectories": remote_candidates[
+                                    "defaultNamespaceDirectories"
+                                ]
+                            }
+                        )
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+                if sub == "chainedLinks":
+                    return (
+                        _json({"chainedLinks": remote_candidates["chainedLinks"]})
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+
+        return _not_found()
+
+    return _not_found()
+
+
+def _handle_erasure_coding(
+    state: MockMapiState,
+    method: str,
+    segments: list[str],
+    body: dict,
+    request: httpx.Request,
+) -> HttpxResponse:
+    """Handle /services/erasureCoding/... routes."""
+    n = len(segments)
+
+    # /services/erasureCoding/linkCandidates
+    if n == 1 and segments[0] == "linkCandidates":
+        if method == "GET":
+            return _json({"name": list(state.replication_links.keys())})
+        return _not_allowed()
+
+    # /services/erasureCoding/ecTopologies
+    if n >= 1 and segments[0] == "ecTopologies":
+        if n == 1:
+            verbose = request.url.params.get("verbose", "false") == "true"
+            if method == "GET":
+                if verbose:
+                    return _json(list(state.ec_topologies.values()))
+                return _json({"name": list(state.ec_topologies.keys())})
+            if method == "PUT":
+                topo_name = body.get("name", "")
+                if topo_name in state.ec_topologies:
+                    return _json({"message": f"{topo_name} already exists"}, 409)
+                body.setdefault("id", f"ec-uuid-{len(state.ec_topologies) + 1:03d}")
+                body.setdefault("state", "ACTIVE")
+                body.setdefault("protectionStatus", "PROTECTED")
+                body.setdefault("readStatus", "AVAILABLE")
+                body.setdefault("erasureCodedObjects", 0)
+                state.ec_topologies[topo_name] = body
+                state.ec_topology_tenants[topo_name] = []
+                return _empty()
+            return _not_allowed()
+
+        topo_name = segments[1]
+        topo = state.ec_topologies.get(topo_name)
+
+        if n == 2:
+            if method == "GET":
+                return _json(topo) if topo else _not_found()
+            if method == "HEAD":
+                return _empty(200 if topo else 404)
+            if method == "POST":
+                if not topo:
+                    return _not_found()
+                params = dict(request.url.params)
+                if "retire" in params:
+                    topo["state"] = "RETIRED"
+                return _empty()
+            if method == "DELETE":
+                if not topo:
+                    return _not_found()
+                del state.ec_topologies[topo_name]
+                state.ec_topology_tenants.pop(topo_name, None)
+                return _empty()
+            return _not_allowed()
+
+        if not topo:
+            return _not_found()
+
+        sub = segments[2]
+
+        if sub == "tenants":
+            tenants = state.ec_topology_tenants.get(topo_name, [])
+            if n == 3:
+                if method == "GET":
+                    return _json({"tenantCandidate": tenants})
+                return _not_allowed()
+            if n == 4:
+                tenant_name = segments[3]
+                if method == "PUT":
+                    if not any(t.get("name") == tenant_name for t in tenants):
+                        tenants.append(
+                            {"name": tenant_name, "uuid": f"tenant-uuid-{tenant_name}"}
+                        )
+                    return _empty()
+                if method == "DELETE":
+                    state.ec_topology_tenants[topo_name] = [
+                        t for t in tenants if t.get("name") != tenant_name
+                    ]
+                    return _empty()
+
+        if sub == "tenantCandidates" and n == 3:
+            # Return all tenants as candidates
+            candidates = [
+                {"name": t, "uuid": f"tenant-uuid-{t}"} for t in state.tenants.keys()
+            ]
+            return (
+                _json({"tenantCandidate": candidates})
+                if method == "GET"
+                else _not_allowed()
+            )
+
+        if sub == "tenantConflictingCandidates" and n == 3:
+            return _json({"tenantCandidate": []}) if method == "GET" else _not_allowed()
+
+        return _not_found()
+
+    return _not_found()
+
+
 # ── Dispatcher ───────────────────────────────────────────────────────
 
 
@@ -544,16 +1006,177 @@ def _make_mapi_dispatcher(state: MockMapiState):
         n = len(segments)
         logger.info("%s %s", method, path)
 
-        if segments[0] != "tenants":
+        body = _parse_body(request) if method in ("PUT", "POST") else {}
+
+        # ── System-level routes (not under /tenants) ──
+        if segments[0] == "network":
+            if n == 1:
+                if method == "GET":
+                    return _json(state.system_network)
+                if method == "POST":
+                    state.system_network.update(body)
+                    return _empty()
             return _not_found()
 
-        body = _parse_body(request) if method in ("PUT", "POST") else {}
+        if segments[0] == "storage" and n >= 2 and segments[1] == "licenses":
+            if n == 2:
+                if method == "GET":
+                    return _json({"license": state.system_licenses})
+                if method == "PUT":
+                    # Simulate license upload (just add a placeholder)
+                    state.system_licenses.append(
+                        {
+                            "serialNumber": f"SN-UPLOAD-{len(state.system_licenses) + 1:03d}",
+                            "localCapacity": 0,
+                            "expirationDate": "2028-01-01T00:00:00+0000",
+                            "feature": "Uploaded",
+                            "uploadDate": "2026-03-13T00:00:00+0000",
+                        }
+                    )
+                    return _empty()
+            if n == 3:
+                serial = segments[2]
+                lic = next(
+                    (
+                        entry
+                        for entry in state.system_licenses
+                        if entry.get("serialNumber") == serial
+                    ),
+                    None,
+                )
+                if lic and method == "GET":
+                    return _json(lic)
+                return _not_found()
+            return _not_found()
+
+        if segments[0] == "nodes" and n == 2 and segments[1] == "statistics":
+            return _static_get(SYSTEM_NODE_STATISTICS, method)
+
+        if segments[0] == "services":
+            if n >= 2 and segments[1] == "replication":
+                return _handle_replication(state, method, segments[2:], body, request)
+            if n >= 2 and segments[1] == "erasureCoding":
+                return _handle_erasure_coding(
+                    state, method, segments[2:], body, request
+                )
+            # existing: services/statistics
+            if n == 2 and segments[1] == "statistics":
+                return _static_get(SYSTEM_SERVICE_STATISTICS, method)
+            return _not_found()
+
+        if segments[0] == "userAccounts":
+            if n == 1:
+                verbose = request.url.params.get("verbose", "false") == "true"
+                if verbose:
+                    return (
+                        _json(list(state.system_user_accounts.values()))
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+                return _crud(state.system_user_accounts, method, None, body, "username")
+            if n == 2:
+                username = segments[1]
+                if method == "POST":
+                    # Password change via query param
+                    if username in state.system_user_accounts:
+                        return _empty()
+                    return _not_found()
+                return _crud(
+                    state.system_user_accounts, method, username, body, "username"
+                )
+            if n == 3 and segments[2] == "changePassword":
+                if method == "POST":
+                    return (
+                        _empty()
+                        if segments[1] in state.system_user_accounts
+                        else _not_found()
+                    )
+            return _not_found()
+
+        if segments[0] == "groupAccounts":
+            if n == 1:
+                verbose = request.url.params.get("verbose", "false") == "true"
+                if verbose:
+                    return (
+                        _json(list(state.system_group_accounts.values()))
+                        if method == "GET"
+                        else _not_allowed()
+                    )
+                return _crud(
+                    state.system_group_accounts, method, None, body, "groupname"
+                )
+            if n == 2:
+                return _crud(
+                    state.system_group_accounts, method, segments[1], body, "groupname"
+                )
+            return _not_found()
+
+        if segments[0] == "supportaccesscredentials":
+            if n == 1:
+                if method == "GET":
+                    return _json(state.system_support_credentials)
+                if method == "PUT":
+                    return _empty()
+            return _not_found()
+
+        if segments[0] == "logs":
+            if n == 1:
+                if method == "GET":
+                    return _json(state.system_log_status)
+                if method == "POST":
+                    return _empty()
+            if n == 2:
+                if segments[1] == "prepare" and method == "POST":
+                    state.system_log_status["started"] = True
+                    state.system_log_status["readyForStreaming"] = True
+                    return _empty()
+                if segments[1] == "download" and method == "POST":
+                    return HttpxResponse(
+                        status_code=200,
+                        content=b"mock-log-data",
+                        headers={
+                            **_HCP_HEADERS,
+                            "Content-Type": "application/octet-stream",
+                        },
+                    )
+            return _not_found()
+
+        if segments[0] == "healthCheckReport":
+            if n == 1:
+                if method == "GET":
+                    return _json(state.system_health_status)
+                if method == "POST":
+                    # Cancel
+                    state.system_health_status["started"] = False
+                    state.system_health_status["readyForStreaming"] = False
+                    return _empty()
+            if n == 2:
+                if segments[1] == "prepare" and method == "POST":
+                    state.system_health_status["started"] = True
+                    state.system_health_status["readyForStreaming"] = True
+                    return _empty()
+                if segments[1] == "download" and method == "POST":
+                    return HttpxResponse(
+                        status_code=200,
+                        content=b"mock-health-data",
+                        headers={
+                            **_HCP_HEADERS,
+                            "Content-Type": "application/octet-stream",
+                        },
+                    )
+            return _not_found()
+
+        if segments[0] != "tenants":
+            return _not_found()
 
         # /tenants
         if n == 1:
             if method == "PUT":
                 return state.create_tenant(body.get("name", ""), body)
             if method == "GET":
+                verbose = request.url.params.get("verbose", "false") == "true"
+                if verbose:
+                    return _json(list(state.tenants.values()))
                 return _json({"name": list(state.tenants.keys())})
             return _not_allowed()
 

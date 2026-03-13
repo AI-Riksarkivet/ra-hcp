@@ -21,6 +21,11 @@ export function formatDate(date: string | Date): string {
   });
 }
 
+export function formatNumber(n: number | null | undefined): string {
+  if (n == null) return "—";
+  return n.toLocaleString();
+}
+
 const QUOTA_UNITS: Record<string, number> = {
   B: 1,
   KB: 1024,

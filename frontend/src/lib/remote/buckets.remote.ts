@@ -705,6 +705,170 @@ export const delete_object_version = command(
   },
 );
 
+// ── Bucket CORS ────────────────────────────────────────────────────
+
+export type CorsRule = {
+  AllowedHeaders?: string[];
+  AllowedMethods?: string[];
+  AllowedOrigins?: string[];
+  ExposeHeaders?: string[];
+  MaxAgeSeconds?: number;
+};
+
+export const get_bucket_cors = query(
+  z.object({ bucket: z.string() }),
+  async ({ bucket }) => {
+    try {
+      const res = await apiFetch(
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/cors`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          cors_rules: (data.cors_rules ?? []) as CorsRule[],
+          error: null as string | null,
+        };
+      }
+      if (res.status === 404) {
+        return { cors_rules: [] as CorsRule[], error: null as string | null };
+      }
+      if (res.status === 501) {
+        return {
+          cors_rules: [] as CorsRule[],
+          error: "CORS management is not supported on this storage backend.",
+        };
+      }
+    } catch (err) {
+      console.error("[buckets.remote] get_bucket_cors", err);
+    }
+    return {
+      cors_rules: [] as CorsRule[],
+      error: null as string | null,
+    };
+  },
+);
+
+export const put_bucket_cors = command(
+  z.object({
+    bucket: z.string(),
+    cors_rules: z.array(z.record(z.string(), z.unknown())),
+  }),
+  async ({ bucket, cors_rules }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/cors`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ CORSRules: cors_rules }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to update CORS configuration",
+      }));
+      throw new Error(
+        typeof err.detail === "string" ? err.detail : JSON.stringify(
+          err.detail,
+        ),
+      );
+    }
+    return await res.json();
+  },
+);
+
+export const delete_bucket_cors = command(
+  z.object({ bucket: z.string() }),
+  async ({ bucket }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/cors`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to delete CORS configuration",
+      }));
+      throw new Error(err.detail);
+    }
+  },
+);
+
+// ── List Multipart Uploads ─────────────────────────────────────────
+
+export type MultipartUploadEntry = {
+  Key: string;
+  UploadId: string;
+  Initiated: string | null;
+  StorageClass: string | null;
+};
+
+export const list_multipart_uploads = query(
+  z.object({
+    bucket: z.string(),
+    prefix: z.string().optional(),
+  }),
+  async ({ bucket, prefix }) => {
+    try {
+      const params = new URLSearchParams();
+      if (prefix) params.set("prefix", prefix);
+      const qs = params.toString();
+      const res = await apiFetch(
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/uploads${
+          qs ? `?${qs}` : ""
+        }`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          uploads: (data.uploads ?? []) as MultipartUploadEntry[],
+          is_truncated: (data.is_truncated ?? false) as boolean,
+          error: null as string | null,
+        };
+      }
+    } catch (err) {
+      console.error("[buckets.remote] list_multipart_uploads", err);
+    }
+    return {
+      uploads: [] as MultipartUploadEntry[],
+      is_truncated: false,
+      error: null as string | null,
+    };
+  },
+);
+
+// ── Create Folder ──────────────────────────────────────────────────
+
+export const create_folder = command(
+  z.object({
+    bucket: z.string(),
+    folder_name: z.string(),
+  }),
+  async ({ bucket, folder_name }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/folder`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder_name }),
+      },
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({
+        detail: "Failed to create folder",
+      }));
+      throw new Error(
+        typeof err.detail === "string" ? err.detail : JSON.stringify(
+          err.detail,
+        ),
+      );
+    }
+    return (await res.json()) as {
+      bucket: string;
+      key: string;
+      status: string;
+    };
+  },
+);
+
 // ── Multipart Upload ───────────────────────────────────────────────
 
 export const presign_multipart_upload = command(

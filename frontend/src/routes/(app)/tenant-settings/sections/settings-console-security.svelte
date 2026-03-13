@@ -6,6 +6,7 @@
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
+	import IpListEditor from '$lib/components/custom/ip-list-editor/ip-list-editor.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
 	import {
 		get_console_security,
@@ -44,6 +45,9 @@
 	let localDisableAfterInactiveDays = $state(0);
 	let localLogoutOnInactive = $state(0);
 	let localLoginMessage = $state('');
+	let localAllowAddresses = $state<string[]>([]);
+	let localDenyAddresses = $state<string[]>([]);
+	let localAllowIfInBoth = $state(false);
 
 	$effect(() => {
 		const s = security;
@@ -65,7 +69,15 @@
 		localDisableAfterInactiveDays = s.disableAfterInactiveDays ?? 0;
 		localLogoutOnInactive = s.logoutOnInactive ?? 0;
 		localLoginMessage = s.loginMessage ?? '';
+		localAllowAddresses = [...(s.ipSettings?.allowAddresses ?? [])];
+		localDenyAddresses = [...(s.ipSettings?.denyAddresses ?? [])];
+		localAllowIfInBoth = s.ipSettings?.allowIfInBothLists ?? false;
 	});
+
+	function arraysEqual(a: string[], b: string[]): boolean {
+		if (a.length !== b.length) return false;
+		return a.every((v, i) => v === b[i]);
+	}
 
 	let dirty = $derived(
 		localMinPasswordLength !== (security.minimumPasswordLength ?? 0) ||
@@ -84,7 +96,10 @@
 			localAutoUnlockDuration !== (security.automaticUserAccoutUnlockDuration ?? 0) ||
 			localDisableAfterInactiveDays !== (security.disableAfterInactiveDays ?? 0) ||
 			localLogoutOnInactive !== (security.logoutOnInactive ?? 0) ||
-			localLoginMessage !== (security.loginMessage ?? '')
+			localLoginMessage !== (security.loginMessage ?? '') ||
+			!arraysEqual(localAllowAddresses, security.ipSettings?.allowAddresses ?? []) ||
+			!arraysEqual(localDenyAddresses, security.ipSettings?.denyAddresses ?? []) ||
+			localAllowIfInBoth !== (security.ipSettings?.allowIfInBothLists ?? false)
 	);
 </script>
 
@@ -252,6 +267,37 @@
 					/>
 				</div>
 			</Card.Content>
+		</Card.Root>
+
+		<!-- IP Restrictions -->
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>IP Restrictions</Card.Title>
+				<Card.Description>
+					Controls which IP addresses can access the management console for this tenant.
+				</Card.Description>
+			</Card.Header>
+			<Card.Content class="space-y-6">
+				<IpListEditor
+					bind:addresses={localAllowAddresses}
+					label="Allow List"
+					emptyText="No allow list configured. All addresses are allowed by default."
+				/>
+				<IpListEditor
+					bind:addresses={localDenyAddresses}
+					label="Deny List"
+					placeholder="IP address or CIDR (e.g. 192.168.1.0/24)"
+					variant="destructive"
+					emptyText="No deny list configured."
+				/>
+				<div class="flex items-center gap-2">
+					<Switch id="console-allow-if-both" bind:checked={localAllowIfInBoth} />
+					<Label for="console-allow-if-both" class="text-sm">Allow if in both lists</Label>
+				</div>
+				<p class="text-xs text-muted-foreground">
+					When enabled, addresses that appear in both allow and deny lists will be allowed.
+				</p>
+			</Card.Content>
 			<Card.Footer>
 				<SaveButton
 					{dirty}
@@ -279,6 +325,11 @@
 									disableAfterInactiveDays: localDisableAfterInactiveDays,
 									logoutOnInactive: localLogoutOnInactive,
 									loginMessage: localLoginMessage || undefined,
+									ipSettings: {
+										allowAddresses: localAllowAddresses.filter(Boolean),
+										denyAddresses: localDenyAddresses.filter(Boolean),
+										allowIfInBothLists: localAllowIfInBoth,
+									},
 								},
 							}).updates(securityData);
 						})}

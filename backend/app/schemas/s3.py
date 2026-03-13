@@ -199,6 +199,77 @@ class AclResponse(BaseModel):
 # ── Mutation Response Models ─────────────────────────────────────────
 
 
+# ── CORS Models ──────────────────────────────────────────────────────
+
+
+class CorsRule(BaseModel):
+    """A single CORS rule for a bucket."""
+
+    model_config = {"extra": "allow"}
+
+    AllowedHeaders: list[str] | None = None
+    AllowedMethods: list[str] | None = None
+    AllowedOrigins: list[str] | None = None
+    ExposeHeaders: list[str] | None = None
+    MaxAgeSeconds: int | None = None
+
+
+class CorsConfiguration(BaseModel):
+    """S3 bucket CORS configuration."""
+
+    CORSRules: list[CorsRule] = Field(default=[])
+
+
+class CorsResponse(BaseModel):
+    """Response for GET bucket CORS."""
+
+    cors_rules: list[dict] = Field(default=[])
+
+
+# ── Multipart Upload Listing Models ──────────────────────────────────
+
+
+class MultipartUploadInfo(BaseModel):
+    """Information about an in-progress multipart upload."""
+
+    key: str = Field(alias="Key")
+    upload_id: str = Field(alias="UploadId")
+    initiated: Optional[datetime] = Field(None, alias="Initiated")
+    storage_class: Optional[str] = Field(None, alias="StorageClass")
+
+    model_config = {"populate_by_name": True}
+
+
+class ListMultipartUploadsResponse(BaseModel):
+    """Response for listing in-progress multipart uploads."""
+
+    bucket: str
+    uploads: list[MultipartUploadInfo] = Field(default=[])
+    is_truncated: bool = False
+
+
+# ── Folder Creation ──────────────────────────────────────────────────
+
+
+class CreateFolderRequest(BaseModel):
+    """Request body for creating a folder."""
+
+    folder_name: str = Field(
+        description="Folder name (trailing slash added automatically)"
+    )
+
+
+class CreateFolderResponse(BaseModel):
+    """Response for folder creation."""
+
+    bucket: str
+    key: str
+    status: str = "created"
+
+
+# ── Mutation Response Models ─────────────────────────────────────────
+
+
 class BucketMutationResponse(BaseModel):
     """Response for bucket create/delete."""
 

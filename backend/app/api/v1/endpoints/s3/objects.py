@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 import tempfile
 import uuid
@@ -22,6 +23,8 @@ from app.schemas.s3 import (
     BulkPresignRequest,
     BulkPresignResponse,
     CopyObjectRequest,
+    CreateFolderRequest,
+    CreateFolderResponse,
     DeleteObjectsRequest,
     DeleteObjectsResponse,
     HeadObjectResponse,
@@ -359,6 +362,21 @@ async def copy_object(
         key,
     )
     return ObjectMutationResponse(status="copied", bucket=bucket, key=key)
+
+
+# ── Create folder (must be before {key:path} catch-all) ──────────────
+
+
+@router.post("/folder", response_model=CreateFolderResponse, status_code=201)
+async def create_folder(
+    bucket: str,
+    body: CreateFolderRequest,
+    s3: StorageProtocol = Depends(get_s3_service),
+):
+    """Create a folder (zero-byte object with trailing slash)."""
+    key = body.folder_name if body.folder_name.endswith("/") else f"{body.folder_name}/"
+    await run_storage(s3.put_object, f"folder '{key}'", bucket, key, io.BytesIO(b""))
+    return CreateFolderResponse(bucket=bucket, key=key)
 
 
 # ── Single-object CRUD ({key:path} catch-all routes last) ────────────

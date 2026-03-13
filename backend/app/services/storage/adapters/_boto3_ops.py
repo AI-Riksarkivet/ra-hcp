@@ -290,6 +290,47 @@ class Boto3Operations:
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
+    # -- Bucket CORS --------------------------------------------------------
+
+    def get_bucket_cors(self, bucket: str) -> dict:
+        with tracer.start_as_current_span(
+            "s3.get_bucket_cors",
+            attributes={"s3.bucket": bucket},
+        ):
+            try:
+                return self._client.get_bucket_cors(Bucket=bucket)
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
+    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
+        with tracer.start_as_current_span(
+            "s3.put_bucket_cors",
+            attributes={"s3.bucket": bucket},
+        ):
+            try:
+                return self._client.put_bucket_cors(
+                    Bucket=bucket,
+                    CORSConfiguration=cors_configuration,
+                )
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
+    def delete_bucket_cors(self, bucket: str) -> dict:
+        with tracer.start_as_current_span(
+            "s3.delete_bucket_cors",
+            attributes={"s3.bucket": bucket},
+        ):
+            try:
+                return self._client.delete_bucket_cors(Bucket=bucket)
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
     # -- Object versions ----------------------------------------------------
 
     def list_object_versions(
@@ -449,6 +490,26 @@ class Boto3Operations:
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
+    def list_multipart_uploads(
+        self,
+        bucket: str,
+        prefix: str | None = None,
+        max_uploads: int = 1000,
+    ) -> dict:
+        with tracer.start_as_current_span(
+            "s3.list_multipart_uploads",
+            attributes={"s3.bucket": bucket, "s3.prefix": prefix or ""},
+        ):
+            try:
+                kwargs: dict[str, Any] = {"Bucket": bucket, "MaxUploads": max_uploads}
+                if prefix:
+                    kwargs["Prefix"] = prefix
+                return self._client.list_multipart_uploads(**kwargs)
+            except ClientError as exc:
+                raise from_client_error(exc) from exc
+            except BotoCoreError as exc:
+                raise from_transport_error(exc) from exc
+
 
 class Boto3Forwarder:
     """Typed forwarding base for composition with Boto3Operations.
@@ -534,6 +595,17 @@ class Boto3Forwarder:
     def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
         return self._ops.put_object_acl(bucket, key, acl)
 
+    # -- Bucket CORS --------------------------------------------------------
+
+    def get_bucket_cors(self, bucket: str) -> dict:
+        return self._ops.get_bucket_cors(bucket)
+
+    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
+        return self._ops.put_bucket_cors(bucket, cors_configuration)
+
+    def delete_bucket_cors(self, bucket: str) -> dict:
+        return self._ops.delete_bucket_cors(bucket)
+
     # -- Object versions ----------------------------------------------------
 
     def list_object_versions(
@@ -597,3 +669,11 @@ class Boto3Forwarder:
         max_parts: int = 1000,
     ) -> dict:
         return self._ops.list_parts(bucket, key, upload_id, max_parts)
+
+    def list_multipart_uploads(
+        self,
+        bucket: str,
+        prefix: str | None = None,
+        max_uploads: int = 1000,
+    ) -> dict:
+        return self._ops.list_multipart_uploads(bucket, prefix, max_uploads)
