@@ -24,29 +24,8 @@ export interface NsProtocols {
   smtpEnabled?: boolean;
 }
 
-export interface IpSettings {
-  allowAddresses?: string[];
-  denyAddresses?: string[];
-  allowIfInBothLists?: boolean;
-}
-
-export interface HttpProtocolSettings {
-  httpsEnabled?: boolean;
-  httpEnabled?: boolean;
-  restEnabled?: boolean;
-  restRequiresAuthentication?: boolean;
-  hs3Enabled?: boolean;
-  hs3RequiresAuthentication?: boolean;
-  httpActiveDirectorySSOEnabled?: boolean;
-  webdavEnabled?: boolean;
-  webdavBasicAuthEnabled?: boolean;
-  ipSettings?: IpSettings;
-}
-
-export interface ProtocolIpSettings {
-  protocol: string;
-  ipSettings?: IpSettings;
-}
+export type { IpSettings } from "./tenant-info.remote.js";
+import type { IpSettings } from "./tenant-info.remote.js";
 
 export interface NsPermissions {
   readAllowed?: boolean;

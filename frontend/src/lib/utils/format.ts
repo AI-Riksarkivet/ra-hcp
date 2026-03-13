@@ -103,6 +103,11 @@ export function matchesDateFilter(
   return Date.now() - d.getTime() <= maxAge;
 }
 
+export function arraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
+}
+
 export function formatRelative(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const now = new Date();

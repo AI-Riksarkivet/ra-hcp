@@ -6,6 +6,7 @@
 	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 	import IpListEditor from '$lib/components/custom/ip-list-editor/ip-list-editor.svelte';
 	import { useSave } from '$lib/utils/use-save.svelte.js';
+	import { arraysEqual } from '$lib/utils/format.js';
 	import {
 		get_search_security,
 		update_search_security,
@@ -37,11 +38,6 @@
 		localDenyAddresses = [...(s.ipSettings?.denyAddresses ?? [])];
 		localAllowIfInBoth = s.ipSettings?.allowIfInBothLists ?? false;
 	});
-
-	function arraysEqual(a: string[], b: string[]): boolean {
-		if (a.length !== b.length) return false;
-		return a.every((v, i) => v === b[i]);
-	}
 
 	let dirty = $derived(
 		!arraysEqual(localAllowAddresses, security.ipSettings?.allowAddresses ?? []) ||

@@ -209,10 +209,12 @@ def dump_for_hcp(model: BaseModel) -> dict[str, Any]:
     Re-wraps any ``ipSettings`` field into HCP's
     ``{"ipAddress": [...]}`` format.
     """
-    d = model.model_dump(exclude_none=True)
     ip: IpSettings | None = getattr(model, "ipSettings", None)
     if ip is not None:
+        d = model.model_dump(exclude_none=True, exclude={"ipSettings"})
         d["ipSettings"] = ip.to_hcp_dict()
+    else:
+        d = model.model_dump(exclude_none=True)
     return d
 
 
