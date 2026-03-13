@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Plus, Database, FileJson } from 'lucide-svelte';
+	import { Plus, Database, FileJson, BarChart3 } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
@@ -10,6 +10,7 @@
 	import NamespaceCreateDialog from './sections/namespace-create-dialog.svelte';
 	import NsGrantDialog from './sections/ns-grant-dialog.svelte';
 	import NsTemplates from './sections/ns-templates.svelte';
+	import TenantChargeback from './sections/tenant-chargeback.svelte';
 	import { get_namespaces } from '$lib/remote/namespaces.remote.js';
 	import { get_tenant_chargeback } from '$lib/remote/tenant-info.remote.js';
 
@@ -52,6 +53,10 @@
 					<Database class="mr-1.5 h-4 w-4" />
 					Namespaces
 				</Tabs.Trigger>
+				<Tabs.Trigger value="chargeback">
+					<BarChart3 class="mr-1.5 h-4 w-4" />
+					Chargeback
+				</Tabs.Trigger>
 				<Tabs.Trigger value="templates">
 					<FileJson class="mr-1.5 h-4 w-4" />
 					Templates
@@ -61,6 +66,10 @@
 			<Tabs.Content value="namespaces" class="space-y-6">
 				<NamespaceStats {tenant} {nsData} {chargebackData} />
 				<NamespaceTable {tenant} {nsData} {chargebackData} ongrantaccess={handleGrantAccess} />
+			</Tabs.Content>
+
+			<Tabs.Content value="chargeback">
+				<TenantChargeback {chargebackData} />
 			</Tabs.Content>
 
 			<Tabs.Content value="templates">

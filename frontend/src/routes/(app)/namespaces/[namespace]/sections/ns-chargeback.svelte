@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { ArrowDownToLine, ArrowUpFromLine, Eye, PenLine } from 'lucide-svelte';
+	import * as Select from '$lib/components/ui/select/index.js';
+	import { ArrowDownToLine, ArrowUpFromLine, Eye, PenLine, Trash2 } from 'lucide-svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import { formatBytes } from '$lib/utils/format.js';
 	import type { ChargebackEntry } from '$lib/utils/format.js';
@@ -14,15 +15,25 @@
 		namespaceName: string;
 	} = $props();
 
-	let chargebackData = $derived(
-		get_ns_chargeback({ tenant, name: namespaceName, granularity: 'day' })
-	);
+	const GRANULARITY_OPTIONS = [
+		{ value: 'hour', label: 'Hourly' },
+		{ value: 'day', label: 'Daily' },
+		{ value: 'total', label: 'Total' },
+	] as const;
 
-	let entries = $derived(
-		((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]).filter(
-			(e) => e.startTime
-		)
-	);
+	type Granularity = 'hour' | 'day' | 'total';
+
+	let granularity = $state<Granularity>('day');
+
+	const GRANULARITY_LABELS: Record<Granularity, string> = {
+		hour: 'hourly',
+		day: '7 day',
+		total: 'all time',
+	};
+
+	let chargebackData = $derived(get_ns_chargeback({ tenant, name: namespaceName, granularity }));
+
+	let entries = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
 
 	function sumField(field: keyof ChargebackEntry): number {
 		return entries.reduce((acc, e) => acc + ((e[field] as number) ?? 0), 0);
@@ -75,6 +86,7 @@
 		},
 		{ label: 'Reads', field: 'reads' as keyof ChargebackEntry, icon: Eye },
 		{ label: 'Writes', field: 'writes' as keyof ChargebackEntry, icon: PenLine },
+		{ label: 'Deletes', field: 'deletes' as keyof ChargebackEntry, icon: Trash2 },
 	];
 
 	function formatTotal(field: keyof ChargebackEntry): string {
@@ -93,6 +105,7 @@
 		bytesOut: null,
 		reads: null,
 		writes: null,
+		deletes: null,
 	});
 
 	function handleMouseMove(field: string, points: SparkPoint[], event: MouseEvent) {
@@ -121,11 +134,27 @@
 {:else if entries.length > 0}
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>I/O Activity</Card.Title>
-			<Card.Description>Namespace chargeback metrics (7 day)</Card.Description>
+			<div class="flex items-center justify-between">
+				<div>
+					<Card.Title>I/O Activity</Card.Title>
+					<Card.Description
+						>Namespace chargeback metrics ({GRANULARITY_LABELS[granularity]})</Card.Description
+					>
+				</div>
+				<Select.Root type="single" bind:value={granularity}>
+					<Select.Trigger class="h-8 w-[100px]">
+						{GRANULARITY_OPTIONS.find((o) => o.value === granularity)?.label ?? 'Daily'}
+					</Select.Trigger>
+					<Select.Content>
+						{#each GRANULARITY_OPTIONS as opt (opt.value)}
+							<Select.Item value={opt.value}>{opt.label}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</div>
 		</Card.Header>
 		<Card.Content>
-			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
 				{#each metricsDef as m (m.field)}
 					{@const points = sparkPoints(m.field)}
 					{@const hi = hoverIndex[m.field]}

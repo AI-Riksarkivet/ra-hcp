@@ -35,18 +35,8 @@ export interface TenantSettings {
   namespaceDefaults: Record<string, unknown>;
 }
 
-export interface ChargebackEntry {
-  namespaceName?: string;
-  objectCount?: number;
-  ingestedVolume?: number;
-  storageCapacityUsed?: number;
-  bytesIn?: number;
-  bytesOut?: number;
-  reads?: number;
-  writes?: number;
-  deletes?: number;
-  valid?: boolean;
-}
+export type { ChargebackEntry } from "$lib/utils/format.js";
+import type { ChargebackEntry } from "$lib/utils/format.js";
 
 export interface ChargebackReport {
   chargebackData?: ChargebackEntry[];
