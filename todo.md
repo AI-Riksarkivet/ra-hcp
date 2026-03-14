@@ -1,3 +1,3 @@
 - fix storiees again , plus add playtwirhgt + accessbility test
 - look over svelte code and styling with new skills
-- py-aot-key-value instead of direct redis instead
+- py-aot-key-value instead of direct redis https://github.com/strawgate/py-key-value 
