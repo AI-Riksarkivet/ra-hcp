@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"dagger/ra-hcp/internal/dagger"
 )
@@ -28,5 +30,22 @@ func (m *RaHcp) TestIntegration(ctx context.Context, source *dagger.Directory) (
 		WithServiceBinding("redis", redisSvc).
 		WithEnvVariable("REDIS_URL", "redis://redis:6379").
 		WithExec([]string{"uv", "run", "pytest", "-m", "redis"}).
+		Stdout(ctx)
+}
+
+// TestMinioIntegration runs S3 integration tests against a real MinIO service.
+func (m *RaHcp) TestMinioIntegration(ctx context.Context, source *dagger.Directory) (string, error) {
+	minioSvc := m.minio()
+
+	// Cache-bust: ensure pytest always runs fresh (service bindings need a live service)
+	cacheBuster := fmt.Sprintf("minio-test-%d", time.Now().UnixNano())
+
+	return m.buildBackendDev(source).
+		WithServiceBinding("minio", minioSvc).
+		WithEnvVariable("MINIO_ENDPOINT", "http://minio:9000").
+		WithEnvVariable("S3_ACCESS_KEY", minioRootUser).
+		WithEnvVariable("S3_SECRET_KEY", minioRootPassword).
+		WithEnvVariable("CACHE_BUSTER", cacheBuster).
+		WithExec([]string{"uv", "run", "pytest", "-m", "minio", "-v", "--tb=short"}).
 		Stdout(ctx)
 }

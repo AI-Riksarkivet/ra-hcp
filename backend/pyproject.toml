@@ -55,4 +55,5 @@ pythonpath = ["."]
 markers = [
     "redis: tests requiring a real Redis connection",
     "moto: integration tests using moto S3 mock",
+    "minio: integration tests requiring a real MinIO service",
 ]
