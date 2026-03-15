@@ -132,7 +132,7 @@ graph TB
 |-----------|-----------|------|
 | Frontend | SvelteKit 2 + Svelte 5, Deno | 5173 (dev), 8000 (container) |
 | Backend | FastAPI, Python 3.13+, uv | 8000 |
-| Storage adapters | HcpStorage (boto3) — pluggable via StorageProtocol | — |
+| Storage adapters | HcpStorage (aioboto3) — pluggable via StorageProtocol | — |
 | Cache | Redis 7+ (optional) | 6379 |
 | HCP MAPI | Hitachi Content Platform | 9090 |
 | S3 endpoint | S3-compatible endpoint (HCP, MinIO, Ceph, AWS) | 443 |

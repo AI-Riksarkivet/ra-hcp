@@ -17,7 +17,7 @@ graph TD
     end
 
     subgraph "Caching (optional)"
-        CACHED --> CS["CacheService<br/>Redis"]
+        CACHED --> CS["KVCache<br/>Redis (py-key-value)"]
         MS -.-> CS
         QS -.-> CS
     end
@@ -46,7 +46,7 @@ A typical request flows like this:
 3. The service makes the external call (MAPI, S3, or Query API) and returns domain objects.
 4. The router serializes the response (JSON or XML) and returns it.
 
-Exceptions bubble up through the same path. Domain exceptions (`MapiError`, `StorageError`) are caught by exception handlers in `main.py` and translated to HTTP responses. Routers never import `httpx` or `boto3` — they only talk to service interfaces.
+Exceptions bubble up through the same path. Domain exceptions (`MapiError`, `StorageError`) are caught by exception handlers in `main.py` and translated to HTTP responses. Routers never import `httpx` or `aioboto3` — they only talk to service interfaces.
 
 This layering makes the backend testable at every level. Unit tests can inject mock services. Integration tests can swap the storage backend from HCP to MinIO. The router layer is thin enough that service-level tests cover most logic.
 
@@ -141,7 +141,7 @@ Services live on `app.state`, initialized in the lifespan handler. Dependencies 
 
 For MAPI and Query services, the dependency creates an `Authenticated*Service` wrapper that binds JWT credentials and the tenant-specific host to the shared inner service. The wrapper is created per-request and discarded after.
 
-S3 clients are special: HCP requires per-user clients because credentials are baked into the boto3 session. The dependency maintains a cache in `app.state.s3_cache` keyed by `HcpCredentials`. Each unique user gets their own boto3 client, lazily created on first request. For MinIO/generic backends, a single shared client keyed by `"default"` is used instead.
+S3 clients are special: HCP requires per-user clients because credentials are baked into the aioboto3 session. The dependency maintains a cache in `app.state.s3_cache` keyed by `HcpCredentials`. Each unique user gets their own aioboto3 client, lazily created on first request. For MinIO/generic backends, a single shared client keyed by `"default"` is used instead.
 
 ## Services
 
@@ -176,16 +176,16 @@ Two query types:
 
 Both unwrap HCP's `{"queryResult": {...}}` response envelope and validate against Pydantic response models. `AuthenticatedQueryService` follows the same composition pattern as the MAPI wrapper.
 
-### CacheService
+### KVCache
 
-`CacheService` (`app/services/cache_service.py`) wraps Redis with graceful degradation. It maintains two Redis clients:
+`KVCache` (`app/services/kv/store.py`) wraps `py-key-value`'s composable async stores with graceful degradation. The factory (`app/services/kv/factory.py`) assembles the store chain:
 
-- **Async client** (`aioredis.Redis`) — used by MAPI and Query services running in the async event loop
-- **Sync client** (`redis.Redis`) — used by Storage services running inside `asyncio.to_thread()`
+- **With Redis**: `RedisStore → PrefixKeysWrapper → TimeoutWrapper → RetryWrapper`
+- **Without Redis**: `NullStore` (all operations are no-ops)
 
-`connect()` attempts to reach Redis and silently disables caching if it fails. The `enabled` property reflects whether Redis is actually available. All cache operations swallow exceptions — a Redis failure never breaks the application.
+`connect()` attempts to reach the backing store and silently disables caching if it fails. The `enabled` property reflects whether the store is actually available. All cache operations swallow exceptions — a store failure never breaks the application.
 
-Operations: `get`, `set` (with TTL), `delete`, `invalidate_pattern` (SCAN-based). Each has both async and sync variants. All keys are prefixed with `{cache_key_prefix}:` (default `hcp:`).
+Operations: `get`, `set` (with TTL), `delete` — all async. Values are JSON-serialized internally (with `default=str` for datetime handling) and wrapped in `{"_raw": ...}` for type safety.
 
 OTel instrumentation records three counters: `cache.hits`, `cache.misses`, `cache.errors`. Every operation also creates a trace span.
 
@@ -197,14 +197,14 @@ Data reads use Lance's native push-down filtering, which is more efficient than 
 
 ## Cached wrappers — the composition pattern
 
-All caching wrappers use composition: each wraps an `inner` service and a `CacheService`. No inheritance is involved. This means the same wrapper works regardless of whether the inner service is a base service or another wrapper.
+All caching wrappers use composition: each wraps an `inner` service and a `KVCache`. No inheritance is involved. This means the same wrapper works regardless of whether the inner service is a base service or another wrapper.
 
 ```mermaid
 graph LR
     ROUTER["Router"] --> AUTH["Authenticated*Service<br/>(credentials)"]
     AUTH --> CACHED["Cached*Service<br/>(TTL cache)"]
     CACHED --> BASE["Base *Service<br/>(HTTP/S3 client)"]
-    CACHED --> REDIS["CacheService<br/>(Redis)"]
+    CACHED --> KV["KVCache<br/>(py-key-value)"]
 ```
 
 ### CachedMapiService
@@ -232,17 +232,17 @@ The Query API is read-only, so there's no invalidation — entries simply expire
 
 ### CachedStorage
 
-Uses sync cache methods because storage operations run inside `asyncio.to_thread()`.
+Uses async cache methods via `KVCache`. All storage operations are natively async (aioboto3).
 
 Cached reads: `list_buckets`, `head_bucket`, `list_objects` (first page only — continuation tokens are not cached), `head_object`, `get_bucket_versioning`, `get_bucket_acl`, `get_object_acl`.
 
 Uncached reads: `get_object` (streams binary data), `list_object_versions`, `generate_presigned_url`.
 
-Write operations delegate first, then precisely invalidate affected cache entries. For example, `create_bucket` invalidates `list_buckets` + `head_bucket` + versioning + ACL + all `list_objects` patterns for that bucket. This precision avoids over-invalidation while keeping the cache consistent.
+Write operations delegate first, then precisely invalidate affected cache entries using explicit key tracking (`_tracked` dict) instead of pattern-based SCAN. For example, `create_bucket` invalidates `list_buckets` + `head_bucket` + versioning + ACL + all `list_objects` entries for that bucket. This precision avoids over-invalidation while keeping the cache consistent.
 
 ### CachedLanceService
 
-Only caches metadata: `list_tables` (default TTL) and `get_schema` (config TTL). Data reads are not cached — Lance's native push-down is more efficient than serializing through Redis. Uncached methods are forwarded via `__getattr__`.
+Async wrapper around the sync `LanceService`. Caches metadata: `list_tables` (default TTL) and `get_schema` (config TTL) via `KVCache`. Data reads (`get_rows`, `get_vector_preview`, `get_cell_bytes`, `search`) are not cached — Lance's native push-down is more efficient than serializing through a cache. Uncached methods are forwarded via explicit async methods that delegate to `asyncio.to_thread(self._inner.method, ...)`.
 
 ## Routers and endpoints
 
@@ -283,12 +283,12 @@ async def modify_console_security(
     return {"status": "updated"}
 ```
 
-S3 operations use `run_storage()`, a helper in `app/api/errors.py` that wraps `asyncio.to_thread()` and catches `StorageError` → `HTTPException`:
+S3 operations use `run_storage()`, a helper in `app/api/errors.py` that awaits the async storage coroutine and catches `StorageError` → `HTTPException`:
 
 ```python
 @router.get("", response_model=ListBucketsResponse)
 async def list_buckets(s3: StorageProtocol = Depends(get_s3_service)):
-    result = await run_storage(s3.list_buckets, "buckets")
+    result = await run_storage(s3.list_buckets(), "buckets")
     buckets = [BucketInfo.model_validate(b) for b in result.get("Buckets", [])]
     ...
 ```
@@ -316,7 +316,7 @@ The `lifespan()` async context manager in `app/main.py` handles startup and shut
 
 **Startup:**
 
-1. Create `CacheService(CacheSettings())` and `await cache.connect()`
+1. Create `KVCache` via `create_kv_cache(CacheSettings())` and `await cache.connect()`
 2. Create `MapiService(MapiSettings())`, wrap with `CachedMapiService` if cache is enabled → `app.state.mapi`
 3. Initialize empty dicts: `app.state.s3_cache = {}`, `app.state.lance_cache = {}`
 4. Create `QueryService(MapiSettings())`, wrap with `CachedQueryService` if cache is enabled → `app.state.query`
@@ -358,9 +358,9 @@ Manual spans are created throughout the service layer:
 |--------|------|--------|
 | `http.server.request.duration` | histogram (ms) | `RequestIDMiddleware` |
 | `http.server.request.count` | counter | `RequestIDMiddleware` |
-| `cache.hits` | counter | `CacheService` |
-| `cache.misses` | counter | `CacheService` |
-| `cache.errors` | counter | `CacheService` |
+| `cache.hits` | counter | `KVCache` |
+| `cache.misses` | counter | `KVCache` |
+| `cache.errors` | counter | `KVCache` |
 
 ### Logging
 

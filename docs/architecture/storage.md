@@ -1,6 +1,6 @@
 # Storage Layer
 
-The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against `StorageProtocol` (structural typing) and never imports backend-specific libraries like `boto3`.
+The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against `StorageProtocol` (structural typing) and never imports backend-specific libraries like `aioboto3`.
 
 ```mermaid
 graph TD
@@ -16,7 +16,7 @@ graph TD
     HCP_A -->|"delegates via Boto3Forwarder"| OPS["Boto3Operations<br/>shared S3 methods"]
     GEN -->|"delegates via Boto3Forwarder"| OPS
 
-    OPS --> CLIENT["boto3 S3 Client"]
+    OPS --> CLIENT["aioboto3 S3 Client"]
 ```
 
 ## How it works
@@ -24,13 +24,13 @@ graph TD
 | Layer | File | Role |
 |-------|------|------|
 | `StorageProtocol` | `services/storage/protocol.py` | `@runtime_checkable` Protocol — all DI type hints use this |
-| `Boto3Operations` | `services/storage/adapters/_boto3_ops.py` | Shared boto3 operations — composed into adapters via `Boto3Forwarder` |
+| `Boto3Operations` | `services/storage/adapters/_boto3_ops.py` | Shared async S3 operations (aioboto3) — composed into adapters via `Boto3Forwarder` |
 | `Boto3Forwarder` | `services/storage/adapters/_boto3_ops.py` | Typed forwarding base class — thin forwarders that delegate to `self._ops` |
 | `HcpStorage` | `services/storage/adapters/hcp.py` | HCP adapter — composes `Boto3Operations` via `Boto3Forwarder`, overrides `list_buckets` and `delete_objects` |
 | `GenericBoto3Storage` | `services/storage/adapters/generic_boto3.py` | Generic S3 adapter — composes `Boto3Operations` via `Boto3Forwarder`, overrides `delete_objects` and ACL operations |
-| `CachedStorage` | `services/cached_storage.py` | Caching decorator — wraps any `StorageProtocol` implementation with TTL-based Redis caching |
+| `CachedStorage` | `services/cached_storage.py` | Caching decorator — wraps any `StorageProtocol` implementation with TTL-based caching via KVCache |
 | `StorageError` | `services/storage/errors.py` | Backend-agnostic exceptions — adapters catch library errors and re-raise |
-| `create_storage` | `services/storage/factory.py` | Factory function — instantiates the correct adapter based on `storage_backend` setting |
+| `create_storage` | `services/storage/factory.py` | Async factory function — instantiates and connects the correct adapter based on `storage_backend` setting |
 
 ### The `Boto3Forwarder` pattern
 

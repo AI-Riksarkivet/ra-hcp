@@ -2,7 +2,9 @@
 
 ## Context
 
-The `ra-hcp` monorepo has a well-factored FastAPI backend where services (`MapiService`, `StorageProtocol` adapters, `QueryService`, `LanceService`) have **zero FastAPI imports** — they're pure domain logic. However, to use any HCP operation today you must run the full FastAPI server.
+The `ra-hcp` monorepo has a well-factored FastAPI backend where services (`MapiService`, `StorageProtocol` adapters, `QueryService`, `LanceService`) have **zero FastAPI imports** — they're pure async domain logic. However, to use any HCP operation today you must run the full FastAPI server.
+
+> **Recent refactor (58d9790):** The S3 storage layer was migrated from sync `boto3` to async `aioboto3`, and the custom `CacheService` (275-line dual sync/async Redis wrapper) was replaced by `KVCache` backed by `py-key-value`'s composable async stores. All `StorageProtocol` methods are now `async def`, adapters use `AsyncExitStack` for client lifecycle, and `run_storage()` accepts coroutines instead of sync callables.
 
 By extracting these services into standalone SDK packages, we enable:
 - **Programmatic access** — Python scripts can talk to HCP directly without a server
@@ -22,7 +24,7 @@ The monorepo stays unified: `backend/`, `frontend/`, `docs/`, and new `packages/
 | **Selective installs** | `pip install rahcp-s3` (40 MB) vs full backend (180 MB) |
 | **Better testing** | SDK tested with moto/respx directly, no ASGI transport needed |
 | **Independent versioning** | Fix `rahcp-s3` without releasing `rahcp-mapi` |
-| **Reusable** | Migration scripts, audit tools import SDK without FastAPI/Redis deps |
+| **Reusable** | Migration scripts, audit tools import SDK without FastAPI/py-key-value deps |
 
 ## Package Architecture
 
@@ -46,8 +48,8 @@ ra-hcp/                              # Workspace root = rahcp umbrella package
 │   │       ├── routing.py           # <- backend/app/core/tenant_routing.py
 │   │       └── types.py             # Shared enums from schemas/common.py
 │   │
-│   ├── rahcp-s3/                    # S3/object storage operations
-│   │   ├── pyproject.toml           # deps: rahcp-core, boto3, opentelemetry-api
+│   ├── rahcp-s3/                    # S3/object storage operations (async via aioboto3)
+│   │   ├── pyproject.toml           # deps: rahcp-core, aioboto3, opentelemetry-api
 │   │   └── src/rahcp_s3/
 │   │       ├── __init__.py          # Exports: StorageProtocol, StorageError, create_storage
 │   │       ├── client.py            # High-level S3Client (NEW)
@@ -88,7 +90,7 @@ ra-hcp/                              # Workspace root = rahcp umbrella package
 │           └── _output.py           # Rich table/JSON formatting
 │
 ├── backend/                         # FastAPI app (workspace member, imports from SDK)
-│   ├── pyproject.toml               # deps: rahcp-s3, rahcp-mapi + fastapi, redis, etc.
+│   ├── pyproject.toml               # deps: rahcp-s3, rahcp-mapi + fastapi, py-key-value, etc.
 │   └── app/...                      # Services become re-export shims
 │
 ├── frontend/                        # SvelteKit app (unchanged, NOT a uv member)
@@ -114,12 +116,12 @@ backend ──→ rahcp-s3
 | `tenant_routing.py` (host derivation functions) | `rahcp-core/routing.py` | Zero internal deps |
 | `config.py` → MapiSettings, S3Settings, StorageSettings | `rahcp-core/config.py` | Remove hardcoded env_file path |
 | `schemas/common.py` → Role, Permission enums | `rahcp-core/types.py` | Shared vocabulary |
-| `storage/protocol.py` (StorageProtocol) | `rahcp-s3/protocol.py` | Zero internal deps |
+| `storage/protocol.py` (StorageProtocol — all async) | `rahcp-s3/protocol.py` | Zero internal deps |
 | `storage/errors.py` (StorageError hierarchy) | `rahcp-s3/errors.py` | Only imports botocore |
 | `adapters/_boto3_ops.py` (Boto3Operations, Boto3Forwarder) | `rahcp-s3/_ops.py` | Rewrite `app.` → `rahcp_s3.` imports |
-| `adapters/hcp.py` (HcpStorage) | `rahcp-s3/adapters/hcp.py` | 3 import rewrites |
-| `adapters/generic_boto3.py` (GenericBoto3Storage) | `rahcp-s3/adapters/generic.py` | 3 import rewrites |
-| `storage/factory.py` → `create_storage()` only | `rahcp-s3/factory.py` | Keep `create_cached_storage` in backend |
+| `adapters/hcp.py` (HcpStorage — AsyncExitStack lifecycle) | `rahcp-s3/adapters/hcp.py` | 3 import rewrites |
+| `adapters/generic_boto3.py` (GenericBoto3Storage — AsyncExitStack lifecycle) | `rahcp-s3/adapters/generic.py` | 3 import rewrites |
+| `storage/factory.py` → `create_storage()` only (async) | `rahcp-s3/factory.py` | Keep `create_cached_storage` in backend |
 | `mapi_errors.py` (MapiError hierarchy) | `rahcp-mapi/errors.py` | Zero internal deps |
 | `mapi_service.py` (MapiService, AuthenticatedMapiService) | `rahcp-mapi/service.py` | Remove CachedMapiService TYPE_CHECKING |
 | `query_service.py` (QueryService, AuthenticatedQueryService) | `rahcp-mapi/query.py` | 6 import rewrites |
@@ -127,8 +129,8 @@ backend ──→ rahcp-s3
 | `lance_service.py` (LanceService) | `rahcp-lance/service.py` | 2 import rewrites; lancedb/pyarrow optional |
 
 **Stays in backend (not extracted):**
-- `CachedStorage`, `CachedMapiService`, `CachedQueryService`, `CachedLanceService` — Redis wrappers
-- `CacheService` — Redis client
+- `CachedStorage`, `CachedMapiService`, `CachedQueryService`, `CachedLanceService` — cache wrappers
+- `KVCache` (py-key-value) — `app/services/kv/` (composable async cache stores)
 - `CacheSettings`, `AuthSettings` — backend-only config
 - `dependencies.py` — FastAPI DI layer
 - `main.py` lifespan — app.state initialization
@@ -183,9 +185,9 @@ Backend files become thin re-exports so **no endpoint code changes**:
 3. **OpenTelemetry: api-only in SDK** — `opentelemetry-api` (no-op by default); backend brings `opentelemetry-sdk` with exporters
 4. **Re-export shims first** — Phase 6 uses `from rahcp_x import *` shims so zero endpoint code changes; direct imports in follow-up PR
 5. **AuthenticatedMapiService type hint** — change `base: MapiService | CachedMapiService` → `base: MapiService` (CachedMapiService conforms at runtime via duck typing)
-6. **create_cached_storage stays in backend** — depends on CacheService (Redis), not an SDK concern
+6. **create_cached_storage stays in backend** — depends on KVCache (py-key-value), not an SDK concern
 7. **rahcp-lance is optional** — heavy deps (lancedb ~200 MB); `pip install rahcp[lance]` pulls it in; LanceService already has graceful ImportError handling
-8. **All caching wrappers stay in backend** — `CachedStorage`, `CachedMapiService`, `CachedQueryService`, `CachedLanceService` all depend on Redis
+8. **All caching wrappers stay in backend** — `CachedStorage`, `CachedMapiService`, `CachedQueryService`, `CachedLanceService` all depend on KVCache (py-key-value)
 
 ## Implementation Phases
 
@@ -204,12 +206,12 @@ Backend files become thin re-exports so **no endpoint code changes**:
 - `types.py` ← copy enums from `schemas/common.py`
 
 ### Phase 3: Extract `rahcp-s3`
-- `protocol.py` ← copy `storage/protocol.py` (zero changes)
+- `protocol.py` ← copy `storage/protocol.py` (all methods async — zero changes)
 - `errors.py` ← copy `storage/errors.py` (zero changes)
-- `_ops.py` ← copy `_boto3_ops.py` (1 import rewrite)
-- `adapters/hcp.py` ← copy (3 import rewrites)
-- `adapters/generic.py` ← copy (3 import rewrites)
-- `factory.py` ← copy `create_storage()` only (4 import rewrites)
+- `_ops.py` ← copy `_boto3_ops.py` (1 import rewrite; uses aioboto3 async client)
+- `adapters/hcp.py` ← copy (3 import rewrites; AsyncExitStack + `connect()`/`close()` lifecycle)
+- `adapters/generic.py` ← copy (3 import rewrites; AsyncExitStack + `connect()`/`close()` lifecycle)
+- `factory.py` ← copy `async create_storage()` only (4 import rewrites; creates + connects adapter)
 
 ### Phase 4: Extract `rahcp-mapi`
 - `errors.py` ← copy `mapi_errors.py` (zero changes)
@@ -220,7 +222,8 @@ Backend files become thin re-exports so **no endpoint code changes**:
 ### Phase 5: Extract `rahcp-lance`
 - `service.py` ← copy `lance_service.py` (2 import rewrites: opentelemetry stays, remove app.* refs)
 - `errors.py` ← new `LanceError` base exception (dataset not found, connection errors)
-- LanceService is sync — endpoints call via `asyncio.to_thread()`, unchanged
+- LanceService is sync — endpoints use `CachedLanceService` which wraps via `asyncio.to_thread()`
+- `CachedLanceService` stays in backend (async wrapper + KVCache for metadata caching)
 - `lancedb` + `pyarrow` are optional deps (graceful ImportError already in source)
 
 ### Phase 6: Create `rahcp` umbrella
@@ -302,7 +305,7 @@ name = "rahcp-s3"
 version = "0.1.0"
 description = "S3 storage operations for Hitachi Content Platform"
 requires-python = ">=3.13"
-dependencies = ["rahcp-core", "boto3>=1.42", "opentelemetry-api>=1.29"]
+dependencies = ["rahcp-core", "aioboto3>=15.0", "opentelemetry-api>=1.29"]
 
 [tool.uv.sources]
 rahcp-core = { workspace = true }
@@ -384,7 +387,7 @@ dependencies = [
     "opentelemetry-exporter-otlp>=1.29",
     "pyjwt>=2.11",
     "python-multipart>=0.0.22",
-    "redis[hiredis]>=5.0",
+    "py-key-value-aio[redis,memory]>=0.2",
     "pyarrow>=17.0",
 ]
 # ... rest unchanged, add:
@@ -401,10 +404,9 @@ rahcp-core = { workspace = true }
 ```python
 from rahcp import HCPClient
 
-client = HCPClient.from_env()              # reads HCP_HOST, HCP_USERNAME, etc.
-buckets = client.s3.list_buckets()
-await client.mapi.fetch_json("/tenants", username="admin", password="p@ss")
-await client.close()
+async with HCPClient.from_env() as client:  # reads HCP_HOST, HCP_USERNAME, etc.
+    buckets = await client.s3.list_buckets()
+    await client.mapi.fetch_json("/tenants", username="admin", password="p@ss")
 ```
 
 ### CLI

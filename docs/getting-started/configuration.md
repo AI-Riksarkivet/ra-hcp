@@ -27,7 +27,7 @@ These variables configure the S3-compatible data plane used for object storage o
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `S3_ENDPOINT_URL` | str | `"https://s3.hcp.example.com"` | S3 endpoint URL. |
-| `S3_REGION` | str | `"us-east-1"` | AWS region. HCP ignores this value, but boto3 requires it to be set. |
+| `S3_REGION` | str | `"us-east-1"` | AWS region. HCP ignores this value, but aioboto3/botocore requires it to be set. |
 
 !!! tip
     S3 credentials are derived from the MAPI credentials automatically. The base64-encoded `HCP_USERNAME` becomes the access key, and the MD5 hash of `HCP_PASSWORD` becomes the secret key. There is no need to configure S3 credentials separately.
