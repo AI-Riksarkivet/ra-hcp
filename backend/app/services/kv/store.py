@@ -16,6 +16,7 @@ import json
 import logging
 from typing import Any
 
+from key_value.aio.protocols.key_value import AsyncKeyValueProtocol
 from opentelemetry import metrics, trace
 
 logger = logging.getLogger(__name__)
@@ -51,14 +52,19 @@ class KVCache:
 
     def __init__(
         self,
-        store: Any,
+        store: AsyncKeyValueProtocol,
         *,
         enabled: bool = True,
         has_url: bool = False,
+        closeable: object | None = None,
     ):
         self._store = store
         self._enabled = enabled
         self._has_url = has_url
+        # The underlying store that supports close() — wrappers
+        # (PrefixKeysWrapper, TimeoutWrapper, RetryWrapper) don't
+        # forward close(), so we keep a direct reference.
+        self._closeable = closeable
 
     @property
     def enabled(self) -> bool:
@@ -83,10 +89,11 @@ class KVCache:
 
     async def close(self) -> None:
         """Best-effort close of the backing store."""
-        close = getattr(self._store, "close", None)
-        if callable(close):
+        target = self._closeable or self._store
+        close_fn = getattr(target, "close", None)
+        if callable(close_fn):
             try:
-                await close()
+                await close_fn()
             except Exception:
                 pass
         self._enabled = False

@@ -21,6 +21,9 @@ from app.services.storage.protocol import StorageProtocol
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 
+# Beyond this limit, new keys aren't tracked — cache TTL handles expiry.
+_MAX_TRACKED_PER_GROUP = 2048
+
 
 class CachedStorage:
     """Transparent caching wrapper for any StorageProtocol implementation."""
@@ -42,7 +45,10 @@ class CachedStorage:
 
     def _track(self, op: str, bucket: str, cache_key: str) -> None:
         """Register a cache key for later invalidation."""
-        self._tracked.setdefault((op, bucket), set()).add(cache_key)
+        tracked = self._tracked.setdefault((op, bucket), set())
+        if len(tracked) >= _MAX_TRACKED_PER_GROUP:
+            return  # TTL will handle expiry for excess keys
+        tracked.add(cache_key)
 
     async def _invalidate_tracked(self, op: str, bucket: str) -> None:
         """Delete all tracked cache keys for (operation, bucket)."""

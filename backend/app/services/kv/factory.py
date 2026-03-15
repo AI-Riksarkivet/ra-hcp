@@ -12,6 +12,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from key_value.aio.protocols.key_value import AsyncKeyValueProtocol
+
 from app.services.kv.store import KVCache
 
 if TYPE_CHECKING:
@@ -37,7 +39,8 @@ def create_kv_cache(settings: CacheSettings) -> KVCache:
     from key_value.aio.wrappers.retry import RetryWrapper
     from key_value.aio.wrappers.timeout import TimeoutWrapper
 
-    store = RedisStore(url=settings.redis_url)
+    redis_store = RedisStore(url=settings.redis_url)
+    store: AsyncKeyValueProtocol = redis_store
 
     if settings.cache_key_prefix:
         store = PrefixKeysWrapper(key_value=store, prefix=settings.cache_key_prefix)
@@ -46,4 +49,4 @@ def create_kv_cache(settings: CacheSettings) -> KVCache:
     store = RetryWrapper(key_value=store, max_retries=2, initial_delay=0.1)
 
     logger.info("Creating RedisStore KVCache (prefix=%s)", settings.cache_key_prefix)
-    return KVCache(store, enabled=False, has_url=True)
+    return KVCache(store, enabled=False, has_url=True, closeable=redis_store)
