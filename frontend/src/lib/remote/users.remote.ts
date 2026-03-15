@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { command, query } from "$app/server";
-import { apiFetch } from "$lib/server/api.js";
+import { apiFetch, throwIfNotOk } from "$lib/server/api.js";
 
 export const get_users = query(
   z.object({ tenant: z.string() }),
@@ -69,12 +69,7 @@ export const set_user_permissions = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update user permissions",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update user permissions");
   },
 );
 
@@ -99,12 +94,7 @@ export const create_user = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to create user",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to create user");
   },
 );
 
@@ -124,12 +114,7 @@ export const create_group = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to create group",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to create group");
   },
 );
 
@@ -167,12 +152,7 @@ export const update_user = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update user",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update user");
   },
 );
 
@@ -185,12 +165,7 @@ export const delete_user = command(
       }`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete user",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete user");
   },
 );
 
@@ -211,12 +186,7 @@ export const change_password = command(
         body: JSON.stringify({ newPassword: password }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to change password",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to change password");
   },
 );
 
@@ -276,12 +246,7 @@ export const update_group = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update group",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update group");
   },
 );
 
@@ -294,12 +259,7 @@ export const delete_group = command(
       }`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete group",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete group");
   },
 );
 
@@ -337,11 +297,6 @@ export const set_group_permissions = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update group permissions",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update group permissions");
   },
 );

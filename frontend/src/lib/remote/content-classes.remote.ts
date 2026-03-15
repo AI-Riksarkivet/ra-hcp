@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { command, query } from "$app/server";
-import { apiFetch } from "$lib/server/api.js";
+import { apiFetch, throwIfNotOk } from "$lib/server/api.js";
 
 export interface ContentProperty {
   name: string;
@@ -77,12 +77,7 @@ export const create_content_class = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to create content class",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to create content class");
   },
 );
 
@@ -103,12 +98,7 @@ export const update_content_class = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update content class",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update content class");
   },
 );
 
@@ -121,11 +111,6 @@ export const delete_content_class = command(
       }`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete content class",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete content class");
   },
 );

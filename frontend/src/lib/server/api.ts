@@ -10,3 +10,16 @@ export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   }
   return fetch(`${BACKEND_URL}${path}`, { ...init, headers });
 }
+
+export async function throwIfNotOk(
+  res: Response,
+  fallback: string,
+): Promise<void> {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: fallback }));
+    const detail = typeof err.detail === "string"
+      ? err.detail
+      : JSON.stringify(err.detail);
+    throw new Error(detail);
+  }
+}

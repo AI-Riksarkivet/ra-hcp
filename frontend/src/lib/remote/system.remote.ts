@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { command, query } from "$app/server";
-import { apiFetch } from "$lib/server/api.js";
+import { apiFetch, throwIfNotOk } from "$lib/server/api.js";
 
 // ── Network ─────────────────────────────────────────────────────────
 
@@ -29,12 +29,7 @@ export const update_network_settings = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update network settings",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update network settings");
   },
 );
 
@@ -243,12 +238,7 @@ export const change_system_user_password = command(
         body: JSON.stringify({ newPassword, oldPassword }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to change password",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to change password");
   },
 );
 
@@ -333,12 +323,7 @@ export const create_tenant = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to create tenant",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to create tenant");
   },
 );
 
@@ -349,12 +334,7 @@ export const delete_tenant = command(
       `/api/v1/mapi/tenants/${encodeURIComponent(name)}`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete tenant",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete tenant");
   },
 );
 
@@ -416,12 +396,7 @@ export const mark_logs = command(
       `/api/v1/mapi/system/logs?mark=${encodeURIComponent(message)}`,
       { method: "POST" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to mark logs",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to mark logs");
   },
 );
 
@@ -436,12 +411,7 @@ export const prepare_logs = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ startDate, endDate }),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to prepare logs",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to prepare logs");
   },
 );
 
@@ -451,12 +421,7 @@ export const cancel_log_download = command(
     const res = await apiFetch(`/api/v1/mapi/system/logs?cancel=true`, {
       method: "POST",
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to cancel log download",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to cancel log download");
   },
 );
 
@@ -498,12 +463,7 @@ export const prepare_health_report = command(
         body: JSON.stringify({ startDate, endDate, collectCurrent }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to prepare health report",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to prepare health report");
   },
 );
 
@@ -513,11 +473,6 @@ export const cancel_health_report = command(
     const res = await apiFetch(`/api/v1/mapi/system/healthCheckReport/cancel`, {
       method: "POST",
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to cancel health report",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to cancel health report");
   },
 );

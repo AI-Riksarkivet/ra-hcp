@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { command, query } from "$app/server";
-import { apiFetch } from "$lib/server/api.js";
+import { apiFetch, throwIfNotOk } from "$lib/server/api.js";
 
 export interface TenantInfo {
   name: string;
@@ -121,12 +121,7 @@ export const update_contact_info = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update contact info",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update contact info");
   },
 );
 
@@ -141,12 +136,7 @@ export const update_namespace_defaults = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update namespace defaults",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update namespace defaults");
   },
 );
 
@@ -158,12 +148,7 @@ export const update_permissions = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update permissions",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update permissions");
   },
 );
 
@@ -224,12 +209,7 @@ export const update_console_security = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update console security",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update console security");
   },
 );
 
@@ -280,12 +260,7 @@ export const update_email_notification = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update email notification",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update email notification");
   },
 );
 
@@ -321,12 +296,7 @@ export const update_search_security = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update search security",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update search security");
   },
 );
 
@@ -360,12 +330,7 @@ export const set_tenant_cors = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update CORS configuration",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update CORS configuration");
   },
 );
 
@@ -375,12 +340,7 @@ export const delete_tenant_cors = command(
     const res = await apiFetch(`/api/v1/mapi/tenants/${tenant}/cors`, {
       method: "DELETE",
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete CORS configuration",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete CORS configuration");
   },
 );
 
@@ -403,12 +363,7 @@ export const update_tenant = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update tenant settings",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update tenant settings");
   },
 );
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { command, query } from "$app/server";
-import { apiFetch } from "$lib/server/api.js";
+import { apiFetch, throwIfNotOk } from "$lib/server/api.js";
 
 export interface Namespace {
   name: string;
@@ -138,12 +138,7 @@ export const update_namespace = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update namespace",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update namespace");
   },
 );
 
@@ -222,12 +217,7 @@ export const update_ns_protocol = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: `Failed to update ${protocol} protocol`,
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, `Failed to update ${protocol} protocol`);
   },
 );
 
@@ -265,12 +255,7 @@ export const update_ns_permissions = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update permissions",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update permissions");
   },
 );
 
@@ -291,12 +276,7 @@ export const update_versioning = command(
         body: JSON.stringify({ enabled }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update versioning",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update versioning");
   },
 );
 
@@ -344,12 +324,7 @@ export const update_ns_versioning = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update versioning settings",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update versioning settings");
   },
 );
 
@@ -362,12 +337,7 @@ export const delete_ns_versioning = command(
       }/versioningSettings`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to reset versioning settings",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to reset versioning settings");
   },
 );
 
@@ -444,12 +414,7 @@ export const update_ns_compliance = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update compliance settings",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update compliance settings");
   },
 );
 
@@ -521,12 +486,7 @@ export const create_retention_class = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to create retention class",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to create retention class");
   },
 );
 
@@ -548,12 +508,7 @@ export const update_retention_class = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update retention class",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update retention class");
   },
 );
 
@@ -570,12 +525,7 @@ export const delete_retention_class = command(
       }/retentionClasses/${encodeURIComponent(className)}`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete retention class",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete retention class");
   },
 );
 
@@ -621,12 +571,7 @@ export const update_ns_indexing = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update indexing settings",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update indexing settings");
   },
 );
 
@@ -670,12 +615,7 @@ export const set_ns_cors = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to set CORS configuration",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to set CORS configuration");
   },
 );
 
@@ -688,12 +628,7 @@ export const delete_ns_cors = command(
       }/cors`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete CORS configuration",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete CORS configuration");
   },
 );
 
@@ -739,12 +674,7 @@ export const update_repl_collision = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update replication collision settings",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update replication collision settings");
   },
 );
 
@@ -758,12 +688,7 @@ export const export_namespace_config = command(
         encodeURIComponent(name)
       }/export`,
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Export failed",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Export failed");
     return await res.json();
   },
 );
@@ -776,12 +701,7 @@ export const export_namespace_configs = command(
         names.map(encodeURIComponent).join(",")
       }`,
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Export failed",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Export failed");
     return await res.json();
   },
 );

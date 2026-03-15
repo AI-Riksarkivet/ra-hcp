@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { command, query } from "$app/server";
-import { apiFetch } from "$lib/server/api.js";
+import { apiFetch, throwIfNotOk } from "$lib/server/api.js";
 
 // ── Replication Service ──────────────────────────────────────────────
 
@@ -37,12 +37,7 @@ export const update_replication_service = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update replication service",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update replication service");
   },
 );
 
@@ -82,12 +77,7 @@ export const delete_replication_certificate = command(
       }`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete certificate",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete certificate");
   },
 );
 
@@ -186,12 +176,7 @@ export const create_replication_link = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to create link",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to create link");
   },
 );
 
@@ -204,12 +189,7 @@ export const delete_replication_link = command(
       }`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete link",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete link");
   },
 );
 
@@ -232,12 +212,7 @@ export const action_replication_link = command(
       }?${action}=true`,
       { method: "POST" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: `Failed to ${action} link`,
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, `Failed to ${action} link`);
   },
 );
 
@@ -275,12 +250,7 @@ export const add_tenant_to_link = command(
       }/content/tenants/${encodeURIComponent(tenantName)}`,
       { method: "PUT" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to add tenant",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to add tenant");
   },
 );
 
@@ -293,12 +263,7 @@ export const remove_tenant_from_link = command(
       }/content/tenants/${encodeURIComponent(tenantName)}`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to remove tenant",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to remove tenant");
   },
 );
 
@@ -352,12 +317,7 @@ export const update_link_schedule = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update schedule",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update schedule");
   },
 );
 
@@ -474,12 +434,7 @@ export const create_ec_topology = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to create topology",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to create topology");
   },
 );
 
@@ -492,12 +447,7 @@ export const delete_ec_topology = command(
       }`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete topology",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete topology");
   },
 );
 
@@ -510,12 +460,7 @@ export const retire_ec_topology = command(
       }?retire=true`,
       { method: "POST" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to retire topology",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to retire topology");
   },
 );
 
@@ -548,12 +493,7 @@ export const add_tenant_to_ec_topology = command(
       }/tenants/${encodeURIComponent(tenantName)}`,
       { method: "PUT" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to add tenant",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to add tenant");
   },
 );
 
@@ -566,11 +506,6 @@ export const remove_tenant_from_ec_topology = command(
       }/tenants/${encodeURIComponent(tenantName)}`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to remove tenant",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to remove tenant");
   },
 );

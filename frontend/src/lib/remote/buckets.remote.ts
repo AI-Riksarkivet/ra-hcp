@@ -1,6 +1,6 @@
 import { command, query } from "$app/server";
 import { z } from "zod";
-import { apiFetch } from "$lib/server/api.js";
+import { apiFetch, throwIfNotOk } from "$lib/server/api.js";
 
 export const get_buckets = query(async () => {
   try {
@@ -153,12 +153,7 @@ export const delete_object = command(
       }`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete object",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete object");
   },
 );
 
@@ -173,12 +168,7 @@ export const bulk_delete_objects = command(
         body: JSON.stringify({ keys }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete objects",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete objects");
     const data = await res.json();
     if (data.errors && data.errors.length > 0) {
       throw new Error(
@@ -226,12 +216,7 @@ export const bulk_presign = command(
         body: JSON.stringify({ keys, expires_in }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to generate presigned URLs",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to generate presigned URLs");
     const data = await res.json();
     return {
       urls: (data.urls ?? []) as { key: string; url: string }[],
@@ -253,12 +238,7 @@ export const generate_presigned_url = command(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bucket, key, expires_in, method }),
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to generate presigned URL",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to generate presigned URL");
     const data = await res.json();
     return {
       url: data.url as string,
@@ -393,12 +373,7 @@ export const copy_object = command(
         body: JSON.stringify({ source_bucket, source_key }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to copy object",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to copy object");
     return await res.json();
   },
 );
@@ -454,12 +429,7 @@ export const set_bucket_versioning = command(
         body: JSON.stringify({ status }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update versioning",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update versioning");
     return await res.json();
   },
 );
@@ -536,12 +506,7 @@ export const put_bucket_acl = command(
         body: JSON.stringify({ Owner: owner, Grants: grants }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update bucket ACL",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update bucket ACL");
     return await res.json();
   },
 );
@@ -589,12 +554,7 @@ export const put_object_acl = command(
         body: JSON.stringify({ Owner: owner, Grants: grants }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to update object ACL",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to update object ACL");
     return await res.json();
   },
 );
@@ -696,12 +656,7 @@ export const delete_object_version = command(
       }?version_id=${encodeURIComponent(version_id)}`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete version",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete version");
   },
 );
 
@@ -783,12 +738,7 @@ export const delete_bucket_cors = command(
       `/api/v1/buckets/${encodeURIComponent(bucket)}/cors`,
       { method: "DELETE" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to delete CORS configuration",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to delete CORS configuration");
   },
 );
 
@@ -893,12 +843,7 @@ export const presign_multipart_upload = command(
         body: JSON.stringify(body),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to generate presigned multipart URLs",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to generate presigned multipart URLs");
     return (await res.json()) as {
       bucket: string;
       key: string;
@@ -920,12 +865,7 @@ export const create_multipart_upload = command(
       }`,
       { method: "POST" },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to initiate multipart upload",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to initiate multipart upload");
     return (await res.json()) as {
       bucket: string;
       key: string;
@@ -954,12 +894,7 @@ export const complete_multipart_upload = command(
         body: JSON.stringify({ upload_id, parts }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to complete multipart upload",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to complete multipart upload");
     return (await res.json()) as {
       bucket: string;
       key: string;
@@ -985,11 +920,6 @@ export const abort_multipart_upload = command(
         body: JSON.stringify({ upload_id }),
       },
     );
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({
-        detail: "Failed to abort multipart upload",
-      }));
-      throw new Error(err.detail);
-    }
+    await throwIfNotOk(res, "Failed to abort multipart upload");
   },
 );
