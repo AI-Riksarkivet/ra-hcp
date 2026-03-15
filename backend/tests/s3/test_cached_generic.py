@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -11,9 +11,9 @@ from app.services.cached_storage import CachedStorage
 
 
 @pytest.fixture
-def mock_inner() -> MagicMock:
+def mock_inner() -> AsyncMock:
     """Mock StorageProtocol implementation."""
-    mock = MagicMock()
+    mock = AsyncMock()
     mock.list_buckets.return_value = {"Buckets": [{"Name": "b1"}]}
     mock.head_bucket.return_value = {"ResponseMetadata": {"HTTPStatusCode": 200}}
     mock.list_objects.return_value = {"Contents": [], "IsTruncated": False}
@@ -34,10 +34,10 @@ def mock_inner() -> MagicMock:
 
 
 @pytest.fixture
-def mock_cache() -> MagicMock:
-    """Mock CacheService — get_sync returns None (cache miss) by default."""
-    cache = MagicMock()
-    cache.get_sync.return_value = None
+def mock_cache() -> AsyncMock:
+    """Mock KVCache — get returns None (cache miss) by default."""
+    cache = AsyncMock()
+    cache.get.return_value = None
     return cache
 
 
@@ -48,7 +48,7 @@ def cache_settings() -> CacheSettings:
 
 @pytest.fixture
 def cached(
-    mock_inner: MagicMock, mock_cache: MagicMock, cache_settings: CacheSettings
+    mock_inner: AsyncMock, mock_cache: AsyncMock, cache_settings: CacheSettings
 ) -> CachedStorage:
     return CachedStorage(mock_inner, mock_cache, cache_settings)
 
@@ -56,60 +56,60 @@ def cached(
 # ── Read caching: cache miss → call inner → set cache ────────────────
 
 
-def test_list_buckets_cache_miss(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_list_buckets_cache_miss(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    result = cached.list_buckets()
+    result = await cached.list_buckets()
     assert result["Buckets"][0]["Name"] == "b1"
     mock_inner.list_buckets.assert_called_once()
-    mock_cache.set_sync.assert_called_once()
+    mock_cache.set.assert_called_once()
 
 
-def test_list_buckets_cache_hit(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_list_buckets_cache_hit(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    mock_cache.get_sync.return_value = {"Buckets": [{"Name": "cached"}]}
-    result = cached.list_buckets()
+    mock_cache.get.return_value = {"Buckets": [{"Name": "cached"}]}
+    result = await cached.list_buckets()
     assert result["Buckets"][0]["Name"] == "cached"
     mock_inner.list_buckets.assert_not_called()
 
 
-def test_head_bucket_cache_miss(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_head_bucket_cache_miss(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.head_bucket("my-bucket")
+    await cached.head_bucket("my-bucket")
     mock_inner.head_bucket.assert_called_once_with("my-bucket")
-    mock_cache.set_sync.assert_called_once()
+    mock_cache.set.assert_called_once()
 
 
-def test_list_objects_cache_miss(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_list_objects_cache_miss(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.list_objects("bucket", prefix="logs/")
+    await cached.list_objects("bucket", prefix="logs/")
     mock_inner.list_objects.assert_called_once()
-    mock_cache.set_sync.assert_called_once()
+    mock_cache.set.assert_called_once()
 
 
-def test_list_objects_with_continuation_skips_cache(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_list_objects_with_continuation_skips_cache(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.list_objects("bucket", continuation_token="tok123")
+    await cached.list_objects("bucket", continuation_token="tok123")
     mock_inner.list_objects.assert_called_once()
-    mock_cache.set_sync.assert_not_called()
+    mock_cache.set.assert_not_called()
 
 
-def test_head_object_cache_miss(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_head_object_cache_miss(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.head_object("bucket", "key.txt")
+    await cached.head_object("bucket", "key.txt")
     mock_inner.head_object.assert_called_once_with("bucket", "key.txt")
-    mock_cache.set_sync.assert_called_once()
+    mock_cache.set.assert_called_once()
 
 
-def test_get_bucket_versioning_cache_miss(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_get_bucket_versioning_cache_miss(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    result = cached.get_bucket_versioning("bucket")
+    result = await cached.get_bucket_versioning("bucket")
     assert result["Status"] == "Enabled"
     mock_inner.get_bucket_versioning.assert_called_once()
 
@@ -117,96 +117,117 @@ def test_get_bucket_versioning_cache_miss(
 # ── Write operations: delegate + invalidate ────────────────────────
 
 
-def test_create_bucket_invalidates(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_create_bucket_invalidates(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.create_bucket("new-bucket")
+    await cached.create_bucket("new-bucket")
     mock_inner.create_bucket.assert_called_once_with("new-bucket")
     # Targeted invalidation: list_buckets + head_bucket + versioning + bucket_acl
-    delete_keys = [c.args[0] for c in mock_cache.delete_sync.call_args_list]
+    delete_keys = [c.args[0] for c in mock_cache.delete.call_args_list]
     assert "s3:list_buckets" in delete_keys
     assert "s3:head_bucket:new-bucket" in delete_keys
     assert "s3:versioning:new-bucket" in delete_keys
     assert "s3:bucket_acl:new-bucket" in delete_keys
-    # Pattern invalidation for list_objects, head_object, object_acl
-    patterns = [c.args[0] for c in mock_cache.invalidate_pattern_sync.call_args_list]
-    assert "s3:list_objects:new-bucket:*" in patterns
-    assert "s3:head_object:new-bucket:*" in patterns
-    assert "s3:object_acl:new-bucket:*" in patterns
 
 
-def test_delete_bucket_invalidates(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_delete_bucket_invalidates(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.delete_bucket("old-bucket")
+    await cached.delete_bucket("old-bucket")
     mock_inner.delete_bucket.assert_called_once_with("old-bucket")
-    delete_keys = [c.args[0] for c in mock_cache.delete_sync.call_args_list]
+    delete_keys = [c.args[0] for c in mock_cache.delete.call_args_list]
     assert "s3:list_buckets" in delete_keys
     assert "s3:head_bucket:old-bucket" in delete_keys
 
 
-def test_put_object_invalidates(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_put_object_invalidates(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
     body = MagicMock()
-    cached.put_object("bucket", "key.txt", body)
+    await cached.put_object("bucket", "key.txt", body)
     mock_inner.put_object.assert_called_once_with("bucket", "key.txt", body)
-    mock_cache.invalidate_pattern_sync.assert_called_once_with(
-        "s3:list_objects:bucket:*"
-    )
-    mock_cache.delete_sync.assert_called_once_with("s3:head_object:bucket:key.txt")
+    mock_cache.delete.assert_called_once_with("s3:head_object:bucket:key.txt")
 
 
-def test_delete_object_invalidates(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_delete_object_invalidates(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.delete_object("bucket", "key.txt")
+    await cached.delete_object("bucket", "key.txt")
     mock_inner.delete_object.assert_called_once()
-    mock_cache.invalidate_pattern_sync.assert_called_once_with(
-        "s3:list_objects:bucket:*"
-    )
-    assert mock_cache.delete_sync.call_count == 2  # head_object + object_acl
+    delete_keys = [c.args[0] for c in mock_cache.delete.call_args_list]
+    assert "s3:head_object:bucket:key.txt" in delete_keys
+    assert "s3:object_acl:bucket:key.txt" in delete_keys
+    assert mock_cache.delete.call_count == 2
 
 
-def test_delete_objects_invalidates(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_delete_objects_invalidates(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.delete_objects("bucket", ["a.txt", "b.txt"])
+    await cached.delete_objects("bucket", ["a.txt", "b.txt"])
     mock_inner.delete_objects.assert_called_once()
-    # 1 pattern invalidation + 2 head_object + 2 object_acl deletes
-    assert mock_cache.delete_sync.call_count == 4
+    # 2 head_object + 2 object_acl deletes
+    assert mock_cache.delete.call_count == 4
 
 
-def test_copy_object_invalidates(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_copy_object_invalidates(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.copy_object("src", "skey", "dst", "dkey")
+    await cached.copy_object("src", "skey", "dst", "dkey")
     mock_inner.copy_object.assert_called_once()
-    mock_cache.invalidate_pattern_sync.assert_called_once_with("s3:list_objects:dst:*")
-    delete_keys = [c.args[0] for c in mock_cache.delete_sync.call_args_list]
+    delete_keys = [c.args[0] for c in mock_cache.delete.call_args_list]
     assert "s3:head_object:dst:dkey" in delete_keys
     assert "s3:object_acl:dst:dkey" in delete_keys
 
 
-def test_put_bucket_versioning_invalidates(
-    cached: CachedStorage, mock_inner: MagicMock, mock_cache: MagicMock
+async def test_put_bucket_versioning_invalidates(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    cached.put_bucket_versioning("bucket", "Enabled")
+    await cached.put_bucket_versioning("bucket", "Enabled")
     mock_inner.put_bucket_versioning.assert_called_once()
-    mock_cache.delete_sync.assert_called_once_with("s3:versioning:bucket")
+    mock_cache.delete.assert_called_once_with("s3:versioning:bucket")
+
+
+# ── Key tracking: reads populate tracking, writes invalidate tracked ─
+
+
+async def test_tracked_list_objects_invalidated_on_put(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
+):
+    """list_objects keys are tracked and deleted when put_object is called."""
+    # Read populates tracking
+    await cached.list_objects("bucket", prefix="docs/")
+    # Write should invalidate tracked keys
+    await cached.put_object("bucket", "docs/new.txt", MagicMock())
+
+    # The tracked list_objects key + the head_object key should be deleted
+    delete_keys = [c.args[0] for c in mock_cache.delete.call_args_list]
+    assert any("list_objects" in k for k in delete_keys)
+    assert "s3:head_object:bucket:docs/new.txt" in delete_keys
+
+
+async def test_tracked_head_object_invalidated_on_delete_bucket(
+    cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
+):
+    """head_object keys are tracked per bucket and deleted on bucket operations."""
+    await cached.head_object("mybucket", "file.txt")
+    await cached.delete_bucket("mybucket")
+
+    delete_keys = [c.args[0] for c in mock_cache.delete.call_args_list]
+    # Tracked head_object key should be in deletes
+    assert "s3:head_object:mybucket:file.txt" in delete_keys
 
 
 # ── Pass-through operations ──────────────────────────────────────────
 
 
-def test_get_object_passes_through(cached: CachedStorage, mock_inner: MagicMock):
+async def test_get_object_passes_through(cached: CachedStorage, mock_inner: AsyncMock):
     mock_inner.get_object.return_value = {"Body": b"data"}
-    result = cached.get_object("bucket", "key")
+    result = await cached.get_object("bucket", "key")
     assert result["Body"] == b"data"
     mock_inner.get_object.assert_called_once_with("bucket", "key", None)
 
 
-def test_multipart_passes_through(cached: CachedStorage, mock_inner: MagicMock):
+async def test_multipart_passes_through(cached: CachedStorage, mock_inner: AsyncMock):
     mock_inner.create_multipart_upload.return_value = {"UploadId": "u1"}
-    result = cached.create_multipart_upload("bucket", "key")
+    result = await cached.create_multipart_upload("bucket", "key")
     assert result["UploadId"] == "u1"

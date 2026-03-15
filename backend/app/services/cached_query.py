@@ -1,4 +1,4 @@
-"""Cached Metadata Query service — wraps QueryService with Redis caching.
+"""Cached Metadata Query service — wraps QueryService with KVCache.
 
 Object and operation query results are cached with short TTLs.
 Read-only API → no invalidation needed, only TTL expiry.
@@ -19,7 +19,7 @@ from app.schemas.query import (
     OperationQuery,
     OperationQueryResponse,
 )
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache
 from app.services.query_service import QueryService
 
 logger = logging.getLogger(__name__)
@@ -33,12 +33,12 @@ def _hash_params(data: dict) -> str:
 
 
 class CachedQueryService:
-    """QueryService wrapper with transparent Redis caching."""
+    """QueryService wrapper with transparent caching."""
 
     def __init__(
         self,
         inner: QueryService,
-        cache: CacheService,
+        cache: KVCache,
         cache_settings: CacheSettings,
     ):
         self._inner = inner

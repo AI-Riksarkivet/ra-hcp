@@ -10,10 +10,10 @@ No HCP-specific workarounds:
 from __future__ import annotations
 
 import logging
+from contextlib import AsyncExitStack
 
-import boto3
-from boto3.s3.transfer import TransferConfig
-from botocore.config import Config as BotoConfig
+import aioboto3
+from aiobotocore.config import AioConfig
 from botocore.exceptions import BotoCoreError, ClientError
 from opentelemetry import trace
 
@@ -30,7 +30,7 @@ tracer = trace.get_tracer(__name__)
 
 
 class GenericBoto3Storage(Boto3Forwarder):
-    """Standard boto3 S3 adapter — no vendor-specific hacks.
+    """Standard async S3 adapter — no vendor-specific hacks.
 
     Implements StorageProtocol via composition: a Boto3Operations instance
     (``self._ops``) provides the shared S3 methods.  Boto3Forwarder supplies
@@ -38,29 +38,20 @@ class GenericBoto3Storage(Boto3Forwarder):
     overrides are defined here.
     """
 
-    def __init__(self, settings: StorageSettings):
+    def __init__(
+        self,
+        settings: StorageSettings,
+        *,
+        access_key: str | None = None,
+        secret_key: str | None = None,
+        endpoint_url: str | None = None,
+    ):
         self.settings = settings
-        boto_config = BotoConfig(
-            signature_version="s3v4",
-            s3={"addressing_style": settings.s3_addressing_style},
-            retries={"max_attempts": 3, "mode": "adaptive"},
-            connect_timeout=10,
-            read_timeout=60,
-        )
-        self._client = boto3.client(
-            "s3",
-            endpoint_url=settings.s3_endpoint_url or None,
-            aws_access_key_id=settings.s3_access_key,
-            aws_secret_access_key=settings.s3_secret_key.get_secret_value(),
-            region_name=settings.s3_region,
-            verify=settings.s3_verify_ssl,
-            config=boto_config,
-        )
-        self._transfer_config = TransferConfig(
-            multipart_threshold=8 * 1024 * 1024,
-            multipart_chunksize=8 * 1024 * 1024,
-        )
-        self._ops = Boto3Operations(self._client, self._transfer_config)
+        self._access_key = access_key or settings.s3_access_key
+        self._secret_key = secret_key or settings.s3_secret_key.get_secret_value()
+        self._endpoint_url = endpoint_url or settings.s3_endpoint_url or None
+        self._ops = Boto3Operations()
+        self._exit_stack = AsyncExitStack()
 
     @classmethod
     def with_credentials(
@@ -71,41 +62,51 @@ class GenericBoto3Storage(Boto3Forwarder):
         endpoint_url: str | None = None,
     ) -> GenericBoto3Storage:
         """Create a GenericBoto3Storage with explicit credentials."""
-        instance = cls.__new__(cls)
-        instance.settings = settings
-        boto_config = BotoConfig(
+        return cls(
+            settings,
+            access_key=access_key,
+            secret_key=secret_key,
+            endpoint_url=endpoint_url,
+        )
+
+    async def connect(self) -> None:
+        """Enter the aioboto3 client context manager."""
+        boto_config = AioConfig(
             signature_version="s3v4",
-            s3={"addressing_style": settings.s3_addressing_style},
+            s3={"addressing_style": self.settings.s3_addressing_style},
             retries={"max_attempts": 3, "mode": "adaptive"},
             connect_timeout=10,
             read_timeout=60,
         )
-        instance._client = boto3.client(
-            "s3",
-            endpoint_url=endpoint_url or settings.s3_endpoint_url or None,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            region_name=settings.s3_region,
-            verify=settings.s3_verify_ssl,
-            config=boto_config,
+        session = aioboto3.Session(
+            aws_access_key_id=self._access_key,
+            aws_secret_access_key=self._secret_key,
         )
-        instance._transfer_config = TransferConfig(
-            multipart_threshold=8 * 1024 * 1024,
-            multipart_chunksize=8 * 1024 * 1024,
+        client = await self._exit_stack.enter_async_context(
+            session.client(
+                "s3",
+                endpoint_url=self._endpoint_url,
+                region_name=self.settings.s3_region,
+                verify=self.settings.s3_verify_ssl,
+                config=boto_config,
+            )
         )
-        instance._ops = Boto3Operations(instance._client, instance._transfer_config)
-        return instance
+        self._ops._client = client
+
+    async def close(self) -> None:
+        """Exit the aioboto3 client context manager."""
+        await self._exit_stack.aclose()
 
     # -- GenericBoto3-specific overrides ------------------------------------
 
-    def delete_objects(self, bucket: str, keys: list[str]) -> dict:
+    async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
         """Native batch delete — works on standard S3-compatible backends."""
         with tracer.start_as_current_span(
             "s3.delete_objects",
             attributes={"s3.bucket": bucket, "s3.key_count": len(keys)},
         ):
             try:
-                result = self._client.delete_objects(
+                result = await self._ops._client.delete_objects(
                     Bucket=bucket,
                     Delete={"Objects": [{"Key": k} for k in keys], "Quiet": True},
                 )
@@ -118,25 +119,25 @@ class GenericBoto3Storage(Boto3Forwarder):
 
     # -- ACLs (not supported on MinIO) -------------------------------------
 
-    def get_bucket_acl(self, bucket: str) -> dict:
+    async def get_bucket_acl(self, bucket: str) -> dict:
         raise StorageOperationNotSupported("get_bucket_acl", "minio")
 
-    def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
+    async def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
         raise StorageOperationNotSupported("put_bucket_acl", "minio")
 
-    def get_object_acl(self, bucket: str, key: str) -> dict:
+    async def get_object_acl(self, bucket: str, key: str) -> dict:
         raise StorageOperationNotSupported("get_object_acl", "minio")
 
-    def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
+    async def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
         raise StorageOperationNotSupported("put_object_acl", "minio")
 
     # -- Bucket CORS (not supported on MinIO) ----------------------------------
 
-    def get_bucket_cors(self, bucket: str) -> dict:
+    async def get_bucket_cors(self, bucket: str) -> dict:
         raise StorageOperationNotSupported("get_bucket_cors", "minio")
 
-    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
+    async def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
         raise StorageOperationNotSupported("put_bucket_cors", "minio")
 
-    def delete_bucket_cors(self, bucket: str) -> dict:
+    async def delete_bucket_cors(self, bucket: str) -> dict:
         raise StorageOperationNotSupported("delete_bucket_cors", "minio")

@@ -19,7 +19,7 @@ from app.api.dependencies import get_cache_service
 from app.api.v1.router import api_router
 from app.core.config import AuthSettings
 from app.core.telemetry import setup_telemetry
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache, create_kv_cache
 from app.services.mapi_errors import MapiError
 
 logger = logging.getLogger(__name__)
@@ -116,13 +116,12 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.core.config import CacheSettings, MapiSettings
-    from app.services.cache_service import CacheService
     from app.services.mapi_service import MapiService
     from app.services.query_service import QueryService
 
     # ── Startup ──────────────────────────────────────────────────────
     cache_settings = CacheSettings()
-    cache = CacheService(cache_settings)
+    cache = create_kv_cache(cache_settings)
     await cache.connect()
     app.state.cache = cache
 
@@ -153,6 +152,13 @@ async def lifespan(app: FastAPI):
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────
+    # Close all cached S3 storage adapters
+    for storage in app.state.s3_cache.values():
+        try:
+            await storage.close()
+        except Exception:
+            logger.warning("Failed to close S3 storage adapter", exc_info=True)
+
     await app.state.query.close()
     await app.state.mapi.close()
     await cache.close()
@@ -382,7 +388,7 @@ async def readyz(request: Request):
         checks["storage"] = storage_settings.storage_backend
 
     # Cache (required only when configured)
-    cache: CacheService | None = getattr(request.app.state, "cache", None)
+    cache: KVCache | None = getattr(request.app.state, "cache", None)
     if cache is not None and cache.has_url:
         if await cache.ping():
             checks["cache"] = "connected"
@@ -399,7 +405,7 @@ async def readyz(request: Request):
 
 
 @app.get("/health", tags=["Health"])
-async def health(cache: CacheService | None = Depends(get_cache_service)):
+async def health(cache: KVCache | None = Depends(get_cache_service)):
     """Legacy health endpoint (backwards compatible)."""
     return {
         "status": "ok",

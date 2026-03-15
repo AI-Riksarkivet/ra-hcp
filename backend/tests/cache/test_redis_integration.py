@@ -13,7 +13,7 @@ import os
 import pytest
 
 from app.core.config import CacheSettings
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache, create_kv_cache
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
 
@@ -30,18 +30,18 @@ async def real_cache():
         cache_key_prefix="integration-test",
         cache_default_ttl=10,
     )
-    svc = CacheService(settings)
-    await svc.connect()
-    yield svc
-    await svc.close()
+    kv = create_kv_cache(settings)
+    await kv.connect()
+    yield kv
+    await kv.close()
 
 
-async def test_real_redis_connect(real_cache: CacheService):
-    """CacheService connects and reports enabled with a real Redis."""
+async def test_real_redis_connect(real_cache: KVCache):
+    """KVCache connects and reports enabled with a real Redis."""
     assert real_cache.enabled is True
 
 
-async def test_real_redis_set_get_delete(real_cache: CacheService):
+async def test_real_redis_set_get_delete(real_cache: KVCache):
     """Round-trip set/get/delete against real Redis."""
     await real_cache.set("hello", {"msg": "world"})
     result = await real_cache.get("hello")

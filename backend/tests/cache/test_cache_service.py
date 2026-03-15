@@ -1,31 +1,30 @@
-"""Unit tests for CacheService."""
+"""Unit tests for KVCache."""
 
 from __future__ import annotations
 
-from app.core.config import CacheSettings
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache
 
 
 # ── Basic get/set/delete ───────────────────────────────────────────────
 
 
-async def test_get_returns_none_on_miss(cache: CacheService):
+async def test_get_returns_none_on_miss(cache: KVCache):
     assert await cache.get("nonexistent") is None
 
 
-async def test_set_and_get(cache: CacheService):
+async def test_set_and_get(cache: KVCache):
     await cache.set("key1", {"hello": "world"}, ttl=60)
     result = await cache.get("key1")
     assert result == {"hello": "world"}
 
 
-async def test_delete(cache: CacheService):
+async def test_delete(cache: KVCache):
     await cache.set("key1", "value")
     await cache.delete("key1")
     assert await cache.get("key1") is None
 
 
-async def test_set_with_datetime(cache: CacheService):
+async def test_set_with_datetime(cache: KVCache):
     """datetime objects are serialized via default=str."""
     from datetime import datetime
 
@@ -36,66 +35,43 @@ async def test_set_with_datetime(cache: CacheService):
     assert result["ts"] == "2024-01-01 12:00:00"
 
 
-# ── Pattern invalidation ──────────────────────────────────────────────
-
-
-async def test_invalidate_pattern(cache: CacheService):
-    await cache.set("mapi:/tenants/t1", "a")
-    await cache.set("mapi:/tenants/t1/namespaces", "b")
-    await cache.set("mapi:/tenants/t2", "c")
-
-    deleted = await cache.invalidate_pattern("mapi:/tenants/t1*")
-    assert deleted == 2
-    assert await cache.get("mapi:/tenants/t1") is None
-    assert await cache.get("mapi:/tenants/t1/namespaces") is None
-    # t2 should survive
-    assert await cache.get("mapi:/tenants/t2") == "c"
-
-
-# ── Sync variants ─────────────────────────────────────────────────────
-
-
-async def test_sync_get_set_delete(cache: CacheService):
-    cache.set_sync("skey", {"sync": True}, ttl=60)
-    assert cache.get_sync("skey") == {"sync": True}
-    cache.delete_sync("skey")
-    assert cache.get_sync("skey") is None
-
-
-async def test_sync_invalidate_pattern(cache: CacheService):
-    cache.set_sync("s3:list_objects:bucket1:a", "x")
-    cache.set_sync("s3:list_objects:bucket1:b", "y")
-    cache.set_sync("s3:list_objects:bucket2:a", "z")
-
-    deleted = cache.invalidate_pattern_sync("s3:list_objects:bucket1:*")
-    assert deleted == 2
-    assert cache.get_sync("s3:list_objects:bucket2:a") == "z"
-
-
 # ── Graceful degradation ──────────────────────────────────────────────
 
 
 async def test_disabled_when_no_url():
-    svc = CacheService(CacheSettings(redis_url="", cache_key_prefix="test"))
-    await svc.connect()
-    assert not svc.enabled
+    from key_value.aio.stores.null import NullStore
+
+    kv = KVCache(NullStore(), enabled=False, has_url=False)
+    assert not kv.enabled
     # All ops are no-ops
-    assert await svc.get("k") is None
-    await svc.set("k", "v")
-    await svc.delete("k")
-    assert await svc.invalidate_pattern("*") == 0
-    assert svc.get_sync("k") is None
-    await svc.close()
+    assert await kv.get("k") is None
+    await kv.set("k", "v")
+    await kv.delete("k")
 
 
-async def test_ops_dont_raise_when_redis_broken(cache: CacheService):
-    """If the Redis connection breaks mid-operation, ops return gracefully."""
-    # Force-close the underlying connection
-    assert cache._redis is not None
-    await cache._redis.aclose()
+async def test_connect_enables_when_store_works():
+    from key_value.aio.stores.memory import MemoryStore
 
-    # Async ops should not raise
-    assert await cache.get("k") is None
-    await cache.set("k", "v")
-    await cache.delete("k")
-    assert await cache.invalidate_pattern("*") == 0
+    kv = KVCache(MemoryStore(), enabled=False, has_url=True)
+    assert not kv.enabled
+    await kv.connect()
+    assert kv.enabled
+
+
+async def test_connect_stays_disabled_without_url():
+    from key_value.aio.stores.null import NullStore
+
+    kv = KVCache(NullStore(), enabled=False, has_url=False)
+    await kv.connect()
+    assert not kv.enabled
+
+
+async def test_ping_returns_true_when_enabled(cache: KVCache):
+    assert await cache.ping() is True
+
+
+async def test_ping_returns_false_when_disabled():
+    from key_value.aio.stores.null import NullStore
+
+    kv = KVCache(NullStore(), enabled=False, has_url=False)
+    assert await kv.ping() is False

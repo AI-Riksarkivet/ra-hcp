@@ -6,7 +6,6 @@ Uses Pydantic query models for request validation — all constraints
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,7 +25,8 @@ from app.schemas.lance import (
     LanceVectorParams,
     VectorPreviewResponse,
 )
-from app.services.lance_service import LanceError, LanceService
+from app.services.cached_lance import CachedLanceService
+from app.services.lance_service import LanceError
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/lance", tags=["Lance Explorer"])
@@ -46,11 +46,11 @@ def _handle_lance_error(exc: Exception, context: str) -> HTTPException:
 @router.get("/tables", response_model=LanceTablesResponse)
 async def list_tables(
     params: LanceDatasetParams = Depends(),
-    lance: LanceService = Depends(get_lance_service),
+    lance: CachedLanceService = Depends(get_lance_service),
 ):
     """List all tables in the Lance dataset directory."""
     try:
-        tables = await asyncio.to_thread(lance.list_tables)
+        tables = await lance.list_tables()
     except Exception as exc:
         raise _handle_lance_error(exc, "list tables")
     return LanceTablesResponse(tables=tables)
@@ -59,11 +59,11 @@ async def list_tables(
 @router.get("/schema", response_model=LanceSchemaResponse)
 async def get_schema(
     params: LanceTableParams = Depends(),
-    lance: LanceService = Depends(get_lance_service),
+    lance: CachedLanceService = Depends(get_lance_service),
 ):
     """Return schema for a Lance table."""
     try:
-        result = await asyncio.to_thread(lance.get_schema, params.table)
+        result = await lance.get_schema(params.table)
     except Exception as exc:
         raise _handle_lance_error(exc, f"schema for {params.table}")
     return result
@@ -72,7 +72,7 @@ async def get_schema(
 @router.get("/rows", response_model=LanceRowsResponse)
 async def get_rows(
     params: LanceRowsParams = Depends(),
-    lance: LanceService = Depends(get_lance_service),
+    lance: CachedLanceService = Depends(get_lance_service),
 ):
     """Return paginated rows from a Lance table."""
     col_list = (
@@ -81,8 +81,7 @@ async def get_rows(
         else None
     )
     try:
-        result = await asyncio.to_thread(
-            lance.get_rows,
+        result = await lance.get_rows(
             params.table,
             params.limit,
             params.offset,
@@ -97,12 +96,11 @@ async def get_rows(
 @router.get("/vector-preview", response_model=VectorPreviewResponse)
 async def get_vector_preview(
     params: LanceVectorParams = Depends(),
-    lance: LanceService = Depends(get_lance_service),
+    lance: CachedLanceService = Depends(get_lance_service),
 ):
     """Return stats and sample vectors for a vector column."""
     try:
-        result = await asyncio.to_thread(
-            lance.get_vector_preview,
+        result = await lance.get_vector_preview(
             params.table,
             params.column,
             params.limit,
@@ -115,7 +113,7 @@ async def get_vector_preview(
 @router.get("/search", response_model=LanceSearchResponse)
 async def search(
     params: LanceSearchParams = Depends(),
-    lance: LanceService = Depends(get_lance_service),
+    lance: CachedLanceService = Depends(get_lance_service),
 ):
     """Search a Lance table using FTS, vector, or hybrid search."""
     import json
@@ -128,8 +126,7 @@ async def search(
             raise HTTPException(status_code=400, detail="Invalid vector JSON")
 
     try:
-        result = await asyncio.to_thread(
-            lance.search,
+        result = await lance.search(
             params.table,
             query_text=params.query,
             query_vector=query_vector,
@@ -147,12 +144,11 @@ async def search(
 @router.get("/cell")
 async def get_cell(
     params: LanceCellParams = Depends(),
-    lance: LanceService = Depends(get_lance_service),
+    lance: CachedLanceService = Depends(get_lance_service),
 ):
     """Stream raw binary content for a single cell."""
     try:
-        data = await asyncio.to_thread(
-            lance.get_cell_bytes,
+        data = await lance.get_cell_bytes(
             params.table,
             params.column,
             params.row,

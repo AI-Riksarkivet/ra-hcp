@@ -49,12 +49,8 @@ async def generate_presigned_url(
             detail=f"method must be one of: {', '.join(sorted(_ALLOWED_METHODS))}",
         )
     url = await run_storage(
-        s3.generate_presigned_url,
+        s3.generate_presigned_url(body.bucket, body.key, body.expires_in, body.method),
         f"object '{body.key}'",
-        body.bucket,
-        body.key,
-        body.expires_in,
-        body.method,
     )
     return PresignedUrlResponse(
         url=url,

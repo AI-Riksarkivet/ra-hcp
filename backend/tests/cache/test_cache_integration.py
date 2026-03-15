@@ -1,7 +1,7 @@
-"""Integration tests for Redis caching through the full API stack.
+"""Integration tests for caching through the full API stack.
 
 These tests wire up CachedMapiService through FastAPI's DI system
-with fakeredis, then make real HTTP requests to verify caching works
+with an in-memory cache, then make real HTTP requests to verify caching works
 end-to-end:
   HTTP request → FastAPI router → DI → CachedMapiService → HCP mock → cache
 """
@@ -24,7 +24,7 @@ from app.api.dependencies import (
 )
 from app.core.config import AuthSettings, CacheSettings, MapiSettings
 from app.main import app
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache
 from app.services.cached_mapi import CachedMapiService
 from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.storage.protocol import StorageProtocol
@@ -61,7 +61,7 @@ def mock_s3_service() -> MagicMock:
 async def cached_client(
     mapi_settings: MapiSettings,
     cache_settings: CacheSettings,
-    cache: CacheService,
+    cache: KVCache,
     mock_s3_service: MagicMock,
     auth_settings: AuthSettings,
     hcp_mock,
@@ -69,7 +69,7 @@ async def cached_client(
     """Test client with CachedMapiService wired through DI.
 
     Unlike the default ``client`` fixture (which injects plain MapiService),
-    this one injects CachedMapiService backed by fakeredis so we can
+    this one injects CachedMapiService backed by MemoryStore so we can
     verify caching behavior through the full API stack.
     """
     inner_mapi = MapiService(mapi_settings)

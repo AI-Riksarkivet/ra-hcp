@@ -5,7 +5,7 @@ description = "Unified API gateway for Hitachi Content Platform (MAPI, S3, Metad
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "boto3>=1.42.58",
+    "aioboto3>=15.0",
     "fastapi>=0.133.1",
     "httpx>=0.28.1",
     "opentelemetry-api>=1.29.0",
@@ -17,7 +17,7 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "pyjwt>=2.11.0",
     "python-multipart>=0.0.22",
-    "redis[hiredis]>=5.0.0",
+    "py-key-value-aio[redis,memory]>=0.2",
     "pyarrow>=17.0",
 ]
 
@@ -32,7 +32,6 @@ lance = [
 
 [dependency-groups]
 dev = [
-    "fakeredis>=2.20",
     "moto[s3]>=5.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.25",

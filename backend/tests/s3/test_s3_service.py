@@ -1,8 +1,8 @@
-"""Tests for HcpStorage adapter (mocked boto3)."""
+"""Tests for HcpStorage adapter (mocked aioboto3 client)."""
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -22,62 +22,61 @@ def s3_settings() -> S3Settings:
 
 
 @pytest.fixture
-def mock_boto_client() -> MagicMock:
-    return MagicMock()
+def mock_client() -> AsyncMock:
+    return AsyncMock()
 
 
 @pytest.fixture
-def service(s3_settings: S3Settings, mock_boto_client: MagicMock) -> HcpStorage:
-    with patch("app.services.storage.adapters.hcp.boto3") as mock_boto3:
-        mock_boto3.client.return_value = mock_boto_client
-        svc = HcpStorage(s3_settings)
+def service(s3_settings: S3Settings, mock_client: AsyncMock) -> HcpStorage:
+    svc = HcpStorage(s3_settings)
+    svc._ops._client = mock_client
     return svc
 
 
 # ── Bucket operations ───────────────────────────────────────────────
 
 
-def test_list_buckets(service: HcpStorage, mock_boto_client: MagicMock):
-    mock_boto_client.list_buckets.return_value = {"Buckets": [{"Name": "b1"}]}
-    result = service.list_buckets()
+async def test_list_buckets(service: HcpStorage, mock_client: AsyncMock):
+    mock_client.list_buckets.return_value = {"Buckets": [{"Name": "b1"}]}
+    result = await service.list_buckets()
     assert result["Buckets"][0]["Name"] == "b1"
-    mock_boto_client.list_buckets.assert_called_once()
+    mock_client.list_buckets.assert_called_once()
 
 
-def test_create_bucket(service: HcpStorage, mock_boto_client: MagicMock):
-    service.create_bucket("new-bucket")
-    mock_boto_client.create_bucket.assert_called_once_with(Bucket="new-bucket")
+async def test_create_bucket(service: HcpStorage, mock_client: AsyncMock):
+    await service.create_bucket("new-bucket")
+    mock_client.create_bucket.assert_called_once_with(Bucket="new-bucket")
 
 
-def test_head_bucket(service: HcpStorage, mock_boto_client: MagicMock):
-    service.head_bucket("my-bucket")
-    mock_boto_client.head_bucket.assert_called_once_with(Bucket="my-bucket")
+async def test_head_bucket(service: HcpStorage, mock_client: AsyncMock):
+    await service.head_bucket("my-bucket")
+    mock_client.head_bucket.assert_called_once_with(Bucket="my-bucket")
 
 
-def test_delete_bucket(service: HcpStorage, mock_boto_client: MagicMock):
-    service.delete_bucket("old-bucket")
-    mock_boto_client.delete_bucket.assert_called_once_with(Bucket="old-bucket")
+async def test_delete_bucket(service: HcpStorage, mock_client: AsyncMock):
+    await service.delete_bucket("old-bucket")
+    mock_client.delete_bucket.assert_called_once_with(Bucket="old-bucket")
 
 
 # ── Object operations ──────────────────────────────────────────────
 
 
-def test_list_objects_basic(service: HcpStorage, mock_boto_client: MagicMock):
-    mock_boto_client.list_objects_v2.return_value = {"Contents": []}
-    service.list_objects("bucket")
-    mock_boto_client.list_objects_v2.assert_called_once_with(
+async def test_list_objects_basic(service: HcpStorage, mock_client: AsyncMock):
+    mock_client.list_objects_v2.return_value = {"Contents": []}
+    await service.list_objects("bucket")
+    mock_client.list_objects_v2.assert_called_once_with(
         Bucket="bucket", MaxKeys=1000, FetchOwner=True
     )
 
 
-def test_list_objects_with_prefix_and_token(
-    service: HcpStorage, mock_boto_client: MagicMock
+async def test_list_objects_with_prefix_and_token(
+    service: HcpStorage, mock_client: AsyncMock
 ):
-    mock_boto_client.list_objects_v2.return_value = {"Contents": []}
-    service.list_objects(
+    mock_client.list_objects_v2.return_value = {"Contents": []}
+    await service.list_objects(
         "bucket", prefix="logs/", max_keys=10, continuation_token="tok123"
     )
-    mock_boto_client.list_objects_v2.assert_called_once_with(
+    mock_client.list_objects_v2.assert_called_once_with(
         Bucket="bucket",
         MaxKeys=10,
         Prefix="logs/",
@@ -86,63 +85,57 @@ def test_list_objects_with_prefix_and_token(
     )
 
 
-def test_put_object(service: HcpStorage, mock_boto_client: MagicMock):
+async def test_put_object(service: HcpStorage, mock_client: AsyncMock):
     body = MagicMock()
-    service.put_object("bucket", "key.txt", body)
-    mock_boto_client.upload_fileobj.assert_called_once()
-    call_args = mock_boto_client.upload_fileobj.call_args
-    assert call_args.args[0] is body
-    assert call_args.args[1] == "bucket"
-    assert call_args.args[2] == "key.txt"
+    await service.put_object("bucket", "key.txt", body)
+    mock_client.upload_fileobj.assert_called_once_with(body, "bucket", "key.txt")
 
 
-def test_get_object(service: HcpStorage, mock_boto_client: MagicMock):
-    mock_boto_client.get_object.return_value = {"Body": b"data"}
-    result = service.get_object("bucket", "key.txt")
+async def test_get_object(service: HcpStorage, mock_client: AsyncMock):
+    mock_client.get_object.return_value = {"Body": b"data"}
+    result = await service.get_object("bucket", "key.txt")
     assert result["Body"] == b"data"
-    mock_boto_client.get_object.assert_called_once_with(Bucket="bucket", Key="key.txt")
+    mock_client.get_object.assert_called_once_with(Bucket="bucket", Key="key.txt")
 
 
-def test_head_object(service: HcpStorage, mock_boto_client: MagicMock):
-    mock_boto_client.head_object.return_value = {"ContentLength": 100}
-    result = service.head_object("bucket", "key.txt")
+async def test_head_object(service: HcpStorage, mock_client: AsyncMock):
+    mock_client.head_object.return_value = {"ContentLength": 100}
+    result = await service.head_object("bucket", "key.txt")
     assert result["ContentLength"] == 100
 
 
-def test_delete_object(service: HcpStorage, mock_boto_client: MagicMock):
-    service.delete_object("bucket", "key.txt")
-    mock_boto_client.delete_object.assert_called_once_with(
-        Bucket="bucket", Key="key.txt"
-    )
+async def test_delete_object(service: HcpStorage, mock_client: AsyncMock):
+    await service.delete_object("bucket", "key.txt")
+    mock_client.delete_object.assert_called_once_with(Bucket="bucket", Key="key.txt")
 
 
-def test_copy_object(service: HcpStorage, mock_boto_client: MagicMock):
-    service.copy_object("src-bucket", "src-key", "dst-bucket", "dst-key")
-    mock_boto_client.copy_object.assert_called_once_with(
+async def test_copy_object(service: HcpStorage, mock_client: AsyncMock):
+    await service.copy_object("src-bucket", "src-key", "dst-bucket", "dst-key")
+    mock_client.copy_object.assert_called_once_with(
         CopySource={"Bucket": "src-bucket", "Key": "src-key"},
         Bucket="dst-bucket",
         Key="dst-key",
     )
 
 
-def test_delete_objects(service: HcpStorage, mock_boto_client: MagicMock):
-    result = service.delete_objects("bucket", ["f1.txt", "f2.txt"])
-    assert mock_boto_client.delete_object.call_count == 2
+async def test_delete_objects(service: HcpStorage, mock_client: AsyncMock):
+    result = await service.delete_objects("bucket", ["f1.txt", "f2.txt"])
+    assert mock_client.delete_object.call_count == 2
     assert result == {}
 
 
 # ── Versioning ──────────────────────────────────────────────────────
 
 
-def test_get_bucket_versioning(service: HcpStorage, mock_boto_client: MagicMock):
-    mock_boto_client.get_bucket_versioning.return_value = {"Status": "Enabled"}
-    result = service.get_bucket_versioning("bucket")
+async def test_get_bucket_versioning(service: HcpStorage, mock_client: AsyncMock):
+    mock_client.get_bucket_versioning.return_value = {"Status": "Enabled"}
+    result = await service.get_bucket_versioning("bucket")
     assert result["Status"] == "Enabled"
 
 
-def test_put_bucket_versioning(service: HcpStorage, mock_boto_client: MagicMock):
-    service.put_bucket_versioning("bucket", "Suspended")
-    mock_boto_client.put_bucket_versioning.assert_called_once_with(
+async def test_put_bucket_versioning(service: HcpStorage, mock_client: AsyncMock):
+    await service.put_bucket_versioning("bucket", "Suspended")
+    mock_client.put_bucket_versioning.assert_called_once_with(
         Bucket="bucket",
         VersioningConfiguration={"Status": "Suspended"},
     )
@@ -151,31 +144,31 @@ def test_put_bucket_versioning(service: HcpStorage, mock_boto_client: MagicMock)
 # ── ACLs ────────────────────────────────────────────────────────────
 
 
-def test_get_bucket_acl(service: HcpStorage, mock_boto_client: MagicMock):
-    mock_boto_client.get_bucket_acl.return_value = {"Owner": {}, "Grants": []}
-    result = service.get_bucket_acl("bucket")
+async def test_get_bucket_acl(service: HcpStorage, mock_client: AsyncMock):
+    mock_client.get_bucket_acl.return_value = {"Owner": {}, "Grants": []}
+    result = await service.get_bucket_acl("bucket")
     assert "Owner" in result
 
 
-def test_put_bucket_acl(service: HcpStorage, mock_boto_client: MagicMock):
+async def test_put_bucket_acl(service: HcpStorage, mock_client: AsyncMock):
     acl = {"Owner": {"ID": "owner"}, "Grants": []}
-    service.put_bucket_acl("bucket", acl)
-    mock_boto_client.put_bucket_acl.assert_called_once_with(
+    await service.put_bucket_acl("bucket", acl)
+    mock_client.put_bucket_acl.assert_called_once_with(
         Bucket="bucket",
         AccessControlPolicy=acl,
     )
 
 
-def test_get_object_acl(service: HcpStorage, mock_boto_client: MagicMock):
-    mock_boto_client.get_object_acl.return_value = {"Owner": {}, "Grants": []}
-    service.get_object_acl("bucket", "key")
-    mock_boto_client.get_object_acl.assert_called_once_with(Bucket="bucket", Key="key")
+async def test_get_object_acl(service: HcpStorage, mock_client: AsyncMock):
+    mock_client.get_object_acl.return_value = {"Owner": {}, "Grants": []}
+    await service.get_object_acl("bucket", "key")
+    mock_client.get_object_acl.assert_called_once_with(Bucket="bucket", Key="key")
 
 
-def test_put_object_acl(service: HcpStorage, mock_boto_client: MagicMock):
+async def test_put_object_acl(service: HcpStorage, mock_client: AsyncMock):
     acl = {"Owner": {"ID": "owner"}, "Grants": []}
-    service.put_object_acl("bucket", "key", acl)
-    mock_boto_client.put_object_acl.assert_called_once_with(
+    await service.put_object_acl("bucket", "key", acl)
+    mock_client.put_object_acl.assert_called_once_with(
         Bucket="bucket",
         Key="key",
         AccessControlPolicy=acl,

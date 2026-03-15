@@ -9,24 +9,30 @@ from typing import IO, Protocol, runtime_checkable
 class StorageProtocol(Protocol):
     """Interface that every storage backend must implement.
 
-    All methods are synchronous — callers run them via asyncio.to_thread().
+    All methods are async — callers ``await`` them directly.
     Methods return plain dicts matching the boto3 response shapes so existing
     endpoint code works without changes.
     """
 
+    # ── Lifecycle ───────────────────────────────────────────────────────
+
+    async def connect(self) -> None: ...
+
+    async def close(self) -> None: ...
+
     # ── Bucket operations ──────────────────────────────────────────────
 
-    def list_buckets(self) -> dict: ...
+    async def list_buckets(self) -> dict: ...
 
-    def create_bucket(self, name: str) -> dict: ...
+    async def create_bucket(self, name: str) -> dict: ...
 
-    def head_bucket(self, name: str) -> dict: ...
+    async def head_bucket(self, name: str) -> dict: ...
 
-    def delete_bucket(self, name: str) -> dict: ...
+    async def delete_bucket(self, name: str) -> dict: ...
 
     # ── Object operations ──────────────────────────────────────────────
 
-    def list_objects(
+    async def list_objects(
         self,
         bucket: str,
         prefix: str | None = None,
@@ -36,21 +42,21 @@ class StorageProtocol(Protocol):
         fetch_owner: bool = True,
     ) -> dict: ...
 
-    def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None: ...
+    async def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None: ...
 
-    def get_object(
+    async def get_object(
         self, bucket: str, key: str, version_id: str | None = None
     ) -> dict: ...
 
-    def head_object(self, bucket: str, key: str) -> dict: ...
+    async def head_object(self, bucket: str, key: str) -> dict: ...
 
-    def delete_object(
+    async def delete_object(
         self, bucket: str, key: str, version_id: str | None = None
     ) -> dict: ...
 
-    def delete_objects(self, bucket: str, keys: list[str]) -> dict: ...
+    async def delete_objects(self, bucket: str, keys: list[str]) -> dict: ...
 
-    def copy_object(
+    async def copy_object(
         self,
         src_bucket: str,
         src_key: str,
@@ -60,31 +66,31 @@ class StorageProtocol(Protocol):
 
     # ── Bucket versioning ─────────────────────────────────────────────
 
-    def get_bucket_versioning(self, bucket: str) -> dict: ...
+    async def get_bucket_versioning(self, bucket: str) -> dict: ...
 
-    def put_bucket_versioning(self, bucket: str, status: str) -> dict: ...
+    async def put_bucket_versioning(self, bucket: str, status: str) -> dict: ...
 
     # ── ACLs ──────────────────────────────────────────────────────────
 
-    def get_bucket_acl(self, bucket: str) -> dict: ...
+    async def get_bucket_acl(self, bucket: str) -> dict: ...
 
-    def put_bucket_acl(self, bucket: str, acl: dict) -> dict: ...
+    async def put_bucket_acl(self, bucket: str, acl: dict) -> dict: ...
 
-    def get_object_acl(self, bucket: str, key: str) -> dict: ...
+    async def get_object_acl(self, bucket: str, key: str) -> dict: ...
 
-    def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict: ...
+    async def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict: ...
 
     # ── Bucket CORS ─────────────────────────────────────────────────
 
-    def get_bucket_cors(self, bucket: str) -> dict: ...
+    async def get_bucket_cors(self, bucket: str) -> dict: ...
 
-    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict: ...
+    async def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict: ...
 
-    def delete_bucket_cors(self, bucket: str) -> dict: ...
+    async def delete_bucket_cors(self, bucket: str) -> dict: ...
 
     # ── Object versions ────────────────────────────────────────────
 
-    def list_object_versions(
+    async def list_object_versions(
         self,
         bucket: str,
         prefix: str | None = None,
@@ -95,7 +101,7 @@ class StorageProtocol(Protocol):
 
     # ── Presigned URLs ───────────────────────────────────────────────
 
-    def generate_presigned_url(
+    async def generate_presigned_url(
         self,
         bucket: str,
         key: str,
@@ -106,9 +112,9 @@ class StorageProtocol(Protocol):
 
     # ── Multipart uploads ────────────────────────────────────────────
 
-    def create_multipart_upload(self, bucket: str, key: str) -> dict: ...
+    async def create_multipart_upload(self, bucket: str, key: str) -> dict: ...
 
-    def upload_part(
+    async def upload_part(
         self,
         bucket: str,
         key: str,
@@ -117,7 +123,7 @@ class StorageProtocol(Protocol):
         body: IO[bytes],
     ) -> dict: ...
 
-    def complete_multipart_upload(
+    async def complete_multipart_upload(
         self,
         bucket: str,
         key: str,
@@ -125,9 +131,11 @@ class StorageProtocol(Protocol):
         parts: list[dict],
     ) -> dict: ...
 
-    def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict: ...
+    async def abort_multipart_upload(
+        self, bucket: str, key: str, upload_id: str
+    ) -> dict: ...
 
-    def list_parts(
+    async def list_parts(
         self,
         bucket: str,
         key: str,
@@ -135,7 +143,7 @@ class StorageProtocol(Protocol):
         max_parts: int = 1000,
     ) -> dict: ...
 
-    def list_multipart_uploads(
+    async def list_multipart_uploads(
         self,
         bucket: str,
         prefix: str | None = None,

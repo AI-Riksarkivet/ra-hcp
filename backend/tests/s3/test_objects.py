@@ -6,7 +6,7 @@ import asyncio
 import io
 import zipfile
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from botocore.exceptions import ClientError
 from httpx import AsyncClient
@@ -195,11 +195,14 @@ async def test_download_objects_bulk(
     """Bulk download starts a task (202), then serves a zip archive (200)."""
 
     def mock_get_object(bucket, key):
-        body = io.BytesIO(f"content of {key}".encode())
+        data = f"content of {key}".encode()
+        body = AsyncMock()
+        body.read = AsyncMock(return_value=data)
+        body.iter_chunks = lambda: iter([data])
         return {
             "Body": body,
             "ContentType": "text/plain",
-            "ContentLength": body.getbuffer().nbytes,
+            "ContentLength": len(data),
             "ETag": '"abc"',
         }
 
@@ -242,7 +245,9 @@ async def test_download_objects_bulk_skips_missing(
                 },
                 operation_name="GetObject",
             )
-        body = io.BytesIO(b"data")
+        body = AsyncMock()
+        body.read = AsyncMock(return_value=b"data")
+        body.iter_chunks = lambda: iter([b"data"])
         return {
             "Body": body,
             "ContentType": "text/plain",

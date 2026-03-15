@@ -35,7 +35,7 @@ from app.schemas.s3 import (
     ZipTaskResponse,
 )
 from app.schemas.common import StatusResponse
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache
 from app.services.storage import StorageProtocol
 
 logger = logging.getLogger(__name__)
@@ -61,13 +61,8 @@ async def list_objects(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     result = await run_storage(
-        s3.list_objects,
+        s3.list_objects(bucket, prefix, max_keys, continuation_token, delimiter),
         f"bucket '{bucket}'",
-        bucket,
-        prefix,
-        max_keys,
-        continuation_token,
-        delimiter,
     )
     objects = [ObjectInfo.model_validate(o) for o in result.get("Contents", [])]
     common_prefixes = [
@@ -92,7 +87,7 @@ async def delete_objects(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     result = await run_storage(
-        s3.delete_objects, f"bucket '{bucket}'", bucket, body.keys
+        s3.delete_objects(bucket, body.keys), f"bucket '{bucket}'"
     )
     return {
         "status": "deleted",
@@ -104,7 +99,7 @@ async def delete_objects(
 # ── ZIP task helpers ──────────────────────────────────────────────────
 
 
-async def _get_task_state(task_id: str, cache: CacheService | None) -> dict | None:
+async def _get_task_state(task_id: str, cache: KVCache | None) -> dict | None:
     """Read task state from Redis (preferred) or in-memory fallback."""
     if cache and cache.enabled:
         state = await cache.get(f"zip_task:{task_id}")
@@ -113,9 +108,7 @@ async def _get_task_state(task_id: str, cache: CacheService | None) -> dict | No
     return _zip_tasks.get(task_id)
 
 
-async def _set_task_state(
-    task_id: str, state: dict, cache: CacheService | None
-) -> None:
+async def _set_task_state(task_id: str, state: dict, cache: KVCache | None) -> None:
     """Write task state to Redis with TTL, or in-memory fallback."""
     if cache and cache.enabled:
         await cache.set(f"zip_task:{task_id}", state, ttl=600)
@@ -127,7 +120,7 @@ async def _list_all_keys(s3: StorageProtocol, bucket: str, prefix: str) -> list[
     keys: list[str] = []
     token: str | None = None
     while True:
-        result = await asyncio.to_thread(s3.list_objects, bucket, prefix, 1000, token)
+        result = await s3.list_objects(bucket, prefix, 1000, token)
         for obj in result.get("Contents", []):
             keys.append(obj["Key"])
             if len(keys) > MAX_ZIP_OBJECTS:
@@ -143,7 +136,7 @@ async def _build_zip(
     s3: StorageProtocol,
     bucket: str,
     keys: list[str],
-    cache: CacheService | None,
+    cache: KVCache | None,
 ) -> None:
     """Background coroutine: build ZIP on disk in batches."""
     zip_path = ZIP_TEMP_DIR / f"{task_id}.zip"
@@ -164,8 +157,8 @@ async def _build_zip(
 
                 async def _fetch(key: str) -> tuple[str, bytes | None]:
                     try:
-                        result = await asyncio.to_thread(s3.get_object, bucket, key)
-                        return key, result["Body"].read()
+                        result = await s3.get_object(bucket, key)
+                        return key, await result["Body"].read()
                     except Exception:
                         return key, None
 
@@ -198,7 +191,7 @@ async def start_zip_download(
     bucket: str,
     body: BulkDownloadRequest,
     s3: StorageProtocol = Depends(get_s3_service),
-    cache: CacheService | None = Depends(get_cache_service),
+    cache: KVCache | None = Depends(get_cache_service),
 ):
     """Start a background ZIP download task.
 
@@ -237,7 +230,7 @@ async def start_zip_download(
 async def get_zip_download(
     bucket: str,
     task_id: str,
-    cache: CacheService | None = Depends(get_cache_service),
+    cache: KVCache | None = Depends(get_cache_service),
 ):
     """Poll ZIP task status or download the completed ZIP."""
     state = await _get_task_state(task_id, cache)
@@ -301,9 +294,7 @@ async def bulk_presign(
     urls = []
     for key in body.keys:
         try:
-            url = await asyncio.to_thread(
-                s3.generate_presigned_url, bucket, key, body.expires_in
-            )
+            url = await s3.generate_presigned_url(bucket, key, body.expires_in)
             urls.append({"key": key, "url": url})
         except Exception:
             continue
@@ -319,7 +310,7 @@ async def get_object_acl(
     key: str,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    result = await run_storage(s3.get_object_acl, f"object '{key}'", bucket, key)
+    result = await run_storage(s3.get_object_acl(bucket, key), f"object '{key}'")
     return {
         "owner": result.get("Owner", {}),
         "grants": result.get("Grants", []),
@@ -334,11 +325,8 @@ async def put_object_acl(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     await run_storage(
-        s3.put_object_acl,
+        s3.put_object_acl(bucket, key, body.model_dump(exclude_none=True)),
         f"object '{key}'",
-        bucket,
-        key,
-        body.model_dump(exclude_none=True),
     )
     return {"status": "updated"}
 
@@ -354,12 +342,8 @@ async def copy_object(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     await run_storage(
-        s3.copy_object,
+        s3.copy_object(body.source_bucket, body.source_key, bucket, key),
         f"object '{key}'",
-        body.source_bucket,
-        body.source_key,
-        bucket,
-        key,
     )
     return ObjectMutationResponse(status="copied", bucket=bucket, key=key)
 
@@ -375,7 +359,7 @@ async def create_folder(
 ):
     """Create a folder (zero-byte object with trailing slash)."""
     key = body.folder_name if body.folder_name.endswith("/") else f"{body.folder_name}/"
-    await run_storage(s3.put_object, f"folder '{key}'", bucket, key, io.BytesIO(b""))
+    await run_storage(s3.put_object(bucket, key, io.BytesIO(b"")), f"folder '{key}'")
     return CreateFolderResponse(bucket=bucket, key=key)
 
 
@@ -389,7 +373,7 @@ async def upload_object(
     file: UploadFile = File(...),
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    await run_storage(s3.put_object, f"object '{key}'", bucket, key, file.file)
+    await run_storage(s3.put_object(bucket, key, file.file), f"object '{key}'")
     return UploadObjectResponse(bucket=bucket, key=key)
 
 
@@ -401,7 +385,7 @@ async def download_object(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     result = await run_storage(
-        s3.get_object, f"object '{key}'", bucket, key, version_id
+        s3.get_object(bucket, key, version_id), f"object '{key}'"
     )
     body = result["Body"]
     return StreamingResponse(
@@ -420,7 +404,7 @@ async def head_object(
     key: str,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    result = await run_storage(s3.head_object, f"object '{key}'", bucket, key)
+    result = await run_storage(s3.head_object(bucket, key), f"object '{key}'")
     return HeadObjectResponse(
         content_length=result.get("ContentLength"),
         content_type=result.get("ContentType"),
@@ -436,5 +420,5 @@ async def delete_object(
     version_id: str | None = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    await run_storage(s3.delete_object, f"object '{key}'", bucket, key, version_id)
+    await run_storage(s3.delete_object(bucket, key, version_id), f"object '{key}'")
     return ObjectMutationResponse(status="deleted", bucket=bucket, key=key)

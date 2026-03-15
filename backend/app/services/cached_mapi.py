@@ -1,4 +1,4 @@
-"""Cached MAPI service — wraps MapiService with Redis caching via composition.
+"""Cached MAPI service — wraps MapiService with KVCache via composition.
 
 GET responses are cached; PUT/POST/DELETE invalidate affected entries.
 Zero changes to endpoint files required.
@@ -14,7 +14,7 @@ import httpx
 from opentelemetry import trace
 
 from app.core.config import CacheSettings, MapiSettings
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache
 from app.services.mapi_service import MapiService
 
 logger = logging.getLogger(__name__)
@@ -38,17 +38,18 @@ _TTL_RULES: list[tuple[str, str]] = [
 
 
 class CachedMapiService:
-    """MapiService wrapper with transparent Redis caching on GET requests."""
+    """MapiService wrapper with transparent caching on GET requests."""
 
     def __init__(
         self,
         inner: MapiService,
-        cache: CacheService,
+        cache: KVCache,
         cache_settings: CacheSettings,
     ):
         self._inner = inner
         self._cache = cache
         self._cache_settings = cache_settings
+        self._cached_keys: set[str] = set()
 
     @property
     def settings(self) -> MapiSettings:
@@ -136,6 +137,7 @@ class CachedMapiService:
                     data = resp.json()
                     ttl = self._select_ttl(path)
                     await self._cache.set(cache_key, data, ttl=ttl)
+                    self._cached_keys.add(cache_key)
                     span.set_attribute("cache.stored", True)
                     logger.debug("Cache SET: %s (ttl=%d)", cache_key, ttl)
                 except (ValueError, TypeError):
@@ -149,14 +151,22 @@ class CachedMapiService:
     async def _invalidate_for_write(self, path: str, host: str | None = None) -> None:
         """Invalidate cache entries affected by a write to *path*."""
         prefix = f"mapi:{host}:" if host else "mapi:"
+
         # Invalidate resource and sub-resources
-        await self._cache.invalidate_pattern(f"{prefix}{path}*")
+        full_prefix = f"{prefix}{path}"
+        to_delete = {k for k in self._cached_keys if k.startswith(full_prefix)}
+        for k in to_delete:
+            await self._cache.delete(k)
+        self._cached_keys -= to_delete
 
         # Invalidate parent collection
         parts = path.rstrip("/").rsplit("/", 1)
         if len(parts) == 2:
-            parent = parts[0]
-            await self._cache.invalidate_pattern(f"{prefix}{parent}*")
+            parent_prefix = f"{prefix}{parts[0]}"
+            to_delete = {k for k in self._cached_keys if k.startswith(parent_prefix)}
+            for k in to_delete:
+                await self._cache.delete(k)
+            self._cached_keys -= to_delete
 
     # ── Forwarded convenience methods ─────────────────────────────────
 

@@ -8,7 +8,7 @@ import pytest
 
 from app.core.config import CacheSettings, MapiSettings
 from app.schemas.query import ObjectQuery, OperationQuery
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache
 from app.services.cached_query import CachedQueryService
 from app.services.query_service import QueryService
 
@@ -17,7 +17,7 @@ from .conftest import QUERY_URL
 
 @pytest.fixture
 async def query_svc(
-    cache: CacheService, query_settings: MapiSettings, cache_settings: CacheSettings
+    cache: KVCache, query_settings: MapiSettings, cache_settings: CacheSettings
 ) -> AsyncGenerator[CachedQueryService, None]:
     inner = QueryService(query_settings)
     svc = CachedQueryService(inner, cache, cache_settings)
@@ -134,9 +134,10 @@ async def test_different_params_miss_cache(query_svc: CachedQueryService, hcp_mo
 
 
 async def test_works_without_cache(query_settings: MapiSettings, hcp_mock):
+    from key_value.aio.stores.null import NullStore
+
     cache_settings = CacheSettings(redis_url="", cache_key_prefix="test")
-    cache = CacheService(cache_settings)
-    await cache.connect()
+    cache = KVCache(NullStore(), enabled=False, has_url=False)
     assert not cache.enabled
 
     inner = QueryService(query_settings)

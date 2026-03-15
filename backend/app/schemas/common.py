@@ -184,11 +184,12 @@ class IpSettings(BaseModel):
             return None
         if isinstance(v, dict):
             # HCP wraps as {"ipAddress": ["10.0.0.1", ...]}
-            return v.get("ipAddress") or []
+            addrs: list[str] = v.get("ipAddress") or []  # type: ignore[assignment]
+            return addrs
         if isinstance(v, IpAddressList):
             return v.ipAddress or []
         if isinstance(v, list):
-            return v
+            return [str(x) for x in v]
         return None
 
     def to_hcp_dict(self) -> dict[str, Any]:

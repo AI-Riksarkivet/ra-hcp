@@ -7,7 +7,7 @@ from collections.abc import AsyncGenerator
 import pytest
 
 from app.core.config import CacheSettings, MapiSettings
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache
 from app.services.cached_mapi import CachedMapiService
 from app.services.mapi_service import MapiService
 
@@ -16,7 +16,7 @@ HCP_BASE = "https://test.hcp.example.com:9090/mapi"
 
 @pytest.fixture
 async def mapi(
-    cache: CacheService, mapi_settings: MapiSettings, cache_settings: CacheSettings
+    cache: KVCache, mapi_settings: MapiSettings, cache_settings: CacheSettings
 ) -> AsyncGenerator[CachedMapiService, None]:
     inner = MapiService(mapi_settings)
     svc = CachedMapiService(inner, cache, cache_settings)
@@ -28,7 +28,7 @@ async def mapi(
 
 
 async def test_get_cache_miss_then_hit(
-    cache: CacheService,
+    cache: KVCache,
     mapi: CachedMapiService,
     hcp_mock,
 ):
@@ -53,7 +53,7 @@ async def test_get_cache_miss_then_hit(
 
 
 async def test_put_invalidates_cache(
-    cache: CacheService,
+    cache: KVCache,
     mapi: CachedMapiService,
     hcp_mock,
 ):
@@ -91,7 +91,7 @@ async def test_put_invalidates_cache(
 
 
 async def test_no_cache_paths(
-    cache: CacheService,
+    cache: KVCache,
     mapi: CachedMapiService,
     hcp_mock,
 ):
@@ -127,7 +127,7 @@ async def test_cache_key_includes_query(mapi: CachedMapiService):
 
 
 async def test_error_responses_not_cached(
-    cache: CacheService,
+    cache: KVCache,
     mapi: CachedMapiService,
     hcp_mock,
 ):
@@ -146,9 +146,10 @@ async def test_error_responses_not_cached(
 
 async def test_works_without_cache(mapi_settings: MapiSettings, hcp_mock):
     """When cache is disabled, CachedMapiService still works normally."""
+    from key_value.aio.stores.null import NullStore
+
     cache_settings = CacheSettings(redis_url="", cache_key_prefix="test")
-    cache = CacheService(cache_settings)
-    await cache.connect()
+    cache = KVCache(NullStore(), enabled=False, has_url=False)
     assert not cache.enabled
 
     inner = MapiService(mapi_settings)

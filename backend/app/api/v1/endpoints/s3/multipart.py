@@ -45,12 +45,10 @@ async def complete_multipart_upload(
 ):
     """Complete a multipart upload by assembling uploaded parts."""
     result = await run_storage(
-        s3.complete_multipart_upload,
+        s3.complete_multipart_upload(
+            bucket, key, body.upload_id, [p.model_dump() for p in body.parts]
+        ),
         f"object '{key}'",
-        bucket,
-        key,
-        body.upload_id,
-        [p.model_dump() for p in body.parts],
     )
     return CompleteMultipartUploadResponse(
         bucket=bucket,
@@ -68,11 +66,8 @@ async def abort_multipart_upload(
 ):
     """Abort a multipart upload and discard uploaded parts."""
     await run_storage(
-        s3.abort_multipart_upload,
+        s3.abort_multipart_upload(bucket, key, body.upload_id),
         f"object '{key}'",
-        bucket,
-        key,
-        body.upload_id,
     )
     return StatusResponse(status="aborted")
 
@@ -87,12 +82,8 @@ async def list_parts(
 ):
     """List uploaded parts for a multipart upload."""
     result = await run_storage(
-        s3.list_parts,
+        s3.list_parts(bucket, key, upload_id, max_parts),
         f"object '{key}'",
-        bucket,
-        key,
-        upload_id,
-        max_parts,
     )
     parts = [PartInfo.model_validate(p) for p in result.get("Parts", [])]
     return ListPartsResponse(
@@ -129,20 +120,21 @@ async def presign_multipart_upload(
         )
 
     result = await run_storage(
-        s3.create_multipart_upload, f"object '{key}'", bucket, key
+        s3.create_multipart_upload(bucket, key), f"object '{key}'"
     )
     upload_id = result["UploadId"]
 
     urls: list[PresignedPartUrl] = []
     for i in range(1, total_parts + 1):
         url = await run_storage(
-            s3.generate_presigned_url,
+            s3.generate_presigned_url(
+                bucket,
+                key,
+                body.expires_in,
+                "upload_part",
+                {"UploadId": upload_id, "PartNumber": i},
+            ),
             f"presign part {i}",
-            bucket,
-            key,
-            body.expires_in,
-            "upload_part",
-            {"UploadId": upload_id, "PartNumber": i},
         )
         urls.append(PresignedPartUrl(part_number=i, url=url))
 
@@ -170,7 +162,7 @@ async def create_multipart_upload(
 ):
     """Initiate a multipart upload and return an upload ID."""
     result = await run_storage(
-        s3.create_multipart_upload, f"object '{key}'", bucket, key
+        s3.create_multipart_upload(bucket, key), f"object '{key}'"
     )
     return CreateMultipartUploadResponse(
         bucket=bucket,
@@ -190,13 +182,8 @@ async def upload_part(
 ):
     """Upload a single part of a multipart upload."""
     result = await run_storage(
-        s3.upload_part,
+        s3.upload_part(bucket, key, upload_id, part_number, file.file),
         f"object '{key}' part {part_number}",
-        bucket,
-        key,
-        upload_id,
-        part_number,
-        file.file,
     )
     return UploadPartResponse(
         part_number=part_number,

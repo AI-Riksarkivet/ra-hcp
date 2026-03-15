@@ -54,7 +54,7 @@ router = APIRouter(prefix="/buckets", tags=["S3 Buckets"])
 @router.get("", response_model=ListBucketsResponse)
 async def list_buckets(s3: StorageProtocol = Depends(get_s3_service)):
     """List all S3 buckets accessible to the authenticated user."""
-    result = await run_storage(s3.list_buckets, "buckets")
+    result = await run_storage(s3.list_buckets(), "buckets")
     buckets = [BucketInfo.model_validate(b) for b in result.get("Buckets", [])]
     owner = OwnerInfo.model_validate(result["Owner"]) if "Owner" in result else None
     return ListBucketsResponse(buckets=buckets, owner=owner)
@@ -66,14 +66,14 @@ async def create_bucket(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Create a new S3 bucket."""
-    await run_storage(s3.create_bucket, f"bucket '{body.bucket}'", body.bucket)
+    await run_storage(s3.create_bucket(body.bucket), f"bucket '{body.bucket}'")
     return {"status": "created", "bucket": body.bucket}
 
 
 @router.head("/{bucket}")
 async def head_bucket(bucket: str, s3: StorageProtocol = Depends(get_s3_service)):
     """Check whether a bucket exists. Returns 200 or 404."""
-    await run_storage(s3.head_bucket, f"bucket '{bucket}'", bucket)
+    await run_storage(s3.head_bucket(bucket), f"bucket '{bucket}'")
     return Response(status_code=200)
 
 
@@ -102,10 +102,10 @@ async def delete_bucket(
             return await _force_delete_hcp(s3, hcp, bucket, token)
 
         # MinIO / generic: simple empty + delete
-        await run_storage(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+        await run_storage(s3.delete_bucket(bucket), f"bucket '{bucket}'")
         return {"status": "deleted", "bucket": bucket}
 
-    await run_storage(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+    await run_storage(s3.delete_bucket(bucket), f"bucket '{bucket}'")
     return {"status": "deleted", "bucket": bucket}
 
 
@@ -118,7 +118,7 @@ async def _force_delete_hcp(
     """HCP-specific force-delete with MAPI namespace reconfiguration."""
     creds = verify_token_with_credentials(token)
     try:
-        await run_storage(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+        await run_storage(s3.delete_bucket(bucket), f"bucket '{bucket}'")
         return {"status": "deleted", "bucket": bucket}
     except HTTPException as exc:
         if exc.status_code != 409 or not creds.tenant:
@@ -138,7 +138,7 @@ async def _force_delete_hcp(
         if attempt > 0:
             await asyncio.sleep(2)
         try:
-            await run_storage(s3.delete_bucket, f"bucket '{bucket}'", bucket)
+            await run_storage(s3.delete_bucket(bucket), f"bucket '{bucket}'")
             return {"status": "deleted", "bucket": bucket}
         except HTTPException as exc:
             if exc.status_code != 409:
@@ -194,13 +194,8 @@ async def _delete_all_versions(s3: StorageProtocol, bucket: str) -> int:
     key_marker: str | None = None
     version_marker: str | None = None
     while True:
-        result = await asyncio.to_thread(
-            s3.list_object_versions,
-            bucket,
-            None,  # prefix
-            1000,
-            key_marker,
-            version_marker,
+        result = await s3.list_object_versions(
+            bucket, None, 1000, key_marker, version_marker
         )
         items: list[tuple[str, str | None]] = []
         for v in result.get("Versions", []):
@@ -210,7 +205,7 @@ async def _delete_all_versions(s3: StorageProtocol, bucket: str) -> int:
 
         for key, vid in items:
             try:
-                await asyncio.to_thread(s3.delete_object, bucket, key, vid)
+                await s3.delete_object(bucket, key, vid)
                 deleted += 1
             except Exception as exc:
                 logger.warning(
@@ -234,10 +229,10 @@ async def _empty_bucket(s3: StorageProtocol, bucket: str) -> None:
     # 2. Clean up any remaining non-versioned objects
     token: str | None = None
     while True:
-        result = await asyncio.to_thread(s3.list_objects, bucket, None, 1000, token)
+        result = await s3.list_objects(bucket, None, 1000, token)
         keys = [o["Key"] for o in result.get("Contents", [])]
         if keys:
-            await asyncio.to_thread(s3.delete_objects, bucket, keys)
+            await s3.delete_objects(bucket, keys)
             deleted += len(keys)
         if not result.get("IsTruncated", False):
             break
@@ -262,7 +257,7 @@ async def get_bucket_versioning(
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     """Get the versioning configuration for a bucket."""
-    result = await run_storage(s3.get_bucket_versioning, f"bucket '{bucket}'", bucket)
+    result = await run_storage(s3.get_bucket_versioning(bucket), f"bucket '{bucket}'")
     return BucketVersioningResponse(
         status=result.get("Status"),
         mfa_delete=result.get("MFADelete"),
@@ -277,7 +272,7 @@ async def put_bucket_versioning(
 ):
     """Enable or suspend versioning on a bucket."""
     await run_storage(
-        s3.put_bucket_versioning, f"bucket '{bucket}'", bucket, body.status
+        s3.put_bucket_versioning(bucket, body.status), f"bucket '{bucket}'"
     )
     return {"status": "updated", "versioning": body.status}
 
@@ -288,7 +283,7 @@ async def put_bucket_versioning(
 @router.get("/{bucket}/acl", response_model=AclResponse)
 async def get_bucket_acl(bucket: str, s3: StorageProtocol = Depends(get_s3_service)):
     """Get the access control list (ACL) for a bucket."""
-    result = await run_storage(s3.get_bucket_acl, f"bucket '{bucket}'", bucket)
+    result = await run_storage(s3.get_bucket_acl(bucket), f"bucket '{bucket}'")
     return {
         "owner": result.get("Owner", {}),
         "grants": result.get("Grants", []),
@@ -303,10 +298,8 @@ async def put_bucket_acl(
 ):
     """Set the access control list (ACL) for a bucket."""
     await run_storage(
-        s3.put_bucket_acl,
+        s3.put_bucket_acl(bucket, body.model_dump(exclude_none=True)),
         f"bucket '{bucket}'",
-        bucket,
-        body.model_dump(exclude_none=True),
     )
     return {"status": "updated"}
 
@@ -317,7 +310,7 @@ async def put_bucket_acl(
 @router.get("/{bucket}/cors", response_model=CorsResponse)
 async def get_bucket_cors(bucket: str, s3: StorageProtocol = Depends(get_s3_service)):
     """Get the CORS configuration for a bucket."""
-    result = await run_storage(s3.get_bucket_cors, f"bucket '{bucket}'", bucket)
+    result = await run_storage(s3.get_bucket_cors(bucket), f"bucket '{bucket}'")
     return {"cors_rules": result.get("CORSRules", [])}
 
 
@@ -329,10 +322,8 @@ async def put_bucket_cors(
 ):
     """Set the CORS configuration for a bucket."""
     await run_storage(
-        s3.put_bucket_cors,
+        s3.put_bucket_cors(bucket, body.model_dump(exclude_none=True)),
         f"bucket '{bucket}'",
-        bucket,
-        body.model_dump(exclude_none=True),
     )
     return {"status": "updated"}
 
@@ -342,7 +333,7 @@ async def delete_bucket_cors(
     bucket: str, s3: StorageProtocol = Depends(get_s3_service)
 ):
     """Delete the CORS configuration for a bucket."""
-    await run_storage(s3.delete_bucket_cors, f"bucket '{bucket}'", bucket)
+    await run_storage(s3.delete_bucket_cors(bucket), f"bucket '{bucket}'")
     return {"status": "deleted"}
 
 
@@ -358,7 +349,7 @@ async def list_multipart_uploads(
 ):
     """List in-progress multipart uploads for a bucket."""
     result = await run_storage(
-        s3.list_multipart_uploads, f"bucket '{bucket}'", bucket, prefix, max_uploads
+        s3.list_multipart_uploads(bucket, prefix, max_uploads), f"bucket '{bucket}'"
     )
     uploads = [MultipartUploadInfo.model_validate(u) for u in result.get("Uploads", [])]
     return ListMultipartUploadsResponse(

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -51,15 +51,31 @@ def s3_settings() -> S3Settings:
     )
 
 
+def _mock_aioboto3_session():
+    """Create a mock aioboto3.Session whose client() returns an async context manager."""
+    mock_client = AsyncMock()
+    mock_client.meta = MagicMock()
+    mock_client.meta.events = MagicMock()
+
+    mock_cm = AsyncMock()
+    mock_cm.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_cm.__aexit__ = AsyncMock(return_value=False)
+
+    mock_session = MagicMock()
+    mock_session.client.return_value = mock_cm
+
+    return mock_session
+
+
 # -- Plain storage creation ------------------------------------------------
 
 
-def test_create_storage_hcp(
+async def test_create_storage_hcp(
     hcp_storage_settings: StorageSettings, s3_settings: S3Settings
 ):
-    with patch("app.services.storage.adapters.hcp.boto3") as mock_boto3:
-        mock_boto3.client.return_value = MagicMock()
-        storage = create_storage(
+    with patch("app.services.storage.adapters.hcp.aioboto3") as mock_aioboto3:
+        mock_aioboto3.Session.return_value = _mock_aioboto3_session()
+        storage = await create_storage(
             hcp_storage_settings,
             "access",
             "secret",
@@ -68,47 +84,47 @@ def test_create_storage_hcp(
     assert isinstance(storage, HcpStorage)
 
 
-def test_create_storage_minio(minio_storage_settings: StorageSettings):
-    with patch("app.services.storage.adapters.generic_boto3.boto3") as mock_boto3:
-        mock_boto3.client.return_value = MagicMock()
-        storage = create_storage(minio_storage_settings, "access", "secret")
+async def test_create_storage_minio(minio_storage_settings: StorageSettings):
+    with patch("app.services.storage.adapters.generic_boto3.aioboto3") as mock_aioboto3:
+        mock_aioboto3.Session.return_value = _mock_aioboto3_session()
+        storage = await create_storage(minio_storage_settings, "access", "secret")
     assert isinstance(storage, GenericBoto3Storage)
 
 
-def test_create_storage_generic(generic_storage_settings: StorageSettings):
-    with patch("app.services.storage.adapters.generic_boto3.boto3") as mock_boto3:
-        mock_boto3.client.return_value = MagicMock()
-        storage = create_storage(generic_storage_settings, "access", "secret")
+async def test_create_storage_generic(generic_storage_settings: StorageSettings):
+    with patch("app.services.storage.adapters.generic_boto3.aioboto3") as mock_aioboto3:
+        mock_aioboto3.Session.return_value = _mock_aioboto3_session()
+        storage = await create_storage(generic_storage_settings, "access", "secret")
     assert isinstance(storage, GenericBoto3Storage)
 
 
-def test_create_storage_unknown_backend():
+async def test_create_storage_unknown_backend():
     settings = StorageSettings(storage_backend="hcp")
     # Bypass Pydantic validation to test the match/case default branch
     object.__setattr__(settings, "storage_backend", "unknown")
     with pytest.raises(ValueError, match="Unknown storage backend"):
-        create_storage(settings, "access", "secret")
+        await create_storage(settings, "access", "secret")
 
 
-def test_create_storage_hcp_requires_s3_settings(
+async def test_create_storage_hcp_requires_s3_settings(
     hcp_storage_settings: StorageSettings,
 ):
     with pytest.raises(ValueError, match="s3_settings required"):
-        create_storage(hcp_storage_settings, "access", "secret")
+        await create_storage(hcp_storage_settings, "access", "secret")
 
 
 # -- Cached storage creation -----------------------------------------------
 
 
-def test_create_cached_storage_hcp(
+async def test_create_cached_storage_hcp(
     hcp_storage_settings: StorageSettings, s3_settings: S3Settings
 ):
     from app.core.config import CacheSettings
     from app.services.cached_storage import CachedStorage
 
-    with patch("app.services.storage.adapters.hcp.boto3") as mock_boto3:
-        mock_boto3.client.return_value = MagicMock()
-        storage = create_cached_storage(
+    with patch("app.services.storage.adapters.hcp.aioboto3") as mock_aioboto3:
+        mock_aioboto3.Session.return_value = _mock_aioboto3_session()
+        storage = await create_cached_storage(
             hcp_storage_settings,
             "access",
             "secret",
@@ -119,13 +135,13 @@ def test_create_cached_storage_hcp(
     assert isinstance(storage, CachedStorage)
 
 
-def test_create_cached_storage_minio(minio_storage_settings: StorageSettings):
+async def test_create_cached_storage_minio(minio_storage_settings: StorageSettings):
     from app.core.config import CacheSettings
     from app.services.cached_storage import CachedStorage
 
-    with patch("app.services.storage.adapters.generic_boto3.boto3") as mock_boto3:
-        mock_boto3.client.return_value = MagicMock()
-        storage = create_cached_storage(
+    with patch("app.services.storage.adapters.generic_boto3.aioboto3") as mock_aioboto3:
+        mock_aioboto3.Session.return_value = _mock_aioboto3_session()
+        storage = await create_cached_storage(
             minio_storage_settings,
             "access",
             "secret",

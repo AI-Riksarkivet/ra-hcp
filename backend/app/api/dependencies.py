@@ -16,10 +16,11 @@ from app.core.security import (
     verify_token_with_credentials,
 )
 from app.core.tenant_routing import mapi_host_for_tenant, s3_endpoint_for_tenant
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache
 from app.services.mapi_service import AuthenticatedMapiService
 from app.services.query_service import AuthenticatedQueryService
 from app.schemas.lance import LanceDatasetParams
+from app.services.cached_lance import CachedLanceService
 from app.services.lance_service import LanceService
 from app.services.storage import StorageProtocol
 from app.services.storage.factory import create_cached_storage, create_storage
@@ -54,8 +55,8 @@ def get_storage_settings() -> StorageSettings:
 # read from request.app.state — no module-level mutable globals.
 
 
-def get_cache_service(request: Request) -> CacheService | None:
-    """Return the shared CacheService from app.state (or None)."""
+def get_cache_service(request: Request) -> KVCache | None:
+    """Return the shared KVCache from app.state (or None)."""
     return getattr(request.app.state, "cache", None)
 
 
@@ -103,7 +104,7 @@ async def get_s3_service(
     """
     storage_settings = get_storage_settings()
     s3_client_cache: dict = request.app.state.s3_cache
-    cache: CacheService | None = getattr(request.app.state, "cache", None)
+    cache: KVCache | None = getattr(request.app.state, "cache", None)
     use_cache = cache is not None and cache.enabled
 
     if storage_settings.storage_backend == "hcp":
@@ -116,7 +117,7 @@ async def get_s3_service(
 
             if use_cache:
                 assert cache is not None
-                s3_client_cache[creds] = create_cached_storage(
+                s3_client_cache[creds] = await create_cached_storage(
                     storage_settings,
                     access_key,
                     secret_key,
@@ -126,7 +127,7 @@ async def get_s3_service(
                     s3_settings=s3_settings,
                 )
             else:
-                s3_client_cache[creds] = create_storage(
+                s3_client_cache[creds] = await create_storage(
                     storage_settings,
                     access_key,
                     secret_key,
@@ -143,7 +144,7 @@ async def get_s3_service(
 
             if use_cache:
                 assert cache is not None
-                s3_client_cache[cache_key] = create_cached_storage(
+                s3_client_cache[cache_key] = await create_cached_storage(
                     storage_settings,
                     access_key,
                     secret_key,
@@ -151,7 +152,7 @@ async def get_s3_service(
                     cache_settings=get_cache_settings(),
                 )
             else:
-                s3_client_cache[cache_key] = create_storage(
+                s3_client_cache[cache_key] = await create_storage(
                     storage_settings,
                     access_key,
                     secret_key,
@@ -166,8 +167,8 @@ async def get_lance_service(
     request: Request,
     token: Annotated[str, Depends(oauth2_scheme)],
     params: LanceDatasetParams = Depends(),
-) -> AsyncGenerator[LanceService, None]:
-    """Yield a LanceService for the given S3 bucket/path, keyed by credentials."""
+) -> AsyncGenerator[CachedLanceService, None]:
+    """Yield a CachedLanceService for the given S3 bucket/path, keyed by credentials."""
     try:
         import lancedb as _  # noqa: F811, F401  # ty: ignore[unresolved-import]
     except ImportError:
@@ -190,30 +191,25 @@ async def get_lance_service(
     cache_key = (creds, params.bucket, params.path)
     lance_cache: dict = request.app.state.lance_cache
     if cache_key not in lance_cache:
-        lance = LanceService.with_credentials(
+        inner = LanceService.with_credentials(
             s3_uri,
             access_key,
             secret_key,
             endpoint_url,
             verify_ssl=settings.hcp_verify_ssl,
         )
-        cache: CacheService | None = getattr(request.app.state, "cache", None)
-        if cache and cache.enabled:
-            from app.services.cached_lance import CachedLanceService
-
-            logger.info(
-                "Creating CachedLanceService for %s/%s",
-                params.bucket,
-                params.path,
-            )
+        cache: KVCache | None = getattr(request.app.state, "cache", None)
+        if cache is not None and cache.enabled:
             lance_cache[cache_key] = CachedLanceService(
-                lance, cache, get_cache_settings()
+                inner, cache, get_cache_settings()
             )
         else:
-            logger.info(
-                "Creating LanceService for %s/%s",
-                params.bucket,
-                params.path,
+            lance_cache[cache_key] = CachedLanceService(
+                inner, cache or KVCache(None, enabled=False), get_cache_settings()
             )
-            lance_cache[cache_key] = lance
+        logger.info(
+            "Creating CachedLanceService for %s/%s",
+            params.bucket,
+            params.path,
+        )
     yield lance_cache[cache_key]

@@ -9,12 +9,12 @@ from app.services.storage.protocol import StorageProtocol
 
 if TYPE_CHECKING:
     from app.core.config import CacheSettings, S3Settings, StorageSettings
-    from app.services.cache_service import CacheService
+    from app.services.kv import KVCache
 
 logger = logging.getLogger(__name__)
 
 
-def create_storage(
+async def create_storage(
     settings: StorageSettings,
     access_key: str,
     secret_key: str,
@@ -23,6 +23,8 @@ def create_storage(
     s3_settings: S3Settings | None = None,
 ) -> StorageProtocol:
     """Create a plain (uncached) storage adapter for the configured backend.
+
+    The adapter is returned already connected (``connect()`` has been called).
 
     Args:
         settings: StorageSettings with backend type and connection params.
@@ -41,7 +43,7 @@ def create_storage(
                 "Creating HcpStorage (endpoint=%s)",
                 endpoint_url or s3_settings.endpoint_url,
             )
-            return HcpStorage.with_credentials(
+            storage = HcpStorage.with_credentials(
                 s3_settings,
                 access_key,
                 secret_key,
@@ -57,7 +59,7 @@ def create_storage(
                 settings.storage_backend,
                 endpoint_url or settings.s3_endpoint_url,
             )
-            return GenericBoto3Storage.with_credentials(
+            storage = GenericBoto3Storage.with_credentials(
                 settings,
                 access_key,
                 secret_key,
@@ -66,24 +68,28 @@ def create_storage(
         case _:
             raise ValueError(f"Unknown storage backend: {settings.storage_backend}")
 
+    await storage.connect()
+    return storage
 
-def create_cached_storage(
+
+async def create_cached_storage(
     settings: StorageSettings,
     access_key: str,
     secret_key: str,
     endpoint_url: str | None = None,
     *,
-    cache: CacheService,
+    cache: KVCache,
     cache_settings: CacheSettings,
     s3_settings: S3Settings | None = None,
 ) -> StorageProtocol:
     """Create a cached storage adapter for the configured backend.
 
     All backends use CachedStorage (composition-based wrapper).
+    The inner adapter is returned already connected.
     """
     from app.services.cached_storage import CachedStorage
 
-    inner = create_storage(
+    inner = await create_storage(
         settings,
         access_key,
         secret_key,

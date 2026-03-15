@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import respx
@@ -15,12 +15,10 @@ from app.api.dependencies import (
     get_query_service,
     get_s3_service,
 )
-import fakeredis
-
 from app.core.config import AuthSettings, CacheSettings, MapiSettings, S3Settings
 from app.core.security import create_access_token
 from app.main import app
-from app.services.cache_service import CacheService
+from app.services.kv import KVCache
 from app.services.mapi_service import AuthenticatedMapiService, MapiService
 from app.services.query_service import AuthenticatedQueryService, QueryService
 from app.services.storage.protocol import StorageProtocol
@@ -79,27 +77,25 @@ def auth_settings() -> AuthSettings:
     )
 
 
-# ── Cache service (fakeredis-backed) ─────────────────────────────────
+# ── Cache (in-memory py-key-value store) ─────────────────────────────
 
 
 @pytest.fixture
-async def cache(cache_settings: CacheSettings) -> AsyncGenerator[CacheService, None]:
-    """CacheService backed by fakeredis — no real Redis needed."""
-    svc = CacheService(cache_settings)
-    svc._redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
-    svc._sync_redis = fakeredis.FakeRedis(decode_responses=True)
-    svc._enabled = True
-    yield svc
-    await svc.close()
+async def cache() -> AsyncGenerator[KVCache, None]:
+    """KVCache backed by MemoryStore — no Redis needed."""
+    from key_value.aio.stores.memory import MemoryStore
+
+    kv = KVCache(MemoryStore(), enabled=True, has_url=True)
+    yield kv
 
 
 # ── Service mocks ────────────────────────────────────────────────────
 
 
 @pytest.fixture
-def mock_s3_service() -> MagicMock:
-    """A fully mocked StorageProtocol (boto3 doesn't use httpx)."""
-    mock = MagicMock(spec=StorageProtocol)
+def mock_s3_service() -> AsyncMock:
+    """A fully mocked StorageProtocol (all methods are async)."""
+    mock = AsyncMock(spec=StorageProtocol)
     mock.list_buckets.return_value = {"Buckets": []}
     mock.create_bucket.return_value = {}
     mock.head_bucket.return_value = {}

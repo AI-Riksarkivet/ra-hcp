@@ -2,22 +2,23 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api.dependencies import get_lance_service
 from app.main import app
-from app.services.lance_service import LanceError, LanceService
+from app.services.cached_lance import CachedLanceService
+from app.services.lance_service import LanceError
 
 
 # ── Fixtures ─────────────────────────────────────────────────────
 
 
 @pytest.fixture
-def mock_lance_service() -> MagicMock:
-    mock = MagicMock(spec=LanceService)
+def mock_lance_service() -> AsyncMock:
+    mock = AsyncMock(spec=CachedLanceService)
     mock.list_tables.return_value = ["embeddings", "documents"]
     mock.get_schema.return_value = {
         "table_name": "embeddings",

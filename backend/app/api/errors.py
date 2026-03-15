@@ -7,10 +7,8 @@ service-layer errors meet the web framework.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
-from collections.abc import Callable
 
 from fastapi import HTTPException
 import httpx
@@ -50,17 +48,22 @@ def parse_json_response(resp: httpx.Response) -> dict:
 
 
 async def run_storage(
-    func: Callable[..., Any], resource: str, *args: Any, **kwargs: Any
+    coro: Any,
+    resource: str,
 ) -> Any:
-    """Run a sync storage operation in a thread with StorageError handling.
+    """Await an async storage operation with StorageError handling.
 
     This is the backend-agnostic version. Storage adapters raise
     StorageError, which is translated to HTTPException here.
+
+    Usage::
+
+        result = await run_storage(s3.list_buckets(), "buckets")
     """
     from app.services.storage.errors import StorageError
 
     try:
-        return await asyncio.to_thread(func, *args, **kwargs)
+        return await coro
     except StorageError as exc:
         raise HTTPException(
             status_code=exc.http_status, detail=f"{resource}: {exc.message}"

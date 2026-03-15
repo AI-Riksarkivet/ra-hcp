@@ -1,8 +1,8 @@
-"""Shared boto3 method implementations for S3-compatible storage adapters.
+"""Shared async boto3 method implementations for S3-compatible storage adapters.
 
-Boto3Operations is a standalone class that holds a boto3 client and
-TransferConfig, providing the S3 methods that are identical across
-HcpStorage and GenericBoto3Storage.
+Boto3Operations is a standalone class that holds an aioboto3 client and
+provides the S3 methods that are identical across HcpStorage and
+GenericBoto3Storage.
 
 Boto3Forwarder is a typed forwarding base class: each concrete adapter
 inherits from it and composes a Boto3Operations instance (``self._ops``).
@@ -19,8 +19,6 @@ from __future__ import annotations
 
 from typing import IO, Any
 
-from boto3.s3.transfer import TransferConfig
-from botocore.client import BaseClient
 from botocore.exceptions import BotoCoreError, ClientError
 from opentelemetry import trace
 
@@ -30,56 +28,53 @@ tracer = trace.get_tracer(__name__)
 
 
 class Boto3Operations:
-    """Shared boto3 S3 method implementations.
+    """Shared async S3 method implementations.
 
-    Args:
-        client: A boto3 S3 client.
-        transfer_config: A boto3 TransferConfig for multipart uploads.
+    The ``_client`` attribute is an aioboto3 S3 client, set by the owning
+    adapter after calling ``connect()``.
     """
 
-    def __init__(self, client: BaseClient, transfer_config: TransferConfig) -> None:
-        self._client = client
-        self._transfer_config = transfer_config
+    _client: Any  # aioboto3 S3 client (set after connect)
 
     # -- Bucket operations --------------------------------------------------
 
-    def list_buckets(self) -> dict:
+    async def list_buckets(self) -> dict:
         with tracer.start_as_current_span("s3.list_buckets"):
             try:
-                return self._client.list_buckets()
+                return await self._client.list_buckets()
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def create_bucket(self, name: str) -> dict:
+    async def create_bucket(self, name: str) -> dict:
         with tracer.start_as_current_span(
             "s3.create_bucket", attributes={"s3.bucket": name}
         ):
             try:
-                return self._client.create_bucket(Bucket=name)
+                return await self._client.create_bucket(Bucket=name)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def head_bucket(self, name: str) -> dict:
+    async def head_bucket(self, name: str) -> dict:
         with tracer.start_as_current_span(
             "s3.head_bucket", attributes={"s3.bucket": name}
         ):
             try:
-                return self._client.head_bucket(Bucket=name)
+                return await self._client.head_bucket(Bucket=name)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def delete_bucket(self, name: str) -> dict:
+    async def delete_bucket(self, name: str) -> dict:
         with tracer.start_as_current_span(
             "s3.delete_bucket", attributes={"s3.bucket": name}
         ):
             try:
-                return self._client.delete_bucket(Bucket=name)
+                return await self._client.delete_bucket(Bucket=name)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
@@ -87,7 +82,7 @@ class Boto3Operations:
 
     # -- Object operations --------------------------------------------------
 
-    def list_objects(
+    async def list_objects(
         self,
         bucket: str,
         prefix: str | None = None,
@@ -110,30 +105,27 @@ class Boto3Operations:
                     kwargs["Delimiter"] = delimiter
                 if fetch_owner:
                     kwargs["FetchOwner"] = True
-                return self._client.list_objects_v2(**kwargs)
+                return await self._client.list_objects_v2(**kwargs)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
+    async def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
         with tracer.start_as_current_span(
             "s3.put_object",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                self._client.upload_fileobj(
-                    body,
-                    bucket,
-                    key,
-                    Config=self._transfer_config,
-                )
+                await self._client.upload_fileobj(body, bucket, key)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def get_object(self, bucket: str, key: str, version_id: str | None = None) -> dict:
+    async def get_object(
+        self, bucket: str, key: str, version_id: str | None = None
+    ) -> dict:
         with tracer.start_as_current_span(
             "s3.get_object",
             attributes={"s3.bucket": bucket, "s3.key": key},
@@ -142,25 +134,25 @@ class Boto3Operations:
                 kwargs: dict[str, Any] = {"Bucket": bucket, "Key": key}
                 if version_id:
                     kwargs["VersionId"] = version_id
-                return self._client.get_object(**kwargs)
+                return await self._client.get_object(**kwargs)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def head_object(self, bucket: str, key: str) -> dict:
+    async def head_object(self, bucket: str, key: str) -> dict:
         with tracer.start_as_current_span(
             "s3.head_object",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.head_object(Bucket=bucket, Key=key)
+                return await self._client.head_object(Bucket=bucket, Key=key)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def delete_object(
+    async def delete_object(
         self, bucket: str, key: str, version_id: str | None = None
     ) -> dict:
         with tracer.start_as_current_span(
@@ -171,13 +163,13 @@ class Boto3Operations:
                 kwargs: dict[str, Any] = {"Bucket": bucket, "Key": key}
                 if version_id:
                     kwargs["VersionId"] = version_id
-                return self._client.delete_object(**kwargs)
+                return await self._client.delete_object(**kwargs)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def copy_object(
+    async def copy_object(
         self,
         src_bucket: str,
         src_key: str,
@@ -194,7 +186,7 @@ class Boto3Operations:
             },
         ):
             try:
-                return self._client.copy_object(
+                return await self._client.copy_object(
                     CopySource={"Bucket": src_bucket, "Key": src_key},
                     Bucket=dst_bucket,
                     Key=dst_key,
@@ -206,25 +198,25 @@ class Boto3Operations:
 
     # -- Bucket versioning --------------------------------------------------
 
-    def get_bucket_versioning(self, bucket: str) -> dict:
+    async def get_bucket_versioning(self, bucket: str) -> dict:
         with tracer.start_as_current_span(
             "s3.get_bucket_versioning",
             attributes={"s3.bucket": bucket},
         ):
             try:
-                return self._client.get_bucket_versioning(Bucket=bucket)
+                return await self._client.get_bucket_versioning(Bucket=bucket)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def put_bucket_versioning(self, bucket: str, status: str) -> dict:
+    async def put_bucket_versioning(self, bucket: str, status: str) -> dict:
         with tracer.start_as_current_span(
             "s3.put_bucket_versioning",
             attributes={"s3.bucket": bucket, "s3.versioning_status": status},
         ):
             try:
-                return self._client.put_bucket_versioning(
+                return await self._client.put_bucket_versioning(
                     Bucket=bucket,
                     VersioningConfiguration={"Status": status},
                 )
@@ -235,25 +227,25 @@ class Boto3Operations:
 
     # -- ACLs ---------------------------------------------------------------
 
-    def get_bucket_acl(self, bucket: str) -> dict:
+    async def get_bucket_acl(self, bucket: str) -> dict:
         with tracer.start_as_current_span(
             "s3.get_bucket_acl",
             attributes={"s3.bucket": bucket},
         ):
             try:
-                return self._client.get_bucket_acl(Bucket=bucket)
+                return await self._client.get_bucket_acl(Bucket=bucket)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
+    async def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
         with tracer.start_as_current_span(
             "s3.put_bucket_acl",
             attributes={"s3.bucket": bucket},
         ):
             try:
-                return self._client.put_bucket_acl(
+                return await self._client.put_bucket_acl(
                     Bucket=bucket,
                     AccessControlPolicy=acl,
                 )
@@ -262,25 +254,25 @@ class Boto3Operations:
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def get_object_acl(self, bucket: str, key: str) -> dict:
+    async def get_object_acl(self, bucket: str, key: str) -> dict:
         with tracer.start_as_current_span(
             "s3.get_object_acl",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.get_object_acl(Bucket=bucket, Key=key)
+                return await self._client.get_object_acl(Bucket=bucket, Key=key)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
+    async def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
         with tracer.start_as_current_span(
             "s3.put_object_acl",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.put_object_acl(
+                return await self._client.put_object_acl(
                     Bucket=bucket,
                     Key=key,
                     AccessControlPolicy=acl,
@@ -292,25 +284,25 @@ class Boto3Operations:
 
     # -- Bucket CORS --------------------------------------------------------
 
-    def get_bucket_cors(self, bucket: str) -> dict:
+    async def get_bucket_cors(self, bucket: str) -> dict:
         with tracer.start_as_current_span(
             "s3.get_bucket_cors",
             attributes={"s3.bucket": bucket},
         ):
             try:
-                return self._client.get_bucket_cors(Bucket=bucket)
+                return await self._client.get_bucket_cors(Bucket=bucket)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
+    async def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
         with tracer.start_as_current_span(
             "s3.put_bucket_cors",
             attributes={"s3.bucket": bucket},
         ):
             try:
-                return self._client.put_bucket_cors(
+                return await self._client.put_bucket_cors(
                     Bucket=bucket,
                     CORSConfiguration=cors_configuration,
                 )
@@ -319,13 +311,13 @@ class Boto3Operations:
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def delete_bucket_cors(self, bucket: str) -> dict:
+    async def delete_bucket_cors(self, bucket: str) -> dict:
         with tracer.start_as_current_span(
             "s3.delete_bucket_cors",
             attributes={"s3.bucket": bucket},
         ):
             try:
-                return self._client.delete_bucket_cors(Bucket=bucket)
+                return await self._client.delete_bucket_cors(Bucket=bucket)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
@@ -333,7 +325,7 @@ class Boto3Operations:
 
     # -- Object versions ----------------------------------------------------
 
-    def list_object_versions(
+    async def list_object_versions(
         self,
         bucket: str,
         prefix: str | None = None,
@@ -353,7 +345,7 @@ class Boto3Operations:
                     kwargs["KeyMarker"] = key_marker
                 if version_id_marker:
                     kwargs["VersionIdMarker"] = version_id_marker
-                return self._client.list_object_versions(**kwargs)
+                return await self._client.list_object_versions(**kwargs)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
@@ -361,7 +353,7 @@ class Boto3Operations:
 
     # -- Presigned URLs -----------------------------------------------------
 
-    def generate_presigned_url(
+    async def generate_presigned_url(
         self,
         bucket: str,
         key: str,
@@ -377,7 +369,7 @@ class Boto3Operations:
                 params: dict[str, Any] = {"Bucket": bucket, "Key": key}
                 if extra_params:
                     params.update(extra_params)
-                return self._client.generate_presigned_url(
+                return await self._client.generate_presigned_url(
                     method,
                     Params=params,
                     ExpiresIn=expires_in,
@@ -389,19 +381,21 @@ class Boto3Operations:
 
     # -- Multipart uploads --------------------------------------------------
 
-    def create_multipart_upload(self, bucket: str, key: str) -> dict:
+    async def create_multipart_upload(self, bucket: str, key: str) -> dict:
         with tracer.start_as_current_span(
             "s3.create_multipart_upload",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.create_multipart_upload(Bucket=bucket, Key=key)
+                return await self._client.create_multipart_upload(
+                    Bucket=bucket, Key=key
+                )
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def upload_part(
+    async def upload_part(
         self,
         bucket: str,
         key: str,
@@ -418,7 +412,7 @@ class Boto3Operations:
             },
         ):
             try:
-                return self._client.upload_part(
+                return await self._client.upload_part(
                     Bucket=bucket,
                     Key=key,
                     UploadId=upload_id,
@@ -430,7 +424,7 @@ class Boto3Operations:
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def complete_multipart_upload(
+    async def complete_multipart_upload(
         self,
         bucket: str,
         key: str,
@@ -442,7 +436,7 @@ class Boto3Operations:
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.complete_multipart_upload(
+                return await self._client.complete_multipart_upload(
                     Bucket=bucket,
                     Key=key,
                     UploadId=upload_id,
@@ -453,13 +447,15 @@ class Boto3Operations:
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict:
+    async def abort_multipart_upload(
+        self, bucket: str, key: str, upload_id: str
+    ) -> dict:
         with tracer.start_as_current_span(
             "s3.abort_multipart_upload",
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.abort_multipart_upload(
+                return await self._client.abort_multipart_upload(
                     Bucket=bucket, Key=key, UploadId=upload_id
                 )
             except ClientError as exc:
@@ -467,7 +463,7 @@ class Boto3Operations:
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def list_parts(
+    async def list_parts(
         self,
         bucket: str,
         key: str,
@@ -479,7 +475,7 @@ class Boto3Operations:
             attributes={"s3.bucket": bucket, "s3.key": key},
         ):
             try:
-                return self._client.list_parts(
+                return await self._client.list_parts(
                     Bucket=bucket,
                     Key=key,
                     UploadId=upload_id,
@@ -490,7 +486,7 @@ class Boto3Operations:
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
-    def list_multipart_uploads(
+    async def list_multipart_uploads(
         self,
         bucket: str,
         prefix: str | None = None,
@@ -504,7 +500,7 @@ class Boto3Operations:
                 kwargs: dict[str, Any] = {"Bucket": bucket, "MaxUploads": max_uploads}
                 if prefix:
                     kwargs["Prefix"] = prefix
-                return self._client.list_multipart_uploads(**kwargs)
+                return await self._client.list_multipart_uploads(**kwargs)
             except ClientError as exc:
                 raise from_client_error(exc) from exc
             except BotoCoreError as exc:
@@ -518,30 +514,27 @@ class Boto3Forwarder:
     Every public method here is a thin, typed forwarder — the real work
     lives in ``Boto3Operations``.  Override any method in a concrete
     adapter to replace the default behaviour.
-
-    This replaces the old ``@delegates_to`` decorator: same delegation
-    pattern, but methods are statically visible to type checkers.
     """
 
     _ops: Boto3Operations
 
     # -- Bucket operations --------------------------------------------------
 
-    def list_buckets(self) -> dict:
-        return self._ops.list_buckets()
+    async def list_buckets(self) -> dict:
+        return await self._ops.list_buckets()
 
-    def create_bucket(self, name: str) -> dict:
-        return self._ops.create_bucket(name)
+    async def create_bucket(self, name: str) -> dict:
+        return await self._ops.create_bucket(name)
 
-    def head_bucket(self, name: str) -> dict:
-        return self._ops.head_bucket(name)
+    async def head_bucket(self, name: str) -> dict:
+        return await self._ops.head_bucket(name)
 
-    def delete_bucket(self, name: str) -> dict:
-        return self._ops.delete_bucket(name)
+    async def delete_bucket(self, name: str) -> dict:
+        return await self._ops.delete_bucket(name)
 
     # -- Object operations --------------------------------------------------
 
-    def list_objects(
+    async def list_objects(
         self,
         bucket: str,
         prefix: str | None = None,
@@ -550,65 +543,67 @@ class Boto3Forwarder:
         delimiter: str | None = None,
         fetch_owner: bool = True,
     ) -> dict:
-        return self._ops.list_objects(
+        return await self._ops.list_objects(
             bucket, prefix, max_keys, continuation_token, delimiter, fetch_owner
         )
 
-    def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
-        self._ops.put_object(bucket, key, body)
+    async def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
+        await self._ops.put_object(bucket, key, body)
 
-    def get_object(self, bucket: str, key: str, version_id: str | None = None) -> dict:
-        return self._ops.get_object(bucket, key, version_id)
-
-    def head_object(self, bucket: str, key: str) -> dict:
-        return self._ops.head_object(bucket, key)
-
-    def delete_object(
+    async def get_object(
         self, bucket: str, key: str, version_id: str | None = None
     ) -> dict:
-        return self._ops.delete_object(bucket, key, version_id)
+        return await self._ops.get_object(bucket, key, version_id)
 
-    def copy_object(
+    async def head_object(self, bucket: str, key: str) -> dict:
+        return await self._ops.head_object(bucket, key)
+
+    async def delete_object(
+        self, bucket: str, key: str, version_id: str | None = None
+    ) -> dict:
+        return await self._ops.delete_object(bucket, key, version_id)
+
+    async def copy_object(
         self, src_bucket: str, src_key: str, dst_bucket: str, dst_key: str
     ) -> dict:
-        return self._ops.copy_object(src_bucket, src_key, dst_bucket, dst_key)
+        return await self._ops.copy_object(src_bucket, src_key, dst_bucket, dst_key)
 
     # -- Bucket versioning --------------------------------------------------
 
-    def get_bucket_versioning(self, bucket: str) -> dict:
-        return self._ops.get_bucket_versioning(bucket)
+    async def get_bucket_versioning(self, bucket: str) -> dict:
+        return await self._ops.get_bucket_versioning(bucket)
 
-    def put_bucket_versioning(self, bucket: str, status: str) -> dict:
-        return self._ops.put_bucket_versioning(bucket, status)
+    async def put_bucket_versioning(self, bucket: str, status: str) -> dict:
+        return await self._ops.put_bucket_versioning(bucket, status)
 
     # -- ACLs ---------------------------------------------------------------
 
-    def get_bucket_acl(self, bucket: str) -> dict:
-        return self._ops.get_bucket_acl(bucket)
+    async def get_bucket_acl(self, bucket: str) -> dict:
+        return await self._ops.get_bucket_acl(bucket)
 
-    def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
-        return self._ops.put_bucket_acl(bucket, acl)
+    async def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
+        return await self._ops.put_bucket_acl(bucket, acl)
 
-    def get_object_acl(self, bucket: str, key: str) -> dict:
-        return self._ops.get_object_acl(bucket, key)
+    async def get_object_acl(self, bucket: str, key: str) -> dict:
+        return await self._ops.get_object_acl(bucket, key)
 
-    def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
-        return self._ops.put_object_acl(bucket, key, acl)
+    async def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
+        return await self._ops.put_object_acl(bucket, key, acl)
 
     # -- Bucket CORS --------------------------------------------------------
 
-    def get_bucket_cors(self, bucket: str) -> dict:
-        return self._ops.get_bucket_cors(bucket)
+    async def get_bucket_cors(self, bucket: str) -> dict:
+        return await self._ops.get_bucket_cors(bucket)
 
-    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
-        return self._ops.put_bucket_cors(bucket, cors_configuration)
+    async def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
+        return await self._ops.put_bucket_cors(bucket, cors_configuration)
 
-    def delete_bucket_cors(self, bucket: str) -> dict:
-        return self._ops.delete_bucket_cors(bucket)
+    async def delete_bucket_cors(self, bucket: str) -> dict:
+        return await self._ops.delete_bucket_cors(bucket)
 
     # -- Object versions ----------------------------------------------------
 
-    def list_object_versions(
+    async def list_object_versions(
         self,
         bucket: str,
         prefix: str | None = None,
@@ -616,13 +611,13 @@ class Boto3Forwarder:
         key_marker: str | None = None,
         version_id_marker: str | None = None,
     ) -> dict:
-        return self._ops.list_object_versions(
+        return await self._ops.list_object_versions(
             bucket, prefix, max_keys, key_marker, version_id_marker
         )
 
     # -- Presigned URLs -----------------------------------------------------
 
-    def generate_presigned_url(
+    async def generate_presigned_url(
         self,
         bucket: str,
         key: str,
@@ -630,16 +625,16 @@ class Boto3Forwarder:
         method: str = "get_object",
         extra_params: dict[str, str | int] | None = None,
     ) -> str:
-        return self._ops.generate_presigned_url(
+        return await self._ops.generate_presigned_url(
             bucket, key, expires_in, method, extra_params
         )
 
     # -- Multipart uploads --------------------------------------------------
 
-    def create_multipart_upload(self, bucket: str, key: str) -> dict:
-        return self._ops.create_multipart_upload(bucket, key)
+    async def create_multipart_upload(self, bucket: str, key: str) -> dict:
+        return await self._ops.create_multipart_upload(bucket, key)
 
-    def upload_part(
+    async def upload_part(
         self,
         bucket: str,
         key: str,
@@ -647,33 +642,35 @@ class Boto3Forwarder:
         part_number: int,
         body: IO[bytes],
     ) -> dict:
-        return self._ops.upload_part(bucket, key, upload_id, part_number, body)
+        return await self._ops.upload_part(bucket, key, upload_id, part_number, body)
 
-    def complete_multipart_upload(
+    async def complete_multipart_upload(
         self,
         bucket: str,
         key: str,
         upload_id: str,
         parts: list[dict],
     ) -> dict:
-        return self._ops.complete_multipart_upload(bucket, key, upload_id, parts)
+        return await self._ops.complete_multipart_upload(bucket, key, upload_id, parts)
 
-    def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict:
-        return self._ops.abort_multipart_upload(bucket, key, upload_id)
+    async def abort_multipart_upload(
+        self, bucket: str, key: str, upload_id: str
+    ) -> dict:
+        return await self._ops.abort_multipart_upload(bucket, key, upload_id)
 
-    def list_parts(
+    async def list_parts(
         self,
         bucket: str,
         key: str,
         upload_id: str,
         max_parts: int = 1000,
     ) -> dict:
-        return self._ops.list_parts(bucket, key, upload_id, max_parts)
+        return await self._ops.list_parts(bucket, key, upload_id, max_parts)
 
-    def list_multipart_uploads(
+    async def list_multipart_uploads(
         self,
         bucket: str,
         prefix: str | None = None,
         max_uploads: int = 1000,
     ) -> dict:
-        return self._ops.list_multipart_uploads(bucket, prefix, max_uploads)
+        return await self._ops.list_multipart_uploads(bucket, prefix, max_uploads)

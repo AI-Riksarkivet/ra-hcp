@@ -27,13 +27,10 @@ async def list_object_versions(
 ):
     """List all versions of objects in a bucket."""
     result = await run_storage(
-        s3.list_object_versions,
+        s3.list_object_versions(
+            bucket, prefix, max_keys, key_marker, version_id_marker
+        ),
         f"bucket '{bucket}'",
-        bucket,
-        prefix,
-        max_keys,
-        key_marker,
-        version_id_marker,
     )
     versions = [ObjectVersionInfo.model_validate(v) for v in result.get("Versions", [])]
     delete_markers = [
