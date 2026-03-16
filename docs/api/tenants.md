@@ -237,3 +237,160 @@ Define custom metadata schemas for object classification and indexing.
 | `HEAD` | `.../contentClasses/{name}` | Check whether a content class exists |
 | `POST` | `.../contentClasses/{name}` | Update a content class |
 | `DELETE` | `.../contentClasses/{name}` | Delete a content class |
+
+---
+
+## Code Examples
+
+### curl
+
+```bash
+BASE="http://localhost:8000/api/v1"
+TOKEN="<your-token>"
+AUTH="Authorization: Bearer $TOKEN"
+TENANT="research"
+
+# ── Tenant management (system admin) ──────────────────────────
+
+# List all tenants (verbose)
+curl -s "$BASE/mapi/tenants?verbose=true" -H "$AUTH" | jq .
+
+# Create a tenant with initial admin user
+curl -s -X PUT "$BASE/mapi/tenants?username=tenantadmin&password=Ch4ng3Me!" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "research",
+    "systemVisibleDescription": "Research storage",
+    "hardQuota": "500 GB",
+    "softQuota": 80
+  }' | jq .
+
+# ── Tenant settings (tenant admin) ───────────────────────────
+
+# Get tenant details
+curl -s "$BASE/mapi/tenants/$TENANT" -H "$AUTH" | jq .
+
+# Update tenant description
+curl -s -X POST "$BASE/mapi/tenants/$TENANT" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{"tenantVisibleDescription": "Updated description"}' | jq .
+
+# ── User accounts ────────────────────────────────────────────
+
+# List users
+curl -s "$BASE/mapi/tenants/$TENANT/userAccounts?verbose=true" \
+  -H "$AUTH" | jq .
+
+# Create a user with MONITOR + COMPLIANCE roles
+curl -s -X PUT "$BASE/mapi/tenants/$TENANT/userAccounts?password=InitP4ss!" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "auditor",
+    "fullName": "Compliance Auditor",
+    "localAuthentication": true,
+    "enabled": true,
+    "forcePasswordChange": true,
+    "roles": {"role": ["MONITOR", "COMPLIANCE"]}
+  }' | jq .
+
+# Change user password
+curl -s -X POST "$BASE/mapi/tenants/$TENANT/userAccounts/auditor/changePassword" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{"newPassword": "N3wP4ssw0rd!"}' | jq .
+
+# Delete a user
+curl -s -X DELETE "$BASE/mapi/tenants/$TENANT/userAccounts/auditor" \
+  -H "$AUTH" | jq .
+
+# ── Group accounts ───────────────────────────────────────────
+
+# List groups
+curl -s "$BASE/mapi/tenants/$TENANT/groupAccounts" -H "$AUTH" | jq .
+
+# Create a group
+curl -s -X PUT "$BASE/mapi/tenants/$TENANT/groupAccounts" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "groupname": "data-engineers",
+    "roles": {"role": ["ADMINISTRATOR"]}
+  }' | jq .
+
+# Delete a group
+curl -s -X DELETE "$BASE/mapi/tenants/$TENANT/groupAccounts/data-engineers" \
+  -H "$AUTH" | jq .
+
+# ── Statistics & chargeback ──────────────────────────────────
+
+# Tenant statistics
+curl -s "$BASE/mapi/tenants/$TENANT/statistics" -H "$AUTH" | jq .
+
+# Chargeback report (daily, January 2025)
+curl -s "$BASE/mapi/tenants/$TENANT/chargebackReport?\
+start=2025-01-01T00:00:00Z&end=2025-02-01T00:00:00Z&granularity=day" \
+  -H "$AUTH" | jq .
+```
+
+### Python
+
+```python
+import httpx
+
+BASE = "http://localhost:8000/api/v1"
+
+async def tenant_examples(token: str):
+    headers = {"Authorization": f"Bearer {token}"}
+    tenant = "research"
+
+    async with httpx.AsyncClient(base_url=BASE, headers=headers) as c:
+        # List tenants (system admin)
+        resp = await c.get("/mapi/tenants", params={"verbose": True})
+        print("Tenants:", [t["name"] for t in resp.json()])
+
+        # Create tenant with admin user (system admin)
+        resp = await c.put(
+            "/mapi/tenants",
+            params={"username": "tenantadmin", "password": "Ch4ng3Me!"},
+            json={
+                "name": "research",
+                "systemVisibleDescription": "Research storage",
+                "hardQuota": "500 GB",
+                "softQuota": 80,
+            },
+        )
+        resp.raise_for_status()
+
+        # Create a user
+        resp = await c.put(
+            f"/mapi/tenants/{tenant}/userAccounts",
+            params={"password": "InitP4ss!"},
+            json={
+                "username": "auditor",
+                "fullName": "Compliance Auditor",
+                "localAuthentication": True,
+                "enabled": True,
+                "forcePasswordChange": True,
+                "roles": {"role": ["MONITOR", "COMPLIANCE"]},
+            },
+        )
+        resp.raise_for_status()
+
+        # Get statistics
+        resp = await c.get(f"/mapi/tenants/{tenant}/statistics")
+        print("Stats:", resp.json())
+
+        # Chargeback report
+        resp = await c.get(
+            f"/mapi/tenants/{tenant}/chargebackReport",
+            params={
+                "start": "2025-01-01T00:00:00Z",
+                "end": "2025-02-01T00:00:00Z",
+                "granularity": "day",
+            },
+        )
+        print("Chargeback entries:", resp.json())
+```

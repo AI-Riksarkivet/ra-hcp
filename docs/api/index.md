@@ -26,7 +26,7 @@ All endpoints require a JWT bearer token obtained via the [Authentication](authe
 | Group | Prefix | Description | Access level |
 |-------|--------|-------------|--------------|
 | **Authentication** | `/api/v1/auth` | Login via OAuth2 password flow to obtain a JWT token. | Public |
-| **Health** | `/healthz`, `/readyz`, `/health` | Liveness probe, readiness probe, and legacy health endpoint. | Public |
+| **Health** | `/liveness`, `/readiness`, `/health` | Liveness probe, readiness probe, and legacy health endpoint. | Public |
 | **S3 Buckets** | `/api/v1/s3/buckets` | Create, list, and manage S3 buckets including versioning and ACLs. | JWT required |
 | **S3 Objects** | `/api/v1/s3/buckets/{bucket}/objects` | Upload, download, copy, and delete objects within buckets. | JWT required |
 | **S3 Versions** | `/api/v1/s3/buckets/{bucket}/versions` | List object versions and delete markers for versioning-enabled buckets. | JWT required |
@@ -64,3 +64,4 @@ All endpoints require a JWT bearer token obtained via the [Authentication](authe
 - [System Administration](system.md) -- System-level MAPI endpoints.
 - [Tenant Administration](tenants.md) -- Tenant-level settings and identity.
 - [Namespaces](namespaces.md) -- Namespace management, compliance, and access.
+- [Workflows](workflows.md) -- End-to-end curl and Python examples for common tasks.

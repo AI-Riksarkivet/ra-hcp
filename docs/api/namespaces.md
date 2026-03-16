@@ -163,3 +163,146 @@ View namespace resource usage and chargeback data. Requires the `MONITOR` role.
 | `start` | string | -- | Start time (ISO 8601) |
 | `end` | string | -- | End time (ISO 8601) |
 | `granularity` | string | `total` | Report granularity: `hour`, `day`, or `total` |
+
+---
+
+## Code Examples
+
+### curl
+
+```bash
+BASE="http://localhost:8000/api/v1"
+TOKEN="<your-token>"
+AUTH="Authorization: Bearer $TOKEN"
+TENANT="research"
+
+# ── Namespace management ─────────────────────────────────────
+
+# List namespaces
+curl -s "$BASE/mapi/tenants/$TENANT/namespaces?verbose=true" \
+  -H "$AUTH" | jq .
+
+# Create a namespace
+curl -s -X PUT "$BASE/mapi/tenants/$TENANT/namespaces" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "datasets",
+    "description": "ML training datasets",
+    "hardQuota": "200 GB",
+    "softQuota": 90
+  }' | jq .
+
+# Get namespace details
+curl -s "$BASE/mapi/tenants/$TENANT/namespaces/datasets?verbose=true" \
+  -H "$AUTH" | jq .
+
+# Delete a namespace
+curl -s -X DELETE "$BASE/mapi/tenants/$TENANT/namespaces/datasets" \
+  -H "$AUTH" | jq .
+
+# ── Templates ────────────────────────────────────────────────
+
+# Export single namespace template
+curl -s "$BASE/mapi/tenants/$TENANT/namespaces/datasets/export" \
+  -H "$AUTH" | jq . > datasets-template.json
+
+# Export multiple namespaces
+curl -s "$BASE/mapi/tenants/$TENANT/namespaces/export?names=datasets,archives" \
+  -H "$AUTH" | jq . > bundle.json
+
+# ── Compliance & retention ───────────────────────────────────
+
+# Get compliance settings
+curl -s "$BASE/mapi/tenants/$TENANT/namespaces/datasets/complianceSettings" \
+  -H "$AUTH" | jq .
+
+# Update compliance settings
+curl -s -X POST "$BASE/mapi/tenants/$TENANT/namespaces/datasets/complianceSettings" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}' | jq .
+
+# Create a retention class (7-year hold)
+curl -s -X PUT "$BASE/mapi/tenants/$TENANT/namespaces/datasets/retentionClasses" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "legal-hold-7y",
+    "value": "A+7y",
+    "description": "Seven-year legal retention"
+  }' | jq .
+
+# List retention classes
+curl -s "$BASE/mapi/tenants/$TENANT/namespaces/datasets/retentionClasses?verbose=true" \
+  -H "$AUTH" | jq .
+
+# ── Statistics ───────────────────────────────────────────────
+
+# Namespace statistics
+curl -s "$BASE/mapi/tenants/$TENANT/namespaces/datasets/statistics" \
+  -H "$AUTH" | jq .
+
+# Namespace chargeback
+curl -s "$BASE/mapi/tenants/$TENANT/namespaces/datasets/chargebackReport?\
+start=2025-01-01T00:00:00Z&end=2025-02-01T00:00:00Z&granularity=day" \
+  -H "$AUTH" | jq .
+```
+
+### Python
+
+```python
+import httpx
+
+BASE = "http://localhost:8000/api/v1"
+
+async def namespace_examples(token: str):
+    headers = {"Authorization": f"Bearer {token}"}
+    tenant = "research"
+
+    async with httpx.AsyncClient(base_url=BASE, headers=headers) as c:
+        # Create namespace
+        resp = await c.put(
+            f"/mapi/tenants/{tenant}/namespaces",
+            json={
+                "name": "datasets",
+                "description": "ML training datasets",
+                "hardQuota": "200 GB",
+                "softQuota": 90,
+            },
+        )
+        resp.raise_for_status()
+        print("Created:", resp.json())
+
+        # Export template
+        resp = await c.get(
+            f"/mapi/tenants/{tenant}/namespaces/datasets/export"
+        )
+        template = resp.json()
+        print("Template keys:", list(template.keys()))
+
+        # Update compliance
+        resp = await c.post(
+            f"/mapi/tenants/{tenant}/namespaces/datasets/complianceSettings",
+            json={"enabled": True},
+        )
+        resp.raise_for_status()
+
+        # Create retention class
+        resp = await c.put(
+            f"/mapi/tenants/{tenant}/namespaces/datasets/retentionClasses",
+            json={
+                "name": "legal-hold-7y",
+                "value": "A+7y",
+                "description": "Seven-year legal retention",
+            },
+        )
+        resp.raise_for_status()
+        print("Retention class created:", resp.json())
+
+        # Namespace statistics
+        resp = await c.get(
+            f"/mapi/tenants/{tenant}/namespaces/datasets/statistics"
+        )
+        print("Stats:", resp.json())
+```

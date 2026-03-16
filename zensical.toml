@@ -36,6 +36,7 @@ nav = [
     { "Tenants" = "api/tenants.md" },
     { "Namespaces" = "api/namespaces.md" },
     { "System" = "api/system.md" },
+    { "Workflows" = "api/workflows.md" },
   ]},
   { "API Reference" = [
     { "Endpoints" = "api/reference/endpoints.md" },

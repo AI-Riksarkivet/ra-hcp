@@ -318,3 +318,136 @@ Common status values: `created`, `updated`, `deleted`, `ok`, `password_changed`,
 | 404 | Resource not found |
 | 409 | Conflict (resource already exists) |
 | 500 | Internal server error |
+
+---
+
+## Code Examples
+
+### curl
+
+```bash
+BASE="http://localhost:8000/api/v1"
+# Login as system admin (no tenant prefix)
+TOKEN=$(curl -s -X POST "$BASE/auth/token" \
+  -d "username=admin&password=secret" | jq -r .access_token)
+AUTH="Authorization: Bearer $TOKEN"
+
+# ── Replication ──────────────────────────────────────────────
+
+# List replication links
+curl -s "$BASE/mapi/services/replication/links?verbose=true" \
+  -H "$AUTH" | jq .
+
+# Get a specific link
+curl -s "$BASE/mapi/services/replication/links/dc-east-west" \
+  -H "$AUTH" | jq .
+
+# Suspend a replication link
+curl -s -X POST "$BASE/mapi/services/replication/links/dc-east-west?suspend" \
+  -H "$AUTH" | jq .
+
+# Resume a replication link
+curl -s -X POST "$BASE/mapi/services/replication/links/dc-east-west?resume" \
+  -H "$AUTH" | jq .
+
+# ── Statistics ───────────────────────────────────────────────
+
+# Node statistics (CPU, memory, disk)
+curl -s "$BASE/mapi/nodes/statistics" -H "$AUTH" | jq .
+
+# Service statistics
+curl -s "$BASE/mapi/services/statistics" -H "$AUTH" | jq .
+
+# ── Metadata query ───────────────────────────────────────────
+
+# Search objects by metadata (Lucene syntax)
+TENANT="research"
+curl -s -X POST "$BASE/query/tenants/$TENANT/objects" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "namespace:datasets AND contentType:application/pdf",
+    "count": 50,
+    "sort": "-changeTimeMilliseconds",
+    "verbose": true
+  }' | jq .
+
+# Audit trail -- recent create and delete operations
+curl -s -X POST "$BASE/query/tenants/$TENANT/operations" \
+  -H "$AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "count": 100,
+    "verbose": true,
+    "systemMetadata": {
+      "changeTime": {
+        "start": "2025-01-01T00:00:00Z",
+        "end": "2025-02-01T00:00:00Z"
+      },
+      "transactions": {
+        "transaction": ["create", "delete"]
+      }
+    }
+  }' | jq .
+
+# ── Infrastructure ───────────────────────────────────────────
+
+# Get network settings
+curl -s "$BASE/mapi/network" -H "$AUTH" | jq .
+
+# List licenses
+curl -s "$BASE/mapi/storage/licenses" -H "$AUTH" | jq .
+```
+
+### Python
+
+```python
+import httpx
+
+BASE = "http://localhost:8000/api/v1"
+
+async def system_examples(token: str):
+    headers = {"Authorization": f"Bearer {token}"}
+
+    async with httpx.AsyncClient(base_url=BASE, headers=headers) as c:
+        # Replication links
+        resp = await c.get(
+            "/mapi/services/replication/links", params={"verbose": True}
+        )
+        print("Replication links:", resp.json())
+
+        # Node statistics
+        resp = await c.get("/mapi/nodes/statistics")
+        print("Node stats:", resp.json())
+
+        # Object metadata query
+        resp = await c.post(
+            "/query/tenants/research/objects",
+            json={
+                "query": "namespace:datasets AND contentType:application/pdf",
+                "count": 50,
+                "sort": "-changeTimeMilliseconds",
+                "verbose": True,
+            },
+        )
+        results = resp.json()
+        for obj in results.get("resultSet", []):
+            print(f"  {obj.get('urlName')}")
+
+        # Operation audit trail
+        resp = await c.post(
+            "/query/tenants/research/operations",
+            json={
+                "count": 100,
+                "verbose": True,
+                "systemMetadata": {
+                    "changeTime": {
+                        "start": "2025-01-01T00:00:00Z",
+                        "end": "2025-02-01T00:00:00Z",
+                    },
+                    "transactions": {"transaction": ["create", "delete"]},
+                },
+            },
+        )
+        print("Operations found:", len(resp.json().get("resultSet", [])))
+```
