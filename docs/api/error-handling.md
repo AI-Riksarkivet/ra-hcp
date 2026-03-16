@@ -2,6 +2,20 @@
 
 Production scripts need to handle transient failures, token expiry, and partial-success scenarios. HCP's S3 layer is **eventually consistent** for certain operations -- the patterns below help build resilient automation.
 
+```mermaid
+graph LR
+    A["Client Request"] --> B{"Success?"}
+    B -->|Yes| C["Return Response"]
+    B -->|Retryable<br/>408 429 5xx| D["Wait<br/><small>exponential backoff</small>"]
+    D --> E{"Attempts<br/>left?"}
+    E -->|Yes| A
+    E -->|No| F["Raise Error"]
+    B -->|Non-retryable<br/>400 401 403 404| F
+
+    style C fill:#d4edda,stroke:#28a745
+    style F fill:#f8d7da,stroke:#dc3545
+```
+
 ## Retry with exponential backoff
 
 ```python
@@ -44,6 +58,20 @@ async def retry(
 ---
 
 ## Auto-refreshing auth wrapper
+
+```mermaid
+sequenceDiagram
+    participant Client as HCPClient
+    participant API as HCP API
+
+    Client->>API: request (GET /statistics)
+    API-->>Client: 401 Unauthorized
+    Note over Client: Token expired — re-login
+    Client->>API: POST /auth/token
+    API-->>Client: new JWT
+    Client->>API: request (GET /statistics) with new token
+    API-->>Client: 200 OK + data
+```
 
 ```python
 import httpx
@@ -214,6 +242,29 @@ Many HCP API operations are naturally idempotent. Knowing which ones are safe to
 ## Multipart upload with fault tolerance
 
 Presigned multipart upload can resume after partial failures. If some parts fail, re-upload only the missing ones:
+
+```mermaid
+graph TD
+    INIT["1. Initiate<br/><small>POST /multipart/presign</small>"] --> PARTS
+
+    subgraph PARTS["2. Upload parts (parallel)"]
+        direction LR
+        P1["Part 1 ✓"]
+        P2["Part 2 ✗→retry→✓"]
+        P3["Part N ✓"]
+    end
+
+    PARTS --> CHECK{"All parts<br/>succeeded?"}
+    CHECK -->|Yes| COMPLETE["3. Complete<br/><small>POST /multipart/complete</small>"]
+    CHECK -->|No| ABORT["3. Abort<br/><small>POST /multipart/abort</small>"]
+
+    COMPLETE --> DONE["Object visible"]
+    ABORT --> ERR["Raise error<br/><small>caller may retry</small>"]
+
+    style DONE fill:#d4edda,stroke:#28a745
+    style ERR fill:#f8d7da,stroke:#dc3545
+    style P2 fill:#fff3cd,stroke:#ffc107
+```
 
 ```python
 import asyncio
@@ -392,6 +443,23 @@ Argo Workflows has built-in retry and timeout support at the template level. Use
 
 Use Argo exit handlers to guarantee cleanup runs regardless of workflow success or failure. This is essential for aborting in-progress multipart uploads, deleting partial results, or releasing resources.
 
+```mermaid
+graph TD
+    WF["Workflow<br/><small>upload-pipeline</small>"]
+    WF -->|runs| UPLOAD["do-upload"]
+    UPLOAD --> RESULT{"Status?"}
+
+    RESULT -->|Succeeded| EXIT_OK["cleanup<br/><small>no-op</small>"]
+    RESULT -->|Failed / Error| EXIT_FAIL["cleanup<br/><small>delete partial/</small>"]
+
+    EXIT_FAIL -.->|bulk DELETE| S3[("HCP S3<br/>partial/ prefix")]
+
+    style EXIT_OK fill:#d4edda,stroke:#28a745
+    style EXIT_FAIL fill:#fff3cd,stroke:#ffc107
+
+    linkStyle 3 stroke:#dc3545
+```
+
 === "YAML"
 
     ```yaml
@@ -529,6 +597,25 @@ Use Argo exit handlers to guarantee cleanup runs regardless of workflow success 
 
 Object storage is not a relational database -- there are no transactions. But you can approximate ACID properties through careful workflow design:
 
+```mermaid
+graph TD
+    subgraph Atomicity
+        A1["onExit handler<br/><small>cleanup partial state</small>"]
+        A2["Staged-commit<br/><small>staging/ → final/</small>"]
+    end
+    subgraph Consistency
+        C1["HEAD polling<br/><small>wait_for_object</small>"]
+        C2["Unique keys<br/><small>per workflow run</small>"]
+    end
+    subgraph Isolation
+        I1["Namespace outputs<br/><small>results/workflow-id/</small>"]
+    end
+    subgraph Durability
+        D1["Verify uploads<br/><small>HEAD + ETag check</small>"]
+        D2["Versioned namespaces<br/><small>for critical data</small>"]
+    end
+```
+
 | Property | S3/HCP reality | How to achieve it |
 |----------|---------------|-------------------|
 | **Atomicity** | Individual PUTs are atomic, but a multi-object "transaction" is not. | Use exit handlers (`onExit`) to clean up partial state on failure. Write to a staging prefix first, then "commit" by copying to the final location. |
@@ -539,6 +626,25 @@ Object storage is not a relational database -- there are no transactions. But yo
 ### Staged-commit pattern
 
 Write results to a temporary prefix, verify them, then "commit" by copying to the final location. On failure, the exit handler deletes the staging prefix.
+
+```mermaid
+graph LR
+    subgraph S3["HCP S3"]
+        STG[("staging/<br/>workflow-id/")]
+        FINAL[("final/<br/>key")]
+    end
+
+    W["1. Write"] -->|PUT| STG
+    STG --> V["2. Verify<br/><small>HEAD check size</small>"]
+    V -->|match| C["3. Commit<br/><small>COPY → final</small>"]
+    C --> STG
+    C -->|copy| FINAL
+    STG --> CL["4. Cleanup<br/><small>DELETE staging</small>"]
+    V -->|mismatch| DEL["DELETE staging<br/><small>+ raise error</small>"]
+
+    style FINAL fill:#d4edda,stroke:#28a745
+    style DEL fill:#f8d7da,stroke:#dc3545
+```
 
 === "Python"
 

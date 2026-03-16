@@ -4,6 +4,29 @@
 
 All examples are provided in both **YAML** (native Argo manifests) and **[Hera](https://github.com/argoproj-labs/hera)** (Python SDK for Argo Workflows).
 
+```mermaid
+graph LR
+    subgraph K8s["Kubernetes"]
+        AC["Argo<br/>Controller"]
+        SEC[("K8s Secret<br/><small>hcp-s3-credentials</small>")]
+        subgraph Pods["Workflow Pods"]
+            P1["Pod 1"]
+            P2["Pod 2"]
+            P3["Pod N"]
+        end
+        AC -->|schedules| Pods
+    end
+
+    subgraph HCP["Hitachi Content Platform"]
+        API["HCP Unified API<br/><small>/api/v1</small>"]
+        S3[("S3 Buckets &<br/>Namespaces")]
+        API --> S3
+    end
+
+    SEC -.->|credentials| Pods
+    Pods <-->|S3 artifacts or<br/>presigned URLs| API
+```
+
 ## Configuring HCP S3 credentials for Argo
 
 First, retrieve the S3 credentials from the API and create a Kubernetes Secret that Argo can reference:
@@ -86,6 +109,24 @@ uv add hera
 ## ETL pipeline with HCP S3 artifacts
 
 A workflow that reads a dataset from HCP, processes it, and writes results back:
+
+```mermaid
+graph LR
+    subgraph HCP["HCP S3"]
+        IN[("manifests/<br/>latest.json")]
+        OUT[("results/<br/>output.json")]
+    end
+
+    subgraph Argo["Argo DAG"]
+        E["extract-data"]
+        T["transform-data"]
+        L["load-results"]
+        E -->|artifact| T -->|artifact| L
+    end
+
+    IN -.->|S3 input<br/>artifact| E
+    L -.->|S3 output<br/>artifact| OUT
+```
 
 === "YAML"
 
@@ -304,6 +345,30 @@ A workflow that reads a dataset from HCP, processes it, and writes results back:
 ## Presigned URL pipeline
 
 For cases where you cannot mount S3 credentials into every pod, use the HCP API to generate presigned URLs and pass them as parameters:
+
+```mermaid
+sequenceDiagram
+    participant Argo as Argo Steps
+    participant API as HCP API
+    participant S3 as HCP S3
+
+    rect rgb(240,248,255)
+    Note over Argo: Step 1 — presign
+    Argo->>API: POST /presign (get_object)
+    API-->>Argo: download URL
+    Argo->>API: POST /presign (put_object)
+    API-->>Argo: upload URL
+    end
+
+    rect rgb(245,255,245)
+    Note over Argo: Step 2 — process
+    Argo->>S3: GET presigned download URL
+    S3-->>Argo: input data
+    Note over Argo: process data...
+    Argo->>S3: PUT presigned upload URL
+    S3-->>Argo: 200 OK
+    end
+```
 
 === "YAML"
 
@@ -527,6 +592,25 @@ print(w.to_yaml())
 ## Batch processing -- fan-out over HCP objects
 
 A common pattern: list objects from an HCP bucket, process each one in parallel (fan-out), then aggregate results (fan-in).
+
+```mermaid
+graph TD
+    D["discover<br/><small>list objects</small>"]
+    D --> F
+
+    subgraph F["fan-out (parallel)"]
+        direction LR
+        P1["process<br/>obj-1"]
+        P2["process<br/>obj-2"]
+        P3["process<br/>obj-N"]
+    end
+
+    F --> A["summarize<br/><small>aggregate results</small>"]
+
+    IN[("incoming/<br/>*.csv")] -.-> D
+    P1 & P2 & P3 -.->|presigned PUT| OUT[("processed/<br/>*.result.json")]
+    A -.-> SUM[("summaries/<br/>batch.json")]
+```
 
 === "YAML"
 
@@ -841,6 +925,40 @@ A common pattern: list objects from an HCP bucket, process each one in parallel 
 ## Error handling for batch workflows
 
 The batch fan-out above processes objects independently, but what happens when some pods fail? Without cleanup, partial results pollute the output prefix. This section adds an **exit handler** that cleans up on failure, plus a **staged-commit** pattern so partial results are never visible to downstream consumers.
+
+```mermaid
+graph TD
+    D["discover<br/><small>list objects</small>"]
+    D --> F
+
+    subgraph F["fan-out (parallel)"]
+        direction LR
+        P1["process<br/>obj-1"]
+        P2["process<br/>obj-2"]
+        P3["process<br/>obj-N"]
+    end
+
+    F -->|all succeed| C["commit<br/><small>copy staging→processed</small>"]
+    C --> DONE["Succeeded"]
+
+    F -->|any fails| FAIL["Failed"]
+    FAIL --> CL["cleanup (onExit)<br/><small>delete staging/</small>"]
+
+    subgraph S3["HCP S3 Prefixes"]
+        direction LR
+        STG[("staging/<br/>workflow-id/")]
+        FINAL[("processed/")]
+    end
+
+    P1 & P2 & P3 -.->|write| STG
+    C -.->|copy| FINAL
+    C -.->|delete| STG
+    CL -.->|delete| STG
+
+    style DONE fill:#d4edda,stroke:#28a745
+    style FAIL fill:#f8d7da,stroke:#dc3545
+    style CL fill:#fff3cd,stroke:#ffc107
+```
 
 === "YAML"
 
