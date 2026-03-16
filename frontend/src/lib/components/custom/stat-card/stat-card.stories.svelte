@@ -13,7 +13,7 @@
 	});
 </script>
 
-<script>
+<script lang="ts">
 	import Database from 'lucide-svelte/icons/database';
 	import HardDrive from 'lucide-svelte/icons/hard-drive';
 	import Users from 'lucide-svelte/icons/users';

@@ -13,7 +13,7 @@
 			percent: 50,
 		},
 		argTypes: {
-			percent: { control: { type: 'range', min: 0, max: 100, step: 1 } },
+			percent: { control: { type: 'range', min: 0, max: 150, step: 1 } },
 		},
 	});
 </script>
@@ -33,14 +33,26 @@
 
 <Story name="Critical" args={{ percent: 95 }} />
 
+<Story name="Empty" args={{ percent: 0 }} />
+
+<Story name="Over Quota" args={{ percent: 120 }} />
+
 <Story name="All Levels">
 	{#snippet template()}
 		<div class="space-y-4 w-64">
-			{#each [10, 30, 50, 70, 80, 90, 95, 100] as pct}
+			{#each [0, 10, 30, 50, 70, 80, 90, 95, 100, 120] as pct}
 				<div>
 					<div class="flex justify-between text-xs text-muted-foreground mb-1">
 						<span>{pct}%</span>
-						<span>{pct > 90 ? 'Critical' : pct > 70 ? 'Warning' : 'OK'}</span>
+						<span
+							>{pct > 100
+								? 'Over quota'
+								: pct > 90
+									? 'Critical'
+									: pct > 70
+										? 'Warning'
+										: 'OK'}</span
+						>
 					</div>
 					<StorageProgressBar percent={pct} />
 				</div>
