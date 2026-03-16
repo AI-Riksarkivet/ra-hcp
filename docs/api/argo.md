@@ -57,6 +57,22 @@ First, retrieve the S3 credentials from the API and create a Kubernetes Secret t
         )
     ```
 
+### Python container image
+
+The Python-based Argo templates below use `httpx` for HTTP calls. Since `python:3.13-slim` does not include httpx, build a small custom image:
+
+```dockerfile
+FROM python:3.13-slim
+RUN pip install --no-cache-dir httpx
+```
+
+```bash
+docker build -t my-registry/python-httpx:3.13 .
+docker push my-registry/python-httpx:3.13
+```
+
+All examples below reference this image as **`my-registry/python-httpx:3.13`** -- replace with your actual registry path.
+
 ### Installing Hera
 
 [Hera](https://github.com/argoproj-labs/hera) lets you define Argo Workflows entirely in Python instead of YAML. Install it with:
@@ -367,24 +383,25 @@ For cases where you cannot mount S3 credentials into every pod, use the HCP API 
             parameters:
               - name: download-url
               - name: upload-url
-          container:
-            image: python:3.13-slim
-            command: [python, -c]
-            args:
-              - |
-                import urllib.request
-                # Download input via presigned URL (no credentials needed)
-                urllib.request.urlretrieve("{{inputs.parameters.download-url}}", "/tmp/data.csv")
-                # Process...
-                with open("/tmp/result.csv", "w") as f:
-                    f.write("processed,data\n")
-                # Upload result via presigned URL
-                with open("/tmp/result.csv", "rb") as f:
-                    req = urllib.request.Request(
-                        "{{inputs.parameters.upload-url}}", data=f.read(), method="PUT"
-                    )
-                    urllib.request.urlopen(req)
-                print("Done: input downloaded and result uploaded via presigned URLs")
+          script:
+            image: my-registry/python-httpx:3.13
+            command: [python]
+            source: |
+              import httpx
+              from pathlib import Path
+
+              # Download input via presigned URL (no credentials needed)
+              resp = httpx.get("{{inputs.parameters.download-url}}")
+              resp.raise_for_status()
+              Path("/tmp/data.csv").write_bytes(resp.content)
+
+              # Process...
+              Path("/tmp/result.csv").write_text("processed,data\n")
+
+              # Upload result via presigned URL
+              data = Path("/tmp/result.csv").read_bytes()
+              httpx.put("{{inputs.parameters.upload-url}}", content=data).raise_for_status()
+              print("Done: input downloaded and result uploaded via presigned URLs")
     ```
 
 === "Hera"
@@ -440,22 +457,22 @@ For cases where you cannot mount S3 credentials into every pod, use the HCP API 
 
 
     @script(
-        image="python:3.13-slim",
+        image="my-registry/python-httpx:3.13",
         retry_strategy=m.RetryStrategy(limit="2", backoff=m.Backoff(duration="10s", factor=2)),
     )
     def process_with_urls(download_url: str, upload_url: str):
         """Download input, process, and upload result via presigned URLs."""
-        import urllib.request
+        import httpx
+        from pathlib import Path
 
-        urllib.request.urlretrieve(download_url, "/tmp/data.csv")
+        resp = httpx.get(download_url)
+        resp.raise_for_status()
+        Path("/tmp/data.csv").write_bytes(resp.content)
 
-        with open("/tmp/result.csv", "w") as f:
-            f.write("processed,data\n")
+        Path("/tmp/result.csv").write_text("processed,data\n")
 
-        with open("/tmp/result.csv", "rb") as f:
-            req = urllib.request.Request(upload_url, data=f.read(), method="PUT")
-            urllib.request.urlopen(req)
-
+        data = Path("/tmp/result.csv").read_bytes()
+        httpx.put(upload_url, content=data).raise_for_status()
         print("Done: input downloaded and result uploaded via presigned URLs")
 
 
@@ -606,58 +623,43 @@ A common pattern: list objects from an HCP bucket, process each one in parallel 
             parameters:
               - name: key
           script:
-            image: python:3.13-slim
+            image: my-registry/python-httpx:3.13
             command: [python]
             source: |
-              import urllib.request, json
+              import httpx, json, os
+              from pathlib import Path
 
               BASE = "{{workflow.parameters.hcp-api-base}}"
               TOKEN = "{{workflow.parameters.hcp-token}}"
               BUCKET = "{{workflow.parameters.bucket}}"
               KEY = "{{inputs.parameters.key}}"
+              headers = {"Authorization": f"Bearer {TOKEN}"}
 
               # Get a presigned download URL from the HCP API
-              req = urllib.request.Request(
+              resp = httpx.post(
                   f"{BASE}/s3/presign",
-                  data=json.dumps({
-                      "bucket": BUCKET, "key": KEY,
-                      "method": "get_object", "expires_in": 600,
-                  }).encode(),
-                  headers={
-                      "Authorization": f"Bearer {TOKEN}",
-                      "Content-Type": "application/json",
-                  },
+                  json={"bucket": BUCKET, "key": KEY, "method": "get_object", "expires_in": 600},
+                  headers=headers,
               )
-              url = json.loads(urllib.request.urlopen(req).read())["url"]
+              url = resp.json()["url"]
 
               # Download and process the object
-              local_path = "/tmp/data"
-              urllib.request.urlretrieve(url, local_path)
-              import os
-              size = os.path.getsize(local_path)
+              resp = httpx.get(url)
+              resp.raise_for_status()
+              Path("/tmp/data").write_bytes(resp.content)
+              size = os.path.getsize("/tmp/data")
               result = {"key": KEY, "size": size, "status": "processed"}
               print(json.dumps(result))
 
               # Upload result back via presigned PUT
               result_key = KEY.replace("incoming/", "processed/") + ".result.json"
-              req = urllib.request.Request(
+              resp = httpx.post(
                   f"{BASE}/s3/presign",
-                  data=json.dumps({
-                      "bucket": BUCKET, "key": result_key,
-                      "method": "put_object", "expires_in": 600,
-                  }).encode(),
-                  headers={
-                      "Authorization": f"Bearer {TOKEN}",
-                      "Content-Type": "application/json",
-                  },
+                  json={"bucket": BUCKET, "key": result_key, "method": "put_object", "expires_in": 600},
+                  headers=headers,
               )
-              upload_url = json.loads(urllib.request.urlopen(req).read())["url"]
-              req = urllib.request.Request(
-                  upload_url,
-                  data=json.dumps(result).encode(),
-                  method="PUT",
-              )
-              urllib.request.urlopen(req)
+              upload_url = resp.json()["url"]
+              httpx.put(upload_url, content=json.dumps(result).encode()).raise_for_status()
               print(f"Result uploaded to {result_key}")
 
         # ── Step 3: Fan in — aggregate results ───────────────────────
@@ -732,49 +734,41 @@ A common pattern: list objects from an HCP bucket, process each one in parallel 
 
 
     @script(
-        image="python:3.13-slim",
+        image="my-registry/python-httpx:3.13",
         retry_strategy=m.RetryStrategy(limit="2", backoff=m.Backoff(duration="10s", factor=2)),
     )
     def process_single(hcp_api_base: str, hcp_token: str, bucket: str, key: str):
         """Download an object via presigned URL, process it, upload the result."""
-        import urllib.request, json, os
+        import httpx, json, os
+        from pathlib import Path
+
+        headers = {"Authorization": f"Bearer {hcp_token}"}
 
         # Presign download
-        req = urllib.request.Request(
+        resp = httpx.post(
             f"{hcp_api_base}/s3/presign",
-            data=json.dumps({
-                "bucket": bucket, "key": key,
-                "method": "get_object", "expires_in": 600,
-            }).encode(),
-            headers={
-                "Authorization": f"Bearer {hcp_token}",
-                "Content-Type": "application/json",
-            },
+            json={"bucket": bucket, "key": key, "method": "get_object", "expires_in": 600},
+            headers=headers,
         )
-        url = json.loads(urllib.request.urlopen(req).read())["url"]
+        url = resp.json()["url"]
 
         # Download and process
-        urllib.request.urlretrieve(url, "/tmp/data")
+        resp = httpx.get(url)
+        resp.raise_for_status()
+        Path("/tmp/data").write_bytes(resp.content)
         size = os.path.getsize("/tmp/data")
         result = {"key": key, "size": size, "status": "processed"}
         print(json.dumps(result))
 
         # Presign upload and write result
         result_key = key.replace("incoming/", "processed/") + ".result.json"
-        req = urllib.request.Request(
+        resp = httpx.post(
             f"{hcp_api_base}/s3/presign",
-            data=json.dumps({
-                "bucket": bucket, "key": result_key,
-                "method": "put_object", "expires_in": 600,
-            }).encode(),
-            headers={
-                "Authorization": f"Bearer {hcp_token}",
-                "Content-Type": "application/json",
-            },
+            json={"bucket": bucket, "key": result_key, "method": "put_object", "expires_in": 600},
+            headers=headers,
         )
-        upload_url = json.loads(urllib.request.urlopen(req).read())["url"]
-        req = urllib.request.Request(upload_url, data=json.dumps(result).encode(), method="PUT")
-        urllib.request.urlopen(req)
+        upload_url = resp.json()["url"]
+        httpx.put(upload_url, content=json.dumps(result).encode()).raise_for_status()
         print(f"Result uploaded to {result_key}")
 
 
