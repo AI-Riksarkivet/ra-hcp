@@ -12,6 +12,12 @@ from app.services.mapi_errors import (
     MapiResponseError,
     MapiTransportError,
 )
+from app.services.storage.errors import (
+    StorageError,
+    StorageOperationNotSupported,
+    StorageTransportError,
+    from_client_error,
+)
 
 
 # ── raise_for_hcp_status ────────────────────────────────────────────
@@ -150,3 +156,75 @@ async def test_run_mapi_translates_mapi_error():
         await run_mapi(_fail(), "tenants")
     assert exc_info.value.status_code == 502
     assert "HCP unreachable" in exc_info.value.detail
+
+
+# ── StorageError domain exceptions ────────────────────────────────
+
+
+def test_storage_error_attributes():
+    err = StorageError("NoSuchBucket", "Bucket not found", 404)
+    assert str(err) == "Bucket not found"
+    assert err.code == "NoSuchBucket"
+    assert err.message == "Bucket not found"
+    assert err.http_status == 404
+
+
+def test_storage_error_default_status():
+    err = StorageError("Unknown", "something broke")
+    assert err.http_status == 502
+
+
+def test_storage_transport_error_is_storage_error():
+    err = StorageTransportError("endpoint unreachable")
+    assert isinstance(err, StorageError)
+    assert err.code == "TransportError"
+    assert err.http_status == 502
+
+
+def test_storage_transport_error_custom_status():
+    err = StorageTransportError("read timed out", 504)
+    assert err.http_status == 504
+
+
+def test_storage_operation_not_supported():
+    err = StorageOperationNotSupported("get_bucket_acl", "minio")
+    assert isinstance(err, StorageError)
+    assert err.code == "NotSupported"
+    assert err.http_status == 501
+    assert "minio" in err.message
+    assert "get_bucket_acl" in err.message
+
+
+@pytest.mark.parametrize(
+    "error_code,expected_status",
+    [
+        ("NoSuchBucket", 404),
+        ("NoSuchKey", 404),
+        ("AccessDenied", 403),
+        ("BucketNotEmpty", 409),
+        ("BucketAlreadyExists", 409),
+        ("InvalidBucketName", 400),
+        ("SlowDown", 503),
+    ],
+)
+def test_from_client_error_maps_known_codes(error_code: str, expected_status: int):
+    exc = type("ClientError", (Exception,), {})()
+    exc.response = {  # type: ignore[attr-defined]
+        "Error": {"Code": error_code, "Message": "test message"},
+        "ResponseMetadata": {"HTTPStatusCode": 500},
+    }
+    result = from_client_error(exc)
+    assert result.code == error_code
+    assert result.http_status == expected_status
+    assert result.message == "test message"
+
+
+def test_from_client_error_unknown_code_uses_http_status():
+    exc = type("ClientError", (Exception,), {})()
+    exc.response = {  # type: ignore[attr-defined]
+        "Error": {"Code": "WeirdError", "Message": "weird"},
+        "ResponseMetadata": {"HTTPStatusCode": 422},
+    }
+    result = from_client_error(exc)
+    assert result.code == "WeirdError"
+    assert result.http_status == 422

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.tenant import TenantCreate, TenantList
 from app.schemas.common import StatusResponse
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/tenants", tags=["System Admin: Tenants"])
 async def list_tenants(
     verbose: bool = False,
     prettyprint: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         "/tenants",
@@ -32,7 +32,7 @@ async def create_tenant(
     password: str = Query(...),
     forcePasswordChange: bool = Query(False),
     initialSecurityGroup: str | None = Query(None),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     """Create an HCP tenant (system-level)."""
     q: dict = {

@@ -181,7 +181,10 @@ async def get_lance_service(
     settings = get_s3_settings()
     endpoint_url = s3_endpoint_for_tenant(creds.tenant, settings.hcp_domain)
     if not endpoint_url:
-        raise ValueError("Cannot derive S3 endpoint: hcp_domain or tenant missing")
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot derive S3 endpoint: hcp_domain or tenant missing",
+        )
     s3_uri = (
         f"s3://{params.bucket}/{params.path}"
         if params.path
@@ -204,8 +207,12 @@ async def get_lance_service(
                 inner, cache, get_cache_settings()
             )
         else:
+            from key_value.aio.stores.null import NullStore
+
             lance_cache[cache_key] = CachedLanceService(
-                inner, cache or KVCache(None, enabled=False), get_cache_settings()
+                inner,
+                cache or KVCache(NullStore(), enabled=False),
+                get_cache_settings(),
             )
         logger.info(
             "Creating CachedLanceService for %s/%s",

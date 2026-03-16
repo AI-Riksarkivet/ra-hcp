@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.namespace import (
     NamespaceCreate,
@@ -26,7 +26,7 @@ PREFIX = "/tenants/{tenant_name}/namespaces"
 async def list_namespaces(
     tenant_name: str,
     qp: ListQueryParams = Depends(),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces",
@@ -39,7 +39,7 @@ async def list_namespaces(
 async def create_namespace(
     tenant_name: str,
     body: NamespaceCreate,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "PUT",
@@ -58,7 +58,7 @@ async def get_namespace(
     tenant_name: str,
     ns_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}",
@@ -71,7 +71,7 @@ async def get_namespace(
 async def check_namespace(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "HEAD",
@@ -87,7 +87,7 @@ async def modify_namespace(
     ns_name: str,
     body: NamespaceUpdate,
     resetMQECheckpoint: str | None = Query(None),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     q = {}
     if resetMQECheckpoint is not None:
@@ -106,7 +106,7 @@ async def modify_namespace(
 async def delete_namespace(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "DELETE",
@@ -123,7 +123,7 @@ async def delete_namespace(
 async def get_versioning(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/versioningSettings"
@@ -135,7 +135,7 @@ async def modify_versioning(
     tenant_name: str,
     ns_name: str,
     body: VersioningSettings,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -149,7 +149,7 @@ async def modify_versioning(
 async def delete_versioning(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "DELETE",

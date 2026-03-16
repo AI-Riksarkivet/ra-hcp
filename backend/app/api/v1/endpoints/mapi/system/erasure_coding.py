@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.erasure_coding import (
     ECLinkCandidateList,
@@ -28,7 +28,7 @@ TOPOS = f"{EC}/ecTopologies"
 @router.get(TOPOS, response_model=ECTopologyList)
 async def list_ec_topologies(
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(TOPOS, query={"verbose": str(verbose).lower()})
 
@@ -36,7 +36,7 @@ async def list_ec_topologies(
 @router.put(TOPOS, response_model=StatusResponse, status_code=201)
 async def create_ec_topology(
     body: ECTopologyCreate,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("PUT", TOPOS, body=body)
     return {"status": "created", "name": body.name}
@@ -46,7 +46,7 @@ async def create_ec_topology(
 async def get_ec_topology(
     topology_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"{TOPOS}/{topology_name}", query={"verbose": str(verbose).lower()}
@@ -56,7 +56,7 @@ async def get_ec_topology(
 @router.head(TOPOS + "/{topology_name}")
 async def check_ec_topology(
     topology_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.send("HEAD", f"{TOPOS}/{topology_name}")
     return Response(status_code=resp.status_code)
@@ -66,7 +66,7 @@ async def check_ec_topology(
 async def modify_or_retire_ec_topology(
     topology_name: str,
     retire: Optional[bool] = Query(None),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     query = {}
     if retire is not None:
@@ -79,7 +79,7 @@ async def modify_or_retire_ec_topology(
 async def delete_ec_topology(
     topology_name: str,
     force: Optional[bool] = Query(None),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     query = {}
     if force:
@@ -97,7 +97,7 @@ async def delete_ec_topology(
 async def get_ec_tenant_candidates(
     topology_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"{TOPOS}/{topology_name}/tenantCandidates",
@@ -112,7 +112,7 @@ async def get_ec_tenant_candidates(
 async def get_ec_tenant_conflicting_candidates(
     topology_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"{TOPOS}/{topology_name}/tenantConflictingCandidates",
@@ -126,7 +126,7 @@ async def get_ec_tenant_conflicting_candidates(
 @router.get(TOPOS + "/{topology_name}/tenants", response_model=TenantCandidateList)
 async def list_ec_topology_tenants(
     topology_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(f"{TOPOS}/{topology_name}/tenants")
 
@@ -139,7 +139,7 @@ async def list_ec_topology_tenants(
 async def add_tenant_to_ec_topology(
     topology_name: str,
     tenant_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("PUT", f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
     return {"status": "created", "tenant": tenant_name}
@@ -151,7 +151,7 @@ async def add_tenant_to_ec_topology(
 async def remove_tenant_from_ec_topology(
     topology_name: str,
     tenant_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("DELETE", f"{TOPOS}/{topology_name}/tenants/{tenant_name}")
     return {"status": "deleted", "tenant": tenant_name}
@@ -163,7 +163,7 @@ async def remove_tenant_from_ec_topology(
 @router.get(f"{EC}/linkCandidates", response_model=ECLinkCandidateList)
 async def get_ec_link_candidates(
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"{EC}/linkCandidates", query={"verbose": str(verbose).lower()}

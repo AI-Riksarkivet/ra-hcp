@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.namespace import CustomMetadataIndexingSettings
 from app.schemas.common import StatusResponse
@@ -21,7 +21,7 @@ PREFIX = "/tenants/{tenant_name}/namespaces"
 async def get_custom_metadata_indexing(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/customMetadataIndexingSettings"
@@ -35,7 +35,7 @@ async def modify_custom_metadata_indexing(
     tenant_name: str,
     ns_name: str,
     body: CustomMetadataIndexingSettings,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",

@@ -12,6 +12,20 @@ class StorageProtocol(Protocol):
     All methods are async — callers ``await`` them directly.
     Methods return plain dicts matching the boto3 response shapes so existing
     endpoint code works without changes.
+
+    Response shape reference (most common keys)::
+
+        list_buckets()      → {"Buckets": [{"Name": str, "CreationDate": datetime}],
+                               "Owner": {"DisplayName": str, "ID": str}}
+        head_bucket()       → {"ResponseMetadata": {...}}
+        list_objects()      → {"Contents": [{"Key": str, "Size": int, ...}],
+                               "IsTruncated": bool,
+                               "NextContinuationToken": str | None}
+        get_object()        → {"Body": StreamingBody, "ContentLength": int,
+                               "ContentType": str, "ETag": str, ...}
+        head_object()       → {"ContentLength": int, "ContentType": str,
+                               "ETag": str, "LastModified": datetime, ...}
+        delete_objects()    → {"Errors": [{"Key": str, "Code": str}]} or {}
     """
 
     # ── Lifecycle ───────────────────────────────────────────────────────

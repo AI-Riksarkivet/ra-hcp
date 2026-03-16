@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 
 router = APIRouter(tags=["Namespace: Templates"])
@@ -33,7 +34,9 @@ _EXCLUDED_NS_KEYS = frozenset(
 )
 
 
-async def _fetch_silent(hcp: MapiService, path: str) -> dict[str, Any] | None:
+async def _fetch_silent(
+    hcp: AuthenticatedMapiService, path: str
+) -> dict[str, Any] | None:
     """Fetch JSON, returning None on any error instead of raising."""
     try:
         return await hcp.fetch_json(path)
@@ -42,7 +45,7 @@ async def _fetch_silent(hcp: MapiService, path: str) -> dict[str, Any] | None:
 
 
 async def _export_single(
-    hcp: MapiService, tenant_name: str, ns_name: str
+    hcp: AuthenticatedMapiService, tenant_name: str, ns_name: str
 ) -> dict[str, Any]:
     """Export a single namespace with all its sub-resources."""
     base = f"/tenants/{tenant_name}/namespaces/{ns_name}"
@@ -132,11 +135,9 @@ async def _export_single(
 async def export_namespace(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ) -> dict[str, Any]:
     """Export a single namespace configuration as a template."""
-    from datetime import datetime, timezone
-
     config = await _export_single(hcp, tenant_name, ns_name)
     return {
         "version": "1.0",
@@ -150,11 +151,9 @@ async def export_namespace(
 async def export_namespaces(
     tenant_name: str,
     names: str = Query(..., description="Comma-separated namespace names"),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ) -> dict[str, Any]:
     """Export multiple namespace configurations as a template bundle."""
-    from datetime import datetime, timezone
-
     ns_names = [n.strip() for n in names.split(",") if n.strip()]
     configs = await asyncio.gather(
         *[_export_single(hcp, tenant_name, ns) for ns in ns_names]

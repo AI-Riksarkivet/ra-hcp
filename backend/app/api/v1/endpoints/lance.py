@@ -6,6 +6,7 @@ Uses Pydantic query models for request validation — all constraints
 
 from __future__ import annotations
 
+import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -116,8 +117,6 @@ async def search(
     lance: CachedLanceService = Depends(get_lance_service),
 ):
     """Search a Lance table using FTS, vector, or hybrid search."""
-    import json
-
     query_vector = None
     if params.vector:
         try:

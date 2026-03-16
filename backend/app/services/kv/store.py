@@ -118,10 +118,9 @@ class KVCache:
         ) as span:
             try:
                 result = await self._store.get(key=key)
-                hit = result is not None
-                span.set_attribute("cache.hit", hit)
+                span.set_attribute("cache.hit", result is not None)
                 attrs = {"cache.key_prefix": key.split(":")[0]}
-                if hit:
+                if result is not None:
                     _cache_hits.add(1, attrs)
                     return json.loads(result["_raw"])
                 _cache_misses.add(1, attrs)

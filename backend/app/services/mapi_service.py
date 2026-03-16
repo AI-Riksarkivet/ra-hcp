@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 if TYPE_CHECKING:
     from app.services.cached_mapi import CachedMapiService
@@ -24,7 +24,7 @@ from app.services.mapi_errors import MapiResponseError, MapiTransportError
 logger = logging.getLogger(__name__)
 
 # ── HCP status code → (http_status, message template) ─────────────────
-_HCP_STATUS_MAP: dict[int, tuple[int, str]] = {
+_HCP_STATUS_MAP: Final[dict[int, tuple[int, str]]] = {
     302: (404, "{resource} not found or no permission"),
     400: (400, "{detail}"),
     401: (401, "HCP authentication failed"),

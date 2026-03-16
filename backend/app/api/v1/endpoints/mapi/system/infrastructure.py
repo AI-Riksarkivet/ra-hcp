@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, UploadFile, File
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.license import License, LicenseList
 from app.schemas.network import NetworkSettings
@@ -20,7 +20,7 @@ router = APIRouter(tags=["System Admin: Infrastructure"])
 @router.get("/network", response_model=NetworkSettings)
 async def get_network_settings(
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json("/network", query={"verbose": str(verbose).lower()})
 
@@ -28,7 +28,7 @@ async def get_network_settings(
 @router.post("/network", response_model=StatusResponse)
 async def modify_network_settings(
     body: NetworkSettings,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("POST", "/network", body=body)
     return {"status": "updated"}
@@ -40,7 +40,7 @@ async def modify_network_settings(
 @router.get("/storage/licenses", response_model=LicenseList)
 async def list_licenses(
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         "/storage/licenses", query={"verbose": str(verbose).lower()}
@@ -50,7 +50,7 @@ async def list_licenses(
 @router.put("/storage/licenses", response_model=StatusResponse, status_code=201)
 async def upload_license(
     file: UploadFile = File(...),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     content = await file.read()
     await hcp.send("PUT", "/storage/licenses", body=content)
@@ -60,7 +60,7 @@ async def upload_license(
 @router.get("/storage/licenses/{serial_number}", response_model=License)
 async def get_license(
     serial_number: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(f"/storage/licenses/{serial_number}")
 
@@ -71,7 +71,7 @@ async def get_license(
 @router.get("/nodes/statistics", response_model=NodeStatistics)
 async def get_node_statistics(
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         "/nodes/statistics", query={"verbose": str(verbose).lower()}
@@ -81,7 +81,7 @@ async def get_node_statistics(
 @router.get("/services/statistics", response_model=ServiceStatistics)
 async def get_service_statistics(
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         "/services/statistics", query={"verbose": str(verbose).lower()}

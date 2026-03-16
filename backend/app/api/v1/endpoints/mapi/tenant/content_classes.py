@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Response
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.content_class import (
     ContentClassCreate,
@@ -23,7 +23,7 @@ PREFIX = "/tenants/{tenant_name}/contentClasses"
 async def list_content_classes(
     tenant_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/contentClasses",
@@ -35,7 +35,7 @@ async def list_content_classes(
 async def create_content_class(
     tenant_name: str,
     body: ContentClassCreate,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "PUT",
@@ -50,7 +50,7 @@ async def get_content_class(
     tenant_name: str,
     content_class_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/contentClasses/{content_class_name}",
@@ -62,7 +62,7 @@ async def get_content_class(
 async def check_content_class(
     tenant_name: str,
     content_class_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.send(
         "HEAD",
@@ -76,7 +76,7 @@ async def update_content_class(
     tenant_name: str,
     content_class_name: str,
     body: ContentClassUpdate,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -90,7 +90,7 @@ async def update_content_class(
 async def delete_content_class(
     tenant_name: str,
     content_class_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "DELETE",

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Union
 from fastapi import APIRouter, Depends
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.namespace import (
     ReplicationCollisionSettings,
@@ -30,7 +30,7 @@ PREFIX = "/tenants/{tenant_name}/namespaces"
 async def get_ns_permissions(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/permissions"
@@ -42,7 +42,7 @@ async def modify_ns_permissions(
     tenant_name: str,
     ns_name: str,
     body: PermissionsResponse,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -59,7 +59,7 @@ async def modify_ns_permissions(
 async def get_default_protocols(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     """Retrieve default namespace protocol settings (legacy, for default namespaces only)."""
     return await hcp.fetch_json(
@@ -72,7 +72,7 @@ async def modify_default_protocols(
     tenant_name: str,
     ns_name: str,
     body: Protocols,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     """Modify default namespace protocol settings (legacy, for default namespaces only)."""
     await hcp.send(
@@ -91,7 +91,7 @@ async def get_protocol(
     tenant_name: str,
     ns_name: str,
     protocol_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/protocols/{protocol_name}"
@@ -103,7 +103,7 @@ async def modify_http_protocol(
     tenant_name: str,
     ns_name: str,
     body: HttpProtocol,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -118,7 +118,7 @@ async def modify_cifs_protocol(
     tenant_name: str,
     ns_name: str,
     body: CifsProtocol,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -133,7 +133,7 @@ async def modify_nfs_protocol(
     tenant_name: str,
     ns_name: str,
     body: NfsProtocol,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -148,7 +148,7 @@ async def modify_smtp_protocol(
     tenant_name: str,
     ns_name: str,
     body: SmtpProtocol,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -168,7 +168,7 @@ async def modify_smtp_protocol(
 async def get_replication_collision(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/replicationCollisionSettings"
@@ -182,7 +182,7 @@ async def modify_replication_collision(
     tenant_name: str,
     ns_name: str,
     body: ReplicationCollisionSettings,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -199,7 +199,7 @@ async def modify_replication_collision(
 async def get_ns_cors(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(f"/tenants/{tenant_name}/namespaces/{ns_name}/cors")
 
@@ -209,7 +209,7 @@ async def set_ns_cors(
     tenant_name: str,
     ns_name: str,
     body: CorsConfiguration,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "PUT",
@@ -223,7 +223,7 @@ async def set_ns_cors(
 async def delete_ns_cors(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "DELETE",

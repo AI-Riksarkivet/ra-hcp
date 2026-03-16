@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.user_account import (
     UpdatePasswordRequest,
@@ -21,7 +21,7 @@ PREFIX = "/userAccounts"
 @router.get("", response_model=UserAccountList)
 async def list_system_users(
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(PREFIX, query={"verbose": str(verbose).lower()})
 
@@ -30,7 +30,7 @@ async def list_system_users(
 async def get_system_user(
     username: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"{PREFIX}/{username}",
@@ -42,7 +42,7 @@ async def get_system_user(
 @router.head("/{username}")
 async def check_system_user(
     username: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("HEAD", f"{PREFIX}/{username}")
     return Response(status_code=200)
@@ -52,7 +52,7 @@ async def check_system_user(
 async def modify_system_user_password(
     username: str,
     password: str = Query(None),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     q = {}
     if password:
@@ -65,7 +65,7 @@ async def modify_system_user_password(
 async def change_system_user_password(
     username: str,
     body: UpdatePasswordRequest,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("POST", f"{PREFIX}/{username}/changePassword", body=body)
     return {"status": "password_changed"}

@@ -216,7 +216,6 @@ async def start_zip_download(
 
     task_id = str(uuid.uuid4())
 
-    # Schedule the ZIP build as a background task
     asyncio.ensure_future(_build_zip(task_id, s3, bucket, keys, cache))
 
     return ZipTaskResponse(
@@ -256,7 +255,6 @@ async def get_zip_download(
             },
         )
 
-    # status == "ready" — stream the file
     zip_path = state.get("path", "")
     if not zip_path or not Path(zip_path).exists():
         raise HTTPException(500, "ZIP file not found on disk")

@@ -4,118 +4,27 @@ from __future__ import annotations
 
 import logging
 import os
-import time
-import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
-from opentelemetry import metrics, trace
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.dependencies import get_cache_service
 from app.api.v1.router import api_router
-from app.core.config import AuthSettings
+from app.core.config import AuthSettings, StorageSettings
+from app.core.middleware import RequestIDMiddleware
 from app.core.telemetry import setup_telemetry
 from app.services.kv import KVCache, create_kv_cache
 from app.services.mapi_errors import MapiError
 
 logger = logging.getLogger(__name__)
-access_logger = logging.getLogger("access")
-
-# Paths that are called constantly by probes — skip access logging
-_HEALTH_PATHS = frozenset({"/healthz", "/readyz", "/health"})
-
-_meter = metrics.get_meter(__name__)
-_http_request_duration = _meter.create_histogram(
-    "http.server.request.duration",
-    description="HTTP request duration in milliseconds",
-    unit="ms",
-)
-_http_request_count = _meter.create_counter(
-    "http.server.request.count",
-    description="Total HTTP requests",
-    unit="1",
-)
-
-
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Request ID, OTel trace correlation, and per-request access logging."""
-
-    async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
-        request.state.request_id = request_id
-
-        # Correlate request_id with OTel trace
-        span = trace.get_current_span()
-        if span.is_recording():
-            span.set_attribute("request.id", request_id)
-
-        start = time.perf_counter()
-        response = await call_next(request)
-        duration_ms = round((time.perf_counter() - start) * 1000, 2)
-
-        response.headers["X-Request-ID"] = request_id
-
-        # Record HTTP metrics
-        metric_attrs = {
-            "http.method": request.method,
-            "http.status_code": response.status_code,
-            "http.route": request.url.path,
-        }
-        _http_request_duration.record(duration_ms, metric_attrs)
-        _http_request_count.add(1, metric_attrs)
-
-        # Log all non-health requests
-        if request.url.path not in _HEALTH_PATHS:
-            # Extract trace/span IDs for log correlation
-            ctx = span.get_span_context()
-            trace_id = format(ctx.trace_id, "032x") if ctx.trace_id else None
-            span_id = format(ctx.span_id, "016x") if ctx.span_id else None
-
-            # Best-effort user/tenant extraction from JWT (no validation)
-            user = None
-            tenant = None
-            auth = request.headers.get("authorization", "")
-            if auth.lower().startswith("bearer "):
-                try:
-                    import jwt
-
-                    payload = jwt.decode(auth[7:], options={"verify_signature": False})
-                    user = payload.get("sub")
-                    tenant = payload.get("tenant")
-                except Exception:
-                    pass
-
-            access_logger.info(
-                "%s %s %s %sms",
-                request.method,
-                request.url.path,
-                response.status_code,
-                duration_ms,
-                extra={
-                    "request_id": request_id,
-                    "method": request.method,
-                    "path": request.url.path,
-                    "query": str(request.query_params) or None,
-                    "status": response.status_code,
-                    "duration_ms": duration_ms,
-                    "user": user,
-                    "tenant": tenant,
-                    "client_ip": request.client.host if request.client else None,
-                    "trace_id": trace_id,
-                    "span_id": span_id,
-                },
-            )
-
-        return response
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.core.config import CacheSettings, MapiSettings
+    from app.core.config import CacheSettings, MapiSettings, StorageSettings
     from app.services.mapi_service import MapiService
     from app.services.query_service import QueryService
 
@@ -149,10 +58,35 @@ async def lifespan(app: FastAPI):
         logger.info("Creating QueryService singleton")
         app.state.query = query
 
+    # S3 storage probe for readiness checks on non-HCP backends
+    storage_settings = StorageSettings()
+    app.state.storage_probe = None
+    if storage_settings.storage_backend != "hcp":
+        try:
+            from app.services.storage.factory import create_storage
+
+            probe = await create_storage(
+                storage_settings,
+                storage_settings.s3_access_key,
+                storage_settings.s3_secret_key.get_secret_value(),
+            )
+            app.state.storage_probe = probe
+            logger.info(
+                "S3 storage probe created (backend=%s)",
+                storage_settings.storage_backend,
+            )
+        except Exception:
+            logger.warning("Failed to create S3 storage probe", exc_info=True)
+
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────
-    # Close all cached S3 storage adapters
+    if app.state.storage_probe is not None:
+        try:
+            await app.state.storage_probe.close()
+        except Exception:
+            logger.warning("Failed to close S3 storage probe", exc_info=True)
+
     for storage in app.state.s3_cache.values():
         try:
             await storage.close()
@@ -167,7 +101,6 @@ async def lifespan(app: FastAPI):
 ROOT_PATH = os.getenv("ROOT_PATH", "")
 
 OPENAPI_TAGS = [
-    # ── Public ──
     {
         "name": "Authentication",
         "description": (
@@ -191,10 +124,18 @@ OPENAPI_TAGS = [
         "description": "Upload, download, copy, and delete objects within buckets.",
     },
     {
+        "name": "S3 Versions",
+        "description": "List object versions and delete markers for versioning-enabled buckets.",
+    },
+    {
+        "name": "S3 Multipart Upload",
+        "description": "Multipart upload: initiate, upload parts, complete, abort, and list.",
+    },
+    {
         "name": "S3 Credentials",
         "description": "Generate presigned URLs and retrieve S3 access credentials.",
     },
-    # ── System Admin (requires HCP system admin) ──
+    # ── System admin ──
     {
         "name": "System Admin: Tenants",
         "description": "List and create tenants. "
@@ -225,7 +166,7 @@ OPENAPI_TAGS = [
         "description": "Manage erasure-coding topologies. "
         "**Requires: system-level user account.**",
     },
-    # ── Tenant Admin (requires tenant admin role) ──
+    # ── Tenant admin ──
     {
         "name": "Tenant Admin: Settings",
         "description": "View and modify tenant configuration: console security, contact info, "
@@ -248,7 +189,7 @@ OPENAPI_TAGS = [
         "description": "Manage content classes for your tenant. "
         "**Requires: tenant-level admin role.**",
     },
-    # ── Namespace (requires admin/compliance role within tenant) ──
+    # ── Namespace ──
     {
         "name": "Namespace: Management",
         "description": "Create, list, and manage namespaces and versioning settings. "
@@ -275,11 +216,20 @@ OPENAPI_TAGS = [
         "description": "View namespace statistics and chargeback reports. "
         "**Requires: tenant-level monitor role.**",
     },
-    # ── Metadata Query API ──
+    {
+        "name": "Namespace: Templates",
+        "description": "Export and import namespace configuration templates. "
+        "**Requires: tenant-level admin role.**",
+    },
+    # ── Query & exploration ──
     {
         "name": "Metadata Query",
         "description": "Search objects by metadata and audit create/delete/purge events "
         "via the HCP Metadata Query API.",
+    },
+    {
+        "name": "Lance Explorer",
+        "description": "Browse and query Lance vector datasets stored in S3.",
     },
 ]
 
@@ -300,46 +250,40 @@ app = FastAPI(
     openapi_tags=OPENAPI_TAGS,
 )
 
-# ── Telemetry ─────────────────────────────────────────────────────────
 setup_telemetry(app)
 
-# ── Middleware (outermost first) ──────────────────────────────────────
-
-# Request ID — outermost so every response gets an ID
+# ── Middleware (outermost → innermost) ────────────────────────────────
+# Order matters: RequestID is outermost so every response gets an ID,
+# even if GZip or CORS rejects the request.
 app.add_middleware(RequestIDMiddleware)  # type: ignore[arg-type]
-
-# GZip — compress responses > 500 bytes
 app.add_middleware(GZipMiddleware, minimum_size=500)  # type: ignore[arg-type]
 
-# CORS — use CORS_ORIGINS env var; empty = allow all (dev mode)
 _auth_settings = AuthSettings()
 _cors_origins = [o.strip() for o in _auth_settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,  # type: ignore[arg-type]
-    allow_origins=_cors_origins or ["*"],
+    allow_origins=_cors_origins or ["*"],  # empty CORS_ORIGINS = allow all (dev mode)
     allow_credentials=bool(_cors_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ── Domain exception handlers ─────────────────────────────────────────
-#
-# Translate service-layer domain exceptions into HTTP responses so that
-# endpoints don't need explicit try/except for every call.
+# ── Exception handlers ───────────────────────────────────────────────
 
 
 @app.exception_handler(MapiError)
 async def mapi_error_handler(request: Request, exc: MapiError):
+    """Translate MAPI domain errors into JSON HTTP responses."""
     return JSONResponse(
         status_code=exc.http_status,
         content={"detail": exc.message},
     )
 
 
-# ── Global exception handler ──────────────────────────────────────────
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    """Catch-all for unhandled exceptions — log and return 500."""
     request_id = getattr(request.state, "request_id", "unknown")
     logger.exception(
         "Unhandled exception on %s %s [request_id=%s]",
@@ -353,30 +297,26 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# ── Mount API routes ──────────────────────────────────────────────────
 app.include_router(api_router, prefix="/api/v1")
 
 
 # ── Health & readiness probes ─────────────────────────────────────────
 
 
-@app.get("/healthz", tags=["Health"])
-async def healthz():
+@app.get("/liveness", tags=["Health"])
+async def liveness():
     """Liveness probe — returns 200 if the process is running."""
     return {"status": "ok"}
 
 
-@app.get("/readyz", tags=["Health"])
-async def readyz(request: Request):
+@app.get("/readiness", tags=["Health"])
+async def readiness(request: Request):
     """Readiness probe — checks backend services are reachable."""
-    from app.core.config import StorageSettings
-
     checks: dict[str, str] = {}
     ready = True
 
     storage_settings = StorageSettings()
 
-    # HCP MAPI check (only when backend is HCP)
     if storage_settings.storage_backend == "hcp":
         mapi = getattr(request.app.state, "mapi", None)
         if mapi is not None and await mapi.ping():
@@ -385,9 +325,18 @@ async def readyz(request: Request):
             checks["hcp"] = "unreachable"
             ready = False
     else:
-        checks["storage"] = storage_settings.storage_backend
+        probe = getattr(request.app.state, "storage_probe", None)
+        if probe is not None:
+            try:
+                await probe.list_buckets()
+                checks["storage"] = "reachable"
+            except Exception:
+                checks["storage"] = "unreachable"
+                ready = False
+        else:
+            checks["storage"] = "unconfigured"
+            ready = False
 
-    # Cache (required only when configured)
     cache: KVCache | None = getattr(request.app.state, "cache", None)
     if cache is not None and cache.has_url:
         if await cache.ping():

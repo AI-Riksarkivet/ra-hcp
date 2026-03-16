@@ -6,6 +6,8 @@ as StorageError so endpoint code never imports botocore / minio / etc.
 
 from __future__ import annotations
 
+from typing import Final
+
 
 class StorageError(Exception):
     """Raised by any storage adapter on operation failure."""
@@ -38,7 +40,7 @@ class StorageOperationNotSupported(StorageError):
 # ── Helpers to convert botocore exceptions ──────────────────────────
 
 
-_CLIENT_ERROR_STATUS: dict[str, int] = {
+_CLIENT_ERROR_STATUS: Final[dict[str, int]] = {
     "NoSuchBucket": 404,
     "NoSuchKey": 404,
     "NoSuchUpload": 404,

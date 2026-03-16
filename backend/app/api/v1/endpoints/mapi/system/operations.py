@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Response, UploadFile, File
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.health_check import (
     HealthCheckDownloadStatus,
@@ -25,7 +25,7 @@ router = APIRouter(tags=["System Admin: Operations"])
 
 @router.get("/healthCheckReport", response_model=HealthCheckDownloadStatus)
 async def get_health_check_status(
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json("/healthCheckReport")
 
@@ -33,7 +33,7 @@ async def get_health_check_status(
 @router.post("/healthCheckReport/prepare", response_model=StatusResponse)
 async def prepare_health_check(
     body: HealthCheckPrepare,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("POST", "/healthCheckReport/prepare", body=body)
     return {"status": "ok"}
@@ -42,7 +42,7 @@ async def prepare_health_check(
 @router.post("/healthCheckReport/download")
 async def download_health_check(
     body: HealthCheckDownload,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.send("POST", "/healthCheckReport/download", body=body)
     return Response(
@@ -54,7 +54,7 @@ async def download_health_check(
 
 @router.post("/healthCheckReport/cancel", response_model=StatusResponse)
 async def cancel_health_check(
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("POST", "/healthCheckReport", query={"cancel": ""})
     return {"status": "cancelled"}
@@ -65,7 +65,7 @@ async def cancel_health_check(
 
 @router.get("/logs", response_model=LogDownloadStatus)
 async def get_log_status(
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     """Retrieve the status of the log download in progress."""
     return await hcp.fetch_json("/logs")
@@ -75,7 +75,7 @@ async def get_log_status(
 async def log_action(
     mark: Optional[str] = Query(None),
     cancel: Optional[bool] = Query(None),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     """Mark the logs with a message, or cancel (clear) the log download."""
     q: dict = {}
@@ -90,7 +90,7 @@ async def log_action(
 @router.post("/logs/prepare", response_model=StatusResponse)
 async def prepare_logs(
     body: LogPrepare,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("POST", "/logs/prepare", body=body)
     return {"status": "ok"}
@@ -99,7 +99,7 @@ async def prepare_logs(
 @router.post("/logs/download")
 async def download_logs(
     body: LogDownload,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.send("POST", "/logs/download", body=body)
     return Response(
@@ -114,7 +114,7 @@ async def download_logs(
 
 @router.get("/supportaccesscredentials", response_model=SupportAccessCredentials)
 async def get_support_credentials(
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json("/supportaccesscredentials")
 
@@ -122,7 +122,7 @@ async def get_support_credentials(
 @router.put("/supportaccesscredentials", response_model=StatusResponse, status_code=201)
 async def upload_support_credentials(
     file: UploadFile = File(...),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     content = await file.read()
     await hcp.send("PUT", "/supportaccesscredentials", body=content)

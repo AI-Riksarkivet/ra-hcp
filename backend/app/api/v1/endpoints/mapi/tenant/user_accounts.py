@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.user_account import (
     UserAccountCreate,
@@ -25,7 +25,7 @@ async def list_user_accounts(
     tenant_name: str,
     qp: ListQueryParams = Depends(),
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/userAccounts",
@@ -38,7 +38,7 @@ async def create_user_account(
     tenant_name: str,
     body: UserAccountCreate,
     password: str = Query(...),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "PUT",
@@ -54,7 +54,7 @@ async def create_user_account(
 async def reset_passwords(
     tenant_name: str,
     resetPasswords: str = Query(...),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -70,7 +70,7 @@ async def get_user_account(
     tenant_name: str,
     username: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/userAccounts/{username}",
@@ -83,7 +83,7 @@ async def get_user_account(
 async def check_user_account(
     tenant_name: str,
     username: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "HEAD",
@@ -99,7 +99,7 @@ async def modify_user_account(
     username: str,
     body: UserAccountUpdate,
     password: str | None = Query(None),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     q = {}
     if password:
@@ -118,7 +118,7 @@ async def modify_user_account(
 async def delete_user_account(
     tenant_name: str,
     username: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "DELETE",
@@ -136,7 +136,7 @@ async def change_password(
     tenant_name: str,
     username: str,
     body: UpdatePasswordRequest,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -156,7 +156,7 @@ async def get_user_data_perms(
     tenant_name: str,
     username: str,
     qp: ListQueryParams = Depends(),
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/userAccounts/{username}/dataAccessPermissions",
@@ -171,7 +171,7 @@ async def modify_user_data_perms(
     tenant_name: str,
     username: str,
     body: DataAccessPermissions,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",

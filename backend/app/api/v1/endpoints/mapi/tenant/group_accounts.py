@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Response
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.group_account import (
     GroupAccountCreate,
@@ -23,7 +23,7 @@ T_PREFIX = "/tenants/{tenant_name}/groupAccounts"
 async def list_group_accounts(
     tenant_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/groupAccounts",
@@ -35,7 +35,7 @@ async def list_group_accounts(
 async def create_group_account(
     tenant_name: str,
     body: GroupAccountCreate,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "PUT",
@@ -51,7 +51,7 @@ async def get_group_account(
     tenant_name: str,
     group_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/groupAccounts/{group_name}",
@@ -64,7 +64,7 @@ async def get_group_account(
 async def check_group_account(
     tenant_name: str,
     group_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("HEAD", f"/tenants/{tenant_name}/groupAccounts/{group_name}")
     return Response(status_code=200)
@@ -75,7 +75,7 @@ async def modify_group_account(
     tenant_name: str,
     group_name: str,
     body: GroupAccountUpdate,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -89,7 +89,7 @@ async def modify_group_account(
 async def delete_group_account(
     tenant_name: str,
     group_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send("DELETE", f"/tenants/{tenant_name}/groupAccounts/{group_name}")
     return {"status": "deleted"}
@@ -105,7 +105,7 @@ async def delete_group_account(
 async def get_group_data_perms(
     tenant_name: str,
     group_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/groupAccounts/{group_name}/dataAccessPermissions"
@@ -119,7 +119,7 @@ async def modify_group_data_perms(
     tenant_name: str,
     group_name: str,
     body: DataAccessPermissions,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",

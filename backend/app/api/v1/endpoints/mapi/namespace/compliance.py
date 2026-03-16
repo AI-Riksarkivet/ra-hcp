@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Response
 
-from app.services.mapi_service import MapiService
+from app.services.mapi_service import AuthenticatedMapiService
 from app.api.dependencies import get_mapi_service
 from app.schemas.namespace import ComplianceSettings
 from app.schemas.common import StatusResponse
@@ -28,7 +28,7 @@ RC_PREFIX = "/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses
 async def get_compliance(
     tenant_name: str,
     ns_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{ns_name}/complianceSettings"
@@ -40,7 +40,7 @@ async def modify_compliance(
     tenant_name: str,
     ns_name: str,
     body: ComplianceSettings,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -58,7 +58,7 @@ async def list_retention_classes(
     tenant_name: str,
     namespace_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses",
@@ -71,7 +71,7 @@ async def create_retention_class(
     tenant_name: str,
     namespace_name: str,
     body: RetentionClassCreate,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "PUT",
@@ -89,7 +89,7 @@ async def get_retention_class(
     namespace_name: str,
     retention_class_name: str,
     verbose: bool = False,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     return await hcp.fetch_json(
         f"/tenants/{tenant_name}/namespaces/{namespace_name}/retentionClasses/{retention_class_name}",
@@ -102,7 +102,7 @@ async def check_retention_class(
     tenant_name: str,
     namespace_name: str,
     retention_class_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     resp = await hcp.send(
         "HEAD",
@@ -117,7 +117,7 @@ async def update_retention_class(
     namespace_name: str,
     retention_class_name: str,
     body: RetentionClassUpdate,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "POST",
@@ -132,7 +132,7 @@ async def delete_retention_class(
     tenant_name: str,
     namespace_name: str,
     retention_class_name: str,
-    hcp: MapiService = Depends(get_mapi_service),
+    hcp: AuthenticatedMapiService = Depends(get_mapi_service),
 ):
     await hcp.send(
         "DELETE",

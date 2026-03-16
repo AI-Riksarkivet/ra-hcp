@@ -13,7 +13,7 @@ from app.api.dependencies import (
 )
 from app.api.errors import run_storage
 from app.core.auth_utils import derive_s3_keys
-from app.core.config import StorageSettings
+from app.core.config import S3Settings, StorageSettings
 from app.core.security import (
     HcpCredentials,
     oauth2_scheme,
@@ -65,6 +65,7 @@ async def generate_presigned_url(
 async def get_s3_credentials(
     token: Annotated[str, Depends(oauth2_scheme)],
     storage_settings: StorageSettings = Depends(get_storage_settings),
+    s3_settings: S3Settings = Depends(get_s3_settings),
 ):
     """Return the S3 credentials for the authenticated user.
 
@@ -74,7 +75,6 @@ async def get_s3_credentials(
     if storage_settings.storage_backend == "hcp":
         creds: HcpCredentials = verify_token_with_credentials(token)
         access_key, secret_key = derive_s3_keys(creds.username, creds.password)
-        s3_settings = get_s3_settings()
         endpoint_url = s3_endpoint_for_tenant(creds.tenant, s3_settings.hcp_domain)
         return S3CredentialsResponse(
             access_key_id=access_key,
@@ -84,7 +84,6 @@ async def get_s3_credentials(
             endpoint_url=endpoint_url,
         )
 
-    # MinIO / generic: return configured credentials
     return S3CredentialsResponse(
         access_key_id=storage_settings.s3_access_key,
         secret_access_key=storage_settings.s3_secret_key.get_secret_value(),
