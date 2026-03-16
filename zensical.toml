@@ -37,6 +37,8 @@ nav = [
     { "Namespaces" = "api/namespaces.md" },
     { "System" = "api/system.md" },
     { "Workflows" = "api/workflows.md" },
+    { "Argo Workflows" = "api/argo.md" },
+    { "Error Handling" = "api/error-handling.md" },
   ]},
   { "API Reference" = [
     { "Endpoints" = "api/reference/endpoints.md" },

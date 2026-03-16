@@ -8,6 +8,7 @@ export PATH := $(HOME)/.deno/bin:$(PATH)
         fmt lint quality \
         run-api run-api-mock \
         frontend-dev frontend-build storybook build-storybook \
+        docs docs-build \
         checks test test-integration serve-backend full-serve build \
         publish publish-backend publish-frontend
 
@@ -86,6 +87,16 @@ storybook:
 ## build-storybook: build Storybook static site
 build-storybook:
 	cd frontend && deno task build-storybook
+
+# ── Docs ─────────────────────────────────────────────────────────────
+
+## docs: serve documentation site locally (live-reload)
+docs:
+	PYTHONPATH=backend uvx --with mkdocstrings-python zensical serve
+
+## docs-build: build documentation site for deployment
+docs-build:
+	PYTHONPATH=backend uvx --with mkdocstrings-python zensical build --clean
 
 # ── Dagger ───────────────────────────────────────────────────────────
 

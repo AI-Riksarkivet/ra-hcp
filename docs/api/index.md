@@ -65,3 +65,5 @@ All endpoints require a JWT bearer token obtained via the [Authentication](authe
 - [Tenant Administration](tenants.md) -- Tenant-level settings and identity.
 - [Namespaces](namespaces.md) -- Namespace management, compliance, and access.
 - [Workflows](workflows.md) -- End-to-end curl and Python examples for common tasks.
+- [Argo Workflows](argo.md) -- ETL pipelines, batch processing, and presigned URL workflows with YAML and Hera.
+- [Error Handling](error-handling.md) -- Retries, idempotency, ACID patterns, and fault-tolerant uploads.
