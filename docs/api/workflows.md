@@ -881,6 +881,7 @@ metadata:
   generateName: hcp-etl-
 spec:
   entrypoint: etl-pipeline
+  activeDeadlineSeconds: 1800        # workflow-level timeout: 30 min
   artifactGC:
     strategy: OnWorkflowDeletion
   templates:
@@ -897,6 +898,12 @@ spec:
             dependencies: [transform]
 
     - name: extract-data
+      retryStrategy:
+        limit: 3
+        backoff:
+          duration: "5s"
+          factor: 2
+          maxDuration: "1m"
       container:
         image: python:3.13-slim
         command: [python, -c]
@@ -930,6 +937,12 @@ spec:
             path: /tmp/output/extracted.json
 
     - name: transform-data
+      retryStrategy:
+        limit: 3
+        backoff:
+          duration: "5s"
+          factor: 2
+          maxDuration: "1m"
       container:
         image: python:3.13-slim
         command: [python, -c]
@@ -950,6 +963,12 @@ spec:
             path: /tmp/output/results.json
 
     - name: load-results
+      retryStrategy:
+        limit: 3
+        backoff:
+          duration: "5s"
+          factor: 2
+          maxDuration: "1m"
       container:
         image: python:3.13-slim
         command: [python, -c]
@@ -989,6 +1008,7 @@ metadata:
   generateName: hcp-presign-
 spec:
   entrypoint: presigned-pipeline
+  activeDeadlineSeconds: 900         # workflow-level timeout: 15 min
   arguments:
     parameters:
       - name: hcp-api-base
@@ -1012,6 +1032,11 @@ spec:
                   value: "{{steps.generate-urls.outputs.parameters.upload-url}}"
 
     - name: presign
+      retryStrategy:
+        limit: 3
+        backoff:
+          duration: "5s"
+          factor: 2
       script:
         image: curlimages/curl:latest
         command: [sh]
@@ -1043,6 +1068,11 @@ spec:
               path: /tmp/upload-url
 
     - name: process-with-urls
+      retryStrategy:
+        limit: 2
+        backoff:
+          duration: "10s"
+          factor: 2
       inputs:
         parameters:
           - name: download-url
@@ -1097,8 +1127,13 @@ HCP_S3 = m.S3Artifact(
     insecure=False,
 )
 
+RETRY = m.RetryStrategy(
+    limit="3",
+    backoff=m.Backoff(duration="5s", factor=2, max_duration="1m"),
+)
 
-@script(image="python:3.13-slim")
+
+@script(image="python:3.13-slim", retry_strategy=RETRY)
 def extract_data(manifest: Artifact) -> Artifact:
     """Read input from HCP S3, write extracted data."""
     from pathlib import Path
@@ -1109,7 +1144,7 @@ def extract_data(manifest: Artifact) -> Artifact:
     Path("/tmp/output/extracted.json").write_text(json.dumps(data))
 
 
-@script(image="python:3.13-slim")
+@script(image="python:3.13-slim", retry_strategy=RETRY)
 def transform_data(extracted: Artifact) -> Artifact:
     """Process the extracted data."""
     from pathlib import Path
@@ -1120,7 +1155,7 @@ def transform_data(extracted: Artifact) -> Artifact:
     Path("/tmp/output/results.json").write_text(json.dumps(results))
 
 
-@script(image="python:3.13-slim")
+@script(image="python:3.13-slim", retry_strategy=RETRY)
 def load_results(results: Artifact) -> Artifact:
     """Upload results back to HCP S3."""
     from pathlib import Path
@@ -1132,6 +1167,7 @@ def load_results(results: Artifact) -> Artifact:
 with Workflow(
     generate_name="hcp-etl-",
     entrypoint="etl-pipeline",
+    active_deadline_seconds=1800,
     artifact_gc=m.ArtifactGC(strategy="OnWorkflowDeletion"),
 ) as w:
     with DAG(name="etl-pipeline"):
@@ -1167,13 +1203,19 @@ from hera.workflows import (
     Parameter,
     Steps,
     Workflow,
+    models as m,
     script,
 )
 
 HCP_BASE = "http://hcp-api.default.svc:8000/api/v1"
 
+RETRY = m.RetryStrategy(
+    limit="3",
+    backoff=m.Backoff(duration="5s", factor=2),
+)
 
-@script(image="curlimages/curl:latest")
+
+@script(image="curlimages/curl:latest", retry_strategy=RETRY)
 def generate_presigned_urls(
     hcp_api_base: str,
     hcp_token: str,
@@ -1206,7 +1248,10 @@ def generate_presigned_urls(
     Path("/tmp/upload-url").write_text(ul)
 
 
-@script(image="python:3.13-slim")
+@script(
+    image="python:3.13-slim",
+    retry_strategy=m.RetryStrategy(limit="2", backoff=m.Backoff(duration="10s", factor=2)),
+)
 def process_with_urls(download_url: str, upload_url: str):
     """Download input, process, and upload result via presigned URLs."""
     import urllib.request
@@ -1226,6 +1271,7 @@ def process_with_urls(download_url: str, upload_url: str):
 with Workflow(
     generate_name="hcp-presign-",
     entrypoint="presigned-pipeline",
+    active_deadline_seconds=900,
     arguments=[
         Parameter(name="hcp-api-base", value=HCP_BASE),
         Parameter(name="hcp-token", value="<your-token>"),
