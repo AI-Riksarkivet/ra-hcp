@@ -25,7 +25,8 @@
 	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
 	import { get_tenant_chargeback } from '$lib/remote/tenant-info.remote.js';
 	import { get_namespaces, type Namespace } from '$lib/remote/namespaces.remote.js';
-	import BucketVersioning from './sections/bucket-versioning.svelte';
+	import { get_bucket_versioning, type BucketVersioning } from '$lib/remote/buckets.remote.js';
+	import BucketVersioningControl from './sections/bucket-versioning.svelte';
 	import BucketAcl from './sections/bucket-acl.svelte';
 	import BucketObjectBrowser from './sections/bucket-object-browser.svelte';
 	import BucketVersions from './sections/bucket-versions.svelte';
@@ -52,6 +53,13 @@
 	});
 	let bucketQuotaBytes = $derived(bucketQuotaStr ? parseQuotaBytes(bucketQuotaStr) : null);
 	let bucketQuotaPercent = $derived(calcQuotaPercent(bucketStorageUsed, bucketQuotaStr));
+
+	// --- Versioning status (used to conditionally show Versions tab) ---
+	let versioningData = $derived(get_bucket_versioning({ bucket }));
+	let versioning = $derived((versioningData?.current ?? {}) as BucketVersioning);
+	let showVersionsTab = $derived(
+		versioning.status === 'Enabled' || versioning.status === 'Suspended'
+	);
 
 	// --- Navigation ---
 	function navigatePrefix(p: string) {
@@ -108,7 +116,7 @@
 					<Tooltip.Content>Bucket storage usage</Tooltip.Content>
 				</Tooltip.Root>
 			{/if}
-			<BucketVersioning {bucket} />
+			<BucketVersioningControl {bucket} />
 		</div>
 		{#if activeTab === 'objects'}
 			<div class="flex items-center gap-2">
@@ -127,10 +135,12 @@
 				<FolderOpen class="mr-1.5 h-4 w-4" />
 				Objects
 			</Tabs.Trigger>
-			<Tabs.Trigger value="versions">
-				<History class="mr-1.5 h-4 w-4" />
-				Versions
-			</Tabs.Trigger>
+			{#if showVersionsTab}
+				<Tabs.Trigger value="versions">
+					<History class="mr-1.5 h-4 w-4" />
+					Versions
+				</Tabs.Trigger>
+			{/if}
 			<Tabs.Trigger value="acl">
 				<Shield class="mr-1.5 h-4 w-4" />
 				Access Control
@@ -170,9 +180,11 @@
 			<BucketObjectBrowser {bucket} {prefix} bind:uploadOpen onnavigate={navigatePrefix} />
 		</Tabs.Content>
 
-		<Tabs.Content value="versions" class="space-y-4">
-			<BucketVersions {bucket} />
-		</Tabs.Content>
+		{#if showVersionsTab}
+			<Tabs.Content value="versions" class="space-y-4">
+				<BucketVersions {bucket} versioningStatus={versioning.status} />
+			</Tabs.Content>
+		{/if}
 
 		<Tabs.Content value="acl">
 			<BucketAcl {bucket} {tenant} />

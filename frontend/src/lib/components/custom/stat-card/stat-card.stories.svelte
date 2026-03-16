@@ -5,8 +5,6 @@
 		title: 'UI/StatCard',
 		component: StatCard,
 		argTypes: {
-			label: { control: 'text' },
-			value: { control: 'text' },
 			delay: {
 				control: 'select',
 				options: ['', 'delay-75', 'delay-150', 'delay-200'],

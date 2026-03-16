@@ -13,14 +13,10 @@
 			disabled: false,
 		},
 		argTypes: {
-			label: { control: 'text' },
-			placeholder: { control: 'text' },
 			variant: {
 				control: 'select',
 				options: ['secondary', 'destructive'],
 			},
-			emptyText: { control: 'text' },
-			disabled: { control: 'boolean' },
 		},
 	});
 </script>

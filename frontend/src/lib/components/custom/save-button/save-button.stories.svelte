@@ -9,10 +9,6 @@
 		args: {
 			onclick: fn(),
 		},
-		argTypes: {
-			dirty: { control: 'boolean' },
-			saving: { control: 'boolean' },
-		},
 	});
 </script>
 

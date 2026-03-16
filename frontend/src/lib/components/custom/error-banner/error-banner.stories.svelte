@@ -8,9 +8,6 @@
 		args: {
 			message: 'Failed to save settings. Please try again.',
 		},
-		argTypes: {
-			message: { control: 'text' },
-		},
 	});
 </script>
 

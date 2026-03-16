@@ -15,11 +15,6 @@
 			label: 'Canonical ID',
 			secret: false,
 		},
-		argTypes: {
-			value: { control: 'text' },
-			label: { control: 'text' },
-			secret: { control: 'boolean' },
-		},
 	});
 </script>
 

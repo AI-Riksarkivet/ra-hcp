@@ -14,12 +14,6 @@
 			onsave: fn(),
 			ondelete: fn(),
 		},
-		argTypes: {
-			corsXml: { control: 'text' },
-			loading: { control: 'boolean' },
-			title: { control: 'text' },
-			description: { control: 'text' },
-		},
 	});
 </script>
 

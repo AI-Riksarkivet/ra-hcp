@@ -14,13 +14,6 @@
 			error: '',
 			onsubmit: fn(),
 		},
-		argTypes: {
-			title: { control: 'text' },
-			description: { control: 'text' },
-			submitLabel: { control: 'text' },
-			loading: { control: 'boolean' },
-			error: { control: 'text' },
-		},
 	});
 </script>
 

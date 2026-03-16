@@ -4,10 +4,6 @@
 	const { Story } = defineMeta({
 		title: 'UI/TagInput',
 		component: TagInput,
-		argTypes: {
-			placeholder: { control: 'text' },
-			disabled: { control: 'boolean' },
-		},
 	});
 </script>
 

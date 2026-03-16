@@ -4,7 +4,8 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
-	import { Search, Download, Trash2, ChevronRight, ChevronDown } from 'lucide-svelte';
+	import { Search, Download, Trash2, ChevronRight, ChevronDown, Info } from 'lucide-svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
@@ -17,8 +18,10 @@
 
 	let {
 		bucket,
+		versioningStatus,
 	}: {
 		bucket: string;
+		versioningStatus: string | null;
 	} = $props();
 
 	// --- Search & type filter ---
@@ -79,10 +82,11 @@
 		type: 'version' | 'delete-marker';
 	}
 
-	// --- Build rows ---
+	// --- Build rows (filter out VersionId: "null" entries) ---
 	let allRows = $derived.by((): VersionRow[] => {
-		const versions: VersionRow[] = ((versionData.current?.versions ?? []) as ObjectVersion[]).map(
-			(v) => ({
+		const versions: VersionRow[] = ((versionData.current?.versions ?? []) as ObjectVersion[])
+			.filter((v) => v.VersionId !== 'null')
+			.map((v) => ({
 				key: v.Key,
 				versionId: v.VersionId,
 				isLatest: v.IsLatest ?? false,
@@ -90,19 +94,18 @@
 				size: v.Size,
 				etag: v.ETag,
 				type: 'version' as const,
-			})
-		);
-		const markers: VersionRow[] = (
-			(versionData.current?.delete_markers ?? []) as DeleteMarker[]
-		).map((d) => ({
-			key: d.Key,
-			versionId: d.VersionId,
-			isLatest: d.IsLatest ?? false,
-			lastModified: d.LastModified,
-			size: null,
-			etag: null,
-			type: 'delete-marker' as const,
-		}));
+			}));
+		const markers: VersionRow[] = ((versionData.current?.delete_markers ?? []) as DeleteMarker[])
+			.filter((d) => d.VersionId !== 'null')
+			.map((d) => ({
+				key: d.Key,
+				versionId: d.VersionId,
+				isLatest: d.IsLatest ?? false,
+				lastModified: d.LastModified,
+				size: null,
+				etag: null,
+				type: 'delete-marker' as const,
+			}));
 		return [...versions, ...markers];
 	});
 
@@ -133,37 +136,54 @@
 		return Array.from(map.entries()).map(([key, rows]) => ({ key, rows }));
 	});
 
-	// --- Expanded state ---
-	let expanded = $state<Set<string>>(new Set());
+	// --- Multi-version groups (for expand/collapse logic) ---
+	let multiVersionGroups = $derived(groups.filter((g) => g.rows.length > 1));
+
+	// --- Expanded state (only tracks multi-version groups) ---
+	let expanded = new SvelteSet<string>();
 
 	function toggleGroup(key: string) {
-		const next = new Set(expanded);
-		if (next.has(key)) {
-			next.delete(key);
+		if (expanded.has(key)) {
+			expanded.delete(key);
 		} else {
-			next.add(key);
+			expanded.add(key);
 		}
-		expanded = next;
 	}
 
 	function expandAll() {
-		expanded = new Set(groups.map((g) => g.key));
+		for (const g of multiVersionGroups) {
+			expanded.add(g.key);
+		}
 	}
 
 	function collapseAll() {
-		expanded = new Set();
+		expanded.clear();
 	}
 
-	// Auto-expand all groups when data loads
+	// Auto-expand multi-version groups when data loads
 	$effect(() => {
-		if (groups.length > 0 && groups.length <= 50) {
-			expanded = new Set(groups.map((g) => g.key));
+		if (multiVersionGroups.length > 0 && multiVersionGroups.length <= 50) {
+			expanded.clear();
+			for (const g of multiVersionGroups) {
+				expanded.add(g.key);
+			}
 		}
 	});
 
 	function getDisplayName(key: string): string {
 		return key.split('/').filter(Boolean).pop() ?? key;
 	}
+
+	// --- Contextual header message ---
+	let headerMessage = $derived.by(() => {
+		if (versioningStatus === 'Enabled') {
+			return 'Showing all object versions. New versions are created on each update.';
+		}
+		if (versioningStatus === 'Suspended') {
+			return 'Versioning is suspended. Showing existing versions \u2014 no new versions are being created.';
+		}
+		return null;
+	});
 
 	// --- Download specific version ---
 	function downloadVersion(row: VersionRow) {
@@ -210,10 +230,122 @@
 	let totalMarkers = $derived(allRows.filter((r) => r.type === 'delete-marker').length);
 </script>
 
+{#snippet versionRow(row: VersionRow, showKey: boolean)}
+	<div
+		class="flex items-center gap-3 rounded-md px-4 py-2 text-sm {row.type === 'delete-marker'
+			? 'bg-destructive/5'
+			: 'hover:bg-muted/50'}"
+	>
+		<!-- Object key (only for single-version flat rows) -->
+		{#if showKey}
+			<span class="min-w-0 flex-1 truncate font-medium text-sm">{row.key}</span>
+		{/if}
+
+		<!-- Type badge -->
+		<div class="w-28 shrink-0">
+			{#if row.type === 'delete-marker'}
+				<Badge variant="destructive">Delete Marker</Badge>
+			{:else if row.isLatest}
+				<Badge variant="success">Latest</Badge>
+			{:else}
+				<Badge variant="outline">Version</Badge>
+			{/if}
+		</div>
+
+		<!-- Version ID -->
+		<Tooltip.Root>
+			<Tooltip.Trigger>
+				{#snippet child({ props })}
+					<span {...props} class="w-32 shrink-0 truncate font-mono text-xs text-muted-foreground">
+						{row.versionId
+							? row.versionId.length > 12
+								? row.versionId.slice(0, 12) + '...'
+								: row.versionId
+							: '-'}
+					</span>
+				{/snippet}
+			</Tooltip.Trigger>
+			<Tooltip.Content>
+				<span class="font-mono text-xs">{row.versionId ?? 'No version ID'}</span>
+			</Tooltip.Content>
+		</Tooltip.Root>
+
+		<!-- Size -->
+		<span class="w-24 shrink-0 text-xs text-muted-foreground">
+			{row.size != null ? formatBytes(row.size) : '-'}
+		</span>
+
+		<!-- Date -->
+		<span class="{showKey ? 'w-40 shrink-0' : 'flex-1'} text-xs text-muted-foreground">
+			{row.lastModified ? formatDate(row.lastModified) : '-'}
+		</span>
+
+		<!-- Actions -->
+		{#if row.versionId}
+			<div class="flex shrink-0 items-center gap-1">
+				{#if row.type === 'version'}
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<Button
+									{...props}
+									variant="ghost"
+									size="icon"
+									class="h-7 w-7"
+									onclick={(e: MouseEvent) => {
+										e.stopPropagation();
+										downloadVersion(row);
+									}}
+								>
+									<Download class="h-3.5 w-3.5" />
+								</Button>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content>Download this version</Tooltip.Content>
+					</Tooltip.Root>
+				{/if}
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<Button
+								{...props}
+								variant="ghost"
+								size="icon"
+								class="h-7 w-7 text-muted-foreground hover:text-destructive"
+								onclick={(e: MouseEvent) => {
+									e.stopPropagation();
+									requestDelete(row);
+								}}
+							>
+								<Trash2 class="h-3.5 w-3.5" />
+							</Button>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content>
+						{row.type === 'delete-marker'
+							? 'Remove delete marker (restores object)'
+							: 'Permanently delete this version'}
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</div>
+		{/if}
+	</div>
+{/snippet}
+
 {#await versionData}
 	<TableSkeleton rows={5} columns={6} />
 {:then}
 	<div class="space-y-4">
+		<!-- Contextual header -->
+		{#if headerMessage}
+			<div
+				class="flex items-start gap-2 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
+			>
+				<Info class="mt-0.5 h-4 w-4 shrink-0" />
+				<span>{headerMessage}</span>
+			</div>
+		{/if}
+
 		<!-- Toolbar -->
 		<div class="flex items-center gap-2">
 			<div class="relative flex-1">
@@ -228,7 +360,7 @@
 				<option value="versions">Versions ({totalVersions})</option>
 				<option value="delete-markers">Delete Markers ({totalMarkers})</option>
 			</select>
-			{#if groups.length > 1}
+			{#if multiVersionGroups.length > 1}
 				<Button variant="ghost" size="sm" class="h-8 text-xs" onclick={expandAll}>
 					Expand all
 				</Button>
@@ -255,153 +387,64 @@
 			<div class="rounded-lg border p-8 text-center text-sm text-muted-foreground">
 				{search
 					? `No versions matching "${search}"`
-					: 'No object versions found. Enable versioning to start tracking changes.'}
+					: 'No object versions found yet. Versions will appear here as objects are updated or deleted.'}
 			</div>
 		{:else}
 			<div class="space-y-1">
 				{#each groups as group (group.key)}
-					{@const isExpanded = expanded.has(group.key)}
-					{@const latestRow = group.rows.find((r) => r.isLatest)}
-					{@const hasDeleteMarker = group.rows.some(
-						(r) => r.type === 'delete-marker' && r.isLatest
-					)}
-
-					<!-- Group header -->
-					<button
-						class="flex w-full items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-left transition-colors hover:bg-accent/50"
-						onclick={() => toggleGroup(group.key)}
-					>
-						{#if isExpanded}
-							<ChevronDown class="h-4 w-4 shrink-0 text-muted-foreground" />
-						{:else}
-							<ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
-						{/if}
-						<span class="min-w-0 flex-1 truncate font-medium text-sm">{group.key}</span>
-						{#if hasDeleteMarker}
-							<Badge variant="destructive" class="shrink-0">Deleted</Badge>
-						{:else if latestRow}
-							<span class="shrink-0 text-xs text-muted-foreground">
-								{latestRow.size != null ? formatBytes(latestRow.size) : ''}
-							</span>
-						{/if}
-						<Badge variant="secondary" class="shrink-0">
-							{group.rows.length} version{group.rows.length !== 1 ? 's' : ''}
-						</Badge>
-					</button>
-
-					<!-- Expanded version rows -->
-					{#if isExpanded}
-						<div class="ml-6 space-y-0.5">
-							{#each group.rows as row (row.versionId ?? row.type + row.lastModified)}
-								<div
-									class="flex items-center gap-3 rounded-md px-4 py-2 text-sm {row.type ===
-									'delete-marker'
-										? 'bg-destructive/5'
-										: 'hover:bg-muted/50'}"
-								>
-									<!-- Type badge -->
-									<div class="w-28 shrink-0">
-										{#if row.type === 'delete-marker'}
-											<Badge variant="destructive">Delete Marker</Badge>
-										{:else if row.isLatest}
-											<Badge variant="success">Latest</Badge>
-										{:else}
-											<Badge variant="outline">Version</Badge>
-										{/if}
-									</div>
-
-									<!-- Version ID -->
-									<Tooltip.Root>
-										<Tooltip.Trigger>
-											{#snippet child({ props })}
-												<span
-													{...props}
-													class="w-32 shrink-0 truncate font-mono text-xs text-muted-foreground"
-												>
-													{row.versionId
-														? row.versionId.length > 12
-															? row.versionId.slice(0, 12) + '...'
-															: row.versionId
-														: '-'}
-												</span>
-											{/snippet}
-										</Tooltip.Trigger>
-										<Tooltip.Content>
-											<span class="font-mono text-xs">{row.versionId ?? 'No version ID'}</span>
-										</Tooltip.Content>
-									</Tooltip.Root>
-
-									<!-- Size -->
-									<span class="w-24 shrink-0 text-xs text-muted-foreground">
-										{row.size != null ? formatBytes(row.size) : '-'}
-									</span>
-
-									<!-- Date -->
-									<span class="flex-1 text-xs text-muted-foreground">
-										{row.lastModified ? formatDate(row.lastModified) : '-'}
-									</span>
-
-									<!-- Actions -->
-									{#if row.versionId}
-										<div class="flex shrink-0 items-center gap-1">
-											{#if row.type === 'version'}
-												<Tooltip.Root>
-													<Tooltip.Trigger>
-														{#snippet child({ props })}
-															<Button
-																{...props}
-																variant="ghost"
-																size="icon"
-																class="h-7 w-7"
-																onclick={(e: MouseEvent) => {
-																	e.stopPropagation();
-																	downloadVersion(row);
-																}}
-															>
-																<Download class="h-3.5 w-3.5" />
-															</Button>
-														{/snippet}
-													</Tooltip.Trigger>
-													<Tooltip.Content>Download this version</Tooltip.Content>
-												</Tooltip.Root>
-											{/if}
-											<Tooltip.Root>
-												<Tooltip.Trigger>
-													{#snippet child({ props })}
-														<Button
-															{...props}
-															variant="ghost"
-															size="icon"
-															class="h-7 w-7 text-muted-foreground hover:text-destructive"
-															onclick={(e: MouseEvent) => {
-																e.stopPropagation();
-																requestDelete(row);
-															}}
-														>
-															<Trash2 class="h-3.5 w-3.5" />
-														</Button>
-													{/snippet}
-												</Tooltip.Trigger>
-												<Tooltip.Content>
-													{row.type === 'delete-marker'
-														? 'Remove delete marker (restores object)'
-														: 'Permanently delete this version'}
-												</Tooltip.Content>
-											</Tooltip.Root>
-										</div>
-									{/if}
-								</div>
-							{/each}
+					{#if group.rows.length === 1}
+						<!-- Single-version object: flat row -->
+						<div class="rounded-lg border bg-card">
+							{@render versionRow(group.rows[0], true)}
 						</div>
+					{:else}
+						<!-- Multi-version object: collapsible group -->
+						{@const isExpanded = expanded.has(group.key)}
+						{@const latestRow = group.rows.find((r) => r.isLatest)}
+						{@const hasDeleteMarker = group.rows.some(
+							(r) => r.type === 'delete-marker' && r.isLatest
+						)}
+
+						<!-- Group header -->
+						<button
+							class="flex w-full items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-left transition-colors hover:bg-accent/50"
+							onclick={() => toggleGroup(group.key)}
+						>
+							{#if isExpanded}
+								<ChevronDown class="h-4 w-4 shrink-0 text-muted-foreground" />
+							{:else}
+								<ChevronRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+							{/if}
+							<span class="min-w-0 flex-1 truncate font-medium text-sm">{group.key}</span>
+							{#if hasDeleteMarker}
+								<Badge variant="destructive" class="shrink-0">Deleted</Badge>
+							{:else if latestRow}
+								<span class="shrink-0 text-xs text-muted-foreground">
+									{latestRow.size != null ? formatBytes(latestRow.size) : ''}
+								</span>
+							{/if}
+							<Badge variant="secondary" class="shrink-0">
+								{group.rows.length} version{group.rows.length !== 1 ? 's' : ''}
+							</Badge>
+						</button>
+
+						<!-- Expanded version rows -->
+						{#if isExpanded}
+							<div class="ml-6 space-y-0.5">
+								{#each group.rows as row (row.versionId ?? row.type + row.lastModified)}
+									{@render versionRow(row, false)}
+								{/each}
+							</div>
+						{/if}
 					{/if}
 				{/each}
 			</div>
 		{/if}
 
-		<!-- Server-side batch pagination -->
+		<!-- Server-side pagination -->
 		{#if isTruncated || tokenHistory.length > 0}
 			<div class="flex items-center justify-end gap-2">
-				<span class="text-xs text-muted-foreground">Batch {serverPage}</span>
+				<span class="text-xs text-muted-foreground">Page {serverPage}</span>
 				<Button
 					variant="outline"
 					size="sm"
@@ -409,7 +452,7 @@
 					onclick={loadPrevPage}
 					disabled={tokenHistory.length === 0}
 				>
-					Previous batch
+					Previous
 				</Button>
 				<Button
 					variant="outline"
@@ -418,7 +461,7 @@
 					onclick={loadNextPage}
 					disabled={!isTruncated}
 				>
-					Next batch
+					Next
 				</Button>
 			</div>
 		{/if}

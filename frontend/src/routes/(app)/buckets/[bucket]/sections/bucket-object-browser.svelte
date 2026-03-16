@@ -779,7 +779,7 @@
 	<!-- Server-side batch pagination (load more from S3) -->
 	{#if isTruncated || tokenHistory.length > 0}
 		<div class="flex items-center justify-end gap-2">
-			<span class="text-xs text-muted-foreground">Batch {serverPage}</span>
+			<span class="text-xs text-muted-foreground">Page {serverPage}</span>
 			<Button
 				variant="outline"
 				size="sm"
@@ -787,7 +787,7 @@
 				onclick={loadPrevPage}
 				disabled={tokenHistory.length === 0}
 			>
-				Previous batch
+				Previous
 			</Button>
 			<Button
 				variant="outline"
@@ -796,7 +796,7 @@
 				onclick={loadNextPage}
 				disabled={!isTruncated}
 			>
-				Next batch
+				Next
 			</Button>
 		</div>
 	{/if}

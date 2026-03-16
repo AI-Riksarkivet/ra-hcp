@@ -15,17 +15,6 @@
 			open: true,
 			onclose: fn(),
 		},
-		argTypes: {
-			filename: { control: 'text' },
-			url: { control: 'text' },
-			size: { control: 'number' },
-			objectKey: { control: 'text' },
-			lastModified: { control: 'text' },
-			etag: { control: 'text' },
-			storageClass: { control: 'text' },
-			hasPrev: { control: 'boolean' },
-			hasNext: { control: 'boolean' },
-		},
 	});
 </script>
 

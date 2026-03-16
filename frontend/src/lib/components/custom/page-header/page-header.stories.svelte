@@ -9,10 +9,6 @@
 			title: 'Namespaces',
 			description: 'Manage tenant namespaces',
 		},
-		argTypes: {
-			title: { control: 'text' },
-			description: { control: 'text' },
-		},
 	});
 </script>
 
