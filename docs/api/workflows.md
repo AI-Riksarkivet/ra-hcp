@@ -43,15 +43,15 @@ Obtain a JWT token once and reuse it for all subsequent requests.
 
     # System-level login
     TOKEN=$(curl -s -X POST "$BASE/auth/token" \
-      -d "username=admin&password=secret" | jq -r .access_token)
+      -d "username=<system-admin>&password=<password>" | jq -r .access_token)
 
     # Tenant-scoped login (slash notation)
     TOKEN=$(curl -s -X POST "$BASE/auth/token" \
-      -d "username=dev-ai/admin&password=secret" | jq -r .access_token)
+      -d "username=<tenant>/<username>&password=<password>" | jq -r .access_token)
 
     # Tenant-scoped login (explicit tenant field)
     TOKEN=$(curl -s -X POST "$BASE/auth/token" \
-      -d "username=admin&password=secret&tenant=dev-ai" | jq -r .access_token)
+      -d "username=<username>&password=<password>&tenant=<tenant>" | jq -r .access_token)
 
     # Verify the token works
     curl -s -H "Authorization: Bearer $TOKEN" "$BASE/buckets" | jq .
@@ -103,27 +103,28 @@ Create a tenant, add an administrator user, then create a namespace -- the typic
 
     # 1. Login as system admin
     TOKEN=$(curl -s -X POST "$BASE/auth/token" \
-      -d "username=admin&password=secret" | jq -r .access_token)
+      -d "username=<system-admin>&password=<password>" | jq -r .access_token)
     AUTH="Authorization: Bearer $TOKEN"
 
     # 2. Create a new tenant with initial admin user
-    curl -s -X PUT "$BASE/mapi/tenants?username=tenantadmin&password=Ch4ng3Me!" \
+    TENANT="<tenant>"
+    curl -s -X PUT "$BASE/mapi/tenants?username=<tenant-admin>&password=<tenant-password>" \
       -H "$AUTH" \
       -H "Content-Type: application/json" \
       -d '{
-        "name": "research",
-        "systemVisibleDescription": "Research department storage",
+        "name": "'"$TENANT"'",
+        "systemVisibleDescription": "Department storage",
         "hardQuota": "500 GB",
         "softQuota": 80
       }' | jq .
 
     # 3. Login as the new tenant admin
     TENANT_TOKEN=$(curl -s -X POST "$BASE/auth/token" \
-      -d "username=research/tenantadmin&password=Ch4ng3Me!" | jq -r .access_token)
+      -d "username=$TENANT/<tenant-admin>&password=<tenant-password>" | jq -r .access_token)
     TAUTH="Authorization: Bearer $TENANT_TOKEN"
 
     # 4. Create a namespace
-    curl -s -X PUT "$BASE/mapi/tenants/research/namespaces" \
+    curl -s -X PUT "$BASE/mapi/tenants/$TENANT/namespaces" \
       -H "$TAUTH" \
       -H "Content-Type: application/json" \
       -d '{
@@ -144,17 +145,21 @@ Create a tenant, add an administrator user, then create a namespace -- the typic
     async def provision_tenant():
         async with httpx.AsyncClient(base_url=BASE) as c:
             # Login as system admin
-            resp = await c.post("/auth/token", data={"username": "admin", "password": "secret"})
+            resp = await c.post("/auth/token", data={
+                "username": "<system-admin>", "password": "<password>",
+            })
             token = resp.json()["access_token"]
             c.headers["Authorization"] = f"Bearer {token}"
+
+            tenant = "<tenant>"
 
             # Create tenant with initial admin
             resp = await c.put(
                 "/mapi/tenants",
-                params={"username": "tenantadmin", "password": "Ch4ng3Me!"},
+                params={"username": "<tenant-admin>", "password": "<tenant-password>"},
                 json={
-                    "name": "research",
-                    "systemVisibleDescription": "Research department storage",
+                    "name": tenant,
+                    "systemVisibleDescription": "Department storage",
                     "hardQuota": "500 GB",
                     "softQuota": 80,
                 },
@@ -165,14 +170,14 @@ Create a tenant, add an administrator user, then create a namespace -- the typic
             # Login as tenant admin
             resp = await c.post(
                 "/auth/token",
-                data={"username": "research/tenantadmin", "password": "Ch4ng3Me!"},
+                data={"username": f"{tenant}/<tenant-admin>", "password": "<tenant-password>"},
             )
             tenant_token = resp.json()["access_token"]
             c.headers["Authorization"] = f"Bearer {tenant_token}"
 
             # Create namespace
             resp = await c.put(
-                "/mapi/tenants/research/namespaces",
+                f"/mapi/tenants/{tenant}/namespaces",
                 json={
                     "name": "datasets",
                     "description": "ML training datasets",
@@ -282,7 +287,7 @@ Export namespace configuration as a reusable template -- useful for disaster rec
     BASE="http://localhost:8000/api/v1"
     TOKEN="<your-token>"
     AUTH="Authorization: Bearer $TOKEN"
-    TENANT="research"
+    TENANT="<tenant>"
 
     # Export a single namespace template
     curl -s "$BASE/mapi/tenants/$TENANT/namespaces/datasets/export" \
@@ -340,7 +345,7 @@ Create users, assign roles, and change passwords at the tenant level.
     BASE="http://localhost:8000/api/v1"
     TOKEN="<your-tenant-admin-token>"
     AUTH="Authorization: Bearer $TOKEN"
-    TENANT="research"
+    TENANT="<tenant>"
 
     # Create a user with MONITOR role
     curl -s -X PUT "$BASE/mapi/tenants/$TENANT/userAccounts?password=InitialP4ss!" \
@@ -443,7 +448,7 @@ Fetch storage statistics and pull chargeback reports for billing or capacity pla
     BASE="http://localhost:8000/api/v1"
     TOKEN="<your-monitor-token>"
     AUTH="Authorization: Bearer $TOKEN"
-    TENANT="research"
+    TENANT="<tenant>"
 
     # Tenant-level statistics
     curl -s "$BASE/mapi/tenants/$TENANT/statistics" \
@@ -517,7 +522,7 @@ Search objects by indexed metadata and audit operations across namespaces.
     BASE="http://localhost:8000/api/v1"
     TOKEN="<your-token>"
     AUTH="Authorization: Bearer $TOKEN"
-    TENANT="research"
+    TENANT="<tenant>"
 
     # Search for large files (>1 MB) in the datasets namespace
     curl -s -X POST "$BASE/query/tenants/$TENANT/objects" \

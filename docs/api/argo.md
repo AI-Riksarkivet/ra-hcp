@@ -922,6 +922,624 @@ graph TD
 
 ---
 
+## Cross-tenant data transformation -- TIFF to JPG
+
+A common archival workflow: read TIFF images from an **ingest** tenant, convert them to JPG, and write the results to a **publish** tenant. Each tenant has its own credentials, and the workflow never exposes one tenant's token to the other.
+
+```mermaid
+graph LR
+    subgraph SRC["Source Tenant"]
+        S3A[("ingest/<br/>scans/*.tiff")]
+    end
+
+    subgraph Argo["Argo Workflow"]
+        direction TB
+        LIST["list-objects<br/><small>list ingest/*.tiff</small>"]
+        LIST --> FAN
+
+        subgraph FAN["fan-out (parallel)"]
+            direction LR
+            C1["convert<br/>scan-001"]
+            C2["convert<br/>scan-002"]
+            C3["convert<br/>scan-N"]
+        end
+
+        FAN --> VER["verify<br/><small>count JPGs</small>"]
+    end
+
+    subgraph DST["Destination Tenant"]
+        S3B[("publish/<br/>images/*.jpg")]
+    end
+
+    S3A -.->|presigned GET<br/><small>source token</small>| FAN
+    FAN -.->|presigned PUT<br/><small>dest token</small>| S3B
+
+    style SRC fill:#e8f4fd,stroke:#0d6efd
+    style DST fill:#d4edda,stroke:#28a745
+```
+
+### Security model
+
+Each tenant has its own JWT token stored in a separate Kubernetes Secret. Pods receive **only presigned URLs** -- they never see raw credentials for either tenant. The presigned URLs are short-lived (10 minutes) and scoped to specific objects.
+
+```bash
+# Create secrets for each tenant (run once)
+kubectl create secret generic hcp-source-token \
+  --from-literal=token="$(curl -s -X POST "$BASE/auth/token" \
+    -d "username=<source-tenant>/<username>&password=<password>" \
+    | jq -r .access_token)" \
+  -n argo
+
+kubectl create secret generic hcp-dest-token \
+  --from-literal=token="$(curl -s -X POST "$BASE/auth/token" \
+    -d "username=<dest-tenant>/<username>&password=<password>" \
+    | jq -r .access_token)" \
+  -n argo
+```
+
+### Workflow definition
+
+=== "YAML"
+
+    ```yaml
+    apiVersion: argoproj.io/v1alpha1
+    kind: Workflow
+    metadata:
+      generateName: hcp-tiff-to-jpg-
+    spec:
+      entrypoint: convert-pipeline
+      activeDeadlineSeconds: 7200         # 2 hours max
+      onExit: cleanup
+      arguments:
+        parameters:
+          - name: hcp-api-base
+            value: "http://hcp-api.default.svc:8000/api/v1"
+          - name: source-tenant
+            value: "<source-tenant>"
+          - name: source-bucket
+            value: "scans"
+          - name: source-prefix
+            value: "ingest/"
+          - name: dest-tenant
+            value: "<dest-tenant>"
+          - name: dest-bucket
+            value: "images"
+      # Mount tenant tokens from K8s Secrets
+      volumes:
+        - name: source-token
+          secret:
+            secretName: hcp-source-token
+        - name: dest-token
+          secret:
+            secretName: hcp-dest-token
+      templates:
+        # ── Orchestrator ──────────────────────────────────────────────
+        - name: convert-pipeline
+          dag:
+            tasks:
+              - name: discover
+                template: list-tiffs
+              - name: convert
+                template: fan-out
+                dependencies: [discover]
+                arguments:
+                  parameters:
+                    - name: object-keys
+                      value: "{{tasks.discover.outputs.parameters.keys}}"
+              - name: verify
+                template: verify-results
+                dependencies: [convert]
+
+        # ── List TIFF files in the source tenant ──────────────────────
+        - name: list-tiffs
+          retryStrategy:
+            limit: 3
+            backoff:
+              duration: "5s"
+              factor: 2
+          volumes:
+            - name: source-token
+              secret:
+                secretName: hcp-source-token
+          script:
+            image: my-registry/python-httpx:3.13
+            command: [python]
+            volumeMounts:
+              - name: source-token
+                mountPath: /secrets/source
+                readOnly: true
+            source: |
+              import httpx, json
+              from pathlib import Path
+
+              BASE = "{{workflow.parameters.hcp-api-base}}"
+              TOKEN = Path("/secrets/source/token").read_text().strip()
+              BUCKET = "{{workflow.parameters.source-bucket}}"
+              PREFIX = "{{workflow.parameters.source-prefix}}"
+
+              resp = httpx.get(
+                  f"{BASE}/s3/buckets/{BUCKET}/objects",
+                  params={"prefix": PREFIX, "max_keys": 500},
+                  headers={"Authorization": f"Bearer {TOKEN}"},
+              )
+              resp.raise_for_status()
+              keys = [
+                  obj["key"] for obj in resp.json()["objects"]
+                  if obj["key"].lower().endswith((".tiff", ".tif"))
+              ]
+              print(f"Found {len(keys)} TIFF files")
+              Path("/tmp/keys.json").write_text(json.dumps(keys))
+          outputs:
+            parameters:
+              - name: keys
+                valueFrom:
+                  path: /tmp/keys.json
+
+        # ── Fan out — one conversion pod per TIFF ─────────────────────
+        - name: fan-out
+          inputs:
+            parameters:
+              - name: object-keys
+          steps:
+            - - name: convert-tiff
+                template: convert-single
+                arguments:
+                  parameters:
+                    - name: key
+                      value: "{{item}}"
+                withParam: "{{inputs.parameters.object-keys}}"
+
+        - name: convert-single
+          retryStrategy:
+            limit: 2
+            retryPolicy: Always
+            backoff:
+              duration: "15s"
+              factor: 2
+              maxDuration: "2m"
+          activeDeadlineSeconds: 600        # 10 min per image
+          volumes:
+            - name: source-token
+              secret:
+                secretName: hcp-source-token
+            - name: dest-token
+              secret:
+                secretName: hcp-dest-token
+          inputs:
+            parameters:
+              - name: key
+          script:
+            image: my-registry/python-httpx:3.13
+            command: [python]
+            volumeMounts:
+              - name: source-token
+                mountPath: /secrets/source
+                readOnly: true
+              - name: dest-token
+                mountPath: /secrets/dest
+                readOnly: true
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "500m"
+              limits:
+                memory: "1Gi"
+            source: |
+              import httpx, json
+              from pathlib import Path
+
+              BASE = "{{workflow.parameters.hcp-api-base}}"
+              SRC_TOKEN = Path("/secrets/source/token").read_text().strip()
+              DST_TOKEN = Path("/secrets/dest/token").read_text().strip()
+              SRC_BUCKET = "{{workflow.parameters.source-bucket}}"
+              DST_BUCKET = "{{workflow.parameters.dest-bucket}}"
+              KEY = "{{inputs.parameters.key}}"
+              WF = "{{workflow.name}}"
+
+              # 1. Presign download from source tenant
+              resp = httpx.post(
+                  f"{BASE}/s3/presign",
+                  json={"bucket": SRC_BUCKET, "key": KEY, "method": "get_object", "expires_in": 600},
+                  headers={"Authorization": f"Bearer {SRC_TOKEN}"},
+              )
+              resp.raise_for_status()
+              tiff_data = httpx.get(resp.json()["url"])
+              tiff_data.raise_for_status()
+              tiff_path = Path("/tmp/input.tiff")
+              tiff_path.write_bytes(tiff_data.content)
+              print(f"Downloaded {KEY} ({len(tiff_data.content)} bytes)")
+
+              # 2. Convert TIFF → JPG using Pillow
+              from PIL import Image
+              img = Image.open(tiff_path)
+              jpg_path = Path("/tmp/output.jpg")
+              img.convert("RGB").save(jpg_path, "JPEG", quality=85)
+              jpg_data = jpg_path.read_bytes()
+              print(f"Converted to JPG ({len(jpg_data)} bytes)")
+
+              # 3. Presign upload to destination tenant (staging prefix)
+              filename = KEY.split("/")[-1].rsplit(".", 1)[0] + ".jpg"
+              staging_key = f"staging/{WF}/{filename}"
+              resp = httpx.post(
+                  f"{BASE}/s3/presign",
+                  json={"bucket": DST_BUCKET, "key": staging_key, "method": "put_object", "expires_in": 600},
+                  headers={"Authorization": f"Bearer {DST_TOKEN}"},
+              )
+              resp.raise_for_status()
+              httpx.put(resp.json()["url"], content=jpg_data).raise_for_status()
+              print(f"Uploaded {staging_key}")
+
+        # ── Verify all results arrived ────────────────────────────────
+        - name: verify-results
+          retryStrategy:
+            limit: 2
+          volumes:
+            - name: dest-token
+              secret:
+                secretName: hcp-dest-token
+          script:
+            image: my-registry/python-httpx:3.13
+            command: [python]
+            volumeMounts:
+              - name: dest-token
+                mountPath: /secrets/dest
+                readOnly: true
+            source: |
+              import httpx, json
+              from pathlib import Path
+
+              BASE = "{{workflow.parameters.hcp-api-base}}"
+              TOKEN = Path("/secrets/dest/token").read_text().strip()
+              BUCKET = "{{workflow.parameters.dest-bucket}}"
+              WF = "{{workflow.name}}"
+
+              # List staged results
+              resp = httpx.get(
+                  f"{BASE}/s3/buckets/{BUCKET}/objects",
+                  params={"prefix": f"staging/{WF}/", "max_keys": 1000},
+                  headers={"Authorization": f"Bearer {TOKEN}"},
+              )
+              resp.raise_for_status()
+              staged = resp.json()["objects"]
+              print(f"Verified {len(staged)} JPGs in staging")
+
+              # Commit: copy staging/ → published/
+              for obj in staged:
+                  src = obj["key"]
+                  dest = src.replace(f"staging/{WF}/", "published/")
+                  httpx.post(
+                      f"{BASE}/s3/buckets/{BUCKET}/objects/{dest}/copy",
+                      json={"source_bucket": BUCKET, "source_key": src},
+                      headers={"Authorization": f"Bearer {TOKEN}"},
+                  ).raise_for_status()
+
+              # Clean up staging
+              keys = [obj["key"] for obj in staged]
+              httpx.post(
+                  f"{BASE}/s3/buckets/{BUCKET}/objects/delete",
+                  json={"keys": keys},
+                  headers={"Authorization": f"Bearer {TOKEN}"},
+              ).raise_for_status()
+              print(f"Committed {len(staged)} JPGs to published/")
+
+        # ── Exit handler — clean up staging on failure ────────────────
+        - name: cleanup
+          volumes:
+            - name: dest-token
+              secret:
+                secretName: hcp-dest-token
+          script:
+            image: my-registry/python-httpx:3.13
+            command: [python]
+            volumeMounts:
+              - name: dest-token
+                mountPath: /secrets/dest
+                readOnly: true
+            source: |
+              import httpx, os
+              from pathlib import Path
+
+              STATUS = "{{workflow.status}}"
+              if STATUS == "Succeeded":
+                  print("Workflow succeeded — no cleanup needed")
+                  exit(0)
+
+              BASE = "{{workflow.parameters.hcp-api-base}}"
+              TOKEN = Path("/secrets/dest/token").read_text().strip()
+              BUCKET = "{{workflow.parameters.dest-bucket}}"
+              WF = "{{workflow.name}}"
+
+              print(f"Workflow {STATUS} — cleaning up staging/{WF}/...")
+              resp = httpx.get(
+                  f"{BASE}/s3/buckets/{BUCKET}/objects",
+                  params={"prefix": f"staging/{WF}/", "max_keys": 1000},
+                  headers={"Authorization": f"Bearer {TOKEN}"},
+              )
+              if resp.status_code == 200:
+                  keys = [obj["key"] for obj in resp.json().get("objects", [])]
+                  if keys:
+                      httpx.post(
+                          f"{BASE}/s3/buckets/{BUCKET}/objects/delete",
+                          json={"keys": keys},
+                          headers={"Authorization": f"Bearer {TOKEN}"},
+                      )
+                      print(f"Deleted {len(keys)} staged objects")
+              else:
+                  print("Could not list staged objects — manual cleanup may be needed")
+    ```
+
+=== "Hera"
+
+    ```python
+    from hera.workflows import (
+        DAG,
+        Parameter,
+        Steps,
+        Workflow,
+        models as m,
+        script,
+    )
+
+    HCP_BASE = "http://hcp-api.default.svc:8000/api/v1"
+    PYTHON_IMAGE = "my-registry/python-httpx:3.13"
+
+    RETRY = m.RetryStrategy(
+        limit="3",
+        backoff=m.Backoff(duration="5s", factor=2),
+    )
+    RETRY_CONVERT = m.RetryStrategy(
+        limit="2",
+        retry_policy="Always",
+        backoff=m.Backoff(duration="15s", factor=2, max_duration="2m"),
+    )
+
+    # Volume mounts for tenant tokens
+    SRC_VOL = m.Volume(name="source-token", secret=m.SecretVolumeSource(secret_name="hcp-source-token"))
+    DST_VOL = m.Volume(name="dest-token", secret=m.SecretVolumeSource(secret_name="hcp-dest-token"))
+    SRC_MOUNT = m.VolumeMount(name="source-token", mount_path="/secrets/source", read_only=True)
+    DST_MOUNT = m.VolumeMount(name="dest-token", mount_path="/secrets/dest", read_only=True)
+
+
+    @script(
+        image=PYTHON_IMAGE,
+        retry_strategy=RETRY,
+        volume_mounts=[SRC_MOUNT],
+    )
+    def list_tiffs(hcp_api_base: str, source_bucket: str, source_prefix: str):
+        """List TIFF files in the source tenant."""
+        import httpx, json
+        from pathlib import Path
+
+        token = Path("/secrets/source/token").read_text().strip()
+        resp = httpx.get(
+            f"{hcp_api_base}/s3/buckets/{source_bucket}/objects",
+            params={"prefix": source_prefix, "max_keys": 500},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        resp.raise_for_status()
+        keys = [
+            obj["key"] for obj in resp.json()["objects"]
+            if obj["key"].lower().endswith((".tiff", ".tif"))
+        ]
+        print(f"Found {len(keys)} TIFF files")
+        Path("/tmp/keys.json").write_text(json.dumps(keys))
+
+
+    @script(
+        image=PYTHON_IMAGE,
+        retry_strategy=RETRY_CONVERT,
+        active_deadline_seconds=600,
+        volume_mounts=[SRC_MOUNT, DST_MOUNT],
+        resources=m.ResourceRequirements(
+            requests={"memory": "512Mi", "cpu": "500m"},
+            limits={"memory": "1Gi"},
+        ),
+    )
+    def convert_single(
+        hcp_api_base: str,
+        source_bucket: str,
+        dest_bucket: str,
+        key: str,
+        workflow_name: str,
+    ):
+        """Download TIFF from source tenant, convert to JPG, upload to dest tenant."""
+        import httpx
+        from pathlib import Path
+
+        src_token = Path("/secrets/source/token").read_text().strip()
+        dst_token = Path("/secrets/dest/token").read_text().strip()
+
+        # 1. Presign download from source tenant
+        resp = httpx.post(
+            f"{hcp_api_base}/s3/presign",
+            json={"bucket": source_bucket, "key": key, "method": "get_object", "expires_in": 600},
+            headers={"Authorization": f"Bearer {src_token}"},
+        )
+        resp.raise_for_status()
+        tiff_data = httpx.get(resp.json()["url"])
+        tiff_data.raise_for_status()
+        tiff_path = Path("/tmp/input.tiff")
+        tiff_path.write_bytes(tiff_data.content)
+        print(f"Downloaded {key} ({len(tiff_data.content)} bytes)")
+
+        # 2. Convert TIFF → JPG
+        from PIL import Image
+
+        img = Image.open(tiff_path)
+        jpg_path = Path("/tmp/output.jpg")
+        img.convert("RGB").save(jpg_path, "JPEG", quality=85)
+        jpg_data = jpg_path.read_bytes()
+        print(f"Converted to JPG ({len(jpg_data)} bytes)")
+
+        # 3. Presign upload to destination tenant (staging prefix)
+        filename = key.split("/")[-1].rsplit(".", 1)[0] + ".jpg"
+        staging_key = f"staging/{workflow_name}/{filename}"
+        resp = httpx.post(
+            f"{hcp_api_base}/s3/presign",
+            json={"bucket": dest_bucket, "key": staging_key, "method": "put_object", "expires_in": 600},
+            headers={"Authorization": f"Bearer {dst_token}"},
+        )
+        resp.raise_for_status()
+        httpx.put(resp.json()["url"], content=jpg_data).raise_for_status()
+        print(f"Uploaded {staging_key}")
+
+
+    @script(
+        image=PYTHON_IMAGE,
+        retry_strategy=m.RetryStrategy(limit="2"),
+        volume_mounts=[DST_MOUNT],
+    )
+    def verify_and_commit(hcp_api_base: str, dest_bucket: str, workflow_name: str):
+        """Verify staged JPGs and commit to published/ prefix."""
+        import httpx
+
+        token = Path("/secrets/dest/token").read_text().strip()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = httpx.get(
+            f"{hcp_api_base}/s3/buckets/{dest_bucket}/objects",
+            params={"prefix": f"staging/{workflow_name}/", "max_keys": 1000},
+            headers=headers,
+        )
+        resp.raise_for_status()
+        staged = resp.json()["objects"]
+        print(f"Verified {len(staged)} JPGs in staging")
+
+        # Commit: copy staging/ → published/
+        for obj in staged:
+            src = obj["key"]
+            dest = src.replace(f"staging/{workflow_name}/", "published/")
+            httpx.post(
+                f"{hcp_api_base}/s3/buckets/{dest_bucket}/objects/{dest}/copy",
+                json={"source_bucket": dest_bucket, "source_key": src},
+                headers=headers,
+            ).raise_for_status()
+
+        # Clean up staging
+        keys = [obj["key"] for obj in staged]
+        httpx.post(
+            f"{hcp_api_base}/s3/buckets/{dest_bucket}/objects/delete",
+            json={"keys": keys},
+            headers=headers,
+        ).raise_for_status()
+        print(f"Committed {len(staged)} JPGs to published/")
+
+
+    @script(image=PYTHON_IMAGE, volume_mounts=[DST_MOUNT])
+    def cleanup(hcp_api_base: str, dest_bucket: str, workflow_name: str):
+        """Exit handler: delete staging prefix on failure."""
+        import httpx, os
+        from pathlib import Path
+
+        status = os.environ.get("ARGO_WORKFLOW_STATUS", "Unknown")
+        if status == "Succeeded":
+            print("Workflow succeeded — no cleanup needed")
+            return
+
+        token = Path("/secrets/dest/token").read_text().strip()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        print(f"Workflow {status} — cleaning up staging/{workflow_name}/...")
+        resp = httpx.get(
+            f"{hcp_api_base}/s3/buckets/{dest_bucket}/objects",
+            params={"prefix": f"staging/{workflow_name}/", "max_keys": 1000},
+            headers=headers,
+        )
+        if resp.status_code == 200:
+            keys = [obj["key"] for obj in resp.json().get("objects", [])]
+            if keys:
+                httpx.post(
+                    f"{hcp_api_base}/s3/buckets/{dest_bucket}/objects/delete",
+                    json={"keys": keys},
+                    headers=headers,
+                )
+                print(f"Deleted {len(keys)} staged objects")
+        else:
+            print("Could not list staged objects — manual cleanup may be needed")
+
+
+    WF_PARAMS = {
+        "hcp_api_base": "{{workflow.parameters.hcp-api-base}}",
+    }
+
+    with Workflow(
+        generate_name="hcp-tiff-to-jpg-",
+        entrypoint="convert-pipeline",
+        active_deadline_seconds=7200,
+        on_exit="cleanup",
+        volumes=[SRC_VOL, DST_VOL],
+        arguments=[
+            Parameter(name="hcp-api-base", value=HCP_BASE),
+            Parameter(name="source-tenant", value="<source-tenant>"),
+            Parameter(name="source-bucket", value="scans"),
+            Parameter(name="source-prefix", value="ingest/"),
+            Parameter(name="dest-tenant", value="<dest-tenant>"),
+            Parameter(name="dest-bucket", value="images"),
+        ],
+    ) as w:
+        with DAG(name="convert-pipeline"):
+            disc = list_tiffs(
+                name="discover",
+                arguments={
+                    **WF_PARAMS,
+                    "source_bucket": "{{workflow.parameters.source-bucket}}",
+                    "source_prefix": "{{workflow.parameters.source-prefix}}",
+                },
+            )
+            with Steps(name="fan-out") as fan:
+                convert_single(
+                    name="convert-tiff",
+                    arguments={
+                        **WF_PARAMS,
+                        "source_bucket": "{{workflow.parameters.source-bucket}}",
+                        "dest_bucket": "{{workflow.parameters.dest-bucket}}",
+                        "key": "{{item}}",
+                        "workflow_name": "{{workflow.name}}",
+                    },
+                    with_param=disc.get_parameter("keys"),
+                )
+            ver = verify_and_commit(
+                name="verify",
+                arguments={
+                    **WF_PARAMS,
+                    "dest_bucket": "{{workflow.parameters.dest-bucket}}",
+                    "workflow_name": "{{workflow.name}}",
+                },
+            )
+            disc >> fan >> ver
+
+        # Exit handler
+        cleanup(
+            name="cleanup",
+            arguments={
+                **WF_PARAMS,
+                "dest_bucket": "{{workflow.parameters.dest-bucket}}",
+                "workflow_name": "{{workflow.name}}",
+            },
+        )
+
+    w.create()
+    ```
+
+!!! note "Container image for Pillow"
+    The `convert-single` template uses [Pillow](https://pillow.readthedocs.io/) for TIFF-to-JPG conversion. Extend the base image:
+
+    ```dockerfile
+    FROM python:3.13-slim
+    RUN pip install --no-cache-dir httpx Pillow
+    ```
+
+    For production, pin exact versions and use a multi-stage build to minimize image size.
+
+The key security properties of this workflow:
+
+1. **Tenant isolation** -- each tenant's JWT is stored in a separate K8s Secret, mounted read-only into only the pods that need it.
+2. **Presigned URLs** -- conversion pods never see raw S3 credentials. URLs are scoped to a single object and expire in 10 minutes.
+3. **Staged-commit** -- JPGs are written to `staging/{workflow-name}/` in the destination tenant, then atomically committed to `published/` only if all conversions succeed.
+4. **Exit handler cleanup** -- if any conversion pod fails, the exit handler deletes all staged objects from the destination tenant.
+
+---
+
 ## Error handling for batch workflows
 
 The batch fan-out above processes objects independently, but what happens when some pods fail? Without cleanup, partial results pollute the output prefix. This section adds an **exit handler** that cleans up on failure, plus a **staged-commit** pattern so partial results are never visible to downstream consumers.

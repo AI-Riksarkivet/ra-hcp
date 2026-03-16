@@ -122,8 +122,8 @@ Usage:
 
 ```python
 async def main():
-    async with HCPClient("admin", "secret", tenant="research") as hcp:
-        resp = await hcp.request("GET", "/mapi/tenants/research/statistics")
+    async with HCPClient("<username>", "<password>", tenant="<tenant>") as hcp:
+        resp = await hcp.request("GET", "/mapi/tenants/<tenant>/statistics")
         print(resp.json())
 ```
 
@@ -156,8 +156,8 @@ hcp_request() {
 }
 
 # Usage
-hcp_request GET "$BASE/mapi/tenants/research/statistics"
-hcp_request PUT "$BASE/mapi/tenants/research/namespaces" \
+hcp_request GET "$BASE/mapi/tenants/$TENANT/statistics"
+hcp_request PUT "$BASE/mapi/tenants/$TENANT/namespaces" \
   -H "Content-Type: application/json" \
   -d '{"name": "test-ns", "hardQuota": "10 GB"}'
 ```
