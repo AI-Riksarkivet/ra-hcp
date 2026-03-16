@@ -423,35 +423,30 @@ For cases where you cannot mount S3 credentials into every pod, use the HCP API 
     )
 
 
-    @script(image="curlimages/curl:latest", retry_strategy=RETRY)
+    @script(image="my-registry/python-httpx:3.13", retry_strategy=RETRY)
     def generate_presigned_urls(
         hcp_api_base: str,
         hcp_token: str,
         bucket: str,
     ):
         """Generate download and upload presigned URLs from the HCP API."""
-        import subprocess, json
+        import httpx
+        from pathlib import Path
+
+        headers = {"Authorization": f"Bearer {hcp_token}"}
 
         def presign(key: str, method: str) -> str:
-            result = subprocess.run(
-                [
-                    "curl", "-s", "-X", "POST", f"{hcp_api_base}/presign",
-                    "-H", f"Authorization: Bearer {hcp_token}",
-                    "-H", "Content-Type: application/json",
-                    "-d", json.dumps({
-                        "bucket": bucket, "key": key,
-                        "method": method, "expires_in": 3600,
-                    }),
-                ],
-                capture_output=True, text=True, check=True,
+            resp = httpx.post(
+                f"{hcp_api_base}/presign",
+                json={"bucket": bucket, "key": key, "method": method, "expires_in": 3600},
+                headers=headers,
             )
-            return json.loads(result.stdout)["url"]
+            resp.raise_for_status()
+            return resp.json()["url"]
 
         dl = presign("input/data.csv", "get_object")
         ul = presign("output/result.csv", "put_object")
 
-        # Write outputs for Argo parameter extraction
-        from pathlib import Path
         Path("/tmp/download-url").write_text(dl)
         Path("/tmp/upload-url").write_text(ul)
 
@@ -712,24 +707,20 @@ A common pattern: list objects from an HCP bucket, process each one in parallel 
     )
 
 
-    @script(image="curlimages/curl:latest", retry_strategy=RETRY)
+    @script(image="my-registry/python-httpx:3.13", retry_strategy=RETRY)
     def list_objects(hcp_api_base: str, hcp_token: str, bucket: str, prefix: str):
         """List objects from HCP and output their keys as a JSON array."""
-        import subprocess, json
-
-        result = subprocess.run(
-            [
-                "curl", "-s", "-f",
-                f"{hcp_api_base}/s3/buckets/{bucket}/objects?prefix={prefix}&max_keys=100",
-                "-H", f"Authorization: Bearer {hcp_token}",
-            ],
-            capture_output=True, text=True, check=True,
-        )
-        objects = json.loads(result.stdout)["objects"]
-        keys = [obj["key"] for obj in objects]
-        print(f"Found {len(keys)} objects")
-
+        import httpx, json
         from pathlib import Path
+
+        resp = httpx.get(
+            f"{hcp_api_base}/s3/buckets/{bucket}/objects",
+            params={"prefix": prefix, "max_keys": 100},
+            headers={"Authorization": f"Bearer {hcp_token}"},
+        )
+        resp.raise_for_status()
+        keys = [obj["key"] for obj in resp.json()["objects"]]
+        print(f"Found {len(keys)} objects")
         Path("/tmp/keys.json").write_text(json.dumps(keys))
 
 
@@ -772,39 +763,31 @@ A common pattern: list objects from an HCP bucket, process each one in parallel 
         print(f"Result uploaded to {result_key}")
 
 
-    @script(image="curlimages/curl:latest", retry_strategy=RETRY)
+    @script(image="my-registry/python-httpx:3.13", retry_strategy=RETRY)
     def aggregate(hcp_api_base: str, hcp_token: str, bucket: str):
         """List processed results and upload a summary."""
-        import subprocess, json
+        import httpx, json
 
-        result = subprocess.run(
-            [
-                "curl", "-s", "-f",
-                f"{hcp_api_base}/s3/buckets/{bucket}/objects?prefix=processed/&max_keys=1000",
-                "-H", f"Authorization: Bearer {hcp_token}",
-            ],
-            capture_output=True, text=True, check=True,
+        headers = {"Authorization": f"Bearer {hcp_token}"}
+
+        resp = httpx.get(
+            f"{hcp_api_base}/s3/buckets/{bucket}/objects",
+            params={"prefix": "processed/", "max_keys": 1000},
+            headers=headers,
         )
-        count = len(json.loads(result.stdout)["objects"])
+        resp.raise_for_status()
+        count = len(resp.json()["objects"])
         summary = json.dumps({"objects_processed": count, "status": "complete"})
         print(summary)
 
         # Upload summary via presigned URL
-        presign = subprocess.run(
-            [
-                "curl", "-s", "-X", "POST", f"{hcp_api_base}/s3/presign",
-                "-H", f"Authorization: Bearer {hcp_token}",
-                "-H", "Content-Type: application/json",
-                "-d", json.dumps({
-                    "bucket": bucket,
-                    "key": "summaries/batch-result.json",
-                    "method": "put_object", "expires_in": 600,
-                }),
-            ],
-            capture_output=True, text=True, check=True,
+        resp = httpx.post(
+            f"{hcp_api_base}/s3/presign",
+            json={"bucket": bucket, "key": "summaries/batch-result.json", "method": "put_object", "expires_in": 600},
+            headers=headers,
         )
-        upload_url = json.loads(presign.stdout)["url"]
-        subprocess.run(["curl", "-s", "-X", "PUT", upload_url, "-d", summary], check=True)
+        upload_url = resp.json()["url"]
+        httpx.put(upload_url, content=summary.encode()).raise_for_status()
 
 
     WF_PARAMS = {
