@@ -1067,9 +1067,214 @@ spec:
             print("Done: input downloaded and result uploaded via presigned URLs")
 ```
 
+### Hera — Python SDK for Argo Workflows
+
+[Hera](https://github.com/argoproj-labs/hera) lets you define Argo Workflows entirely in Python instead of YAML. Install it with:
+
+```bash
+uv add hera
+```
+
+#### ETL pipeline with HCP S3 artifacts (Hera)
+
+This is the Python equivalent of the YAML DAG above:
+
+```python
+from hera.workflows import (
+    DAG,
+    Artifact,
+    S3Artifact,
+    Workflow,
+    models as m,
+    script,
+)
+
+HCP_S3 = m.S3Artifact(
+    endpoint="hcp-s3.example.com",
+    bucket="datasets",
+    access_key_secret=m.SecretKeySelector(name="hcp-s3-credentials", key="accessKey"),
+    secret_key_secret=m.SecretKeySelector(name="hcp-s3-credentials", key="secretKey"),
+    insecure=False,
+)
+
+
+@script(image="python:3.13-slim")
+def extract_data(manifest: Artifact) -> Artifact:
+    """Read input from HCP S3, write extracted data."""
+    from pathlib import Path
+    import json
+
+    data = json.loads(Path("/tmp/input/manifest.json").read_text())
+    print(f"Loaded {len(data['files'])} files from manifest")
+    Path("/tmp/output/extracted.json").write_text(json.dumps(data))
+
+
+@script(image="python:3.13-slim")
+def transform_data(extracted: Artifact) -> Artifact:
+    """Process the extracted data."""
+    from pathlib import Path
+    import json
+
+    data = json.loads(Path("/tmp/input/extracted.json").read_text())
+    results = {"processed": len(data.get("files", [])), "status": "ok"}
+    Path("/tmp/output/results.json").write_text(json.dumps(results))
+
+
+@script(image="python:3.13-slim")
+def load_results(results: Artifact) -> Artifact:
+    """Upload results back to HCP S3."""
+    from pathlib import Path
+
+    data = Path("/tmp/input/results.json").read_text()
+    print(f"Results uploaded to HCP: {data}")
+
+
+with Workflow(
+    generate_name="hcp-etl-",
+    entrypoint="etl-pipeline",
+    artifact_gc=m.ArtifactGC(strategy="OnWorkflowDeletion"),
+) as w:
+    with DAG(name="etl-pipeline"):
+        ext = extract_data(
+            name="extract",
+            arguments=[
+                S3Artifact(
+                    name="manifest",
+                    path="/tmp/input/manifest.json",
+                    **HCP_S3.dict() | {"key": "manifests/latest.json"},
+                ),
+            ],
+        )
+        trn = transform_data(
+            name="transform",
+            arguments=[ext.get_artifact("extracted").with_name("extracted")],
+        )
+        ld = load_results(
+            name="load",
+            arguments=[trn.get_artifact("results").with_name("results")],
+        )
+        ext >> trn >> ld
+
+w.create()  # submit to the Argo server
+```
+
+#### Presigned URL pipeline (Hera)
+
+A Steps-based workflow using the HCP API to generate presigned URLs:
+
+```python
+from hera.workflows import (
+    Parameter,
+    Steps,
+    Workflow,
+    script,
+)
+
+HCP_BASE = "http://hcp-api.default.svc:8000/api/v1"
+
+
+@script(image="curlimages/curl:latest")
+def generate_presigned_urls(
+    hcp_api_base: str,
+    hcp_token: str,
+    bucket: str,
+):
+    """Generate download and upload presigned URLs from the HCP API."""
+    import subprocess, json
+
+    def presign(key: str, method: str) -> str:
+        result = subprocess.run(
+            [
+                "curl", "-s", "-X", "POST", f"{hcp_api_base}/presign",
+                "-H", f"Authorization: Bearer {hcp_token}",
+                "-H", "Content-Type: application/json",
+                "-d", json.dumps({
+                    "bucket": bucket, "key": key,
+                    "method": method, "expires_in": 3600,
+                }),
+            ],
+            capture_output=True, text=True, check=True,
+        )
+        return json.loads(result.stdout)["url"]
+
+    dl = presign("input/data.csv", "get_object")
+    ul = presign("output/result.csv", "put_object")
+
+    # Write outputs for Argo parameter extraction
+    from pathlib import Path
+    Path("/tmp/download-url").write_text(dl)
+    Path("/tmp/upload-url").write_text(ul)
+
+
+@script(image="python:3.13-slim")
+def process_with_urls(download_url: str, upload_url: str):
+    """Download input, process, and upload result via presigned URLs."""
+    import urllib.request
+
+    urllib.request.urlretrieve(download_url, "/tmp/data.csv")
+
+    with open("/tmp/result.csv", "w") as f:
+        f.write("processed,data\n")
+
+    with open("/tmp/result.csv", "rb") as f:
+        req = urllib.request.Request(upload_url, data=f.read(), method="PUT")
+        urllib.request.urlopen(req)
+
+    print("Done: input downloaded and result uploaded via presigned URLs")
+
+
+with Workflow(
+    generate_name="hcp-presign-",
+    entrypoint="presigned-pipeline",
+    arguments=[
+        Parameter(name="hcp-api-base", value=HCP_BASE),
+        Parameter(name="hcp-token", value="<your-token>"),
+        Parameter(name="bucket", value="datasets"),
+    ],
+) as w:
+    with Steps(name="presigned-pipeline"):
+        urls = generate_presigned_urls(
+            name="generate-urls",
+            arguments={
+                "hcp_api_base": "{{workflow.parameters.hcp-api-base}}",
+                "hcp_token": "{{workflow.parameters.hcp-token}}",
+                "bucket": "{{workflow.parameters.bucket}}",
+            },
+        )
+        process_with_urls(
+            name="process",
+            arguments={
+                "download_url": urls.get_parameter("download-url"),
+                "upload_url": urls.get_parameter("upload-url"),
+            },
+        )
+
+w.create()
+```
+
+#### Running Hera workflows
+
+```bash
+# Submit directly from a script
+uv run --with hera python etl_workflow.py
+
+# Or export to YAML and submit with Argo CLI
+uv run --with hera python -c "
+from etl_workflow import w
+print(w.to_yaml())
+" | argo submit -
+
+# Useful during development: validate without submitting
+uv run --with hera python -c "
+from etl_workflow import w
+print(w.to_yaml())
+" | argo lint -
+```
+
 !!! tip "Which approach to use?"
-    - **S3 artifacts** (first example): Best when Argo has direct network access to HCP S3. Argo handles download/upload automatically. Requires the S3 credentials Secret.
-    - **Presigned URLs** (second example): Best when pods cannot reach HCP directly or you want to avoid distributing S3 credentials. The HCP API generates short-lived URLs that anyone can use.
+    - **S3 artifacts** (YAML or Hera DAG): Best when Argo has direct network access to HCP S3. Argo handles download/upload automatically. Requires the S3 credentials Secret.
+    - **Presigned URLs** (YAML or Hera Steps): Best when pods cannot reach HCP directly or you want to avoid distributing S3 credentials. The HCP API generates short-lived URLs that anyone can use.
+    - **YAML vs Hera**: Use YAML for simple workflows or when non-Python teams maintain them. Use Hera when you want type safety, IDE autocompletion, and Python-native DAG composition (`>>` operator).
 
 ---
 
