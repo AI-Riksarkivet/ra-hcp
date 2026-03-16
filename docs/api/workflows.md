@@ -1271,9 +1271,351 @@ print(w.to_yaml())
 " | argo lint -
 ```
 
+### Batch processing — fan-out over HCP objects
+
+A common pattern: list objects from an HCP bucket, process each one in parallel (fan-out), then aggregate results (fan-in).
+
+#### Batch processing (YAML)
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: hcp-batch-
+spec:
+  entrypoint: batch-pipeline
+  arguments:
+    parameters:
+      - name: hcp-api-base
+        value: "http://hcp-api.default.svc:8000/api/v1"
+      - name: hcp-token
+        value: "<your-token>"
+      - name: bucket
+        value: "datasets"
+      - name: prefix
+        value: "incoming/"
+  templates:
+    # ── Orchestrator DAG ─────────────────────────────────────────
+    - name: batch-pipeline
+      dag:
+        tasks:
+          - name: discover
+            template: list-objects
+          - name: process
+            template: fan-out
+            dependencies: [discover]
+            arguments:
+              parameters:
+                - name: object-keys
+                  value: "{{tasks.discover.outputs.parameters.keys}}"
+          - name: summarize
+            template: aggregate
+            dependencies: [process]
+
+    # ── Step 1: List objects from HCP via the API ────────────────
+    - name: list-objects
+      retryStrategy:
+        limit: 3
+        backoff:
+          duration: "5s"
+          factor: 2
+      script:
+        image: curlimages/curl:latest
+        command: [sh]
+        source: |
+          BASE="{{workflow.parameters.hcp-api-base}}"
+          TOKEN="{{workflow.parameters.hcp-token}}"
+          BUCKET="{{workflow.parameters.bucket}}"
+          PREFIX="{{workflow.parameters.prefix}}"
+
+          RESP=$(curl -s -f "$BASE/s3/buckets/$BUCKET/objects?prefix=$PREFIX&max_keys=100" \
+            -H "Authorization: Bearer $TOKEN")
+
+          # Extract object keys as a JSON array
+          echo "$RESP" | jq '[.objects[].key]' > /tmp/keys.json
+          echo "Found $(echo "$RESP" | jq '.objects | length') objects"
+          cat /tmp/keys.json
+      outputs:
+        parameters:
+          - name: keys
+            valueFrom:
+              path: /tmp/keys.json
+
+    # ── Step 2: Fan out — one pod per object ─────────────────────
+    - name: fan-out
+      inputs:
+        parameters:
+          - name: object-keys
+      steps:
+        - - name: process-object
+            template: process-single
+            arguments:
+              parameters:
+                - name: key
+                  value: "{{item}}"
+            withParam: "{{inputs.parameters.object-keys}}"
+
+    - name: process-single
+      retryStrategy:
+        limit: 2
+        backoff:
+          duration: "10s"
+          factor: 2
+      inputs:
+        parameters:
+          - name: key
+      script:
+        image: python:3.13-slim
+        command: [python]
+        source: |
+          import urllib.request, json
+
+          BASE = "{{workflow.parameters.hcp-api-base}}"
+          TOKEN = "{{workflow.parameters.hcp-token}}"
+          BUCKET = "{{workflow.parameters.bucket}}"
+          KEY = "{{inputs.parameters.key}}"
+
+          # Get a presigned download URL from the HCP API
+          req = urllib.request.Request(
+              f"{BASE}/s3/presign",
+              data=json.dumps({
+                  "bucket": BUCKET, "key": KEY,
+                  "method": "get_object", "expires_in": 600,
+              }).encode(),
+              headers={
+                  "Authorization": f"Bearer {TOKEN}",
+                  "Content-Type": "application/json",
+              },
+          )
+          url = json.loads(urllib.request.urlopen(req).read())["url"]
+
+          # Download and process the object
+          local_path = "/tmp/data"
+          urllib.request.urlretrieve(url, local_path)
+          import os
+          size = os.path.getsize(local_path)
+          result = {"key": KEY, "size": size, "status": "processed"}
+          print(json.dumps(result))
+
+          # Upload result back via presigned PUT
+          result_key = KEY.replace("incoming/", "processed/") + ".result.json"
+          req = urllib.request.Request(
+              f"{BASE}/s3/presign",
+              data=json.dumps({
+                  "bucket": BUCKET, "key": result_key,
+                  "method": "put_object", "expires_in": 600,
+              }).encode(),
+              headers={
+                  "Authorization": f"Bearer {TOKEN}",
+                  "Content-Type": "application/json",
+              },
+          )
+          upload_url = json.loads(urllib.request.urlopen(req).read())["url"]
+          req = urllib.request.Request(
+              upload_url,
+              data=json.dumps(result).encode(),
+              method="PUT",
+          )
+          urllib.request.urlopen(req)
+          print(f"Result uploaded to {result_key}")
+
+    # ── Step 3: Fan in — aggregate results ───────────────────────
+    - name: aggregate
+      retryStrategy:
+        limit: 2
+      script:
+        image: curlimages/curl:latest
+        command: [sh]
+        source: |
+          BASE="{{workflow.parameters.hcp-api-base}}"
+          TOKEN="{{workflow.parameters.hcp-token}}"
+          BUCKET="{{workflow.parameters.bucket}}"
+
+          # List all processed results
+          RESULTS=$(curl -s -f "$BASE/s3/buckets/$BUCKET/objects?prefix=processed/&max_keys=1000" \
+            -H "Authorization: Bearer $TOKEN")
+
+          COUNT=$(echo "$RESULTS" | jq '.objects | length')
+          SUMMARY="{\"workflow\":\"{{workflow.name}}\",\"objects_processed\":$COUNT,\"status\":\"complete\"}"
+          echo "$SUMMARY"
+
+          # Upload summary via presigned URL
+          PRESIGN=$(curl -s -X POST "$BASE/s3/presign" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"bucket\":\"$BUCKET\",\"key\":\"summaries/{{workflow.name}}.json\",\"method\":\"put_object\",\"expires_in\":600}")
+          UPLOAD_URL=$(echo "$PRESIGN" | jq -r '.url')
+          curl -s -X PUT "$UPLOAD_URL" -d "$SUMMARY"
+          echo "Summary uploaded"
+```
+
+#### Batch processing (Hera)
+
+```python
+from hera.workflows import (
+    DAG,
+    Parameter,
+    Steps,
+    Workflow,
+    models as m,
+    script,
+)
+
+HCP_BASE = "http://hcp-api.default.svc:8000/api/v1"
+
+RETRY = m.RetryStrategy(
+    limit="3",
+    backoff=m.Backoff(duration="5s", factor=2),
+)
+
+
+@script(image="curlimages/curl:latest", retry_strategy=RETRY)
+def list_objects(hcp_api_base: str, hcp_token: str, bucket: str, prefix: str):
+    """List objects from HCP and output their keys as a JSON array."""
+    import subprocess, json
+
+    result = subprocess.run(
+        [
+            "curl", "-s", "-f",
+            f"{hcp_api_base}/s3/buckets/{bucket}/objects?prefix={prefix}&max_keys=100",
+            "-H", f"Authorization: Bearer {hcp_token}",
+        ],
+        capture_output=True, text=True, check=True,
+    )
+    objects = json.loads(result.stdout)["objects"]
+    keys = [obj["key"] for obj in objects]
+    print(f"Found {len(keys)} objects")
+
+    from pathlib import Path
+    Path("/tmp/keys.json").write_text(json.dumps(keys))
+
+
+@script(
+    image="python:3.13-slim",
+    retry_strategy=m.RetryStrategy(limit="2", backoff=m.Backoff(duration="10s", factor=2)),
+)
+def process_single(hcp_api_base: str, hcp_token: str, bucket: str, key: str):
+    """Download an object via presigned URL, process it, upload the result."""
+    import urllib.request, json, os
+
+    # Presign download
+    req = urllib.request.Request(
+        f"{hcp_api_base}/s3/presign",
+        data=json.dumps({
+            "bucket": bucket, "key": key,
+            "method": "get_object", "expires_in": 600,
+        }).encode(),
+        headers={
+            "Authorization": f"Bearer {hcp_token}",
+            "Content-Type": "application/json",
+        },
+    )
+    url = json.loads(urllib.request.urlopen(req).read())["url"]
+
+    # Download and process
+    urllib.request.urlretrieve(url, "/tmp/data")
+    size = os.path.getsize("/tmp/data")
+    result = {"key": key, "size": size, "status": "processed"}
+    print(json.dumps(result))
+
+    # Presign upload and write result
+    result_key = key.replace("incoming/", "processed/") + ".result.json"
+    req = urllib.request.Request(
+        f"{hcp_api_base}/s3/presign",
+        data=json.dumps({
+            "bucket": bucket, "key": result_key,
+            "method": "put_object", "expires_in": 600,
+        }).encode(),
+        headers={
+            "Authorization": f"Bearer {hcp_token}",
+            "Content-Type": "application/json",
+        },
+    )
+    upload_url = json.loads(urllib.request.urlopen(req).read())["url"]
+    req = urllib.request.Request(upload_url, data=json.dumps(result).encode(), method="PUT")
+    urllib.request.urlopen(req)
+    print(f"Result uploaded to {result_key}")
+
+
+@script(image="curlimages/curl:latest", retry_strategy=RETRY)
+def aggregate(hcp_api_base: str, hcp_token: str, bucket: str):
+    """List processed results and upload a summary."""
+    import subprocess, json
+
+    result = subprocess.run(
+        [
+            "curl", "-s", "-f",
+            f"{hcp_api_base}/s3/buckets/{bucket}/objects?prefix=processed/&max_keys=1000",
+            "-H", f"Authorization: Bearer {hcp_token}",
+        ],
+        capture_output=True, text=True, check=True,
+    )
+    count = len(json.loads(result.stdout)["objects"])
+    summary = json.dumps({"objects_processed": count, "status": "complete"})
+    print(summary)
+
+    # Upload summary via presigned URL
+    presign = subprocess.run(
+        [
+            "curl", "-s", "-X", "POST", f"{hcp_api_base}/s3/presign",
+            "-H", f"Authorization: Bearer {hcp_token}",
+            "-H", "Content-Type: application/json",
+            "-d", json.dumps({
+                "bucket": bucket,
+                "key": "summaries/batch-result.json",
+                "method": "put_object", "expires_in": 600,
+            }),
+        ],
+        capture_output=True, text=True, check=True,
+    )
+    upload_url = json.loads(presign.stdout)["url"]
+    subprocess.run(["curl", "-s", "-X", "PUT", upload_url, "-d", summary], check=True)
+
+
+WF_PARAMS = {
+    "hcp_api_base": "{{workflow.parameters.hcp-api-base}}",
+    "hcp_token": "{{workflow.parameters.hcp-token}}",
+    "bucket": "{{workflow.parameters.bucket}}",
+}
+
+with Workflow(
+    generate_name="hcp-batch-",
+    entrypoint="batch-pipeline",
+    arguments=[
+        Parameter(name="hcp-api-base", value=HCP_BASE),
+        Parameter(name="hcp-token", value="<your-token>"),
+        Parameter(name="bucket", value="datasets"),
+        Parameter(name="prefix", value="incoming/"),
+    ],
+) as w:
+    with DAG(name="batch-pipeline"):
+        # Step 1: Discover objects
+        disc = list_objects(
+            name="discover",
+            arguments={**WF_PARAMS, "prefix": "{{workflow.parameters.prefix}}"},
+        )
+        # Step 2: Fan out — process each object in parallel
+        with Steps(name="fan-out") as fan:
+            process_single(
+                name="process-object",
+                arguments={
+                    **WF_PARAMS,
+                    "key": "{{item}}",
+                },
+                with_param=disc.get_parameter("keys"),
+            )
+        # Step 3: Aggregate results
+        agg = aggregate(name="summarize", arguments=WF_PARAMS)
+
+        disc >> fan >> agg
+
+w.create()
+```
+
 !!! tip "Which approach to use?"
     - **S3 artifacts** (YAML or Hera DAG): Best when Argo has direct network access to HCP S3. Argo handles download/upload automatically. Requires the S3 credentials Secret.
     - **Presigned URLs** (YAML or Hera Steps): Best when pods cannot reach HCP directly or you want to avoid distributing S3 credentials. The HCP API generates short-lived URLs that anyone can use.
+    - **Batch fan-out**: Use `withParam` (YAML) or `with_param` (Hera) to process N objects in parallel. Argo handles scheduling and concurrency limits.
     - **YAML vs Hera**: Use YAML for simple workflows or when non-Python teams maintain them. Use Hera when you want type safety, IDE autocompletion, and Python-native DAG composition (`>>` operator).
 
 ---
@@ -1602,3 +1944,278 @@ HCP follows S3 semantics for consistency:
             delay = min(delay * 2, 2.0)
         return False
     ```
+
+### Argo-native retries and timeouts
+
+Argo Workflows has built-in retry and timeout support at the template level. Use these **in addition to** application-level retries -- Argo retries restart the entire pod, which handles OOM kills, node evictions, and infrastructure failures that application code cannot catch.
+
+#### retryStrategy (YAML)
+
+```yaml
+templates:
+  - name: process-data
+    retryStrategy:
+      limit: 3                    # max 3 retries (4 total attempts)
+      retryPolicy: Always         # retry on both errors and node failures
+      backoff:
+        duration: "10s"           # initial delay
+        factor: 2                 # exponential: 10s, 20s, 40s
+        maxDuration: "2m"         # cap at 2 minutes
+    activeDeadlineSeconds: 600    # hard timeout: kill pod after 10 min
+    container:
+      image: python:3.13-slim
+      command: [python, -c]
+      args:
+        - |
+          # your processing code here
+          print("processing...")
+```
+
+#### retryStrategy (Hera)
+
+```python
+from hera.workflows import models as m, script
+
+@script(
+    image="python:3.13-slim",
+    retry_strategy=m.RetryStrategy(
+        limit="3",
+        retry_policy="Always",
+        backoff=m.Backoff(duration="10s", factor=2, max_duration="2m"),
+    ),
+    active_deadline_seconds=600,
+)
+def process_data():
+    """Processing with Argo-managed retries and timeout."""
+    print("processing...")
+```
+
+### Cleanup on failure — exit handlers
+
+Use Argo exit handlers to guarantee cleanup runs regardless of workflow success or failure. This is essential for aborting in-progress multipart uploads, deleting partial results, or releasing resources.
+
+#### Exit handler (YAML)
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: hcp-safe-upload-
+spec:
+  entrypoint: upload-pipeline
+  onExit: cleanup                    # always runs, even on failure
+  arguments:
+    parameters:
+      - name: hcp-api-base
+        value: "http://hcp-api.default.svc:8000/api/v1"
+      - name: hcp-token
+        value: "<your-token>"
+      - name: bucket
+        value: "datasets"
+  templates:
+    - name: upload-pipeline
+      steps:
+        - - name: upload
+            template: do-upload
+
+    - name: do-upload
+      retryStrategy:
+        limit: 2
+      script:
+        image: python:3.13-slim
+        command: [python]
+        source: |
+          # ... upload logic ...
+          print("uploading data")
+
+    # ── Guaranteed cleanup ──────────────────────────────────────
+    - name: cleanup
+      script:
+        image: curlimages/curl:latest
+        command: [sh]
+        source: |
+          BASE="{{workflow.parameters.hcp-api-base}}"
+          TOKEN="{{workflow.parameters.hcp-token}}"
+          BUCKET="{{workflow.parameters.bucket}}"
+          STATUS="{{workflow.status}}"    # Succeeded / Failed / Error
+
+          if [ "$STATUS" != "Succeeded" ]; then
+            echo "Workflow $STATUS -- cleaning up partial uploads..."
+
+            # Abort any in-progress multipart uploads
+            # Delete partial results to avoid polluting the bucket
+            curl -s -X POST "$BASE/s3/buckets/$BUCKET/objects/delete" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"keys\": [\"partial/{{workflow.name}}/\"]}" || true
+
+            echo "Cleanup complete"
+          else
+            echo "Workflow succeeded -- no cleanup needed"
+          fi
+```
+
+#### Exit handler (Hera)
+
+```python
+from hera.workflows import DAG, Parameter, Steps, Workflow, models as m, script
+
+HCP_BASE = "http://hcp-api.default.svc:8000/api/v1"
+
+
+@script(image="python:3.13-slim", retry_strategy=m.RetryStrategy(limit="2"))
+def do_upload(hcp_api_base: str, hcp_token: str, bucket: str):
+    """Upload data to HCP."""
+    print("uploading data")
+
+
+@script(image="curlimages/curl:latest")
+def cleanup(hcp_api_base: str, hcp_token: str, bucket: str):
+    """Clean up partial uploads on failure. Runs as onExit handler."""
+    import subprocess, os
+
+    status = os.environ.get("ARGO_WORKFLOW_STATUS", "Unknown")
+    if status != "Succeeded":
+        print(f"Workflow {status} -- cleaning up...")
+        subprocess.run(
+            [
+                "curl", "-s", "-X", "POST",
+                f"{hcp_api_base}/s3/buckets/{bucket}/objects/delete",
+                "-H", f"Authorization: Bearer {hcp_token}",
+                "-H", "Content-Type: application/json",
+                "-d", '{"keys": ["partial/"]}',
+            ],
+            check=False,  # don't fail cleanup on errors
+        )
+        print("Cleanup complete")
+    else:
+        print("Workflow succeeded -- no cleanup needed")
+
+
+with Workflow(
+    generate_name="hcp-safe-upload-",
+    entrypoint="upload-pipeline",
+    on_exit="cleanup",
+    arguments=[
+        Parameter(name="hcp-api-base", value=HCP_BASE),
+        Parameter(name="hcp-token", value="<your-token>"),
+        Parameter(name="bucket", value="datasets"),
+    ],
+) as w:
+    with Steps(name="upload-pipeline"):
+        do_upload(
+            name="upload",
+            arguments={
+                "hcp_api_base": "{{workflow.parameters.hcp-api-base}}",
+                "hcp_token": "{{workflow.parameters.hcp-token}}",
+                "bucket": "{{workflow.parameters.bucket}}",
+            },
+        )
+
+    # Exit handler template (registered by name via on_exit="cleanup")
+    cleanup(
+        name="cleanup",
+        arguments={
+            "hcp_api_base": "{{workflow.parameters.hcp-api-base}}",
+            "hcp_token": "{{workflow.parameters.hcp-token}}",
+            "bucket": "{{workflow.parameters.bucket}}",
+        },
+    )
+
+w.create()
+```
+
+### ACID-like guarantees for workflows
+
+Object storage is not a relational database -- there are no transactions. But you can approximate ACID properties through careful workflow design:
+
+| Property | S3/HCP reality | How to achieve it |
+|----------|---------------|-------------------|
+| **Atomicity** | Individual PUTs are atomic, but a multi-object "transaction" is not. | Use exit handlers (`onExit`) to clean up partial state on failure. Write to a staging prefix first, then "commit" by copying to the final location. |
+| **Consistency** | New PUTs are read-after-write consistent. Overwrites and deletes are eventually consistent. | Use `HEAD` polling after writes ([`wait_for_object`](#consistency-considerations) above). Use unique keys per workflow run (`{{workflow.name}}`) to avoid overwrites. |
+| **Isolation** | No locking — concurrent writers to the same key cause last-write-wins. | Namespace outputs by workflow run ID: `results/{{workflow.name}}/output.json`. Never write to a shared key from parallel pods. |
+| **Durability** | S3 objects are durable once the PUT succeeds (HCP replicates across nodes). | Verify uploads with a `HEAD` request checking `Content-Length` and `ETag`. For critical data, use versioning-enabled namespaces. |
+
+#### Staged-commit pattern
+
+Write results to a temporary prefix, verify them, then "commit" by copying to the final location. On failure, the exit handler deletes the staging prefix.
+
+```python
+import httpx
+
+BASE = "http://localhost:8000/api/v1"
+
+async def staged_upload(
+    token: str,
+    bucket: str,
+    final_key: str,
+    data: bytes,
+    workflow_id: str,
+):
+    """Upload to a staging key, verify, then copy to the final location."""
+    headers = {"Authorization": f"Bearer {token}"}
+    staging_key = f"staging/{workflow_id}/{final_key}"
+
+    async with httpx.AsyncClient(base_url=BASE, headers=headers, timeout=60.0) as c:
+        # 1. Write to staging
+        resp = await c.put(
+            f"/s3/buckets/{bucket}/objects/{staging_key}",
+            content=data,
+        )
+        resp.raise_for_status()
+
+        # 2. Verify — HEAD to confirm size
+        resp = await c.head(f"/s3/buckets/{bucket}/objects/{staging_key}")
+        resp.raise_for_status()
+        actual_size = int(resp.headers.get("content-length", 0))
+        if actual_size != len(data):
+            # Mismatch — delete staging and raise
+            await c.delete(f"/s3/buckets/{bucket}/objects/{staging_key}")
+            raise RuntimeError(
+                f"Size mismatch: expected {len(data)}, got {actual_size}"
+            )
+
+        # 3. Commit — copy from staging to final
+        resp = await c.post(
+            f"/s3/buckets/{bucket}/objects/{final_key}/copy",
+            json={"source_bucket": bucket, "source_key": staging_key},
+        )
+        resp.raise_for_status()
+
+        # 4. Clean up staging
+        await c.delete(f"/s3/buckets/{bucket}/objects/{staging_key}")
+
+        print(f"Committed {final_key} ({actual_size} bytes)")
+```
+
+```bash
+# Bash equivalent — staged commit
+STAGING_KEY="staging/$(uuidgen)/$FINAL_KEY"
+
+# 1. Write to staging
+curl -s -X PUT "$BASE/s3/buckets/$BUCKET/objects/$STAGING_KEY" \
+  -H "$AUTH" --data-binary @"$LOCAL_FILE"
+
+# 2. Verify
+SIZE=$(curl -s -I "$BASE/s3/buckets/$BUCKET/objects/$STAGING_KEY" \
+  -H "$AUTH" | grep -i content-length | awk '{print $2}' | tr -d '\r')
+EXPECTED=$(stat -f%z "$LOCAL_FILE")
+if [ "$SIZE" != "$EXPECTED" ]; then
+  echo "ERROR: Size mismatch ($SIZE != $EXPECTED)" >&2
+  curl -s -X DELETE "$BASE/s3/buckets/$BUCKET/objects/$STAGING_KEY" -H "$AUTH"
+  exit 1
+fi
+
+# 3. Commit — copy to final location
+curl -s -X POST "$BASE/s3/buckets/$BUCKET/objects/$FINAL_KEY/copy" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d "{\"source_bucket\": \"$BUCKET\", \"source_key\": \"$STAGING_KEY\"}"
+
+# 4. Clean up staging
+curl -s -X DELETE "$BASE/s3/buckets/$BUCKET/objects/$STAGING_KEY" -H "$AUTH"
+
+echo "Committed $FINAL_KEY"
+```
+
+!!! warning "Multipart uploads are not atomic"
+    A multipart upload is only visible after `CompleteMultipartUpload`. If the workflow fails between uploading parts and completing, the parts remain as invisible orphans consuming storage. Always use exit handlers to call `AbortMultipartUpload` on failure, and consider enabling `artifactGC` on the workflow to clean up Argo-managed artifacts.
