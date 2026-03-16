@@ -23,6 +23,7 @@
 		type ECTopology,
 		type TenantCandidate,
 	} from '$lib/remote/replication.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let topologyName = $derived(page.params.topology ?? '');
 
@@ -83,7 +84,7 @@
 			addTenantOpen = false;
 			addTenantName = '';
 		} catch (err) {
-			addTenantError = err instanceof Error ? err.message : 'Failed to add tenant';
+			addTenantError = getErrorMessage(err, 'Failed to add tenant');
 		} finally {
 			addTenantLoading = false;
 		}
@@ -98,7 +99,7 @@
 			}).updates(topologyData);
 			toast.success(`Tenant "${removeTenantName}" removed from topology`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to remove tenant');
+			toast.error(getErrorMessage(err, 'Failed to remove tenant'));
 		}
 	}
 
@@ -109,7 +110,7 @@
 			await retire_ec_topology({ topologyName }).updates(topologyData);
 			toast.success(`Topology "${topologyName}" retired`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to retire topology');
+			toast.error(getErrorMessage(err, 'Failed to retire topology'));
 		} finally {
 			retiring = false;
 		}

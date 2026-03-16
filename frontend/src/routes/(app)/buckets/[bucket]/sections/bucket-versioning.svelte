@@ -9,6 +9,7 @@
 		set_bucket_versioning,
 		type BucketVersioning,
 	} from '$lib/remote/buckets.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		bucket,
@@ -29,7 +30,7 @@
 			await set_bucket_versioning({ bucket, status: newStatus }).updates(versioningData);
 			toast.success(`Versioning ${newStatus.toLowerCase()}`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to update versioning');
+			toast.error(getErrorMessage(err, 'Failed to update versioning'));
 		} finally {
 			saving = false;
 		}

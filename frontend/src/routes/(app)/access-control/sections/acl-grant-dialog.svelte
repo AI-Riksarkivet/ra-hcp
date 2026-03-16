@@ -17,6 +17,7 @@
 	import type { User, GroupAccount } from '$lib/constants.js';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { ACL_PERMISSIONS, permissionLabel } from '../acl-constants.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	interface Props {
 		tenant?: string;
@@ -140,7 +141,7 @@
 			granteeId = '';
 			grantBucketSelection = {};
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to grant access');
+			toast.error(getErrorMessage(err, 'Failed to grant access'));
 		} finally {
 			granting = false;
 		}

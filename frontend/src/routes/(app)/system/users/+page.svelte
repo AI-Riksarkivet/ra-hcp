@@ -14,6 +14,7 @@
 		change_system_user_password,
 		type SystemUser,
 	} from '$lib/remote/system.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let usersData = $derived(get_system_users({}));
 	let users = $derived((usersData?.current ?? []) as SystemUser[]);
@@ -53,7 +54,7 @@
 			toast.success(`Password changed for ${selectedUser}`);
 			changePasswordOpen = false;
 		} catch (err) {
-			passwordError = err instanceof Error ? err.message : 'Failed to change password';
+			passwordError = getErrorMessage(err, 'Failed to change password');
 		} finally {
 			passwordLoading = false;
 		}

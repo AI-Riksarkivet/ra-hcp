@@ -24,6 +24,7 @@
 		type LinkContent,
 		type LinkSchedule,
 	} from '$lib/remote/replication.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let linkName = $derived(page.params.link);
 
@@ -55,7 +56,7 @@
 			await action_replication_link({ linkName, action }).updates(linkData);
 			toast.success(`${label} completed successfully`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : `Failed to ${label.toLowerCase()}`);
+			toast.error(getErrorMessage(err, `Failed to ${label.toLowerCase()}`));
 		} finally {
 			actionLoading = '';
 		}
@@ -78,7 +79,7 @@
 			addTenantName = '';
 			addTenantOpen = false;
 		} catch (err) {
-			addTenantError = err instanceof Error ? err.message : 'Failed to add tenant to link';
+			addTenantError = getErrorMessage(err, 'Failed to add tenant to link');
 		} finally {
 			addTenantLoading = false;
 		}
@@ -94,7 +95,7 @@
 			await remove_tenant_from_link({ linkName, tenantName }).updates(contentData);
 			toast.success(`Tenant "${tenantName}" removed from link`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : `Failed to remove tenant "${tenantName}"`);
+			toast.error(getErrorMessage(err, `Failed to remove tenant "${tenantName}"`));
 		} finally {
 			removingTenant = '';
 		}

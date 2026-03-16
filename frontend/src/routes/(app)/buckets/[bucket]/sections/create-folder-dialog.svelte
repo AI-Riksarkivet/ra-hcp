@@ -4,6 +4,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { create_folder } from '$lib/remote/buckets.remote.js';
 	import { toast } from 'svelte-sonner';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		open = $bindable(false),
@@ -46,7 +47,7 @@
 			folderName = '';
 			oncreated();
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Failed to create folder';
+			createError = getErrorMessage(err, 'Failed to create folder');
 		} finally {
 			creating = false;
 		}

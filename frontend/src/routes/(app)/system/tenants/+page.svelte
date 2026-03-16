@@ -17,6 +17,7 @@
 		delete_tenant,
 		type TenantListEntry,
 	} from '$lib/remote/system.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let tenantsData = $derived(get_all_tenants({}));
 	let tenants = $derived((tenantsData?.current ?? []) as TenantListEntry[]);
@@ -54,7 +55,7 @@
 			createUsername = '';
 			createPassword = '';
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Failed to create tenant';
+			createError = getErrorMessage(err, 'Failed to create tenant');
 		} finally {
 			createLoading = false;
 		}
@@ -65,7 +66,7 @@
 			await delete_tenant({ name: deleteName }).updates(tenantsData);
 			toast.success(`Tenant "${deleteName}" deleted`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete tenant');
+			toast.error(getErrorMessage(err, 'Failed to delete tenant'));
 		}
 	}
 </script>

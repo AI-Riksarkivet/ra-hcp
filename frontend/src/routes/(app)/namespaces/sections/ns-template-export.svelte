@@ -8,6 +8,7 @@
 	import { Download, Search, Eye, Loader2 } from 'lucide-svelte';
 	import { export_namespace_configs, type Namespace } from '$lib/remote/namespaces.remote.js';
 	import NsExportPreviewDialog from './ns-export-preview-dialog.svelte';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -59,7 +60,7 @@
 			URL.revokeObjectURL(url);
 			toast.success(`Exported ${selected.size} namespace template(s)`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Export failed');
+			toast.error(getErrorMessage(err, 'Export failed'));
 		} finally {
 			exporting = false;
 		}
@@ -74,7 +75,7 @@
 			const result = await export_namespace_configs({ tenant, names: [...selected] });
 			previewData = result as Record<string, unknown>;
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to load preview');
+			toast.error(getErrorMessage(err, 'Failed to load preview'));
 			previewOpen = false;
 		} finally {
 			previewLoading = false;

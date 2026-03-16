@@ -1,4 +1,5 @@
 import { toast } from "svelte-sonner";
+import { getErrorMessage } from "$lib/utils/get-error-message.js";
 
 interface UseDeleteOptions {
   entityName: string;
@@ -28,10 +29,7 @@ export function useDelete(opts: UseDeleteOptions) {
       await deleteFn();
       toast.success(`Deleted ${opts.entityName} "${deleteTarget}"`);
     } catch (err) {
-      const msg = err instanceof Error
-        ? err.message
-        : `Failed to delete ${opts.entityName}`;
-      toast.error(msg);
+      toast.error(getErrorMessage(err, `Failed to delete ${opts.entityName}`));
     } finally {
       deleting = false;
       deleteDialogOpen = false;
@@ -54,9 +52,7 @@ export function useDelete(opts: UseDeleteOptions) {
         successCount++;
       } catch (err) {
         failCount++;
-        if (err instanceof Error && err.message) {
-          errors.push(`${names[i]}: ${err.message}`);
-        }
+        errors.push(`${names[i]}: ${getErrorMessage(err, "Unknown error")}`);
       }
     }
     if (successCount > 0) {

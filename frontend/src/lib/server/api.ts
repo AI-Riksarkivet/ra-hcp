@@ -1,4 +1,5 @@
 import { getRequestEvent } from "$app/server";
+import { error } from "@sveltejs/kit";
 import { BACKEND_URL } from "$lib/server/env.js";
 
 export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -20,6 +21,6 @@ export async function throwIfNotOk(
     const detail = typeof err.detail === "string"
       ? err.detail
       : JSON.stringify(err.detail);
-    throw new Error(detail);
+    error(res.status, detail);
   }
 }

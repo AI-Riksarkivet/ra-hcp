@@ -6,6 +6,7 @@
 	import FormDialog from '$lib/components/custom/form-dialog/form-dialog.svelte';
 	import { get_users, create_user } from '$lib/remote/users.remote.js';
 	import { AVAILABLE_ROLES } from '$lib/constants.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -40,7 +41,7 @@
 			open = false;
 			form.reset();
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Failed to create user';
+			createError = getErrorMessage(err, 'Failed to create user');
 		} finally {
 			creating = false;
 		}

@@ -36,6 +36,7 @@
 		type ObjectQueryResponse,
 	} from '$lib/remote/search.remote.js';
 	import DataTableActions from '../data-table/data-table-actions.svelte';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -149,7 +150,7 @@
 				sort: buildSortParam(),
 			});
 		} catch (err) {
-			objectError = err instanceof Error ? err.message : 'Object query failed';
+			objectError = getErrorMessage(err, 'Object query failed');
 			objectResults = null;
 		} finally {
 			objectLoading = false;
@@ -215,11 +216,13 @@
 					checked: allSelected,
 					onCheckedChange: toggleAll,
 					disabled: filteredResults.length === 0,
+					'aria-label': 'Select all rows',
 				}),
 			cell: ({ row }) =>
 				renderComponent(DataTableCheckbox, {
 					checked: selected.has(itemKey(row.original)),
 					onCheckedChange: () => toggleOne(itemKey(row.original)),
+					'aria-label': `Select ${row.original.utf8Name}`,
 				}),
 			meta: { headerClass: 'w-10', cellClass: 'px-4 py-3' },
 		},

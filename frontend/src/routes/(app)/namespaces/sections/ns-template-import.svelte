@@ -26,6 +26,7 @@
 	} from '$lib/types/ns-templates.js';
 	import NsImportEditor from './ns-import-editor.svelte';
 	import StepProgress from '$lib/components/custom/step-progress/step-progress.svelte';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -180,7 +181,7 @@
 				importSteps[stepIdx].status = 'done';
 			} catch (err) {
 				importSteps[stepIdx].status = 'failed';
-				importSteps[stepIdx].error = err instanceof Error ? err.message : 'Unknown error';
+				importSteps[stepIdx].error = getErrorMessage(err, 'Unknown error');
 			}
 			importSteps = [...importSteps];
 			stepIdx++;

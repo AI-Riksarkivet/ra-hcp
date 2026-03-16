@@ -29,6 +29,7 @@
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { PERMISSION_MAP, permissionColor, permissionLabel } from '../acl-constants.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	interface Props {
 		tenant?: string;
@@ -196,7 +197,7 @@
 
 			toast.success(`Revoked ${permissionLabel(permValue)} on ${row.bucket}`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to revoke grant');
+			toast.error(getErrorMessage(err, 'Failed to revoke grant'));
 		} finally {
 			revoking = null;
 		}

@@ -4,6 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import FormDialog from '$lib/components/custom/form-dialog/form-dialog.svelte';
 	import { get_buckets, create_bucket } from '$lib/remote/buckets.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		open = $bindable(false),
@@ -49,7 +50,7 @@
 				form.reset();
 			}
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Failed to create bucket';
+			createError = getErrorMessage(err, 'Failed to create bucket');
 		} finally {
 			creating = false;
 		}

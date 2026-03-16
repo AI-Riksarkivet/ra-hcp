@@ -26,6 +26,7 @@
 		type ReplicationCertificate,
 		type ReplicationLink,
 	} from '$lib/remote/replication.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let serviceData = $derived(get_replication_service({}));
 	let service = $derived((serviceData?.current ?? {}) as ReplicationServiceSettings);
@@ -81,7 +82,7 @@
 			createCompression = false;
 			createEncryption = true;
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Failed to create replication link';
+			createError = getErrorMessage(err, 'Failed to create replication link');
 		} finally {
 			createLoading = false;
 		}
@@ -92,7 +93,7 @@
 			await delete_replication_link({ linkName: deleteLinkName }).updates(linksData);
 			toast.success(`Replication link "${deleteLinkName}" deleted`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete replication link');
+			toast.error(getErrorMessage(err, 'Failed to delete replication link'));
 		}
 	}
 
@@ -101,7 +102,7 @@
 			await delete_replication_certificate({ certificateId: deleteCertId }).updates(certsData);
 			toast.success('Certificate deleted');
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete certificate');
+			toast.error(getErrorMessage(err, 'Failed to delete certificate'));
 		}
 	}
 
@@ -121,7 +122,7 @@
 				`Replication link "${linkName}" ${action === 'suspend' ? 'suspended' : 'resumed'}`
 			);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : `Failed to ${action} replication link`);
+			toast.error(getErrorMessage(err, `Failed to ${action} replication link`));
 		}
 	}
 

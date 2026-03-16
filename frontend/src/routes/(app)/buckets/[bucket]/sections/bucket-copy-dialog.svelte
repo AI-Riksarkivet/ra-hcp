@@ -6,6 +6,7 @@
 	import { Loader2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import { copy_object, get_buckets } from '$lib/remote/buckets.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		bucket,
@@ -55,7 +56,7 @@
 			if (destBucket === bucket) oncopied();
 			close();
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to copy object');
+			toast.error(getErrorMessage(err, 'Failed to copy object'));
 		} finally {
 			copying = false;
 		}

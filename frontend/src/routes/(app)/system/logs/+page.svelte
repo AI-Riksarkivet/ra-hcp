@@ -14,6 +14,7 @@
 		cancel_log_download,
 		type LogStatus,
 	} from '$lib/remote/system.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let statusData = $derived(get_log_status({}));
 	let status = $derived((statusData?.current ?? {}) as LogStatus);
@@ -32,7 +33,7 @@
 			toast.success('Logs marked successfully');
 			markMessage = '';
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to mark logs');
+			toast.error(getErrorMessage(err, 'Failed to mark logs'));
 		} finally {
 			markLoading = false;
 		}
@@ -47,7 +48,7 @@
 			}).updates(statusData);
 			toast.success('Log package preparation started');
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to prepare logs');
+			toast.error(getErrorMessage(err, 'Failed to prepare logs'));
 		} finally {
 			prepareLoading = false;
 		}
@@ -58,7 +59,7 @@
 			await cancel_log_download({}).updates(statusData);
 			toast.success('Log download cancelled');
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to cancel');
+			toast.error(getErrorMessage(err, 'Failed to cancel'));
 		}
 	}
 </script>

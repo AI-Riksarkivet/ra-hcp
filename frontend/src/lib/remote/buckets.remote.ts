@@ -1,4 +1,5 @@
 import { command, query } from "$app/server";
+import { error } from "@sveltejs/kit";
 import { z } from "zod";
 import { apiFetch, throwIfNotOk } from "$lib/server/api.js";
 
@@ -139,7 +140,7 @@ export const delete_bucket = command(
       const detail = typeof err.detail === "string"
         ? err.detail
         : JSON.stringify(err.detail);
-      throw new Error(detail);
+      error(res.status, detail);
     }
   },
 );
@@ -171,7 +172,8 @@ export const bulk_delete_objects = command(
     await throwIfNotOk(res, "Failed to delete objects");
     const data = await res.json();
     if (data.errors && data.errors.length > 0) {
-      throw new Error(
+      error(
+        500,
         `Failed to delete ${data.errors.length} of ${keys.length} objects`,
       );
     }
@@ -274,7 +276,8 @@ export const start_zip_download = command(
       const err = await res.json().catch(() => ({
         detail: "Failed to start ZIP download",
       }));
-      throw new Error(
+      error(
+        res.status,
         typeof err.detail === "string" ? err.detail : JSON.stringify(
           err.detail,
         ),
@@ -721,7 +724,8 @@ export const put_bucket_cors = command(
       const err = await res.json().catch(() => ({
         detail: "Failed to update CORS configuration",
       }));
-      throw new Error(
+      error(
+        res.status,
         typeof err.detail === "string" ? err.detail : JSON.stringify(
           err.detail,
         ),
@@ -805,7 +809,8 @@ export const create_folder = command(
       const err = await res.json().catch(() => ({
         detail: "Failed to create folder",
       }));
-      throw new Error(
+      error(
+        res.status,
         typeof err.detail === "string" ? err.detail : JSON.stringify(
           err.detail,
         ),

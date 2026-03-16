@@ -6,11 +6,13 @@
 		onCheckedChange,
 		disabled = false,
 		hidden = false,
+		'aria-label': ariaLabel = 'Select row',
 	}: {
 		checked?: boolean;
 		onCheckedChange?: (value: boolean) => void;
 		disabled?: boolean;
 		hidden?: boolean;
+		'aria-label'?: string;
 	} = $props();
 </script>
 
@@ -20,6 +22,11 @@
 		onkeydown={(e: KeyboardEvent) => e.stopPropagation()}
 		role="presentation"
 	>
-		<Checkbox {checked} onCheckedChange={(v) => onCheckedChange?.(!!v)} {disabled} />
+		<Checkbox
+			{checked}
+			onCheckedChange={(v) => onCheckedChange?.(!!v)}
+			{disabled}
+			aria-label={ariaLabel}
+		/>
 	</span>
 {/if}

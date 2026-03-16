@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { command } from "$app/server";
+import { error } from "@sveltejs/kit";
 import { apiFetch } from "$lib/server/api.js";
 
 export interface QueryStatus {
@@ -97,23 +98,26 @@ export const search_objects = command(
       const err = await res.json().catch(() => ({ detail: "" }));
       const detail = err.detail || "";
       if (res.status === 403) {
-        throw new Error(
+        error(
+          403,
           detail ||
             "Access denied. Ensure the user has SEARCH permission and that namespaces have search enabled.",
         );
       }
       if (res.status === 400) {
-        throw new Error(
+        error(
+          400,
           detail || "Invalid query syntax. Check your query expression.",
         );
       }
       if (res.status === 502 || res.status === 504) {
-        throw new Error(
+        error(
+          res.status,
           detail ||
             "Could not reach the HCP query engine. Verify that the HCP system is reachable and search is enabled.",
         );
       }
-      throw new Error(detail || `Object query failed (HTTP ${res.status})`);
+      error(res.status, detail || `Object query failed (HTTP ${res.status})`);
     }
     return (await res.json()) as ObjectQueryResponse;
   },
@@ -168,21 +172,26 @@ export const search_operations = command(
       const err = await res.json().catch(() => ({ detail: "" }));
       const detail = err.detail || "";
       if (res.status === 403) {
-        throw new Error(
+        error(
+          403,
           detail ||
             "Access denied. Ensure the user has SEARCH permission on the target namespaces.",
         );
       }
       if (res.status === 400) {
-        throw new Error(detail || "Invalid query parameters.");
+        error(400, detail || "Invalid query parameters.");
       }
       if (res.status === 502 || res.status === 504) {
-        throw new Error(
+        error(
+          res.status,
           detail ||
             "Could not reach the HCP query engine. Verify that the HCP system is reachable.",
         );
       }
-      throw new Error(detail || `Operation query failed (HTTP ${res.status})`);
+      error(
+        res.status,
+        detail || `Operation query failed (HTTP ${res.status})`,
+      );
     }
     return (await res.json()) as OperationQueryResponse;
   },

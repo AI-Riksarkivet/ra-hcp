@@ -114,6 +114,7 @@
 							enabled: localVersioningEnabled,
 						});
 					}
+					nsData.refresh();
 				})}
 		/>
 	</Card.Footer>

@@ -32,7 +32,6 @@
 	import BucketVersions from './sections/bucket-versions.svelte';
 	import BucketCors from './sections/bucket-cors.svelte';
 	import BucketUploads from './sections/bucket-uploads.svelte';
-	import CreateFolderDialog from './sections/create-folder-dialog.svelte';
 
 	// --- Page params ---
 	let tenant = $derived(page.data.tenant as string | undefined);
@@ -177,7 +176,13 @@
 			</nav>
 
 			<!-- Object Browser -->
-			<BucketObjectBrowser {bucket} {prefix} bind:uploadOpen onnavigate={navigatePrefix} />
+			<BucketObjectBrowser
+				{bucket}
+				{prefix}
+				bind:uploadOpen
+				bind:createFolderOpen
+				onnavigate={navigatePrefix}
+			/>
 		</Tabs.Content>
 
 		{#if showVersionsTab}
@@ -199,10 +204,3 @@
 		</Tabs.Content>
 	</Tabs.Root>
 </div>
-
-<CreateFolderDialog
-	bind:open={createFolderOpen}
-	{bucket}
-	{prefix}
-	oncreated={() => navigatePrefix(prefix)}
-/>

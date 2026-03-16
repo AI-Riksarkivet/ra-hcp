@@ -27,6 +27,7 @@
 		delete_retention_class,
 		type RetentionClass,
 	} from '$lib/remote/namespaces.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -67,7 +68,7 @@
 			createOpen = false;
 			form.reset();
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Failed to create retention class';
+			createError = getErrorMessage(err, 'Failed to create retention class');
 		} finally {
 			creating = false;
 		}
@@ -106,7 +107,7 @@
 			toast.success(`Retention class "${editTarget.name}" updated`);
 			editOpen = false;
 		} catch (err) {
-			editError = err instanceof Error ? err.message : 'Failed to update retention class';
+			editError = getErrorMessage(err, 'Failed to update retention class');
 		} finally {
 			editing = false;
 		}

@@ -8,6 +8,7 @@
 	import TagInput from '$lib/components/custom/tag-input/tag-input.svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import { create_namespace, type Namespace } from '$lib/remote/namespaces.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -66,7 +67,7 @@
 			versioningEnabled = false;
 			keepDeletionRecords = false;
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Failed to create namespace';
+			createError = getErrorMessage(err, 'Failed to create namespace');
 		} finally {
 			creating = false;
 		}

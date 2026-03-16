@@ -16,6 +16,7 @@
 		type Namespace,
 		type NsStatistics,
 	} from '$lib/remote/namespaces.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -68,7 +69,7 @@
 			toast.success('Namespace owner updated');
 			editingOwner = false;
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to update owner');
+			toast.error(getErrorMessage(err, 'Failed to update owner'));
 		} finally {
 			savingOwner = false;
 		}
@@ -105,7 +106,7 @@
 			toast.success('Hard quota updated');
 			editingHardQuota = false;
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to update hard quota');
+			toast.error(getErrorMessage(err, 'Failed to update hard quota'));
 		} finally {
 			savingHardQuota = false;
 		}
@@ -142,7 +143,7 @@
 			toast.success('Soft quota updated');
 			editingSoftQuota = false;
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to update soft quota');
+			toast.error(getErrorMessage(err, 'Failed to update soft quota'));
 		} finally {
 			savingSoftQuota = false;
 		}

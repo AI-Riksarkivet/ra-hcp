@@ -15,6 +15,7 @@
 		type ObjectVersion,
 		type DeleteMarker,
 	} from '$lib/remote/buckets.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		bucket,
@@ -219,7 +220,7 @@
 			deleteDialogOpen = false;
 			toast.success('Version deleted permanently');
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete version');
+			toast.error(getErrorMessage(err, 'Failed to delete version'));
 		} finally {
 			deleting = false;
 		}

@@ -103,11 +103,13 @@
 				renderComponent(DataTableCheckbox, {
 					checked: t.getIsAllPageRowsSelected(),
 					onCheckedChange: (val: boolean) => t.toggleAllPageRowsSelected(!!val),
+					'aria-label': 'Select all rows',
 				}),
 			cell: ({ row }) =>
 				renderComponent(DataTableCheckbox, {
 					checked: row.getIsSelected(),
 					onCheckedChange: (val: boolean) => row.toggleSelected(!!val),
+					'aria-label': `Select ${row.original.name}`,
 				}),
 			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
 		},
@@ -177,7 +179,12 @@
 <div class="space-y-3">
 	<div class="relative max-w-md">
 		<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-		<Input bind:value={search} placeholder="Search namespaces..." class="pl-10" />
+		<Input
+			bind:value={search}
+			placeholder="Search namespaces..."
+			class="pl-10"
+			aria-label="Search namespaces"
+		/>
 	</div>
 
 	{#if selectedCount > 0}

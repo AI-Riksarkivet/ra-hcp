@@ -17,6 +17,7 @@
 		set_user_permissions,
 		type DataAccessPermissions,
 	} from '$lib/remote/users.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -240,7 +241,7 @@
 			grantOpen = false;
 			accessVersion++;
 		} catch (err) {
-			grantError = err instanceof Error ? err.message : 'Failed to grant access';
+			grantError = getErrorMessage(err, 'Failed to grant access');
 		} finally {
 			granting = false;
 		}

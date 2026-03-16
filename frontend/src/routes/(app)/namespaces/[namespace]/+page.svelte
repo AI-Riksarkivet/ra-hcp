@@ -27,6 +27,7 @@
 		update_ns_protocol,
 		type NsProtocols as NsProtocolsType,
 	} from '$lib/remote/namespaces.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let namespaceName = $derived(page.params.namespace ?? '');
@@ -151,7 +152,7 @@
 			editingName = false;
 			goto(`/namespaces/${encodeURIComponent(trimmed)}`, { replaceState: true });
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to rename namespace');
+			toast.error(getErrorMessage(err, 'Failed to rename namespace'));
 		} finally {
 			savingName = false;
 		}

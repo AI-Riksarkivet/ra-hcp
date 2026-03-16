@@ -15,6 +15,7 @@
 		set_user_permissions,
 		type DataAccessPermissions,
 	} from '$lib/remote/users.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	const PERMISSION_KEYS = ['READ', 'WRITE', 'DELETE', 'PURGE', 'SEARCH', 'BROWSE'] as const;
 
@@ -22,10 +23,12 @@
 		tenant,
 		namespaceNames = [],
 		open = $bindable(false),
+		ongranted,
 	}: {
 		tenant: string;
 		namespaceNames: string[];
 		open: boolean;
+		ongranted?: () => void;
 	} = $props();
 
 	let usersData = $derived(open ? get_users({ tenant }) : null);
@@ -91,8 +94,9 @@
 
 			toast.success(`Granted access to ${selectedUser} on ${namespaceNames.length} namespace(s)`);
 			open = false;
+			ongranted?.();
 		} catch (err) {
-			grantError = err instanceof Error ? err.message : 'Failed to grant access';
+			grantError = getErrorMessage(err, 'Failed to grant access');
 		} finally {
 			granting = false;
 		}

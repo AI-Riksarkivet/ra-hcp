@@ -21,6 +21,7 @@
 		permissionColor,
 		permissionLabel,
 	} from '../../../access-control/acl-constants.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		bucket,
@@ -133,7 +134,7 @@
 			granteeId = '';
 			grantPermission = 'READ';
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to add grant');
+			toast.error(getErrorMessage(err, 'Failed to add grant'));
 		} finally {
 			granting = false;
 		}
@@ -155,7 +156,7 @@
 			}).updates(aclData);
 			toast.success('Permission revoked');
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to revoke');
+			toast.error(getErrorMessage(err, 'Failed to revoke'));
 		} finally {
 			revoking = '';
 		}

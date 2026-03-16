@@ -46,16 +46,20 @@
 	import BucketShareDialog from './bucket-share-dialog.svelte';
 	import BucketCopyDialog from './bucket-copy-dialog.svelte';
 	import BucketUploadDialog from './bucket-upload-dialog.svelte';
+	import CreateFolderDialog from './create-folder-dialog.svelte';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		bucket,
 		prefix,
 		uploadOpen = $bindable(false),
+		createFolderOpen = $bindable(false),
 		onnavigate,
 	}: {
 		bucket: string;
 		prefix: string;
 		uploadOpen: boolean;
+		createFolderOpen: boolean;
 		onnavigate: (prefix: string) => void;
 	} = $props();
 
@@ -294,6 +298,7 @@
 					checked: table.getIsAllPageRowsSelected(),
 					indeterminate: table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected(),
 					onCheckedChange: (value: boolean) => table.toggleAllPageRowsSelected(!!value),
+					'aria-label': 'Select all rows',
 				}),
 			cell: ({ row }) =>
 				isObjFolder(row.original)
@@ -301,6 +306,7 @@
 					: renderComponent(DataTableCheckbox, {
 							checked: row.getIsSelected(),
 							onCheckedChange: (value: boolean) => row.toggleSelected(!!value),
+							'aria-label': `Select ${getDisplayName(row.original.key)}`,
 						}),
 			enableSorting: false,
 			enableHiding: false,
@@ -412,7 +418,7 @@
 			deleteDialogOpen = false;
 			toast.success('Object deleted');
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete object');
+			toast.error(getErrorMessage(err, 'Failed to delete object'));
 		} finally {
 			deleting = false;
 		}
@@ -428,7 +434,7 @@
 			bulkDeleteOpen = false;
 			toast.success(`Deleted ${keys.length} object${keys.length !== 1 ? 's' : ''}`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete objects');
+			toast.error(getErrorMessage(err, 'Failed to delete objects'));
 		} finally {
 			deleting = false;
 		}
@@ -459,7 +465,7 @@
 				`Started downloading ${result.urls.length} file${result.urls.length !== 1 ? 's' : ''}`
 			);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to download objects');
+			toast.error(getErrorMessage(err, 'Failed to download objects'));
 		} finally {
 			downloading = false;
 		}
@@ -483,7 +489,7 @@
 			toast.info(`Preparing ZIP... 0/${result.total} files`);
 			pollZipStatus();
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to start ZIP download');
+			toast.error(getErrorMessage(err, 'Failed to start ZIP download'));
 			zipDownloading = false;
 		}
 	}
@@ -850,4 +856,11 @@
 	itemType="object"
 	loading={deleting}
 	onconfirm={handleConfirmBulkDelete}
+/>
+
+<CreateFolderDialog
+	bind:open={createFolderOpen}
+	{bucket}
+	{prefix}
+	oncreated={() => objectData.refresh()}
 />

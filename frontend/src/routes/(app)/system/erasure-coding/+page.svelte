@@ -19,6 +19,7 @@
 		delete_ec_topology,
 		type ECTopology,
 	} from '$lib/remote/replication.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let topologiesData = $derived(get_ec_topologies({}));
 	let topologies = $derived((topologiesData?.current ?? []) as ECTopology[]);
@@ -67,7 +68,7 @@
 			createMinimumObjectSize = '4096';
 			createRestorePeriod = '';
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Failed to create topology';
+			createError = getErrorMessage(err, 'Failed to create topology');
 		} finally {
 			createLoading = false;
 		}
@@ -78,7 +79,7 @@
 			await delete_ec_topology({ topologyName: deleteName }).updates(topologiesData);
 			toast.success(`Topology "${deleteName}" deleted`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete topology');
+			toast.error(getErrorMessage(err, 'Failed to delete topology'));
 		}
 	}
 

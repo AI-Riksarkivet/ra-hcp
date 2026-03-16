@@ -1,4 +1,5 @@
 import { toast } from "svelte-sonner";
+import { getErrorMessage } from "$lib/utils/get-error-message.js";
 
 interface UseSaveOptions {
   successMsg: string;
@@ -15,8 +16,8 @@ export function useSave(opts: UseSaveOptions) {
       await fn();
       syncVersion++;
       toast.success(opts.successMsg);
-    } catch {
-      toast.error(opts.errorMsg);
+    } catch (err) {
+      toast.error(getErrorMessage(err, opts.errorMsg));
     } finally {
       saving = false;
     }

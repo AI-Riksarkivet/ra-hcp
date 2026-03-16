@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { command, query } from "$app/server";
+import { error } from "@sveltejs/kit";
 import { apiFetch, throwIfNotOk } from "$lib/server/api.js";
 
 export interface Namespace {
@@ -118,7 +119,7 @@ export const create_namespace = command(
         : Array.isArray(err.detail)
         ? err.detail.map((e: { msg?: string }) => e.msg).join("; ")
         : JSON.stringify(err.detail);
-      throw new Error(detail);
+      error(res.status, detail);
     }
   },
 );
@@ -752,7 +753,7 @@ export const delete_namespace = command(
       const detail = typeof err.detail === "string"
         ? err.detail
         : JSON.stringify(err.detail);
-      throw new Error(detail);
+      error(res.status, detail);
     }
   },
 );

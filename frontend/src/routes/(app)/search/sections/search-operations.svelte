@@ -20,6 +20,7 @@
 		type QueryResultObject,
 		type OperationQueryResponse,
 	} from '$lib/remote/search.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -82,7 +83,7 @@
 				namespaces: opNamespace ? [opNamespace] : undefined,
 			});
 		} catch (err) {
-			opError = err instanceof Error ? err.message : 'Operation query failed';
+			opError = getErrorMessage(err, 'Operation query failed');
 			opResults = null;
 		} finally {
 			opLoading = false;

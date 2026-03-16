@@ -120,11 +120,13 @@
 				renderComponent(DataTableCheckbox, {
 					checked: table.getIsAllPageRowsSelected(),
 					onCheckedChange: (val: boolean) => table.toggleAllPageRowsSelected(!!val),
+					'aria-label': 'Select all rows',
 				}),
 			cell: ({ row }) =>
 				renderComponent(DataTableCheckbox, {
 					checked: row.getIsSelected(),
 					onCheckedChange: (val: boolean) => row.toggleSelected(!!val),
+					'aria-label': `Select ${row.original.name}`,
 				}),
 			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
 		},

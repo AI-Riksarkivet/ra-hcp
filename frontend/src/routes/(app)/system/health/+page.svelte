@@ -14,6 +14,7 @@
 		cancel_health_report,
 		type HealthStatus,
 	} from '$lib/remote/system.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let statusData = $derived(get_health_status({}));
 	let status = $derived((statusData?.current ?? {}) as HealthStatus);
@@ -33,7 +34,7 @@
 			}).updates(statusData);
 			toast.success('Health report preparation started');
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to prepare report');
+			toast.error(getErrorMessage(err, 'Failed to prepare report'));
 		} finally {
 			prepareLoading = false;
 		}
@@ -44,7 +45,7 @@
 			await cancel_health_report({}).updates(statusData);
 			toast.success('Health report cancelled');
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to cancel');
+			toast.error(getErrorMessage(err, 'Failed to cancel'));
 		}
 	}
 </script>

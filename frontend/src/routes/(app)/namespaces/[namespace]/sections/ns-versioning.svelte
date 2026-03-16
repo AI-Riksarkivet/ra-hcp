@@ -14,6 +14,7 @@
 		delete_ns_versioning,
 		type VersioningSettings,
 	} from '$lib/remote/namespaces.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		tenant,
@@ -63,7 +64,7 @@
 			toast.success('Versioning settings reset to defaults');
 			resetOpen = false;
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to reset versioning settings');
+			toast.error(getErrorMessage(err, 'Failed to reset versioning settings'));
 		} finally {
 			resetting = false;
 		}

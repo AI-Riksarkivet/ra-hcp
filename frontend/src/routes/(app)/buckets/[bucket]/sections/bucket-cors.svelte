@@ -15,6 +15,7 @@
 	} from '$lib/remote/buckets.remote.js';
 	import { Plus, Trash2, Globe, X } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	const HTTP_METHODS = ['GET', 'PUT', 'POST', 'DELETE', 'HEAD'] as const;
 
@@ -143,7 +144,7 @@
 			toast.success('CORS configuration deleted');
 			deleteOpen = false;
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to delete CORS configuration');
+			toast.error(getErrorMessage(err, 'Failed to delete CORS configuration'));
 		} finally {
 			deleting = false;
 		}

@@ -12,6 +12,7 @@
 	import { RefreshCw, Trash2, Upload } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let {
 		bucket,
@@ -44,7 +45,7 @@
 			abortDialogOpen = false;
 			toast.success(`Aborted upload for "${abortTarget.Key}"`);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : 'Failed to abort upload');
+			toast.error(getErrorMessage(err, 'Failed to abort upload'));
 		} finally {
 			aborting = false;
 		}

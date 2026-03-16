@@ -22,6 +22,7 @@
 		complete_multipart_upload,
 		abort_multipart_upload,
 	} from '$lib/remote/buckets.remote.js';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	const MULTIPART_THRESHOLD = 100 * 1024 * 1024; // 100 MB
 	const PART_SIZE = 25 * 1024 * 1024; // 25 MB
@@ -257,7 +258,7 @@
 			selectedFiles[index] = {
 				...selectedFiles[index],
 				status: 'error',
-				error: err instanceof Error ? err.message : 'Multipart upload failed',
+				error: getErrorMessage(err, 'Multipart upload failed'),
 			};
 		}
 	}

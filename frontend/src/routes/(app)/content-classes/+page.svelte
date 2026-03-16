@@ -29,6 +29,7 @@
 		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
 	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
+	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
 	let classesData = $derived(tenant ? get_content_classes({ tenant }) : undefined);
@@ -127,7 +128,7 @@
 			createOpen = false;
 			form.reset();
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Failed to create content class';
+			createError = getErrorMessage(err, 'Failed to create content class');
 		} finally {
 			creating = false;
 		}

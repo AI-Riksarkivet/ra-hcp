@@ -18,6 +18,12 @@ const preview: Preview = {
     a11y: {
       // Fail on accessibility violations by default — use 'todo' per-story to defer fixes
       test: "error",
+      config: {
+        rules: [
+          // Storybook renders stories outside landmark regions — false positive
+          { id: "region", enabled: false },
+        ],
+      },
     },
   },
   decorators: [
