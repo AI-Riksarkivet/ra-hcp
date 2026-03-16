@@ -7,7 +7,7 @@ export PATH := $(HOME)/.deno/bin:$(PATH)
 .PHONY: help setup install-deno install-uv setup-hooks skills \
         fmt lint quality \
         run-api run-api-mock \
-        frontend-dev frontend-build storybook build-storybook \
+        frontend-dev frontend-build storybook build-storybook test-storybook \
         docs docs-build \
         checks test test-integration serve-backend full-serve build \
         publish publish-backend publish-frontend
@@ -87,6 +87,10 @@ storybook:
 ## build-storybook: build Storybook static site
 build-storybook:
 	cd frontend && deno task build-storybook
+
+## test-storybook: run Storybook interaction + a11y tests via Vitest
+test-storybook:
+	cd frontend && deno task test-storybook
 
 # ── Docs ─────────────────────────────────────────────────────────────
 

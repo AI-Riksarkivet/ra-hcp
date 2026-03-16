@@ -1,5 +1,6 @@
 import type { Preview } from "@storybook/sveltekit";
 import { withThemeByClassName } from "@storybook/addon-themes";
+import TooltipProviderDecorator from "./decorators/tooltip-provider-decorator.svelte";
 import "../src/app.css";
 
 const preview: Preview = {
@@ -27,6 +28,10 @@ const preview: Preview = {
     },
   },
   decorators: [
+    // Provide Tooltip.Provider context for all stories (Bits UI requires this)
+    () => ({
+      Component: TooltipProviderDecorator,
+    }),
     withThemeByClassName({
       themes: {
         light: "",

@@ -41,7 +41,7 @@
 		},
 	};
 
-	const service = $derived(SERVICE_TAGS[tag.toLowerCase()]);
+	const service = $derived(tag ? SERVICE_TAGS[tag.toLowerCase()] : undefined);
 </script>
 
 {#if service}
