@@ -74,6 +74,80 @@
 		}
 	}
 
+	// Hard quota editing
+	let editingHardQuota = $state(false);
+	let hardQuotaInput = $state('');
+	let savingHardQuota = $state(false);
+
+	function startEditHardQuota() {
+		hardQuotaInput = ns?.hardQuota ?? '';
+		editingHardQuota = true;
+	}
+
+	function cancelEditHardQuota() {
+		editingHardQuota = false;
+	}
+
+	async function saveHardQuota() {
+		if (!nsData) return;
+		const trimmed = hardQuotaInput.trim();
+		if (trimmed && !parseQuotaBytes(trimmed)) {
+			toast.error('Invalid quota format. Use e.g. "50 GB" or "1.5 TB"');
+			return;
+		}
+		savingHardQuota = true;
+		try {
+			await update_namespace({
+				tenant,
+				name: namespaceName,
+				body: { hardQuota: trimmed },
+			}).updates(nsData);
+			toast.success('Hard quota updated');
+			editingHardQuota = false;
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to update hard quota');
+		} finally {
+			savingHardQuota = false;
+		}
+	}
+
+	// Soft quota editing
+	let editingSoftQuota = $state(false);
+	let softQuotaInput = $state('');
+	let savingSoftQuota = $state(false);
+
+	function startEditSoftQuota() {
+		softQuotaInput = ns?.softQuota != null ? String(ns.softQuota) : '';
+		editingSoftQuota = true;
+	}
+
+	function cancelEditSoftQuota() {
+		editingSoftQuota = false;
+	}
+
+	async function saveSoftQuota() {
+		if (!nsData) return;
+		const val = Number(softQuotaInput);
+		if (softQuotaInput.trim() !== '' && (isNaN(val) || val < 10 || val > 95)) {
+			toast.error('Soft quota must be an integer between 10 and 95');
+			return;
+		}
+		savingSoftQuota = true;
+		try {
+			await update_namespace({
+				tenant,
+				name: namespaceName,
+				body: { softQuota: softQuotaInput.trim() === '' ? null : val },
+			}).updates(nsData);
+			toast.success('Soft quota updated');
+			editingSoftQuota = false;
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to update soft quota');
+		} finally {
+			savingSoftQuota = false;
+		}
+	}
+
 	const FIELD_DESCRIPTIONS: Record<string, string> = {
 		description: 'A human-readable summary of the namespace purpose.',
 		owner:
@@ -194,7 +268,7 @@
 								{formatBytes(nsStorageUsed)} / {ns.hardQuota}
 							</p>
 							{#if quota}
-								{@const pct = Math.min(100, (nsStorageUsed / quota) * 100)}
+								{@const pct = (nsStorageUsed / quota) * 100}
 								<StorageProgressBar percent={pct} class="mt-1 max-w-32" />
 							{/if}
 						{:else}
@@ -203,13 +277,99 @@
 					</div>
 					<div>
 						{@render fieldLabel('Hard Quota', 'hardQuota')}
-						<p class="mt-0.5 text-sm">{ns.hardQuota || '—'}</p>
+						{#if editingHardQuota}
+							<div class="mt-0.5 flex items-center gap-1">
+								<Input
+									class="h-7 w-28 text-sm"
+									bind:value={hardQuotaInput}
+									placeholder="e.g. 50 GB"
+									disabled={savingHardQuota}
+									onkeydown={(e: KeyboardEvent) => {
+										if (e.key === 'Enter') saveHardQuota();
+										if (e.key === 'Escape') cancelEditHardQuota();
+									}}
+								/>
+								<Button
+									variant="ghost"
+									size="icon"
+									class="h-7 w-7"
+									onclick={saveHardQuota}
+									disabled={savingHardQuota}
+								>
+									<Check class="h-3.5 w-3.5" />
+								</Button>
+								<Button
+									variant="ghost"
+									size="icon"
+									class="h-7 w-7"
+									onclick={cancelEditHardQuota}
+									disabled={savingHardQuota}
+								>
+									<X class="h-3.5 w-3.5" />
+								</Button>
+							</div>
+						{:else}
+							<p class="mt-0.5 flex items-center gap-1 text-sm">
+								{ns.hardQuota || '—'}
+								<button
+									class="inline-flex text-muted-foreground hover:text-foreground"
+									onclick={startEditHardQuota}
+									title="Change hard quota"
+								>
+									<Pencil class="h-3 w-3" />
+								</button>
+							</p>
+						{/if}
 					</div>
 					<div>
 						{@render fieldLabel('Soft Quota', 'softQuota')}
-						<p class="mt-0.5 text-sm">
-							{ns.softQuota != null ? `${ns.softQuota}%` : '—'}
-						</p>
+						{#if editingSoftQuota}
+							<div class="mt-0.5 flex items-center gap-1">
+								<Input
+									class="h-7 w-20 text-sm"
+									type="number"
+									min="10"
+									max="95"
+									bind:value={softQuotaInput}
+									placeholder="10–95"
+									disabled={savingSoftQuota}
+									onkeydown={(e: KeyboardEvent) => {
+										if (e.key === 'Enter') saveSoftQuota();
+										if (e.key === 'Escape') cancelEditSoftQuota();
+									}}
+								/>
+								<span class="text-sm text-muted-foreground">%</span>
+								<Button
+									variant="ghost"
+									size="icon"
+									class="h-7 w-7"
+									onclick={saveSoftQuota}
+									disabled={savingSoftQuota}
+								>
+									<Check class="h-3.5 w-3.5" />
+								</Button>
+								<Button
+									variant="ghost"
+									size="icon"
+									class="h-7 w-7"
+									onclick={cancelEditSoftQuota}
+									disabled={savingSoftQuota}
+								>
+									<X class="h-3.5 w-3.5" />
+								</Button>
+							</div>
+						{:else}
+							<p class="mt-0.5 flex items-center gap-1 text-sm">
+								{ns.softQuota != null ? `${ns.softQuota}%` : '—'}
+								<button
+									class="inline-flex text-muted-foreground hover:text-foreground"
+									onclick={startEditSoftQuota}
+									title="Change soft quota"
+								>
+									<Pencil class="h-3 w-3" />
+								</button>
+							</p>
+						{/if}
 					</div>
 					<div>
 						{@render fieldLabel('Objects', 'objects')}

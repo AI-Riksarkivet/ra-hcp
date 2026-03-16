@@ -152,13 +152,28 @@ def _cors(settings: dict, method: str, body: dict) -> HttpxResponse:
 def _protocol(
     settings: dict, method: str, protocol: str | None, body: dict
 ) -> HttpxResponse:
-    """Handle GET/POST on protocol settings (default or named)."""
+    """Handle GET/POST on protocol settings (default or named).
+
+    Depth-5 GET (/protocols) returns a merged view of all protocol flags.
+    Depth-6 GET/POST (/protocols/{proto}) reads/writes a specific protocol.
+    """
     protocols = settings.setdefault("protocols", {})
-    key = protocol or "default"
+    if protocol is None:
+        # Depth-5: summary of all protocol flags
+        if method == "GET":
+            merged: dict[str, object] = {}
+            for v in protocols.values():
+                if isinstance(v, dict):
+                    merged.update(v)
+            return _json(merged)
+        return _not_allowed()
+    # Depth-6: specific protocol
     if method == "GET":
-        return _json(protocols.get(key, {}))
+        return _json(protocols.get(protocol, {}))
     if method == "POST":
-        protocols[key] = body
+        existing = protocols.get(protocol, {})
+        existing.update(body)
+        protocols[protocol] = existing
         return _empty()
     return _not_allowed()
 
@@ -296,6 +311,8 @@ class MockMapiState:
         ns_map[name] = body
         self.retention_classes.setdefault((tenant, name), {})
         self.ns_settings.setdefault((tenant, name), default_ns_settings())
+        # Grant the creating user data-access (mirrors S3 create_bucket behaviour)
+        self._grant_user_ns_access(tenant, "admin", name)
         # Sync: also create as S3 bucket
         self._sync_create_bucket(name)
         return _empty()
@@ -508,6 +525,27 @@ def _handle_namespaces(
     if n == 4:
         if method == "DELETE":
             return state.delete_namespace(tenant, ns_name)
+        # Handle rename: if POST body contains a new "name", re-key the dict
+        if method == "POST" and "name" in body and body["name"] != ns_name:
+            if ns_name not in ns_map:
+                return _not_found()
+            new_name = body["name"]
+            data = ns_map.pop(ns_name)
+            data.update(body)
+            ns_map[new_name] = data
+            # Move ns_settings to the new key
+            old_key = (tenant, ns_name)
+            new_key = (tenant, new_name)
+            if old_key in state.ns_settings:
+                state.ns_settings[new_key] = state.ns_settings.pop(old_key)
+            # Move retention classes
+            old_rc_key = (tenant, ns_name)
+            new_rc_key = (tenant, new_name)
+            if old_rc_key in state.retention_classes:
+                state.retention_classes[new_rc_key] = state.retention_classes.pop(
+                    old_rc_key
+                )
+            return _empty()
         return _crud(ns_map, method, ns_name, body)
 
     ns_sub = segments[4]

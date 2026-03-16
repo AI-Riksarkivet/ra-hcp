@@ -358,10 +358,10 @@ NS_STATISTICS: dict = {
 TENANT_CHARGEBACK: dict = {
     "chargebackData": [
         {
-            "namespaceName": "finance-records",
+            "namespaceName": "documents",
             "objectCount": 750,
             "ingestedVolume": 32212254720,
-            "storageCapacityUsed": 34359738368,
+            "storageCapacityUsed": 34359738368,  # ~32 GB (quota: 100 GB)
             "bytesIn": 8589934592,
             "bytesOut": 4294967296,
             "reads": 15230,
@@ -370,10 +370,10 @@ TENANT_CHARGEBACK: dict = {
             "valid": True,
         },
         {
-            "namespaceName": "compliance-archive",
+            "namespaceName": "archives",
             "objectCount": 320,
-            "ingestedVolume": 16106127360,
-            "storageCapacityUsed": 17179869184,
+            "ingestedVolume": 55834574848,
+            "storageCapacityUsed": 59055800320,  # ~55 GB (quota: 50 GB — over quota!)
             "bytesIn": 2147483648,
             "bytesOut": 1073741824,
             "reads": 4870,
@@ -382,10 +382,10 @@ TENANT_CHARGEBACK: dict = {
             "valid": True,
         },
         {
-            "namespaceName": "dev-sandbox",
+            "namespaceName": "logs",
             "objectCount": 164,
             "ingestedVolume": 2147483648,
-            "storageCapacityUsed": 2147483648,
+            "storageCapacityUsed": 2147483648,  # ~2 GB (quota: 25 GB)
             "bytesIn": 1073741824,
             "bytesOut": 536870912,
             "reads": 2340,
@@ -1163,15 +1163,9 @@ def default_ns_settings() -> dict[str, dict]:
             "allowDisablingCompliance": True,
         },
         "protocols": {
-            "default": {
+            "http": {
                 "httpEnabled": True,
                 "httpsEnabled": True,
-                "cifsEnabled": False,
-                "nfsEnabled": False,
-                "smtpEnabled": False,
-            },
-            "http": {
-                "enabled": True,
                 "httpsRequired": False,
                 "hsIncludedPaths": [],
                 "hsExcludedPaths": [],
@@ -1180,16 +1174,16 @@ def default_ns_settings() -> dict[str, dict]:
                 "allowHeaders": [],
             },
             "cifs": {
-                "enabled": False,
+                "cifsEnabled": False,
                 "caseSensitiveNamespaces": False,
             },
             "nfs": {
-                "enabled": False,
+                "nfsEnabled": False,
                 "uid": 0,
                 "gid": 0,
             },
             "smtp": {
-                "enabled": False,
+                "smtpEnabled": False,
                 "emailDomain": "",
             },
         },

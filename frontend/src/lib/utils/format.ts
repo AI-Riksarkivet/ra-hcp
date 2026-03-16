@@ -83,7 +83,7 @@ export function calcQuotaPercent(
   if (!quotaStr) return null;
   const quotaBytes = parseQuotaBytes(quotaStr);
   if (!quotaBytes || !used) return null;
-  return Math.min(100, (used / quotaBytes) * 100);
+  return (used / quotaBytes) * 100;
 }
 
 const DATE_FILTER_MS: Record<string, number> = {

@@ -32,7 +32,20 @@
 
 	let chargebackData = $derived(get_ns_chargeback({ tenant, name: namespaceName, granularity }));
 
-	let entries = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
+	// Cache last known entries so the card stays visible during refetch
+	let cachedEntries = $state<ChargebackEntry[]>([]);
+	let hasLoaded = $state(false);
+
+	$effect(() => {
+		const fresh = (chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[];
+		if (fresh.length > 0 || chargebackData?.current) {
+			cachedEntries = fresh;
+			hasLoaded = true;
+		}
+	});
+
+	let entries = $derived(cachedEntries);
+	let loading = $derived(hasLoaded && !chargebackData?.current);
 
 	function sumField(field: keyof ChargebackEntry): number {
 		return entries.reduce((acc, e) => acc + ((e[field] as number) ?? 0), 0);
@@ -129,10 +142,10 @@
 	}
 </script>
 
-{#if !chargebackData?.current}
+{#if !hasLoaded}
 	<CardSkeleton />
 {:else if entries.length > 0}
-	<Card.Root>
+	<Card.Root class={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
 		<Card.Header>
 			<div class="flex items-center justify-between">
 				<div>

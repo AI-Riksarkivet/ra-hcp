@@ -217,16 +217,15 @@
 		</div>
 		<div class="space-y-1.5">
 			<Label for="ec-type">Type</Label>
-			<Select.Root type="single" bind:value={createType}>
-				<Select.Trigger id="ec-type" class="w-full">
-					{createType}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Item value="2+1">2+1</Select.Item>
-					<Select.Item value="4+2">4+2</Select.Item>
-					<Select.Item value="6+3">6+3</Select.Item>
-				</Select.Content>
-			</Select.Root>
+			<select
+				id="ec-type"
+				class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+				bind:value={createType}
+			>
+				<option value="2+1">2+1</option>
+				<option value="4+2">4+2</option>
+				<option value="6+3">6+3</option>
+			</select>
 		</div>
 		<div class="space-y-1.5">
 			<Label for="ec-desc">Description</Label>

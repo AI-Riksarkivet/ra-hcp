@@ -255,7 +255,7 @@
 		<div class="flex flex-col gap-1">
 			<span class="text-sm">{formatBytes(used)}{quota ? ` / ${ns.hardQuota}` : ''}</span>
 			{#if quota}
-				{@const pct = Math.min(100, (used / quota) * 100)}
+				{@const pct = (used / quota) * 100}
 				<StorageProgressBar percent={pct} class="max-w-24" />
 			{/if}
 		</div>
