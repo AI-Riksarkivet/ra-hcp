@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from typing import IO, Any, Dict, List, Optional
 from urllib.parse import quote, urlencode
 
+from app.services.storage.errors import StorageError
+
 
 class _StoredObject:
     """Metadata + bytes for a single stored object."""
@@ -23,7 +25,11 @@ class _StoredObject:
 
 
 class MockS3Service:
-    """In-memory S3 service implementing the same interface as S3Service."""
+    """In-memory S3 service implementing the StorageProtocol interface.
+
+    All public methods are async and raise StorageError (not ClientError)
+    so they work correctly with ``run_storage()`` in the API layer.
+    """
 
     def __init__(self) -> None:
         self._logger = logging.getLogger("mock_server.s3")
@@ -49,35 +55,13 @@ class MockS3Service:
 
     def _require_bucket(self, name: str) -> None:
         if name not in self._buckets:
-            from botocore.exceptions import ClientError
-
-            raise ClientError(
-                {
-                    "Error": {
-                        "Code": "NoSuchBucket",
-                        "Message": f"Bucket '{name}' does not exist",
-                    },
-                    "ResponseMetadata": {"HTTPStatusCode": 404},
-                },
-                "HeadBucket",
-            )
+            raise StorageError("NoSuchBucket", f"Bucket '{name}' does not exist", 404)
 
     def _require_object(self, bucket: str, key: str) -> _StoredObject:
         self._require_bucket(bucket)
         obj = self._objects.get(bucket, {}).get(key)
         if obj is None:
-            from botocore.exceptions import ClientError
-
-            raise ClientError(
-                {
-                    "Error": {
-                        "Code": "NoSuchKey",
-                        "Message": f"Object '{key}' not found",
-                    },
-                    "ResponseMetadata": {"HTTPStatusCode": 404},
-                },
-                "HeadObject",
-            )
+            raise StorageError("NoSuchKey", f"Object '{key}' not found", 404)
         return obj
 
     # ── Namespace ↔ bucket sync helpers ─────────────────────────────────
@@ -131,7 +115,7 @@ class MockS3Service:
             if p.get("permissions", {}).get("permission")
         }
 
-    def list_buckets(self) -> dict:
+    async def list_buckets(self) -> dict:
         self._logger.info("list_buckets")
         allowed = self._accessible_buckets()
         buckets = [
@@ -141,48 +125,26 @@ class MockS3Service:
         ]
         return {"Buckets": buckets}
 
-    def create_bucket(self, name: str) -> dict:
+    async def create_bucket(self, name: str) -> dict:
         self._logger.info("create_bucket name=%s", name)
         if name in self._buckets:
-            from botocore.exceptions import ClientError
-
-            raise ClientError(
-                {
-                    "Error": {
-                        "Code": "BucketAlreadyOwnedByYou",
-                        "Message": "Bucket already exists",
-                    },
-                    "ResponseMetadata": {"HTTPStatusCode": 409},
-                },
-                "CreateBucket",
-            )
+            raise StorageError("BucketAlreadyOwnedByYou", "Bucket already exists", 409)
         self._buckets[name] = {"CreationDate": datetime.now(timezone.utc).isoformat()}
         self._objects[name] = {}
         # Sync: also create as MAPI namespace
         self._sync_create_namespace(name)
         return {}
 
-    def head_bucket(self, name: str) -> dict:
+    async def head_bucket(self, name: str) -> dict:
         self._logger.info("head_bucket name=%s", name)
         self._require_bucket(name)
         return {}
 
-    def delete_bucket(self, name: str) -> dict:
+    async def delete_bucket(self, name: str) -> dict:
         self._logger.info("delete_bucket name=%s", name)
         self._require_bucket(name)
         if self._objects.get(name):
-            from botocore.exceptions import ClientError
-
-            raise ClientError(
-                {
-                    "Error": {
-                        "Code": "BucketNotEmpty",
-                        "Message": "Bucket is not empty",
-                    },
-                    "ResponseMetadata": {"HTTPStatusCode": 409},
-                },
-                "DeleteBucket",
-            )
+            raise StorageError("BucketNotEmpty", "Bucket is not empty", 409)
         del self._buckets[name]
         self._objects.pop(name, None)
         self._versioning.pop(name, None)
@@ -194,7 +156,7 @@ class MockS3Service:
 
     # ── Object operations ─────────────────────────────────────────────
 
-    def list_objects(
+    async def list_objects(
         self,
         bucket: str,
         prefix: Optional[str] = None,
@@ -260,13 +222,13 @@ class MockS3Service:
             result["NextContinuationToken"] = str(start + max_keys)
         return result
 
-    def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
+    async def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
         self._logger.info("put_object bucket=%s key=%s", bucket, key)
         self._require_bucket(bucket)
         data = body.read()
         self._objects[bucket][key] = _StoredObject(data)
 
-    def get_object(
+    async def get_object(
         self, bucket: str, key: str, version_id: Optional[str] = None
     ) -> dict:
         self._logger.info("get_object bucket=%s key=%s", bucket, key)
@@ -281,7 +243,7 @@ class MockS3Service:
             "ETag": obj.etag,
         }
 
-    def head_object(self, bucket: str, key: str) -> dict:
+    async def head_object(self, bucket: str, key: str) -> dict:
         self._logger.info("head_object bucket=%s key=%s", bucket, key)
         obj = self._require_object(bucket, key)
         return {
@@ -291,7 +253,7 @@ class MockS3Service:
             "LastModified": obj.last_modified,
         }
 
-    def delete_object(
+    async def delete_object(
         self, bucket: str, key: str, version_id: Optional[str] = None
     ) -> dict:
         self._logger.info("delete_object bucket=%s key=%s", bucket, key)
@@ -300,7 +262,7 @@ class MockS3Service:
         self._object_acls.pop((bucket, key), None)
         return {}
 
-    def copy_object(
+    async def copy_object(
         self,
         src_bucket: str,
         src_key: str,
@@ -318,7 +280,7 @@ class MockS3Service:
         )
         return {}
 
-    def delete_objects(self, bucket: str, keys: List[str]) -> dict:
+    async def delete_objects(self, bucket: str, keys: List[str]) -> dict:
         self._logger.info("delete_objects bucket=%s count=%d", bucket, len(keys))
         self._require_bucket(bucket)
         deleted = []
@@ -331,19 +293,19 @@ class MockS3Service:
 
     # ── Versioning ────────────────────────────────────────────────────
 
-    def get_bucket_versioning(self, bucket: str) -> dict:
+    async def get_bucket_versioning(self, bucket: str) -> dict:
         self._logger.info("get_bucket_versioning bucket=%s", bucket)
         self._require_bucket(bucket)
         status = self._versioning.get(bucket)
         return {"Status": status} if status else {}
 
-    def put_bucket_versioning(self, bucket: str, status: str) -> dict:
+    async def put_bucket_versioning(self, bucket: str, status: str) -> dict:
         self._logger.info("put_bucket_versioning bucket=%s status=%s", bucket, status)
         self._require_bucket(bucket)
         self._versioning[bucket] = status
         return {}
 
-    def list_object_versions(
+    async def list_object_versions(
         self,
         bucket: str,
         prefix: Optional[str] = None,
@@ -386,23 +348,23 @@ class MockS3Service:
         "Grants": [],
     }
 
-    def get_bucket_acl(self, bucket: str) -> dict:
+    async def get_bucket_acl(self, bucket: str) -> dict:
         self._logger.info("get_bucket_acl bucket=%s", bucket)
         self._require_bucket(bucket)
         return self._bucket_acls.get(bucket, self._DEFAULT_ACL.copy())
 
-    def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
+    async def put_bucket_acl(self, bucket: str, acl: dict) -> dict:
         self._logger.info("put_bucket_acl bucket=%s", bucket)
         self._require_bucket(bucket)
         self._bucket_acls[bucket] = acl
         return {}
 
-    def get_object_acl(self, bucket: str, key: str) -> dict:
+    async def get_object_acl(self, bucket: str, key: str) -> dict:
         self._logger.info("get_object_acl bucket=%s key=%s", bucket, key)
         self._require_object(bucket, key)
         return self._object_acls.get((bucket, key), self._DEFAULT_ACL.copy())
 
-    def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
+    async def put_object_acl(self, bucket: str, key: str, acl: dict) -> dict:
         self._logger.info("put_object_acl bucket=%s key=%s", bucket, key)
         self._require_object(bucket, key)
         self._object_acls[(bucket, key)] = acl
@@ -410,32 +372,25 @@ class MockS3Service:
 
     # ── CORS ───────────────────────────────────────────────────────────
 
-    def get_bucket_cors(self, bucket: str) -> dict:
+    async def get_bucket_cors(self, bucket: str) -> dict:
         self._logger.info("get_bucket_cors bucket=%s", bucket)
         self._require_bucket(bucket)
         cors = self._bucket_cors.get(bucket)
         if cors is None:
-            from botocore.exceptions import ClientError
-
-            raise ClientError(
-                {
-                    "Error": {
-                        "Code": "NoSuchCORSConfiguration",
-                        "Message": "The CORS configuration does not exist",
-                    },
-                    "ResponseMetadata": {"HTTPStatusCode": 404},
-                },
-                "GetBucketCors",
+            raise StorageError(
+                "NoSuchCORSConfiguration",
+                "The CORS configuration does not exist",
+                404,
             )
         return cors
 
-    def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
+    async def put_bucket_cors(self, bucket: str, cors_configuration: dict) -> dict:
         self._logger.info("put_bucket_cors bucket=%s", bucket)
         self._require_bucket(bucket)
         self._bucket_cors[bucket] = cors_configuration
         return {}
 
-    def delete_bucket_cors(self, bucket: str) -> dict:
+    async def delete_bucket_cors(self, bucket: str) -> dict:
         self._logger.info("delete_bucket_cors bucket=%s", bucket)
         self._require_bucket(bucket)
         self._bucket_cors.pop(bucket, None)
@@ -443,7 +398,7 @@ class MockS3Service:
 
     # ── List multipart uploads ────────────────────────────────────────
 
-    def list_multipart_uploads(
+    async def list_multipart_uploads(
         self,
         bucket: str,
         prefix: Optional[str] = None,
@@ -474,7 +429,7 @@ class MockS3Service:
 
     # ── Presigned URLs ────────────────────────────────────────────────
 
-    def generate_presigned_url(
+    async def generate_presigned_url(
         self,
         bucket: str,
         key: str,
@@ -514,21 +469,14 @@ class MockS3Service:
             and key is not None
             and (upload["bucket"] != bucket or upload["key"] != key)
         ):
-            from botocore.exceptions import ClientError
-
-            raise ClientError(
-                {
-                    "Error": {
-                        "Code": "NoSuchUpload",
-                        "Message": f"Upload ID '{upload_id}' does not exist",
-                    },
-                    "ResponseMetadata": {"HTTPStatusCode": 404},
-                },
-                "ListParts",
+            raise StorageError(
+                "NoSuchUpload",
+                f"Upload ID '{upload_id}' does not exist",
+                404,
             )
         return upload
 
-    def create_multipart_upload(self, bucket: str, key: str) -> dict:
+    async def create_multipart_upload(self, bucket: str, key: str) -> dict:
         self._logger.info("create_multipart_upload bucket=%s key=%s", bucket, key)
         self._require_bucket(bucket)
         self._upload_counter += 1
@@ -540,7 +488,7 @@ class MockS3Service:
         }
         return {"Bucket": bucket, "Key": key, "UploadId": upload_id}
 
-    def upload_part(
+    async def upload_part(
         self,
         bucket: str,
         key: str,
@@ -562,7 +510,7 @@ class MockS3Service:
         upload["parts"][part_number] = {"data": data, "etag": etag}
         return {"ETag": etag}
 
-    def complete_multipart_upload(
+    async def complete_multipart_upload(
         self,
         bucket: str,
         key: str,
@@ -582,18 +530,7 @@ class MockS3Service:
         for part in sorted(parts, key=lambda p: p["PartNumber"]):
             pn = part["PartNumber"]
             if pn not in upload["parts"]:
-                from botocore.exceptions import ClientError
-
-                raise ClientError(
-                    {
-                        "Error": {
-                            "Code": "InvalidPart",
-                            "Message": f"Part {pn} not found",
-                        },
-                        "ResponseMetadata": {"HTTPStatusCode": 400},
-                    },
-                    "CompleteMultipartUpload",
-                )
+                raise StorageError("InvalidPart", f"Part {pn} not found", 400)
             assembled += upload["parts"][pn]["data"]
 
         self._objects[bucket][key] = _StoredObject(assembled)
@@ -604,7 +541,9 @@ class MockS3Service:
             "ETag": self._objects[bucket][key].etag,
         }
 
-    def abort_multipart_upload(self, bucket: str, key: str, upload_id: str) -> dict:
+    async def abort_multipart_upload(
+        self, bucket: str, key: str, upload_id: str
+    ) -> dict:
         self._logger.info(
             "abort_multipart_upload bucket=%s key=%s upload_id=%s",
             bucket,
@@ -616,7 +555,7 @@ class MockS3Service:
         del self._multipart_uploads[upload_id]
         return {}
 
-    def list_parts(
+    async def list_parts(
         self,
         bucket: str,
         key: str,

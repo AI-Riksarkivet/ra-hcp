@@ -127,7 +127,7 @@ async def presigned_download(bucket: str, key: str, request: Request):
             status_code=503,
         )
     try:
-        result = mock_s3.get_object(bucket, key)
+        result = await mock_s3.get_object(bucket, key)
     except Exception:
         return StreamingResponse(
             content=iter([b"Object not found"]),
