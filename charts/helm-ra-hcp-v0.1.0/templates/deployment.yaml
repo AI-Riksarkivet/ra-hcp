@@ -48,18 +48,24 @@ spec:
             - name: http
               containerPort: 8000
               protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /liveness
+              port: http
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
           livenessProbe:
             httpGet:
-              path: /health
+              path: /liveness
               port: http
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
           readinessProbe:
             httpGet:
-              path: /health
+              path: /readiness
               port: http
-            initialDelaySeconds: 3
-            periodSeconds: 5
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           envFrom:
             - configMapRef:
                 name: {{ include "ra-hcp.fullname" . }}

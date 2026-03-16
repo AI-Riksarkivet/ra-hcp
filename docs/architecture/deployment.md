@@ -159,8 +159,8 @@ The backend exposes health endpoints for Kubernetes liveness and readiness probe
 
 | Endpoint | Purpose | Checks |
 |----------|---------|--------|
-| `GET /healthz` | Liveness probe | Always returns 200 — the process is alive |
-| `GET /readyz` | Readiness probe | Checks HCP MAPI reachability and Redis connectivity |
+| `GET /liveness` | Liveness probe | Always returns 200 — the process is alive |
+| `GET /readiness` | Readiness probe | Checks HCP MAPI reachability and Redis connectivity |
 | `GET /health` | Legacy | Returns cache status |
 
 The Helm chart configures these probes automatically. A backend pod that can't reach HCP is marked unready and removed from the load balancer until connectivity is restored.

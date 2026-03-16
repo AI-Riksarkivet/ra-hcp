@@ -327,14 +327,14 @@ The `lifespan()` async context manager in `app/main.py` handles startup and shut
 
 Middleware runs outermost-first:
 
-1. **`RequestIDMiddleware`**: reads `X-Request-ID` header or generates a UUID. Sets `request.state.request_id` and correlates with the OTel span. Records HTTP metrics (`http.server.request.duration`, `http.server.request.count`). Produces structured access logs with best-effort JWT user/tenant extraction (no signature validation for logging — it only needs the `sub` and `tenant` claims). Skips logging for health paths (`/healthz`, `/readyz`, `/health`).
+1. **`RequestIDMiddleware`**: reads `X-Request-ID` header or generates a UUID. Sets `request.state.request_id` and correlates with the OTel span. Records HTTP metrics (`http.server.request.duration`, `http.server.request.count`). Produces structured access logs with best-effort JWT user/tenant extraction (no signature validation for logging — it only needs the `sub` and `tenant` claims). Skips logging for health paths (`/liveness`, `/readiness`, `/health`).
 2. **`GZipMiddleware`**: compresses responses larger than 500 bytes.
 3. **`CORSMiddleware`**: empty `CORS_ORIGINS` allows all origins without credentials; non-empty restricts to specified origins with credentials.
 
 ### Health endpoints
 
-- `GET /healthz` — liveness probe, always returns `{"status": "ok"}`
-- `GET /readyz` — readiness probe, checks HCP MAPI reachability and Redis connectivity
+- `GET /liveness` — liveness probe, always returns `{"status": "ok"}`
+- `GET /readiness` — readiness probe, checks HCP MAPI reachability and Redis connectivity
 - `GET /health` — legacy, returns cache status
 
 ## Observability

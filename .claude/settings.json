@@ -1,6 +1,5 @@
 {
   "enabledPlugins": {
-    "svelte-skills@svelte-skills-kit": true,
     "mcp-essentials@claude-code-toolkit": true,
     "analytics@claude-code-toolkit": true,
     "toolkit-skills@claude-code-toolkit": true,
@@ -8,6 +7,7 @@
     "redis-development@redis": true,
     "svelte@svelte": true,
     "astral@astral-sh": true,
-    "svelte-flow@linehaulai-claude-marketplace": true
+    "svelte-flow@linehaulai-claude-marketplace": true,
+    "svelte-skills@svelte-skills-kit": true
   }
 }

@@ -102,6 +102,24 @@ redis:
     #   cpu: 50m
     #   memory: 64Mi
 
+# Health probe configuration
+# startupProbe: allows slow starts (cache connect, MAPI init)
+#   Kubernetes waits up to failureThreshold × periodSeconds (default: 10×3 = 30s)
+#   before killing the pod. No liveness/readiness checks run until startup passes.
+# livenessProbe: /liveness — is the process alive? Restart if not.
+# readinessProbe: /readiness — are backends (HCP, Redis) reachable? Remove from
+#   service if not, but don't restart.
+probes:
+  startup:
+    failureThreshold: 10
+    periodSeconds: 3
+  liveness:
+    periodSeconds: 10
+    failureThreshold: 3
+  readiness:
+    periodSeconds: 5
+    failureThreshold: 2
+
 podDisruptionBudget:
   enabled: false
   # minAvailable: 1
