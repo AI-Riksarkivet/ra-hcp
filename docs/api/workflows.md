@@ -2,6 +2,16 @@
 
 Copy-paste-ready **curl** and **Python 3.13+ (`httpx`)** examples for the most common HCP API workflows. Every example assumes the API is running at `http://localhost:8000` -- adjust `BASE` to match your environment.
 
+The HCP Unified API exposes two endpoint families under the same JWT token:
+
+| Family | Prefix | Purpose | Examples |
+|--------|--------|---------|----------|
+| **S3 data-plane** | `/buckets`, `/presign` | Object storage — upload, download, copy, delete, presigned URLs, multipart | Sections 3, 8, 9 |
+| **MAPI management** | `/mapi/tenants/...` | Administration — tenants, namespaces, users, groups, statistics, compliance | Sections 2, 4, 5, 6 |
+| **Query** | `/query/tenants/...` | Metadata search — find objects by custom metadata, audit operations | Section 7 |
+
+All paths below are relative to `BASE` (`http://localhost:8000/api/v1`).
+
 ## Prerequisites
 
 ```bash
@@ -339,6 +349,9 @@ Export namespace configuration as a reusable template -- useful for disaster rec
 
 Create users, assign roles, and change passwords at the tenant level.
 
+!!! warning "Example passwords"
+    The passwords in these examples (`InitialP4ss!`, `N3wS3cure!`) are **for illustration only**. In production, use a strong password policy and never commit credentials to source control.
+
 === "curl"
 
     ```bash
@@ -434,6 +447,13 @@ Create users, assign roles, and change passwords at the tenant level.
             )
             resp.raise_for_status()
             print("Password changed")
+
+            # Delete a user
+            resp = await c.delete(
+                f"/mapi/tenants/{tenant}/userAccounts/analyst",
+            )
+            resp.raise_for_status()
+            print("User deleted")
     ```
 
 ---
@@ -515,6 +535,9 @@ Search objects by indexed metadata and audit operations across namespaces.
 
 !!! note
     Metadata query endpoints use the `/api/v1/query` prefix (not `/api/v1/mapi`). The target namespace must have indexing enabled.
+
+!!! tip "Query syntax"
+    The `query` field uses **Lucene syntax**: `field:value`, `AND`/`OR` operators, range queries (`size:[1048576 TO *]`), and wildcards (`contentType:application/*`). Enclose exact phrases in escaped quotes (`\"engineering\"`).
 
 === "curl"
 
@@ -822,5 +845,10 @@ Upload large files using presigned multipart upload -- the recommended approach 
 
 ## Related pages
 
+- [Authentication](authentication.md) -- Login flow, JWT details, and token refresh patterns.
+- [S3 Buckets](s3-buckets.md) -- Bucket CRUD, versioning, and ACL reference.
+- [S3 Objects](s3-objects.md) -- Object upload, download, copy, delete, and CORS configuration.
+- [Tenants](tenants.md) -- Tenant-level settings and identity management.
+- [Namespaces](namespaces.md) -- Namespace management, compliance, and access.
 - [Argo Workflows](argo.md) -- ETL pipelines, presigned URL workflows, batch fan-out/fan-in with YAML and Hera.
 - [Error Handling](error-handling.md) -- Retries, idempotency, ACID patterns, and fault-tolerant multipart uploads.

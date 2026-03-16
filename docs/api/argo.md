@@ -100,7 +100,8 @@ docker build -t my-registry/python-httpx:3.13 .
 ```dockerfile
 FROM python:3.13-slim
 RUN pip install --no-cache-dir httpx Pillow
-COPY hcp_s3.py /usr/local/lib/python3.13/site-packages/hcp_s3.py
+COPY hcp_s3.py /app/hcp_s3.py
+ENV PYTHONPATH="/app"
 ```
 
 ```bash
@@ -714,7 +715,7 @@ graph TD
               BUCKET="{{workflow.parameters.bucket}}"
               PREFIX="{{workflow.parameters.prefix}}"
 
-              RESP=$(curl -s -f "$BASE/s3/buckets/$BUCKET/objects?prefix=$PREFIX&max_keys=100" \
+              RESP=$(curl -s -f "$BASE/buckets/$BUCKET/objects?prefix=$PREFIX&max_keys=100" \
                 -H "Authorization: Bearer $TOKEN")
 
               # Extract object keys as a JSON array
@@ -787,7 +788,7 @@ graph TD
               BUCKET="{{workflow.parameters.bucket}}"
 
               # List all processed results
-              RESULTS=$(curl -s -f "$BASE/s3/buckets/$BUCKET/objects?prefix=processed/&max_keys=1000" \
+              RESULTS=$(curl -s -f "$BASE/buckets/$BUCKET/objects?prefix=processed/&max_keys=1000" \
                 -H "Authorization: Bearer $TOKEN")
 
               COUNT=$(echo "$RESULTS" | jq '.objects | length')
@@ -795,7 +796,7 @@ graph TD
               echo "$SUMMARY"
 
               # Upload summary via presigned URL
-              PRESIGN=$(curl -s -X POST "$BASE/s3/presign" \
+              PRESIGN=$(curl -s -X POST "$BASE/presign" \
                 -H "Authorization: Bearer $TOKEN" \
                 -H "Content-Type: application/json" \
                 -d "{\"bucket\":\"$BUCKET\",\"key\":\"summaries/{{workflow.name}}.json\",\"method\":\"put_object\",\"expires_in\":600}")
@@ -1007,7 +1008,7 @@ def presign(
 ) -> str:
     """Get a presigned URL from the HCP API."""
     resp = httpx.post(
-        f"{base}/s3/presign",
+        f"{base}/presign",
         json={"bucket": bucket, "key": key, "method": method, "expires_in": expires},
         headers=auth_headers(token),
     )
@@ -1039,7 +1040,7 @@ def verify_upload(
 ) -> None:
     """HEAD the uploaded object and assert size matches."""
     resp = httpx.head(
-        f"{base}/s3/buckets/{bucket}/objects/{key}",
+        f"{base}/buckets/{bucket}/objects/{key}",
         headers=auth_headers(token),
         timeout=30.0,
     )
@@ -1059,7 +1060,7 @@ def list_objects(
 ) -> list[dict]:
     """List objects under a prefix."""
     resp = httpx.get(
-        f"{base}/s3/buckets/{bucket}/objects",
+        f"{base}/buckets/{bucket}/objects",
         params={"prefix": prefix, "max_keys": max_keys},
         headers=auth_headers(token),
     )
@@ -1072,7 +1073,7 @@ def delete_keys(base: str, token: str, bucket: str, keys: list[str]) -> None:
     if not keys:
         return
     httpx.post(
-        f"{base}/s3/buckets/{bucket}/objects/delete",
+        f"{base}/buckets/{bucket}/objects/delete",
         json={"keys": keys},
         headers=auth_headers(token),
     ).raise_for_status()
@@ -1087,7 +1088,7 @@ def commit_staging(
         src = obj["key"]
         dest = src.replace(staging_prefix, dest_prefix)
         httpx.post(
-            f"{base}/s3/buckets/{bucket}/objects/{dest}/copy",
+            f"{base}/buckets/{bucket}/objects/{dest}/copy",
             json={"source_bucket": bucket, "source_key": src},
             headers=auth_headers(token),
         ).raise_for_status()
@@ -1141,7 +1142,8 @@ Bake the helper module and dependencies into a single image used by all steps:
 ```dockerfile
 FROM python:3.13-slim
 RUN pip install --no-cache-dir httpx Pillow
-COPY hcp_s3.py /usr/local/lib/python3.13/site-packages/hcp_s3.py
+COPY hcp_s3.py /app/hcp_s3.py
+ENV PYTHONPATH="/app"
 ```
 
 ```bash
@@ -1670,7 +1672,7 @@ graph TD
               BUCKET="{{workflow.parameters.bucket}}"
               PREFIX="{{workflow.parameters.prefix}}"
 
-              RESP=$(curl -s -f "$BASE/s3/buckets/$BUCKET/objects?prefix=$PREFIX&max_keys=100" \
+              RESP=$(curl -s -f "$BASE/buckets/$BUCKET/objects?prefix=$PREFIX&max_keys=100" \
                 -H "Authorization: Bearer $TOKEN")
               echo "$RESP" | jq '[.objects[].key]' > /tmp/keys.json
               echo "Found $(echo "$RESP" | jq '.objects | length') objects"
@@ -1767,11 +1769,11 @@ graph TD
               if [ "$STATUS" != "Succeeded" ]; then
                 echo "Workflow $STATUS — deleting staging prefix staging/$WF/..."
                 # List staged objects
-                KEYS=$(curl -s -f "$BASE/s3/buckets/$BUCKET/objects?prefix=staging/$WF/&max_keys=1000" \
+                KEYS=$(curl -s -f "$BASE/buckets/$BUCKET/objects?prefix=staging/$WF/&max_keys=1000" \
                   -H "Authorization: Bearer $TOKEN" | jq '[.objects[].key]')
 
                 if [ "$(echo "$KEYS" | jq 'length')" -gt 0 ]; then
-                  curl -s -X POST "$BASE/s3/buckets/$BUCKET/objects/delete" \
+                  curl -s -X POST "$BASE/buckets/$BUCKET/objects/delete" \
                     -H "Authorization: Bearer $TOKEN" \
                     -H "Content-Type: application/json" \
                     -d "{\"keys\": $KEYS}" || true

@@ -510,7 +510,7 @@ graph TD
 
                 # Abort any in-progress multipart uploads
                 # Delete partial results to avoid polluting the bucket
-                curl -s -X POST "$BASE/s3/buckets/$BUCKET/objects/delete" \
+                curl -s -X POST "$BASE/buckets/$BUCKET/objects/delete" \
                   -H "Authorization: Bearer $TOKEN" \
                   -H "Content-Type: application/json" \
                   -d "{\"keys\": [\"partial/{{workflow.name}}/\"]}" || true
@@ -546,7 +546,7 @@ graph TD
             subprocess.run(
                 [
                     "curl", "-s", "-X", "POST",
-                    f"{hcp_api_base}/s3/buckets/{bucket}/objects/delete",
+                    f"{hcp_api_base}/buckets/{bucket}/objects/delete",
                     "-H", f"Authorization: Bearer {hcp_token}",
                     "-H", "Content-Type: application/json",
                     "-d", '{"keys": ["partial/"]}',
@@ -637,9 +637,8 @@ graph LR
     W["1. Write"] -->|PUT| STG
     STG --> V["2. Verify<br/><small>HEAD check size</small>"]
     V -->|match| C["3. Commit<br/><small>COPY → final</small>"]
-    C --> STG
     C -->|copy| FINAL
-    STG --> CL["4. Cleanup<br/><small>DELETE staging</small>"]
+    C -->|delete staging| CL["4. Cleanup<br/><small>DELETE staging</small>"]
     V -->|mismatch| DEL["DELETE staging<br/><small>+ raise error</small>"]
 
     style FINAL fill:#d4edda,stroke:#28a745
@@ -667,31 +666,31 @@ graph LR
         async with httpx.AsyncClient(base_url=BASE, headers=headers, timeout=60.0) as c:
             # 1. Write to staging
             resp = await c.put(
-                f"/s3/buckets/{bucket}/objects/{staging_key}",
+                f"/buckets/{bucket}/objects/{staging_key}",
                 content=data,
             )
             resp.raise_for_status()
 
             # 2. Verify — HEAD to confirm size
-            resp = await c.head(f"/s3/buckets/{bucket}/objects/{staging_key}")
+            resp = await c.head(f"/buckets/{bucket}/objects/{staging_key}")
             resp.raise_for_status()
             actual_size = int(resp.headers.get("content-length", 0))
             if actual_size != len(data):
                 # Mismatch — delete staging and raise
-                await c.delete(f"/s3/buckets/{bucket}/objects/{staging_key}")
+                await c.delete(f"/buckets/{bucket}/objects/{staging_key}")
                 raise RuntimeError(
                     f"Size mismatch: expected {len(data)}, got {actual_size}"
                 )
 
             # 3. Commit — copy from staging to final
             resp = await c.post(
-                f"/s3/buckets/{bucket}/objects/{final_key}/copy",
+                f"/buckets/{bucket}/objects/{final_key}/copy",
                 json={"source_bucket": bucket, "source_key": staging_key},
             )
             resp.raise_for_status()
 
             # 4. Clean up staging
-            await c.delete(f"/s3/buckets/{bucket}/objects/{staging_key}")
+            await c.delete(f"/buckets/{bucket}/objects/{staging_key}")
 
             print(f"Committed {final_key} ({actual_size} bytes)")
     ```
@@ -703,26 +702,26 @@ graph LR
     STAGING_KEY="staging/$(uuidgen)/$FINAL_KEY"
 
     # 1. Write to staging
-    curl -s -X PUT "$BASE/s3/buckets/$BUCKET/objects/$STAGING_KEY" \
+    curl -s -X PUT "$BASE/buckets/$BUCKET/objects/$STAGING_KEY" \
       -H "$AUTH" --data-binary @"$LOCAL_FILE"
 
     # 2. Verify
-    SIZE=$(curl -s -I "$BASE/s3/buckets/$BUCKET/objects/$STAGING_KEY" \
+    SIZE=$(curl -s -I "$BASE/buckets/$BUCKET/objects/$STAGING_KEY" \
       -H "$AUTH" | grep -i content-length | awk '{print $2}' | tr -d '\r')
     EXPECTED=$(stat -f%z "$LOCAL_FILE")
     if [ "$SIZE" != "$EXPECTED" ]; then
       echo "ERROR: Size mismatch ($SIZE != $EXPECTED)" >&2
-      curl -s -X DELETE "$BASE/s3/buckets/$BUCKET/objects/$STAGING_KEY" -H "$AUTH"
+      curl -s -X DELETE "$BASE/buckets/$BUCKET/objects/$STAGING_KEY" -H "$AUTH"
       exit 1
     fi
 
     # 3. Commit — copy to final location
-    curl -s -X POST "$BASE/s3/buckets/$BUCKET/objects/$FINAL_KEY/copy" \
+    curl -s -X POST "$BASE/buckets/$BUCKET/objects/$FINAL_KEY/copy" \
       -H "$AUTH" -H "Content-Type: application/json" \
       -d "{\"source_bucket\": \"$BUCKET\", \"source_key\": \"$STAGING_KEY\"}"
 
     # 4. Clean up staging
-    curl -s -X DELETE "$BASE/s3/buckets/$BUCKET/objects/$STAGING_KEY" -H "$AUTH"
+    curl -s -X DELETE "$BASE/buckets/$BUCKET/objects/$STAGING_KEY" -H "$AUTH"
 
     echo "Committed $FINAL_KEY"
     ```
