@@ -1,7 +1,6 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import SaveButton from '$lib/components/custom/save-button/save-button.svelte';
 	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
@@ -51,15 +50,14 @@
 			<Card.Content class="space-y-4">
 				<div class="space-y-1.5">
 					<Label for="dns-mode">Downstream DNS Mode</Label>
-					<Select.Root type="single" bind:value={localDnsMode}>
-						<Select.Trigger id="dns-mode" class="w-48">
-							{localDnsMode}
-						</Select.Trigger>
-						<Select.Content>
-							<Select.Item value="ADVANCED">ADVANCED</Select.Item>
-							<Select.Item value="BASIC">BASIC</Select.Item>
-						</Select.Content>
-					</Select.Root>
+					<select
+						id="dns-mode"
+						class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-48 items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+						bind:value={localDnsMode}
+					>
+						<option value="ADVANCED">ADVANCED</option>
+						<option value="BASIC">BASIC</option>
+					</select>
 					<p class="text-xs text-muted-foreground">
 						ADVANCED mode allows full DNS configuration. BASIC mode uses simplified settings.
 					</p>

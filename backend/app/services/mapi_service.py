@@ -31,7 +31,7 @@ _HCP_STATUS_MAP: Final[dict[int, tuple[int, str]]] = {
     403: (403, "{detail}"),
     404: (404, "{resource} not found"),
     405: (405, "Method not allowed for this resource"),
-    409: (409, "{resource} already exists"),
+    409: (409, "{resource}: {detail}"),
     414: (414, "Request URI too large"),
     415: (415, "Unsupported media type"),
     500: (502, "HCP internal error: {detail}"),

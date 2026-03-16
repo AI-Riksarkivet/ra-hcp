@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
+
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -378,16 +378,15 @@
 		</div>
 		<div class="space-y-1.5">
 			<Label for="link-type">Link Type</Label>
-			<Select.Root type="single" bind:value={createType}>
-				<Select.Trigger id="link-type" class="w-full">
-					{createType}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Item value="ACTIVE_ACTIVE">ACTIVE_ACTIVE</Select.Item>
-					<Select.Item value="OUTBOUND_ONLY">OUTBOUND_ONLY</Select.Item>
-					<Select.Item value="INBOUND_ONLY">INBOUND_ONLY</Select.Item>
-				</Select.Content>
-			</Select.Root>
+			<select
+				id="link-type"
+				class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-9 w-full items-center rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+				bind:value={createType}
+			>
+				<option value="ACTIVE_ACTIVE">ACTIVE_ACTIVE</option>
+				<option value="OUTBOUND_ONLY">OUTBOUND_ONLY</option>
+				<option value="INBOUND_ONLY">INBOUND_ONLY</option>
+			</select>
 		</div>
 		<div class="space-y-1.5">
 			<Label for="link-host">Remote Host</Label>

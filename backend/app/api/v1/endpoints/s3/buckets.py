@@ -96,10 +96,10 @@ async def delete_bucket(
     empty + delete (no MAPI involved).
     """
     if force:
-        await _empty_bucket(s3, bucket)
+        empty_errors = await _empty_bucket(s3, bucket)
 
         if storage_settings.storage_backend == "hcp":
-            return await _force_delete_hcp(s3, hcp, bucket, token)
+            return await _force_delete_hcp(s3, hcp, bucket, token, empty_errors)
 
         # MinIO / generic: simple empty + delete
         await run_storage(s3.delete_bucket(bucket), f"bucket '{bucket}'")
@@ -114,6 +114,7 @@ async def _force_delete_hcp(
     hcp: AuthenticatedMapiService,
     bucket: str,
     token: str,
+    object_errors: list[str] | None = None,
 ) -> dict:
     """HCP-specific force-delete with MAPI namespace reconfiguration."""
     creds = verify_token_with_credentials(token)
@@ -154,14 +155,15 @@ async def _force_delete_hcp(
                 bucket,
             )
 
-    raise HTTPException(
-        status_code=409,
-        detail=(
-            f"bucket '{bucket}': All objects removed but HCP is still "
-            f"cleaning up internal deletion records. "
-            f"Please try again in a few minutes."
-        ),
-    )
+    reason = f"bucket '{bucket}': Could not delete bucket."
+    if object_errors:
+        reason += " Some objects failed to delete: " + "; ".join(object_errors)
+    else:
+        reason += (
+            " HCP is still cleaning up internal deletion records."
+            " Please try again in a few minutes."
+        )
+    raise HTTPException(status_code=409, detail=reason)
 
 
 async def _prepare_namespace_for_delete(
@@ -188,9 +190,16 @@ async def _prepare_namespace_for_delete(
         logger.warning("force-delete: failed to disable search")
 
 
-async def _delete_all_versions(s3: StorageProtocol, bucket: str) -> int:
-    """Delete every object version and delete marker in *bucket*."""
+async def _delete_all_versions(
+    s3: StorageProtocol, bucket: str
+) -> tuple[int, list[str]]:
+    """Delete every object version and delete marker in *bucket*.
+
+    Returns ``(deleted_count, errors)`` where *errors* holds the first
+    few human-readable failure reasons (capped at 5).
+    """
     deleted = 0
+    errors: list[str] = []
     key_marker: str | None = None
     version_marker: str | None = None
     while True:
@@ -211,20 +220,28 @@ async def _delete_all_versions(s3: StorageProtocol, bucket: str) -> int:
                 logger.warning(
                     "force-delete: failed to remove %s/%s: %s", bucket, key, exc
                 )
+                if len(errors) < 5:
+                    errors.append(f"{key}: {exc}")
 
         if not result.get("IsTruncated", False):
             break
         key_marker = result.get("NextKeyMarker")
         version_marker = result.get("NextVersionIdMarker")
-    return deleted
+    return deleted, errors
 
 
-async def _empty_bucket(s3: StorageProtocol, bucket: str) -> None:
-    """Delete all objects, versions, and delete markers in *bucket*."""
+async def _empty_bucket(s3: StorageProtocol, bucket: str) -> list[str]:
+    """Delete all objects, versions, and delete markers in *bucket*.
+
+    Returns a list of per-object failure reasons (capped).
+    """
     deleted = 0
+    errors: list[str] = []
 
     # 1. Delete all object versions and delete markers
-    deleted += await _delete_all_versions(s3, bucket)
+    count, errs = await _delete_all_versions(s3, bucket)
+    deleted += count
+    errors.extend(errs)
 
     # 2. Clean up any remaining non-versioned objects
     token: str | None = None
@@ -232,20 +249,31 @@ async def _empty_bucket(s3: StorageProtocol, bucket: str) -> None:
         result = await s3.list_objects(bucket, None, 1000, token)
         keys = [o["Key"] for o in result.get("Contents", [])]
         if keys:
-            await s3.delete_objects(bucket, keys)
-            deleted += len(keys)
+            bulk_result = await s3.delete_objects(bucket, keys)
+            bulk_errors = bulk_result.get("Errors", [])
+            deleted += len(keys) - len(bulk_errors)
+            for err in bulk_errors:
+                if len(errors) < 5:
+                    key = err.get("Key", "?")
+                    code = err.get("Code", "Unknown")
+                    msg = err.get("Message", "")
+                    errors.append(f"{key}: {code} {msg}".strip())
         if not result.get("IsTruncated", False):
             break
         token = result.get("NextContinuationToken")
 
     # 3. Deleting non-versioned objects may have created new delete markers
     #    on versioned buckets — clean those up too.
-    deleted += await _delete_all_versions(s3, bucket)
+    count, errs = await _delete_all_versions(s3, bucket)
+    deleted += count
+    errors.extend(errs)
 
     if deleted > 0:
         logger.info(
             "force-delete: removed %d objects from bucket '%s'", deleted, bucket
         )
+
+    return errors
 
 
 # ── Bucket versioning ────────────────────────────────────────────────

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { ArrowDownToLine, ArrowUpFromLine, Eye, PenLine, Trash2 } from 'lucide-svelte';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import { formatBytes } from '$lib/utils/format.js';
@@ -109,9 +108,10 @@
 	});
 
 	function handleMouseMove(field: string, points: SparkPoint[], event: MouseEvent) {
-		const svg = event.currentTarget as SVGSVGElement;
-		const rect = svg.getBoundingClientRect();
-		const mouseX = ((event.clientX - rect.left) / rect.width) * W;
+		const el = event.currentTarget as HTMLElement;
+		const rect = el.getBoundingClientRect();
+		const pct = (event.clientX - rect.left) / rect.width;
+		const mouseX = pct * W;
 		let closest = 0;
 		let minDist = Infinity;
 		for (let i = 0; i < points.length; i++) {
@@ -141,16 +141,14 @@
 						>Namespace chargeback metrics ({GRANULARITY_LABELS[granularity]})</Card.Description
 					>
 				</div>
-				<Select.Root type="single" bind:value={granularity}>
-					<Select.Trigger class="h-8 w-[100px]">
-						{GRANULARITY_OPTIONS.find((o) => o.value === granularity)?.label ?? 'Daily'}
-					</Select.Trigger>
-					<Select.Content>
-						{#each GRANULARITY_OPTIONS as opt (opt.value)}
-							<Select.Item value={opt.value}>{opt.label}</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
+				<select
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-8 w-[100px] items-center rounded-md border px-2 py-1 text-sm shadow-sm focus:outline-none focus:ring-1"
+					bind:value={granularity}
+				>
+					{#each GRANULARITY_OPTIONS as opt (opt.value)}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
+				</select>
 			</div>
 		</Card.Header>
 		<Card.Content>
@@ -173,53 +171,47 @@
 							{/if}
 						</div>
 						{#if points.length > 1}
-							<svg
-								viewBox="0 0 {W} {H}"
-								preserveAspectRatio="none"
-								class="h-[48px] w-full cursor-crosshair"
-								role="img"
-								aria-label="{m.label} sparkline"
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div
+								class="relative h-[48px] w-full cursor-crosshair"
 								onmousemove={(e) => handleMouseMove(m.field, points, e)}
 								onmouseleave={() => handleMouseLeave(m.field)}
 							>
-								<defs>
-									<linearGradient id="grad-{m.field}" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="0%" stop-color="hsl(var(--primary))" stop-opacity="0.3" />
-										<stop offset="100%" stop-color="hsl(var(--primary))" stop-opacity="0.02" />
-									</linearGradient>
-								</defs>
-								<path d={areaPath(points)} fill="url(#grad-{m.field})" />
-								<path
-									d={linePath(points)}
-									fill="none"
-									stroke="hsl(var(--primary))"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									vector-effect="non-scaling-stroke"
-								/>
+								<svg
+									viewBox="0 0 {W} {H}"
+									preserveAspectRatio="none"
+									class="absolute inset-0 h-full w-full"
+									role="img"
+									aria-label="{m.label} sparkline"
+								>
+									<defs>
+										<linearGradient id="grad-{m.field}" x1="0" y1="0" x2="0" y2="1">
+											<stop offset="0%" stop-color="hsl(var(--primary))" stop-opacity="0.3" />
+											<stop offset="100%" stop-color="hsl(var(--primary))" stop-opacity="0.02" />
+										</linearGradient>
+									</defs>
+									<path d={areaPath(points)} fill="url(#grad-{m.field})" />
+									<path
+										d={linePath(points)}
+										fill="none"
+										stroke="hsl(var(--primary))"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										vector-effect="non-scaling-stroke"
+									/>
+								</svg>
 								{#if hoveredPoint}
-									<line
-										x1={hoveredPoint.x}
-										y1={PAD}
-										x2={hoveredPoint.x}
-										y2={H}
-										stroke="hsl(var(--muted-foreground))"
-										stroke-width="1"
-										stroke-dasharray="2,2"
-										vector-effect="non-scaling-stroke"
-									/>
-									<circle
-										cx={hoveredPoint.x}
-										cy={hoveredPoint.y}
-										r="2"
-										fill="hsl(var(--primary))"
-										stroke="hsl(var(--background))"
-										stroke-width="1.5"
-										vector-effect="non-scaling-stroke"
-									/>
+									<div
+										class="pointer-events-none absolute top-0 h-full w-px border-l border-dashed border-muted-foreground/50"
+										style="left: {(hoveredPoint.x / W) * 100}%"
+									></div>
+									<div
+										class="pointer-events-none absolute h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-1 ring-background"
+										style="left: {(hoveredPoint.x / W) * 100}%; top: {(hoveredPoint.y / H) * 100}%"
+									></div>
 								{/if}
-							</svg>
+							</div>
 						{/if}
 					</div>
 				{/each}

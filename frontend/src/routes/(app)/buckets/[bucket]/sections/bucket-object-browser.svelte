@@ -411,8 +411,8 @@
 			await delete_object({ bucket, key: deleteTarget }).updates(objectData);
 			deleteDialogOpen = false;
 			toast.success('Object deleted');
-		} catch {
-			toast.error('Failed to delete object');
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to delete object');
 		} finally {
 			deleting = false;
 		}
@@ -427,8 +427,8 @@
 			rowSelection = {};
 			bulkDeleteOpen = false;
 			toast.success(`Deleted ${keys.length} object${keys.length !== 1 ? 's' : ''}`);
-		} catch {
-			toast.error('Failed to delete objects');
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : 'Failed to delete objects');
 		} finally {
 			deleting = false;
 		}
