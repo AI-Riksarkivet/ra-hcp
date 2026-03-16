@@ -95,7 +95,7 @@ RUN pip install --no-cache-dir httpx
 docker build -t my-registry/python-httpx:3.13 .
 ```
 
-**Full image** -- httpx + Pillow + shared `hcp_s3` helper module (used by batch and cross-tenant examples):
+**Full image** -- httpx + Pillow + shared `hcp_s3` helper module (used by batch, cross-tenant, and error-handling examples):
 
 ```dockerfile
 FROM python:3.13-slim
@@ -105,11 +105,45 @@ COPY hcp_s3.py /usr/local/lib/python3.13/site-packages/hcp_s3.py
 
 ```bash
 docker build -t my-registry/hcp-convert:3.13 .
+docker push my-registry/hcp-convert:3.13
 ```
 
-The `hcp_s3` module provides reusable helpers for presigning, downloading, uploading, listing, bulk-deleting, verification, and staged-commit patterns. See the [full source](#shared-helper-module----hcp_s3py) in the cross-tenant section below.
+Replace `my-registry/` with your actual container registry path.
 
-Replace `my-registry/` with your actual registry path.
+#### What the `hcp-convert` image provides
+
+The `hcp-convert:3.13` image bundles everything a workflow pod needs to interact with HCP S3 via presigned URLs:
+
+| Package | Purpose |
+|---------|---------|
+| **httpx** | HTTP client for presigned URL transfers and HCP API calls |
+| **Pillow** | Image validation and format conversion (TIFF, JPG, PNG, etc.) |
+| **hcp_s3** | Shared helper module that eliminates boilerplate across workflow steps |
+
+#### `hcp_s3` helper module -- quick reference
+
+The `hcp_s3` module is a single Python file baked into the container at import time (`import hcp_s3`). It provides presigning, transfers, verification, listing, bulk operations, and staged-commit patterns so each workflow step stays concise.
+
+| Function | Description |
+|----------|-------------|
+| `read_token(secret_path)` | Read a JWT from a mounted Kubernetes Secret |
+| `auth_headers(token)` | Build an `Authorization: Bearer` header dict |
+| `presign(base, token, bucket, key, method, expires=600)` | Get a presigned URL from the HCP API |
+| `download(base, token, bucket, key, dest)` | Presign + GET + write to local `Path`. Returns byte count |
+| `upload(base, token, bucket, key, data)` | Presign + PUT bytes. Returns ETag |
+| `verify_upload(base, token, bucket, key, expected_size)` | HEAD the object and assert `Content-Length` matches |
+| `list_objects(base, token, bucket, prefix, max_keys=1000)` | List objects under a prefix |
+| `delete_keys(base, token, bucket, keys)` | Bulk-delete a list of object keys |
+| `commit_staging(base, token, bucket, staging_prefix, dest_prefix)` | Copy all objects from staging to final prefix, then delete staging. Returns count |
+| `cleanup_staging(base, token, bucket, staging_prefix)` | Delete all objects under a staging prefix (safe on errors). Returns count |
+| `validate_tiff(path)` | Check magic bytes + `Image.verify()` — catches corrupt TIFFs |
+| `validate_jpg(path)` | Check magic bytes + `Image.load()` — forces full decode, catches truncation |
+
+The full source code is in the [cross-tenant section](#shared-helper-module----hcp_s3py) below.
+
+!!! tip "When to use which image"
+    - **`python-httpx:3.13`** -- Use for the ETL and presigned URL pipelines where pods work with raw data and don't need Pillow or shared helpers.
+    - **`hcp-convert:3.13`** -- Use for batch fan-out, cross-tenant transformations, and error-handling workflows where pods need `import hcp_s3` for concise presigned URL operations and staged-commit patterns.
 
 ### Installing Hera
 
