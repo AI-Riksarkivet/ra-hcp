@@ -80,9 +80,11 @@ First, retrieve the S3 credentials from the API and create a Kubernetes Secret t
         )
     ```
 
-### Python container image
+### Python container images
 
-The Python-based Argo templates below use `httpx` for HTTP calls. Since `python:3.13-slim` does not include httpx, build a small custom image:
+The Python-based Argo templates use `httpx` and shared helpers. Build two images:
+
+**Base image** -- httpx only (used by the ETL and presigned URL examples):
 
 ```dockerfile
 FROM python:3.13-slim
@@ -91,10 +93,23 @@ RUN pip install --no-cache-dir httpx
 
 ```bash
 docker build -t my-registry/python-httpx:3.13 .
-docker push my-registry/python-httpx:3.13
 ```
 
-All examples below reference this image as **`my-registry/python-httpx:3.13`** -- replace with your actual registry path.
+**Full image** -- httpx + Pillow + shared `hcp_s3` helper module (used by batch and cross-tenant examples):
+
+```dockerfile
+FROM python:3.13-slim
+RUN pip install --no-cache-dir httpx Pillow
+COPY hcp_s3.py /usr/local/lib/python3.13/site-packages/hcp_s3.py
+```
+
+```bash
+docker build -t my-registry/hcp-convert:3.13 .
+```
+
+The `hcp_s3` module provides reusable helpers for presigning, downloading, uploading, listing, bulk-deleting, verification, and staged-commit patterns. See the [full source](#shared-helper-module----hcp_s3py) in the cross-tenant section below.
+
+Replace `my-registry/` with your actual registry path.
 
 ### Installing Hera
 
@@ -702,43 +717,27 @@ graph TD
             parameters:
               - name: key
           script:
-            image: my-registry/python-httpx:3.13
+            image: my-registry/hcp-convert:3.13
             command: [python]
             source: |
-              import httpx, json, os
+              import hcp_s3, json
               from pathlib import Path
 
               BASE = "{{workflow.parameters.hcp-api-base}}"
               TOKEN = "{{workflow.parameters.hcp-token}}"
               BUCKET = "{{workflow.parameters.bucket}}"
               KEY = "{{inputs.parameters.key}}"
-              headers = {"Authorization": f"Bearer {TOKEN}"}
 
-              # Get a presigned download URL from the HCP API
-              resp = httpx.post(
-                  f"{BASE}/s3/presign",
-                  json={"bucket": BUCKET, "key": KEY, "method": "get_object", "expires_in": 600},
-                  headers=headers,
-              )
-              url = resp.json()["url"]
+              # Download via presigned URL
+              size = hcp_s3.download(BASE, TOKEN, BUCKET, KEY, Path("/tmp/data"))
 
-              # Download and process the object
-              resp = httpx.get(url)
-              resp.raise_for_status()
-              Path("/tmp/data").write_bytes(resp.content)
-              size = os.path.getsize("/tmp/data")
+              # Process (placeholder — replace with your logic)
               result = {"key": KEY, "size": size, "status": "processed"}
               print(json.dumps(result))
 
-              # Upload result back via presigned PUT
+              # Upload result via presigned URL
               result_key = KEY.replace("incoming/", "processed/") + ".result.json"
-              resp = httpx.post(
-                  f"{BASE}/s3/presign",
-                  json={"bucket": BUCKET, "key": result_key, "method": "put_object", "expires_in": 600},
-                  headers=headers,
-              )
-              upload_url = resp.json()["url"]
-              httpx.put(upload_url, content=json.dumps(result).encode()).raise_for_status()
+              hcp_s3.upload(BASE, TOKEN, BUCKET, result_key, json.dumps(result).encode())
               print(f"Result uploaded to {result_key}")
 
         # ── Step 3: Fan in — aggregate results ───────────────────────
@@ -791,87 +790,51 @@ graph TD
     )
 
 
-    @script(image="my-registry/python-httpx:3.13", retry_strategy=RETRY)
+    @script(image="my-registry/hcp-convert:3.13", retry_strategy=RETRY)
     def list_objects(hcp_api_base: str, hcp_token: str, bucket: str, prefix: str):
         """List objects from HCP and output their keys as a JSON array."""
-        import httpx, json
+        import hcp_s3, json
         from pathlib import Path
 
-        resp = httpx.get(
-            f"{hcp_api_base}/s3/buckets/{bucket}/objects",
-            params={"prefix": prefix, "max_keys": 100},
-            headers={"Authorization": f"Bearer {hcp_token}"},
-        )
-        resp.raise_for_status()
-        keys = [obj["key"] for obj in resp.json()["objects"]]
+        objs = hcp_s3.list_objects(hcp_api_base, hcp_token, bucket, prefix, max_keys=100)
+        keys = [obj["key"] for obj in objs]
         print(f"Found {len(keys)} objects")
         Path("/tmp/keys.json").write_text(json.dumps(keys))
 
 
     @script(
-        image="my-registry/python-httpx:3.13",
+        image="my-registry/hcp-convert:3.13",
         retry_strategy=m.RetryStrategy(limit="2", backoff=m.Backoff(duration="10s", factor=2)),
     )
     def process_single(hcp_api_base: str, hcp_token: str, bucket: str, key: str):
         """Download an object via presigned URL, process it, upload the result."""
-        import httpx, json, os
+        import hcp_s3, json
         from pathlib import Path
 
-        headers = {"Authorization": f"Bearer {hcp_token}"}
+        # Download via presigned URL
+        size = hcp_s3.download(hcp_api_base, hcp_token, bucket, key, Path("/tmp/data"))
 
-        # Presign download
-        resp = httpx.post(
-            f"{hcp_api_base}/s3/presign",
-            json={"bucket": bucket, "key": key, "method": "get_object", "expires_in": 600},
-            headers=headers,
-        )
-        url = resp.json()["url"]
-
-        # Download and process
-        resp = httpx.get(url)
-        resp.raise_for_status()
-        Path("/tmp/data").write_bytes(resp.content)
-        size = os.path.getsize("/tmp/data")
+        # Process (placeholder — replace with your logic)
         result = {"key": key, "size": size, "status": "processed"}
         print(json.dumps(result))
 
-        # Presign upload and write result
+        # Upload result via presigned URL
         result_key = key.replace("incoming/", "processed/") + ".result.json"
-        resp = httpx.post(
-            f"{hcp_api_base}/s3/presign",
-            json={"bucket": bucket, "key": result_key, "method": "put_object", "expires_in": 600},
-            headers=headers,
-        )
-        upload_url = resp.json()["url"]
-        httpx.put(upload_url, content=json.dumps(result).encode()).raise_for_status()
+        hcp_s3.upload(hcp_api_base, hcp_token, bucket, result_key, json.dumps(result).encode())
         print(f"Result uploaded to {result_key}")
 
 
-    @script(image="my-registry/python-httpx:3.13", retry_strategy=RETRY)
+    @script(image="my-registry/hcp-convert:3.13", retry_strategy=RETRY)
     def aggregate(hcp_api_base: str, hcp_token: str, bucket: str):
         """List processed results and upload a summary."""
-        import httpx, json
+        import hcp_s3, json
 
-        headers = {"Authorization": f"Bearer {hcp_token}"}
-
-        resp = httpx.get(
-            f"{hcp_api_base}/s3/buckets/{bucket}/objects",
-            params={"prefix": "processed/", "max_keys": 1000},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        count = len(resp.json()["objects"])
-        summary = json.dumps({"objects_processed": count, "status": "complete"})
+        objs = hcp_s3.list_objects(hcp_api_base, hcp_token, bucket, "processed/")
+        summary = json.dumps({"objects_processed": len(objs), "status": "complete"})
         print(summary)
 
         # Upload summary via presigned URL
-        resp = httpx.post(
-            f"{hcp_api_base}/s3/presign",
-            json={"bucket": bucket, "key": "summaries/batch-result.json", "method": "put_object", "expires_in": 600},
-            headers=headers,
-        )
-        upload_url = resp.json()["url"]
-        httpx.put(upload_url, content=summary.encode()).raise_for_status()
+        hcp_s3.upload(hcp_api_base, hcp_token, bucket, "summaries/batch-result.json", summary.encode())
 
 
     WF_PARAMS = {
@@ -1710,10 +1673,10 @@ graph TD
             parameters:
               - name: key
           script:
-            image: my-registry/python-httpx:3.13
+            image: my-registry/hcp-convert:3.13
             command: [python]
             source: |
-              import httpx, json, os
+              import hcp_s3, json
               from pathlib import Path
 
               BASE = "{{workflow.parameters.hcp-api-base}}"
@@ -1721,32 +1684,16 @@ graph TD
               BUCKET = "{{workflow.parameters.bucket}}"
               KEY = "{{inputs.parameters.key}}"
               WF = "{{workflow.name}}"
-              headers = {"Authorization": f"Bearer {TOKEN}"}
 
               # Download via presigned URL
-              resp = httpx.post(
-                  f"{BASE}/s3/presign",
-                  json={"bucket": BUCKET, "key": KEY, "method": "get_object", "expires_in": 600},
-                  headers=headers,
-              )
-              resp.raise_for_status()
-              data = httpx.get(resp.json()["url"])
-              data.raise_for_status()
-              Path("/tmp/data").write_bytes(data.content)
+              size = hcp_s3.download(BASE, TOKEN, BUCKET, KEY, Path("/tmp/data"))
 
-              # Process (placeholder)
-              size = os.path.getsize("/tmp/data")
+              # Process (placeholder — replace with your logic)
               result = json.dumps({"key": KEY, "size": size, "status": "processed"})
 
               # Write to STAGING prefix — not visible to consumers yet
               staging_key = f"staging/{WF}/{KEY.split('/')[-1]}.result.json"
-              resp = httpx.post(
-                  f"{BASE}/s3/presign",
-                  json={"bucket": BUCKET, "key": staging_key, "method": "put_object", "expires_in": 600},
-                  headers=headers,
-              )
-              resp.raise_for_status()
-              httpx.put(resp.json()["url"], content=result.encode()).raise_for_status()
+              hcp_s3.upload(BASE, TOKEN, BUCKET, staging_key, result.encode())
               print(f"Staged: {staging_key}")
 
         # ── Commit — copy staging → final prefix ─────────────────────
@@ -1754,46 +1701,22 @@ graph TD
           retryStrategy:
             limit: 2
           script:
-            image: my-registry/python-httpx:3.13
+            image: my-registry/hcp-convert:3.13
             command: [python]
             source: |
-              import httpx, json
+              import hcp_s3
 
               BASE = "{{workflow.parameters.hcp-api-base}}"
               TOKEN = "{{workflow.parameters.hcp-token}}"
               BUCKET = "{{workflow.parameters.bucket}}"
               WF = "{{workflow.name}}"
-              headers = {"Authorization": f"Bearer {TOKEN}"}
 
-              # List all staged results for this workflow run
-              resp = httpx.get(
-                  f"{BASE}/s3/buckets/{BUCKET}/objects",
-                  params={"prefix": f"staging/{WF}/", "max_keys": 1000},
-                  headers=headers,
+              count = hcp_s3.commit_staging(
+                  BASE, TOKEN, BUCKET,
+                  staging_prefix=f"staging/{WF}/",
+                  dest_prefix="processed/",
               )
-              resp.raise_for_status()
-              staged = resp.json()["objects"]
-              print(f"Committing {len(staged)} results...")
-
-              # Copy each from staging/ → processed/
-              for obj in staged:
-                  src = obj["key"]
-                  dest = src.replace(f"staging/{WF}/", "processed/")
-                  resp = httpx.post(
-                      f"{BASE}/s3/buckets/{BUCKET}/objects/{dest}/copy",
-                      json={"source_bucket": BUCKET, "source_key": src},
-                      headers=headers,
-                  )
-                  resp.raise_for_status()
-
-              # Delete staging prefix
-              keys = [obj["key"] for obj in staged]
-              httpx.post(
-                  f"{BASE}/s3/buckets/{BUCKET}/objects/delete",
-                  json={"keys": keys},
-                  headers=headers,
-              ).raise_for_status()
-              print(f"Committed {len(staged)} results, staging cleaned up")
+              print(f"Committed {count} results, staging cleaned up")
 
         # ── Exit handler — clean up staging on failure ────────────────
         - name: cleanup
@@ -1840,7 +1763,7 @@ graph TD
     )
 
     HCP_BASE = "http://hcp-api.default.svc:8000/api/v1"
-    PYTHON_IMAGE = "my-registry/python-httpx:3.13"
+    CONVERT_IMAGE = "my-registry/hcp-convert:3.13"
 
     RETRY = m.RetryStrategy(
         limit="3",
@@ -1853,122 +1776,63 @@ graph TD
     )
 
 
-    @script(image=PYTHON_IMAGE, retry_strategy=RETRY)
+    @script(image=CONVERT_IMAGE, retry_strategy=RETRY)
     def list_objects(hcp_api_base: str, hcp_token: str, bucket: str, prefix: str):
         """List objects and output keys as JSON array."""
-        import httpx, json
+        import hcp_s3, json
         from pathlib import Path
 
-        resp = httpx.get(
-            f"{hcp_api_base}/s3/buckets/{bucket}/objects",
-            params={"prefix": prefix, "max_keys": 100},
-            headers={"Authorization": f"Bearer {hcp_token}"},
-        )
-        resp.raise_for_status()
-        keys = [obj["key"] for obj in resp.json()["objects"]]
+        objs = hcp_s3.list_objects(hcp_api_base, hcp_token, bucket, prefix, max_keys=100)
+        keys = [obj["key"] for obj in objs]
         print(f"Found {len(keys)} objects")
         Path("/tmp/keys.json").write_text(json.dumps(keys))
 
 
-    @script(image=PYTHON_IMAGE, retry_strategy=RETRY_POD, active_deadline_seconds=300)
+    @script(image=CONVERT_IMAGE, retry_strategy=RETRY_POD, active_deadline_seconds=300)
     def process_single(
         hcp_api_base: str, hcp_token: str, bucket: str, key: str, workflow_name: str,
     ):
         """Download, process, and write result to staging prefix."""
-        import httpx, json, os
+        import hcp_s3, json
         from pathlib import Path
 
-        headers = {"Authorization": f"Bearer {hcp_token}"}
-
         # Download via presigned URL
-        resp = httpx.post(
-            f"{hcp_api_base}/s3/presign",
-            json={"bucket": bucket, "key": key, "method": "get_object", "expires_in": 600},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        data = httpx.get(resp.json()["url"])
-        data.raise_for_status()
-        Path("/tmp/data").write_bytes(data.content)
+        size = hcp_s3.download(hcp_api_base, hcp_token, bucket, key, Path("/tmp/data"))
 
-        # Process
-        size = os.path.getsize("/tmp/data")
+        # Process (placeholder — replace with your logic)
         result = json.dumps({"key": key, "size": size, "status": "processed"})
 
         # Write to staging prefix (not visible to consumers)
         staging_key = f"staging/{workflow_name}/{key.split('/')[-1]}.result.json"
-        resp = httpx.post(
-            f"{hcp_api_base}/s3/presign",
-            json={"bucket": bucket, "key": staging_key, "method": "put_object", "expires_in": 600},
-            headers=headers,
-        )
-        resp.raise_for_status()
-        httpx.put(resp.json()["url"], content=result.encode()).raise_for_status()
+        hcp_s3.upload(hcp_api_base, hcp_token, bucket, staging_key, result.encode())
         print(f"Staged: {staging_key}")
 
 
-    @script(image=PYTHON_IMAGE, retry_strategy=m.RetryStrategy(limit="2"))
+    @script(image=CONVERT_IMAGE, retry_strategy=m.RetryStrategy(limit="2"))
     def commit_results(hcp_api_base: str, hcp_token: str, bucket: str, workflow_name: str):
         """Copy staging → processed, then delete staging."""
-        import httpx
+        import hcp_s3
 
-        headers = {"Authorization": f"Bearer {hcp_token}"}
-
-        # List staged results
-        resp = httpx.get(
-            f"{hcp_api_base}/s3/buckets/{bucket}/objects",
-            params={"prefix": f"staging/{workflow_name}/", "max_keys": 1000},
-            headers=headers,
+        count = hcp_s3.commit_staging(
+            hcp_api_base, hcp_token, bucket,
+            staging_prefix=f"staging/{workflow_name}/",
+            dest_prefix="processed/",
         )
-        resp.raise_for_status()
-        staged = resp.json()["objects"]
-        print(f"Committing {len(staged)} results...")
-
-        # Copy each to final prefix
-        for obj in staged:
-            src = obj["key"]
-            dest = src.replace(f"staging/{workflow_name}/", "processed/")
-            httpx.post(
-                f"{hcp_api_base}/s3/buckets/{bucket}/objects/{dest}/copy",
-                json={"source_bucket": bucket, "source_key": src},
-                headers=headers,
-            ).raise_for_status()
-
-        # Delete staging
-        keys = [obj["key"] for obj in staged]
-        httpx.post(
-            f"{hcp_api_base}/s3/buckets/{bucket}/objects/delete",
-            json={"keys": keys},
-            headers=headers,
-        ).raise_for_status()
-        print(f"Committed {len(staged)} results, staging cleaned up")
+        print(f"Committed {count} results, staging cleaned up")
 
 
-    @script(image=PYTHON_IMAGE)
+    @script(image=CONVERT_IMAGE)
     def cleanup(hcp_api_base: str, hcp_token: str, bucket: str, workflow_name: str):
         """Exit handler: delete staging prefix on failure."""
-        import httpx, os
+        import hcp_s3, os
 
         status = os.environ.get("ARGO_WORKFLOW_STATUS", "Unknown")
         if status != "Succeeded":
             print(f"Workflow {status} — cleaning up staging/{workflow_name}/...")
-            headers = {"Authorization": f"Bearer {hcp_token}"}
-            resp = httpx.get(
-                f"{hcp_api_base}/s3/buckets/{bucket}/objects",
-                params={"prefix": f"staging/{workflow_name}/", "max_keys": 1000},
-                headers=headers,
+            deleted = hcp_s3.cleanup_staging(
+                hcp_api_base, hcp_token, bucket, f"staging/{workflow_name}/",
             )
-            if resp.status_code == 200:
-                keys = [obj["key"] for obj in resp.json().get("objects", [])]
-                if keys:
-                    httpx.post(
-                        f"{hcp_api_base}/s3/buckets/{bucket}/objects/delete",
-                        json={"keys": keys},
-                        headers=headers,
-                    )
-                    print(f"Deleted {len(keys)} staged objects")
-            else:
-                print("Could not list staged objects — manual cleanup may be needed")
+            print(f"Deleted {deleted} staged objects")
         else:
             print("Workflow succeeded — no cleanup needed")
 
