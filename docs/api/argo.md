@@ -838,6 +838,423 @@ A common pattern: list objects from an HCP bucket, process each one in parallel 
 
 ---
 
+## Error handling for batch workflows
+
+The batch fan-out above processes objects independently, but what happens when some pods fail? Without cleanup, partial results pollute the output prefix. This section adds an **exit handler** that cleans up on failure, plus a **staged-commit** pattern so partial results are never visible to downstream consumers.
+
+=== "YAML"
+
+    ```yaml
+    apiVersion: argoproj.io/v1alpha1
+    kind: Workflow
+    metadata:
+      generateName: hcp-batch-safe-
+    spec:
+      entrypoint: batch-pipeline
+      activeDeadlineSeconds: 3600       # hard limit: 1 hour
+      onExit: cleanup                   # always runs, even on failure
+      arguments:
+        parameters:
+          - name: hcp-api-base
+            value: "http://hcp-api.default.svc:8000/api/v1"
+          - name: hcp-token
+            value: "<your-token>"
+          - name: bucket
+            value: "datasets"
+          - name: prefix
+            value: "incoming/"
+      templates:
+        # ── Orchestrator ─────────────────────────────────────────────
+        - name: batch-pipeline
+          dag:
+            tasks:
+              - name: discover
+                template: list-objects
+              - name: process
+                template: fan-out
+                dependencies: [discover]
+                arguments:
+                  parameters:
+                    - name: object-keys
+                      value: "{{tasks.discover.outputs.parameters.keys}}"
+              - name: commit
+                template: commit-results
+                dependencies: [process]
+
+        # ── List objects ─────────────────────────────────────────────
+        - name: list-objects
+          retryStrategy:
+            limit: 3
+            backoff:
+              duration: "5s"
+              factor: 2
+          script:
+            image: curlimages/curl:latest
+            command: [sh]
+            source: |
+              BASE="{{workflow.parameters.hcp-api-base}}"
+              TOKEN="{{workflow.parameters.hcp-token}}"
+              BUCKET="{{workflow.parameters.bucket}}"
+              PREFIX="{{workflow.parameters.prefix}}"
+
+              RESP=$(curl -s -f "$BASE/s3/buckets/$BUCKET/objects?prefix=$PREFIX&max_keys=100" \
+                -H "Authorization: Bearer $TOKEN")
+              echo "$RESP" | jq '[.objects[].key]' > /tmp/keys.json
+              echo "Found $(echo "$RESP" | jq '.objects | length') objects"
+          outputs:
+            parameters:
+              - name: keys
+                valueFrom:
+                  path: /tmp/keys.json
+
+        # ── Fan out — write to staging prefix ────────────────────────
+        - name: fan-out
+          inputs:
+            parameters:
+              - name: object-keys
+          steps:
+            - - name: process-object
+                template: process-single
+                arguments:
+                  parameters:
+                    - name: key
+                      value: "{{item}}"
+                withParam: "{{inputs.parameters.object-keys}}"
+
+        - name: process-single
+          retryStrategy:
+            limit: 2
+            retryPolicy: Always        # retry on OOM kills and node failures too
+            backoff:
+              duration: "10s"
+              factor: 2
+              maxDuration: "2m"
+          activeDeadlineSeconds: 300    # per-pod timeout: 5 min
+          inputs:
+            parameters:
+              - name: key
+          script:
+            image: my-registry/python-httpx:3.13
+            command: [python]
+            source: |
+              import httpx, json, os
+              from pathlib import Path
+
+              BASE = "{{workflow.parameters.hcp-api-base}}"
+              TOKEN = "{{workflow.parameters.hcp-token}}"
+              BUCKET = "{{workflow.parameters.bucket}}"
+              KEY = "{{inputs.parameters.key}}"
+              WF = "{{workflow.name}}"
+              headers = {"Authorization": f"Bearer {TOKEN}"}
+
+              # Download via presigned URL
+              resp = httpx.post(
+                  f"{BASE}/s3/presign",
+                  json={"bucket": BUCKET, "key": KEY, "method": "get_object", "expires_in": 600},
+                  headers=headers,
+              )
+              resp.raise_for_status()
+              data = httpx.get(resp.json()["url"])
+              data.raise_for_status()
+              Path("/tmp/data").write_bytes(data.content)
+
+              # Process (placeholder)
+              size = os.path.getsize("/tmp/data")
+              result = json.dumps({"key": KEY, "size": size, "status": "processed"})
+
+              # Write to STAGING prefix — not visible to consumers yet
+              staging_key = f"staging/{WF}/{KEY.split('/')[-1]}.result.json"
+              resp = httpx.post(
+                  f"{BASE}/s3/presign",
+                  json={"bucket": BUCKET, "key": staging_key, "method": "put_object", "expires_in": 600},
+                  headers=headers,
+              )
+              resp.raise_for_status()
+              httpx.put(resp.json()["url"], content=result.encode()).raise_for_status()
+              print(f"Staged: {staging_key}")
+
+        # ── Commit — copy staging → final prefix ─────────────────────
+        - name: commit-results
+          retryStrategy:
+            limit: 2
+          script:
+            image: my-registry/python-httpx:3.13
+            command: [python]
+            source: |
+              import httpx, json
+
+              BASE = "{{workflow.parameters.hcp-api-base}}"
+              TOKEN = "{{workflow.parameters.hcp-token}}"
+              BUCKET = "{{workflow.parameters.bucket}}"
+              WF = "{{workflow.name}}"
+              headers = {"Authorization": f"Bearer {TOKEN}"}
+
+              # List all staged results for this workflow run
+              resp = httpx.get(
+                  f"{BASE}/s3/buckets/{BUCKET}/objects",
+                  params={"prefix": f"staging/{WF}/", "max_keys": 1000},
+                  headers=headers,
+              )
+              resp.raise_for_status()
+              staged = resp.json()["objects"]
+              print(f"Committing {len(staged)} results...")
+
+              # Copy each from staging/ → processed/
+              for obj in staged:
+                  src = obj["key"]
+                  dest = src.replace(f"staging/{WF}/", "processed/")
+                  resp = httpx.post(
+                      f"{BASE}/s3/buckets/{BUCKET}/objects/{dest}/copy",
+                      json={"source_bucket": BUCKET, "source_key": src},
+                      headers=headers,
+                  )
+                  resp.raise_for_status()
+
+              # Delete staging prefix
+              keys = [obj["key"] for obj in staged]
+              httpx.post(
+                  f"{BASE}/s3/buckets/{BUCKET}/objects/delete",
+                  json={"keys": keys},
+                  headers=headers,
+              ).raise_for_status()
+              print(f"Committed {len(staged)} results, staging cleaned up")
+
+        # ── Exit handler — clean up staging on failure ────────────────
+        - name: cleanup
+          script:
+            image: curlimages/curl:latest
+            command: [sh]
+            source: |
+              BASE="{{workflow.parameters.hcp-api-base}}"
+              TOKEN="{{workflow.parameters.hcp-token}}"
+              BUCKET="{{workflow.parameters.bucket}}"
+              WF="{{workflow.name}}"
+              STATUS="{{workflow.status}}"
+
+              if [ "$STATUS" != "Succeeded" ]; then
+                echo "Workflow $STATUS — deleting staging prefix staging/$WF/..."
+                # List staged objects
+                KEYS=$(curl -s -f "$BASE/s3/buckets/$BUCKET/objects?prefix=staging/$WF/&max_keys=1000" \
+                  -H "Authorization: Bearer $TOKEN" | jq '[.objects[].key]')
+
+                if [ "$(echo "$KEYS" | jq 'length')" -gt 0 ]; then
+                  curl -s -X POST "$BASE/s3/buckets/$BUCKET/objects/delete" \
+                    -H "Authorization: Bearer $TOKEN" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"keys\": $KEYS}" || true
+                  echo "Staging cleaned up"
+                else
+                  echo "No staged objects to clean up"
+                fi
+              else
+                echo "Workflow succeeded — no cleanup needed"
+              fi
+    ```
+
+=== "Hera"
+
+    ```python
+    from hera.workflows import (
+        DAG,
+        Parameter,
+        Steps,
+        Workflow,
+        models as m,
+        script,
+    )
+
+    HCP_BASE = "http://hcp-api.default.svc:8000/api/v1"
+    PYTHON_IMAGE = "my-registry/python-httpx:3.13"
+
+    RETRY = m.RetryStrategy(
+        limit="3",
+        backoff=m.Backoff(duration="5s", factor=2),
+    )
+    RETRY_POD = m.RetryStrategy(
+        limit="2",
+        retry_policy="Always",
+        backoff=m.Backoff(duration="10s", factor=2, max_duration="2m"),
+    )
+
+
+    @script(image=PYTHON_IMAGE, retry_strategy=RETRY)
+    def list_objects(hcp_api_base: str, hcp_token: str, bucket: str, prefix: str):
+        """List objects and output keys as JSON array."""
+        import httpx, json
+        from pathlib import Path
+
+        resp = httpx.get(
+            f"{hcp_api_base}/s3/buckets/{bucket}/objects",
+            params={"prefix": prefix, "max_keys": 100},
+            headers={"Authorization": f"Bearer {hcp_token}"},
+        )
+        resp.raise_for_status()
+        keys = [obj["key"] for obj in resp.json()["objects"]]
+        print(f"Found {len(keys)} objects")
+        Path("/tmp/keys.json").write_text(json.dumps(keys))
+
+
+    @script(image=PYTHON_IMAGE, retry_strategy=RETRY_POD, active_deadline_seconds=300)
+    def process_single(
+        hcp_api_base: str, hcp_token: str, bucket: str, key: str, workflow_name: str,
+    ):
+        """Download, process, and write result to staging prefix."""
+        import httpx, json, os
+        from pathlib import Path
+
+        headers = {"Authorization": f"Bearer {hcp_token}"}
+
+        # Download via presigned URL
+        resp = httpx.post(
+            f"{hcp_api_base}/s3/presign",
+            json={"bucket": bucket, "key": key, "method": "get_object", "expires_in": 600},
+            headers=headers,
+        )
+        resp.raise_for_status()
+        data = httpx.get(resp.json()["url"])
+        data.raise_for_status()
+        Path("/tmp/data").write_bytes(data.content)
+
+        # Process
+        size = os.path.getsize("/tmp/data")
+        result = json.dumps({"key": key, "size": size, "status": "processed"})
+
+        # Write to staging prefix (not visible to consumers)
+        staging_key = f"staging/{workflow_name}/{key.split('/')[-1]}.result.json"
+        resp = httpx.post(
+            f"{hcp_api_base}/s3/presign",
+            json={"bucket": bucket, "key": staging_key, "method": "put_object", "expires_in": 600},
+            headers=headers,
+        )
+        resp.raise_for_status()
+        httpx.put(resp.json()["url"], content=result.encode()).raise_for_status()
+        print(f"Staged: {staging_key}")
+
+
+    @script(image=PYTHON_IMAGE, retry_strategy=m.RetryStrategy(limit="2"))
+    def commit_results(hcp_api_base: str, hcp_token: str, bucket: str, workflow_name: str):
+        """Copy staging → processed, then delete staging."""
+        import httpx
+
+        headers = {"Authorization": f"Bearer {hcp_token}"}
+
+        # List staged results
+        resp = httpx.get(
+            f"{hcp_api_base}/s3/buckets/{bucket}/objects",
+            params={"prefix": f"staging/{workflow_name}/", "max_keys": 1000},
+            headers=headers,
+        )
+        resp.raise_for_status()
+        staged = resp.json()["objects"]
+        print(f"Committing {len(staged)} results...")
+
+        # Copy each to final prefix
+        for obj in staged:
+            src = obj["key"]
+            dest = src.replace(f"staging/{workflow_name}/", "processed/")
+            httpx.post(
+                f"{hcp_api_base}/s3/buckets/{bucket}/objects/{dest}/copy",
+                json={"source_bucket": bucket, "source_key": src},
+                headers=headers,
+            ).raise_for_status()
+
+        # Delete staging
+        keys = [obj["key"] for obj in staged]
+        httpx.post(
+            f"{hcp_api_base}/s3/buckets/{bucket}/objects/delete",
+            json={"keys": keys},
+            headers=headers,
+        ).raise_for_status()
+        print(f"Committed {len(staged)} results, staging cleaned up")
+
+
+    @script(image=PYTHON_IMAGE)
+    def cleanup(hcp_api_base: str, hcp_token: str, bucket: str, workflow_name: str):
+        """Exit handler: delete staging prefix on failure."""
+        import httpx, os
+
+        status = os.environ.get("ARGO_WORKFLOW_STATUS", "Unknown")
+        if status != "Succeeded":
+            print(f"Workflow {status} — cleaning up staging/{workflow_name}/...")
+            headers = {"Authorization": f"Bearer {hcp_token}"}
+            resp = httpx.get(
+                f"{hcp_api_base}/s3/buckets/{bucket}/objects",
+                params={"prefix": f"staging/{workflow_name}/", "max_keys": 1000},
+                headers=headers,
+            )
+            if resp.status_code == 200:
+                keys = [obj["key"] for obj in resp.json().get("objects", [])]
+                if keys:
+                    httpx.post(
+                        f"{hcp_api_base}/s3/buckets/{bucket}/objects/delete",
+                        json={"keys": keys},
+                        headers=headers,
+                    )
+                    print(f"Deleted {len(keys)} staged objects")
+            else:
+                print("Could not list staged objects — manual cleanup may be needed")
+        else:
+            print("Workflow succeeded — no cleanup needed")
+
+
+    WF_PARAMS = {
+        "hcp_api_base": "{{workflow.parameters.hcp-api-base}}",
+        "hcp_token": "{{workflow.parameters.hcp-token}}",
+        "bucket": "{{workflow.parameters.bucket}}",
+    }
+
+    with Workflow(
+        generate_name="hcp-batch-safe-",
+        entrypoint="batch-pipeline",
+        active_deadline_seconds=3600,
+        on_exit="cleanup",
+        arguments=[
+            Parameter(name="hcp-api-base", value=HCP_BASE),
+            Parameter(name="hcp-token", value="<your-token>"),
+            Parameter(name="bucket", value="datasets"),
+            Parameter(name="prefix", value="incoming/"),
+        ],
+    ) as w:
+        with DAG(name="batch-pipeline"):
+            disc = list_objects(
+                name="discover",
+                arguments={**WF_PARAMS, "prefix": "{{workflow.parameters.prefix}}"},
+            )
+            with Steps(name="fan-out") as fan:
+                process_single(
+                    name="process-object",
+                    arguments={
+                        **WF_PARAMS,
+                        "key": "{{item}}",
+                        "workflow_name": "{{workflow.name}}",
+                    },
+                    with_param=disc.get_parameter("keys"),
+                )
+            com = commit_results(
+                name="commit",
+                arguments={**WF_PARAMS, "workflow_name": "{{workflow.name}}"},
+            )
+            disc >> fan >> com
+
+        # Exit handler (registered by name)
+        cleanup(
+            name="cleanup",
+            arguments={**WF_PARAMS, "workflow_name": "{{workflow.name}}"},
+        )
+
+    w.create()
+    ```
+
+The key patterns in this workflow:
+
+1. **Staged writes** -- fan-out pods write to `staging/{{workflow.name}}/` instead of the final `processed/` prefix. Downstream consumers never see partial results.
+2. **Commit step** -- only runs if ALL fan-out pods succeed. Copies staging to final, then deletes staging.
+3. **Exit handler (`onExit: cleanup`)** -- guaranteed to run on failure. Deletes the staging prefix so no orphaned objects remain.
+4. **Per-pod retries** -- `retryPolicy: Always` retries on OOM kills and node evictions (not just script errors). `activeDeadlineSeconds: 300` prevents hung pods.
+5. **Workflow timeout** -- `activeDeadlineSeconds: 3600` ensures the entire workflow fails rather than running forever.
+
+---
+
 ## Related pages
 
 - [API Workflows](workflows.md) -- curl and Python examples for authentication, S3 operations, tenant/namespace management, and more.
