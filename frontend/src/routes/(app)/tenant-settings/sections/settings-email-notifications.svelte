@@ -42,7 +42,7 @@
 		localFrom = e.emailTemplate?.from ?? '';
 		localSubject = e.emailTemplate?.subject ?? '';
 		localBody = e.emailTemplate?.body ?? '';
-		localRecipients = (e.recipients ?? []).map((r) => ({
+		localRecipients = (Array.isArray(e.recipients) ? e.recipients : []).map((r) => ({
 			address: r.address ?? '',
 			importance: r.importance ?? 'ALL',
 			severity: r.severity ?? 'NOTICE',
@@ -50,7 +50,7 @@
 	});
 
 	function recipientsEqual(): boolean {
-		const remote = email.recipients ?? [];
+		const remote = Array.isArray(email.recipients) ? email.recipients : [];
 		if (localRecipients.length !== remote.length) return false;
 		return localRecipients.every(
 			(r, i) =>

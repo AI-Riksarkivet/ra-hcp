@@ -14,7 +14,31 @@
 		chargebackData: RemoteQuery<ChargebackReport>;
 	} = $props();
 
-	let entries = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
+	// Aggregate chargeback entries by namespace (HCP may return multiple rows per namespace)
+	let entries = $derived.by(() => {
+		const raw = (chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[];
+		const map = new Map<string, ChargebackEntry>();
+		for (const e of raw) {
+			const name = e.namespaceName ?? '';
+			const existing = map.get(name);
+			if (!existing) {
+				map.set(name, { ...e });
+			} else {
+				existing.objectCount = Math.max(existing.objectCount ?? 0, e.objectCount ?? 0);
+				existing.storageCapacityUsed = Math.max(
+					existing.storageCapacityUsed ?? 0,
+					e.storageCapacityUsed ?? 0
+				);
+				existing.ingestedVolume = (existing.ingestedVolume ?? 0) + (e.ingestedVolume ?? 0);
+				existing.bytesIn = (existing.bytesIn ?? 0) + (e.bytesIn ?? 0);
+				existing.bytesOut = (existing.bytesOut ?? 0) + (e.bytesOut ?? 0);
+				existing.reads = (existing.reads ?? 0) + (e.reads ?? 0);
+				existing.writes = (existing.writes ?? 0) + (e.writes ?? 0);
+				existing.deletes = (existing.deletes ?? 0) + (e.deletes ?? 0);
+			}
+		}
+		return [...map.values()];
+	});
 
 	type SortKey = keyof ChargebackEntry;
 

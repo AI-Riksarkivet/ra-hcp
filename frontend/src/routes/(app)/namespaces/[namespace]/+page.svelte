@@ -132,7 +132,18 @@
 			});
 
 			// Step 3: Re-POST data access permissions to refresh HCP S3 gateway
+			// HCP GET returns read-only fields (readAllowed, etc.) that POST rejects,
+			// so we must rebuild a clean body with only namespaceName + permissions.
 			try {
+				function cleanPerms(raw: DataAccessPermissions): Record<string, unknown> {
+					return {
+						namespacePermission: (raw.namespacePermission ?? []).map((e) => ({
+							namespaceName: e.namespaceName,
+							permissions: { permission: e.permissions?.permission ?? [] },
+						})),
+					};
+				}
+
 				const [users, groups] = await Promise.all([
 					get_users({ tenant }) as Promise<Array<{ username: string }>>,
 					get_groups({ tenant }) as Promise<Array<{ groupname: string }>>,
@@ -150,7 +161,7 @@
 							await set_user_permissions({
 								tenant,
 								username: u.username,
-								body: perms as Record<string, unknown>,
+								body: cleanPerms(perms),
 							});
 						}
 					}),
@@ -166,7 +177,7 @@
 							await set_group_permissions({
 								tenant,
 								groupname: g.groupname,
-								body: perms as Record<string, unknown>,
+								body: cleanPerms(perms),
 							});
 						}
 					}),
