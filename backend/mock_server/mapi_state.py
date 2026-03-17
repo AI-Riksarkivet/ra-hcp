@@ -374,6 +374,38 @@ class MockMapiState:
         s3._objects.pop(name, None)
         s3._versioning.pop(name, None)
         s3._bucket_acls.pop(name, None)
+        s3._bucket_cors.pop(name, None)
+
+    def _sync_rename_bucket(self, old_name: str, new_name: str, tenant: str) -> None:
+        """Rename an S3 bucket and update data access permissions."""
+        s3 = self._s3_service
+        if s3 is not None:
+            if old_name in s3._buckets:
+                s3._buckets[new_name] = s3._buckets.pop(old_name)
+            if old_name in s3._objects:
+                s3._objects[new_name] = s3._objects.pop(old_name)
+            if old_name in s3._versioning:
+                s3._versioning[new_name] = s3._versioning.pop(old_name)
+            if old_name in s3._bucket_acls:
+                s3._bucket_acls[new_name] = s3._bucket_acls.pop(old_name)
+            if old_name in s3._bucket_cors:
+                s3._bucket_cors[new_name] = s3._bucket_cors.pop(old_name)
+            # Re-key object ACLs
+            for key in [k for k in s3._object_acls if k[0] == old_name]:
+                s3._object_acls[(new_name, key[1])] = s3._object_acls.pop(key)
+            # Re-key multipart uploads
+            for uid, upload in s3._multipart_uploads.items():
+                if upload.get("bucket") == old_name:
+                    upload["bucket"] = new_name
+
+        # Update data access permissions — rename namespaceName references
+        for key, perms in self.data_access_perms.items():
+            if key[0] != tenant:
+                continue
+            ns_perms = perms.get("namespacePermission", [])
+            for entry in ns_perms:
+                if entry.get("namespaceName") == old_name:
+                    entry["namespaceName"] = new_name
 
 
 # ── Seed ─────────────────────────────────────────────────────────────
@@ -539,12 +571,10 @@ def _handle_namespaces(
             if old_key in state.ns_settings:
                 state.ns_settings[new_key] = state.ns_settings.pop(old_key)
             # Move retention classes
-            old_rc_key = (tenant, ns_name)
-            new_rc_key = (tenant, new_name)
-            if old_rc_key in state.retention_classes:
-                state.retention_classes[new_rc_key] = state.retention_classes.pop(
-                    old_rc_key
-                )
+            if old_key in state.retention_classes:
+                state.retention_classes[new_key] = state.retention_classes.pop(old_key)
+            # Rename S3 bucket and update data access permissions
+            state._sync_rename_bucket(ns_name, new_name, tenant)
             return _empty()
         return _crud(ns_map, method, ns_name, body)
 

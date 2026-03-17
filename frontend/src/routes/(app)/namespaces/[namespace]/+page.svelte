@@ -27,6 +27,15 @@
 		update_ns_protocol,
 		type NsProtocols as NsProtocolsType,
 	} from '$lib/remote/namespaces.remote.js';
+	import {
+		get_users,
+		get_user_permissions,
+		set_user_permissions,
+		get_groups,
+		get_group_permissions,
+		set_group_permissions,
+		type DataAccessPermissions,
+	} from '$lib/remote/users.remote.js';
 	import { getErrorMessage } from '$lib/utils/get-error-message.js';
 
 	let tenant = $derived(page.data.tenant as string | undefined);
@@ -122,7 +131,52 @@
 				body: { name: trimmed },
 			});
 
-			// Step 3: Re-enable protocols on the renamed namespace
+			// Step 3: Re-POST data access permissions to refresh HCP S3 gateway
+			try {
+				const [users, groups] = await Promise.all([
+					get_users({ tenant }) as Promise<Array<{ username: string }>>,
+					get_groups({ tenant }) as Promise<Array<{ groupname: string }>>,
+				]);
+				await Promise.all([
+					...users.map(async (u) => {
+						const perms = (await get_user_permissions({
+							tenant,
+							username: u.username,
+						})) as DataAccessPermissions;
+						const hasAccess = (perms.namespacePermission ?? []).some(
+							(e) => e.namespaceName === trimmed
+						);
+						if (hasAccess) {
+							await set_user_permissions({
+								tenant,
+								username: u.username,
+								body: perms as Record<string, unknown>,
+							});
+						}
+					}),
+					...groups.map(async (g) => {
+						const perms = (await get_group_permissions({
+							tenant,
+							groupname: g.groupname,
+						})) as DataAccessPermissions;
+						const hasAccess = (perms.namespacePermission ?? []).some(
+							(e) => e.namespaceName === trimmed
+						);
+						if (hasAccess) {
+							await set_group_permissions({
+								tenant,
+								groupname: g.groupname,
+								body: perms as Record<string, unknown>,
+							});
+						}
+					}),
+				]);
+			} catch {
+				// Non-fatal: permissions may need manual re-save
+				console.warn('Could not refresh data access permissions after rename');
+			}
+
+			// Step 4: Re-enable protocols on the renamed namespace
 			if (hadHttp || hadHttps) {
 				await update_ns_protocol({
 					tenant,
