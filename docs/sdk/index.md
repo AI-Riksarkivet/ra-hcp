@@ -525,6 +525,7 @@ profiles:
 | `download-all BUCKET` | Download all objects to local directory |
 | `rm BUCKET KEY [KEY ...]` | Delete one or more objects |
 | `presign BUCKET KEY` | Generate presigned download URL (with `--expires`) |
+| `verify BUCKET DIR` | Verify all local files exist in bucket with matching sizes |
 
 ##### `rahcp s3 ls` -- browsing objects
 
@@ -602,6 +603,7 @@ Upload an entire local directory to a bucket, preserving the directory structure
 |------|-------|---------|-------------|
 | `--prefix` | `-p` | `""` | Key prefix to prepend to all uploaded keys |
 | `--workers` | `-w` | `10` | Number of concurrent uploads |
+| `--skip-existing` / `--overwrite` | -- | `--skip-existing` | Skip files that already exist with matching size (idempotent) |
 
 **Examples:**
 
@@ -612,9 +614,17 @@ rahcp s3 upload-all my-bucket ./local-scans
 # Upload with a key prefix
 rahcp s3 upload-all my-bucket ./scans --prefix data/2025/
 
+# Force overwrite existing files (on versioned namespaces)
+rahcp s3 upload-all my-bucket ./scans --overwrite
+
 # Use 20 concurrent uploads
 rahcp s3 upload-all my-bucket ./archive -w 20
+
+# After upload, verify everything made it
+rahcp s3 verify my-bucket ./scans --prefix data/2025/
 ```
+
+The command is **idempotent by default** -- re-running it skips files that already exist in the bucket with matching size. This makes it safe to retry after partial failures.
 
 The command recursively finds all files in the source directory and uploads them with keys that mirror the local path. For example, uploading `./scans/` with `--prefix data/` maps:
 
@@ -623,6 +633,28 @@ The command recursively finds all files in the source directory and uploads them
 ./scans/batch-1/image-002.tif  →  s3://my-bucket/data/batch-1/image-002.tif
 ./scans/batch-2/image-003.tif  →  s3://my-bucket/data/batch-2/image-003.tif
 ```
+
+##### `rahcp s3 verify` -- post-upload verification
+
+Compare a local directory against the bucket to confirm all files were uploaded correctly:
+
+```bash
+rahcp s3 verify my-bucket ./local-scans
+rahcp s3 verify my-bucket ./scans --prefix data/2025/
+```
+
+Output:
+```
+Verification: 603 local files, 601 remote objects
+
+  597 OK — present with matching size
+  6 MISSING — not found in bucket:
+    0/955e67d3.../artifacts/donut-model/model.safetensors
+    17/6802f8af.../artifacts/weights/best.pt
+    ...
+```
+
+Exits with code 1 if any files are missing or have size mismatches, making it usable in scripts and CI.
 
 ##### Bulk transfer overview
 

@@ -253,10 +253,15 @@ def upload_all(
     source_dir: str = typer.Argument(..., help="Local directory to upload"),
     prefix: str = typer.Option("", "--prefix", "-p", help="Key prefix to prepend"),
     workers: int = typer.Option(10, "--workers", "-w", help="Concurrent uploads"),
+    skip_existing: bool = typer.Option(
+        True, "--skip-existing/--overwrite", help="Skip files that already exist with matching size"
+    ),
 ) -> None:
     """Upload all files from a local directory to a bucket."""
 
     async def _run() -> None:
+        from rahcp_client.errors import ConflictError, NotFoundError
+
         src = Path(source_dir)
         if not src.is_dir():
             console.print(f"[red]Not a directory: {src}[/red]")
@@ -273,15 +278,33 @@ def upload_all(
         )
 
         async def _upload_one(client: Any, file_path: Path) -> str:
+            """Returns 'ok', 'skipped', or 'error'."""
             rel = file_path.relative_to(src)
             key = f"{prefix}{rel}" if prefix else str(rel)
+            local_size = file_path.stat().st_size
+
+            # Skip if already exists with matching size
+            if skip_existing:
+                try:
+                    meta = await client.s3.head(bucket, key)
+                    remote_size = int(meta.get("content-length", -1))
+                    if remote_size == local_size:
+                        return "skipped"
+                except NotFoundError:
+                    pass  # doesn't exist yet — upload it
+                except Exception:
+                    pass  # HEAD failed — try uploading anyway
+
             async with sem:
                 try:
                     await client.s3.upload(bucket, key, file_path)
                     console.print(
-                        f"  [green]{key}[/green] ({_human_size(file_path.stat().st_size)})"
+                        f"  [green]{key}[/green] ({_human_size(local_size)})"
                     )
                     return "ok"
+                except ConflictError:
+                    # Object already exists (no versioning) — treat as skipped
+                    return "skipped"
                 except Exception as exc:
                     console.print(f"  [red]{key}[/red] — {_short_error(exc)}")
                     return "error"
@@ -289,11 +312,89 @@ def upload_all(
         async with make_client(ctx) as client:
             results = await asyncio.gather(*[_upload_one(client, f) for f in files])
             ok = results.count("ok")
+            skipped = results.count("skipped")
             errs = results.count("error")
             parts = [f"Uploaded {ok} files"]
+            if skipped:
+                parts.append(f"skipped {skipped} existing")
             if errs:
                 parts.append(f"[red]{errs} errors[/red]")
             console.print(f"\n[bold]Done.[/bold] {', '.join(parts)}")
+
+    run(_run())
+
+
+@app.command()
+def verify(
+    ctx: typer.Context,
+    bucket: str = typer.Argument(...),
+    source_dir: str = typer.Argument(..., help="Local directory to compare against"),
+    prefix: str = typer.Option("", "--prefix", "-p", help="Key prefix (same as upload-all)"),
+) -> None:
+    """Verify all local files exist in the bucket with matching sizes."""
+
+    async def _run() -> None:
+        src = Path(source_dir)
+        if not src.is_dir():
+            console.print(f"[red]Not a directory: {src}[/red]")
+            raise SystemExit(1)
+
+        files = [f for f in src.rglob("*") if f.is_file()]
+        if not files:
+            console.print("[dim]No files found.[/dim]")
+            return
+
+        # Build remote object index (paginated)
+        console.print(f"Listing remote objects in s3://{bucket}/{prefix}...")
+        remote: dict[str, int] = {}
+        token = None
+        async with make_client(ctx) as client:
+            while True:
+                data = await client.s3.list_objects(
+                    bucket, prefix, max_keys=1000, continuation_token=token
+                )
+                for obj in data.get("objects", []):
+                    remote[obj["Key"]] = obj.get("Size", 0)
+                if not data.get("is_truncated"):
+                    break
+                token = data.get("next_continuation_token")
+
+        # Compare
+        ok = 0
+        missing: list[str] = []
+        size_mismatch: list[tuple[str, int, int]] = []
+
+        for f in files:
+            rel = f.relative_to(src)
+            key = f"{prefix}{rel}" if prefix else str(rel)
+            local_size = f.stat().st_size
+            if key not in remote:
+                missing.append(key)
+            elif remote[key] != local_size:
+                size_mismatch.append((key, local_size, remote[key]))
+            else:
+                ok += 1
+
+        # Report
+        console.print(f"\n[bold]Verification:[/bold] {len(files)} local files, {len(remote)} remote objects\n")
+        console.print(f"  [green]{ok} OK[/green] — present with matching size")
+
+        if missing:
+            console.print(f"  [red]{len(missing)} MISSING[/red] — not found in bucket:")
+            for key in missing[:20]:
+                console.print(f"    {key}")
+            if len(missing) > 20:
+                console.print(f"    ... and {len(missing) - 20} more")
+
+        if size_mismatch:
+            console.print(f"  [yellow]{len(size_mismatch)} SIZE MISMATCH[/yellow]:")
+            for key, local, remote_size in size_mismatch[:10]:
+                console.print(f"    {key}: local={_human_size(local)}, remote={_human_size(remote_size)}")
+
+        if not missing and not size_mismatch:
+            console.print("\n  [bold green]All files verified.[/bold green]")
+        else:
+            raise SystemExit(1)
 
     run(_run())
 
