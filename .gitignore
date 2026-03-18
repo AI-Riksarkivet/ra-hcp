@@ -27,6 +27,7 @@ frontend/vite.config.ts.timestamp-*
 # CLI config (contains credentials/tokens)
 .rahcp/
 !.rahcp.example.yaml
+dump/
 
 # Docs
 site/

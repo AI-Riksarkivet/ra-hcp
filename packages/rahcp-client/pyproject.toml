@@ -5,6 +5,13 @@ description = "Async Python client for HCP Unified API"
 requires-python = ">=3.13"
 dependencies = ["httpx>=0.28", "pydantic-settings>=2.13"]
 
+[project.optional-dependencies]
+otel = [
+    "opentelemetry-api>=1.29",
+    "opentelemetry-sdk>=1.29",
+    "opentelemetry-exporter-otlp>=1.29",
+]
+
 [dependency-groups]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.25", "respx>=0.22"]
 

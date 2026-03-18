@@ -42,7 +42,10 @@ class S3Ops:
 
     def _http(self) -> httpx.AsyncClient:
         """Create an httpx client for presigned URL operations."""
-        return httpx.AsyncClient(verify=self._client.verify_ssl)
+        return httpx.AsyncClient(
+            verify=self._client.verify_ssl,
+            timeout=httpx.Timeout(self._client.timeout, connect=10.0),
+        )
 
     @staticmethod
     def _raise_for_presigned(resp: httpx.Response, bucket: str, key: str) -> None:

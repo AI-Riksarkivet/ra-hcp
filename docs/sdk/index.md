@@ -381,6 +381,8 @@ rahcp --log-level info s3 download-all my-bucket
 
 The SDK never logs passwords or tokens. Error messages from HCP are redacted -- any JSON response field matching `password`, `token`, `access_token`, `secret`, or `authorization` is replaced with `[REDACTED]` before logging or raising exceptions.
 
+Presigned URL errors (e.g. 403 on upload/download) never expose the signed URL -- the SDK strips the signature parameters and shows only `403 Forbidden for bucket/key`. Use `--log-level debug` for the full request path and redacted response body.
+
 ### Retry behavior
 
 The client automatically retries transient failures with exponential backoff:
