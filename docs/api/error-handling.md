@@ -21,6 +21,9 @@ graph LR
 
 ## Retry with exponential backoff
 
+!!! note "SDK does this automatically"
+    `HCPClient` retries transient errors (408, 429, 500-504) with exponential backoff and refreshes tokens on 401 — no manual retry logic needed. The code below is for raw `httpx` usage.
+
 ```python
 import asyncio
 import httpx
@@ -61,6 +64,9 @@ async def retry(
 ---
 
 ## Auto-refreshing auth wrapper
+
+!!! note "SDK does this automatically"
+    `HCPClient` re-authenticates on 401 automatically. The wrapper below is for raw `httpx`.
 
 ```mermaid
 sequenceDiagram
@@ -243,6 +249,9 @@ Many HCP API operations are naturally idempotent. Knowing which ones are safe to
 ---
 
 ## Multipart upload with fault tolerance
+
+!!! note "SDK does this automatically"
+    `client.s3.upload()` auto-selects multipart for files >= 100 MB, uploads parts in parallel, and aborts on failure. The code below is for raw `httpx`.
 
 Presigned multipart upload can resume after partial failures. If some parts fail, re-upload only the missing ones:
 

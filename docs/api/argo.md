@@ -365,9 +365,92 @@ graph LR
     w.create()  # submit to the Argo server
     ```
 
+=== "rahcp SDK (Hera)"
+
+    Using the `rahcp-client` SDK instead of Argo S3 artifacts — no S3 credentials Secret needed:
+
+    ```python
+    from hera.workflows import DAG, Workflow, models as m, script
+
+    IMAGE = "my-registry/hcp-sdk:3.13"
+    RETRY = m.RetryStrategy(limit="3", backoff=m.Backoff(duration="5s", factor=2))
+
+    # Credentials injected as env vars from K8s Secret
+    HCP_ENV = [
+        m.EnvVar(name="HCP_ENDPOINT", value="http://hcp-api.default.svc:8000/api/v1"),
+        m.EnvVar(name="HCP_USERNAME", value_from=m.EnvVarSource(
+            secret_key_ref=m.SecretKeySelector(name="hcp-credentials", key="username"))),
+        m.EnvVar(name="HCP_PASSWORD", value_from=m.EnvVarSource(
+            secret_key_ref=m.SecretKeySelector(name="hcp-credentials", key="password"))),
+        m.EnvVar(name="HCP_TENANT", value_from=m.EnvVarSource(
+            secret_key_ref=m.SecretKeySelector(name="hcp-credentials", key="tenant"))),
+    ]
+
+
+    @script(image=IMAGE, retry_strategy=RETRY, env=HCP_ENV)
+    def extract_data(bucket: str, key: str):
+        """Download manifest from HCP via presigned URL."""
+        import asyncio, json
+        from pathlib import Path
+        from rahcp_client import HCPClient
+
+        async def main():
+            async with HCPClient.from_env() as client:
+                data = await client.s3.download_bytes(bucket, key)
+                manifest = json.loads(data)
+                print(f"Loaded {len(manifest['files'])} files")
+                Path("/tmp/extracted.json").write_text(json.dumps(manifest))
+
+        asyncio.run(main())
+
+
+    @script(image=IMAGE, retry_strategy=RETRY)
+    def transform_data():
+        """Process the extracted data."""
+        import json
+        from pathlib import Path
+
+        data = json.loads(Path("/tmp/extracted.json").read_text())
+        results = {"processed": len(data.get("files", [])), "status": "ok"}
+        Path("/tmp/results.json").write_text(json.dumps(results))
+
+
+    @script(image=IMAGE, retry_strategy=RETRY, env=HCP_ENV)
+    def load_results(bucket: str):
+        """Upload results back to HCP via presigned URL."""
+        import asyncio
+        from pathlib import Path
+        from rahcp_client import HCPClient
+
+        async def main():
+            async with HCPClient.from_env() as client:
+                await client.s3.upload(bucket, "results/output.json", Path("/tmp/results.json"))
+                print("Results uploaded")
+
+        asyncio.run(main())
+
+
+    with Workflow(
+        generate_name="hcp-etl-sdk-",
+        entrypoint="etl-pipeline",
+        active_deadline_seconds=1800,
+    ) as w:
+        with DAG(name="etl-pipeline"):
+            ext = extract_data(name="extract", arguments={
+                "bucket": "datasets", "key": "manifests/latest.json"})
+            trn = transform_data(name="transform")
+            ld = load_results(name="load", arguments={"bucket": "results"})
+            ext >> trn >> ld
+
+    w.create()
+    ```
+
 ---
 
 ## Presigned URL pipeline
+
+!!! tip "The SDK handles presigned URLs automatically"
+    When using the `rahcp-client` SDK (as in the batch and cross-tenant examples below), presigned URLs are generated and used internally — you never need to manage them manually. This section shows the **manual approach** for cases where you need explicit control over URL generation.
 
 For cases where you cannot mount S3 credentials into every pod, use the HCP API to generate presigned URLs and pass them as parameters:
 
