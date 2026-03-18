@@ -323,15 +323,39 @@ The SDK has optional OpenTelemetry tracing. Every API request creates a span wit
 uv pip install "rahcp-client[otel]"
 ```
 
-When `opentelemetry-api` is installed, the SDK creates spans automatically:
+When `opentelemetry-api` is installed, the SDK creates spans automatically for every HTTP request and key S3 operations (upload, download, multipart). The OTEL exporter is configured via standard environment variables -- the same ones the backend uses:
 
-```python
-# Spans are created for every request:
-#   span name: "POST /presign"
-#   attributes: http.method, http.path, http.status_code
+```bash
+OTEL_SERVICE_NAME=rahcp-cli
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway.example.com/otlp
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf    # or grpc
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic%20...
 ```
 
-When OTel is **not** installed, the tracer is a no-op — zero overhead, no dependency. Structured logging via Python's `logging` module is always active (method, path, status, duration in ms).
+When OTel is **not** installed, the tracer is a no-op -- zero overhead, no dependency. Structured logging via Python's `logging` module is always active (method, path, status, duration in ms).
+
+#### Logging
+
+Control log verbosity with the `--log-level` flag, the `RAHCP_LOG_LEVEL` env var, or the `log_level` profile setting:
+
+```bash
+# Debug — see every HTTP request with timing
+rahcp --log-level debug s3 ls
+
+# Info — see auth events and summaries
+rahcp --log-level info s3 download-all my-bucket
+```
+
+| Level | What you see |
+|-------|-------------|
+| `debug` | Every HTTP request with method, path, status, duration (ms) |
+| `info` | Authentication, upload/download summaries |
+| `warning` | Retries, transport errors (default) |
+| `error` | Non-retryable failures |
+
+#### Credential safety
+
+The SDK never logs passwords or tokens. Error messages from HCP are redacted -- any JSON response field matching `password`, `token`, `access_token`, `secret`, or `authorization` is replaced with `[REDACTED]` before logging or raising exceptions.
 
 ### Retry behavior
 
@@ -409,6 +433,7 @@ profiles:
     password: secret
     tenant: dev-ai
     verify_ssl: false       # disable for local dev
+    log_level: info         # debug | info | warning | error
 
   prod:
     endpoint: https://hcp-api.example.com/api/v1
@@ -416,6 +441,7 @@ profiles:
     password: ""
     tenant: prod-archive
     verify_ssl: true        # always verify in production
+    log_level: warning      # quiet in production
 ```
 
 #### Global options
@@ -428,6 +454,7 @@ profiles:
 | `--username` / `-u` | `HCP_USERNAME` | Username |
 | `--password` / `-p` | `HCP_PASSWORD` | Password |
 | `--tenant` / `-t` | `HCP_TENANT` | Tenant |
+| `--log-level` | `RAHCP_LOG_LEVEL` | Log level: `debug`, `info`, `warning`, `error` |
 | `--json` | -- | Output raw JSON |
 
 ### Commands

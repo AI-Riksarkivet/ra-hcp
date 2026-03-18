@@ -25,6 +25,24 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 _RETRYABLE_STATUSES = frozenset({408, 429, 500, 503, 504})
+_SENSITIVE_KEYS = {"password", "token", "access_token", "secret", "authorization"}
+
+
+def _redact(text: str, max_len: int = 200) -> str:
+    """Truncate and redact sensitive values from error/log messages."""
+    import json as _json
+
+    truncated = text[:max_len]
+    try:
+        data = _json.loads(truncated)
+        if isinstance(data, dict):
+            for key in data:
+                if key.lower() in _SENSITIVE_KEYS:
+                    data[key] = "[REDACTED]"
+            return _json.dumps(data)
+    except (ValueError, TypeError):
+        pass
+    return truncated
 
 
 class HCPClient:
@@ -68,6 +86,12 @@ class HCPClient:
         self._token: str | None = None
         self._s3: S3Ops | None = None
         self._mapi: MapiOps | None = None
+
+    def __repr__(self) -> str:
+        return (
+            f"HCPClient(endpoint={self.endpoint!r}, user={self.username!r}, "
+            f"tenant={self.tenant!r})"
+        )
 
     @property
     def token(self) -> str | None:
@@ -140,12 +164,14 @@ class HCPClient:
         response = await self._http.post("/auth/token", data=form)
         if response.status_code != 200:
             raise AuthenticationError(
-                f"Login failed: {response.status_code} {response.text}",
+                f"Login failed: {response.status_code}",
                 status_code=response.status_code,
             )
         data = response.json()
         self._token = data["access_token"]
-        log.info("Authenticated as %s (tenant=%s)", self.username, self.tenant or "system")
+        log.info(
+            "Authenticated as %s (tenant=%s)", self.username, self.tenant or "system"
+        )
 
     def _auth_headers(self) -> dict[str, str]:
         """Return authorization headers if a token is available."""
@@ -190,7 +216,11 @@ class HCPClient:
                     duration = (time.monotonic() - t0) * 1000
                     log.warning(
                         "%s %s — transport error after %.0fms (attempt %d): %s",
-                        method, path, duration, attempt + 1, exc,
+                        method,
+                        path,
+                        duration,
+                        attempt + 1,
+                        exc,
                     )
                     last_error = RetryableError(str(exc))
                     await self._backoff(attempt)
@@ -201,7 +231,10 @@ class HCPClient:
 
                 log.debug(
                     "%s %s → %d (%.0fms)",
-                    method, path, response.status_code, duration,
+                    method,
+                    path,
+                    response.status_code,
+                    duration,
                 )
 
                 # Auto-refresh on 401
@@ -215,20 +248,31 @@ class HCPClient:
                 if response.status_code in _RETRYABLE_STATUSES:
                     log.warning(
                         "%s %s → %d (attempt %d/%d, retrying)",
-                        method, path, response.status_code, attempt + 1, self.max_retries + 1,
+                        method,
+                        path,
+                        response.status_code,
+                        attempt + 1,
+                        self.max_retries + 1,
                     )
-                    last_error = error_for_status(response.status_code, response.text)
+                    last_error = error_for_status(
+                        response.status_code, _redact(response.text)
+                    )
                     if attempt < self.max_retries:
                         await self._backoff(attempt)
                         continue
 
                 # Success or non-retryable error
                 if response.status_code >= 400:
+                    safe_body = _redact(response.text)
                     log.error(
                         "%s %s → %d (%.0fms): %s",
-                        method, path, response.status_code, duration, response.text[:200],
+                        method,
+                        path,
+                        response.status_code,
+                        duration,
+                        safe_body,
                     )
-                    raise error_for_status(response.status_code, response.text)
+                    raise error_for_status(response.status_code, safe_body)
 
                 return response
 

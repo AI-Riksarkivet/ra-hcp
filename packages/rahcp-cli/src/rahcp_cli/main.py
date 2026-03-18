@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import typer
 
 from rahcp_cli import auth, namespace, s3
@@ -62,6 +64,12 @@ def main(
         envvar="HCP_TENANT",
         help="HCP tenant (overrides profile)",
     ),
+    log_level: str = typer.Option(
+        None,
+        "--log-level",
+        envvar="RAHCP_LOG_LEVEL",
+        help="Log level: debug, info, warning, error",
+    ),
     output_json: bool = typer.Option(
         False,
         "--json",
@@ -73,6 +81,14 @@ def main(
 
     cfg = load_config(config)
     p = cfg.resolve(profile)
+
+    # Configure logging
+    level = (log_level or p.log_level).upper()
+    logging.basicConfig(
+        level=getattr(logging, level, logging.WARNING),
+        format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
+        datefmt="%H:%M:%S",
+    )
 
     # CLI flags > env vars > profile > defaults
     ctx.obj["endpoint"] = endpoint or p.endpoint

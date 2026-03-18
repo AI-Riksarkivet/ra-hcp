@@ -42,6 +42,7 @@ class Profile(BaseModel):
     password: str = ""
     tenant: str = ""
     verify_ssl: bool = True
+    log_level: str = "warning"
 
 
 class CLIConfig(BaseModel):
