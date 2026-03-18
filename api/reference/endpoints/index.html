@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/api/reference/endpoints/">
       
       
-        <link rel="prev" href="../../system/">
+        <link rel="prev" href="../../error-handling/">
       
       
         <link rel="next" href="../common/">
@@ -303,6 +303,25 @@
           
   
   API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../sdk/" class="md-tabs__link">
+          
+  
+  Python SDK
 
         </a>
       </li>
@@ -1189,6 +1208,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../argo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Argo Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1868,7 +1971,7 @@
   <span class="md-ellipsis">
     
   
-    Components
+    Python SDK
   
 
     
@@ -1881,6 +1984,119 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python SDK
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sdk/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2425,7 +2641,7 @@ GET  /buckets/{bucket}/uploads — list in-progress multipart uploads</p>
 <span class="normal">60</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ListBucketsResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_buckets</span><span class="p">(</span><span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;List all S3 buckets accessible to the authenticated user.&quot;&quot;&quot;</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">list_buckets</span><span class="p">,</span> <span class="s2">&quot;buckets&quot;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">list_buckets</span><span class="p">(),</span> <span class="s2">&quot;buckets&quot;</span><span class="p">)</span>
     <span class="n">buckets</span> <span class="o">=</span> <span class="p">[</span><span class="n">BucketInfo</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Buckets&quot;</span><span class="p">,</span> <span class="p">[])]</span>
     <span class="n">owner</span> <span class="o">=</span> <span class="n">OwnerInfo</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;Owner&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="s2">&quot;Owner&quot;</span> <span class="ow">in</span> <span class="n">result</span> <span class="k">else</span> <span class="kc">None</span>
     <span class="k">return</span> <span class="n">ListBucketsResponse</span><span class="p">(</span><span class="n">buckets</span><span class="o">=</span><span class="n">buckets</span><span class="p">,</span> <span class="n">owner</span><span class="o">=</span><span class="n">owner</span><span class="p">)</span>
@@ -2468,7 +2684,7 @@ GET  /buckets/{bucket}/uploads — list in-progress multipart uploads</p>
     <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">),</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new S3 bucket.&quot;&quot;&quot;</span>
-    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">create_bucket</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">body</span><span class="o">.</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">create_bucket</span><span class="p">(</span><span class="n">body</span><span class="o">.</span><span class="n">bucket</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">body</span><span class="o">.</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;created&quot;</span><span class="p">,</span> <span class="s2">&quot;bucket&quot;</span><span class="p">:</span> <span class="n">body</span><span class="o">.</span><span class="n">bucket</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2503,7 +2719,7 @@ GET  /buckets/{bucket}/uploads — list in-progress multipart uploads</p>
 <span class="normal">77</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">&quot;</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">head_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check whether a bucket exists. Returns 200 or 404.&quot;&quot;&quot;</span>
-    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">head_bucket</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">head_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2585,16 +2801,16 @@ empty + delete (no MAPI involved).</p>
 <span class="sd">    empty + delete (no MAPI involved).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">force</span><span class="p">:</span>
-        <span class="k">await</span> <span class="n">_empty_bucket</span><span class="p">(</span><span class="n">s3</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
+        <span class="n">empty_errors</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_empty_bucket</span><span class="p">(</span><span class="n">s3</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">storage_settings</span><span class="o">.</span><span class="n">storage_backend</span> <span class="o">==</span> <span class="s2">&quot;hcp&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="k">await</span> <span class="n">_force_delete_hcp</span><span class="p">(</span><span class="n">s3</span><span class="p">,</span> <span class="n">hcp</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">token</span><span class="p">)</span>
+            <span class="k">return</span> <span class="k">await</span> <span class="n">_force_delete_hcp</span><span class="p">(</span><span class="n">s3</span><span class="p">,</span> <span class="n">hcp</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">empty_errors</span><span class="p">)</span>
 
         <span class="c1"># MinIO / generic: simple empty + delete</span>
-        <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">delete_bucket</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">delete_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;deleted&quot;</span><span class="p">,</span> <span class="s2">&quot;bucket&quot;</span><span class="p">:</span> <span class="n">bucket</span><span class="p">}</span>
 
-    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">delete_bucket</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">delete_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;deleted&quot;</span><span class="p">,</span> <span class="s2">&quot;bucket&quot;</span><span class="p">:</span> <span class="n">bucket</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2622,23 +2838,23 @@ empty + delete (no MAPI involved).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">259</span>
-<span class="normal">260</span>
-<span class="normal">261</span>
-<span class="normal">262</span>
-<span class="normal">263</span>
-<span class="normal">264</span>
-<span class="normal">265</span>
-<span class="normal">266</span>
-<span class="normal">267</span>
-<span class="normal">268</span>
-<span class="normal">269</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/versioning&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketVersioningResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/versioning&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketVersioningResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_bucket_versioning</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">),</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the versioning configuration for a bucket.&quot;&quot;&quot;</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">get_bucket_versioning</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">get_bucket_versioning</span><span class="p">(</span><span class="n">bucket</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">BucketVersioningResponse</span><span class="p">(</span>
         <span class="n">status</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Status&quot;</span><span class="p">),</span>
         <span class="n">mfa_delete</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MFADelete&quot;</span><span class="p">),</span>
@@ -2669,17 +2885,17 @@ empty + delete (no MAPI involved).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span>
-<span class="normal">281</span>
-<span class="normal">282</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/versioning&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">VersioningMutationResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/versioning&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">VersioningMutationResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">put_bucket_versioning</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">PutBucketVersioningRequest</span><span class="p">,</span>
@@ -2687,7 +2903,7 @@ empty + delete (no MAPI involved).</p>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Enable or suspend versioning on a bucket.&quot;&quot;&quot;</span>
     <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span>
-        <span class="n">s3</span><span class="o">.</span><span class="n">put_bucket_versioning</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">status</span>
+        <span class="n">s3</span><span class="o">.</span><span class="n">put_bucket_versioning</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">status</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;updated&quot;</span><span class="p">,</span> <span class="s2">&quot;versioning&quot;</span><span class="p">:</span> <span class="n">body</span><span class="o">.</span><span class="n">status</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>
@@ -2716,17 +2932,17 @@ empty + delete (no MAPI involved).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">288</span>
-<span class="normal">289</span>
-<span class="normal">290</span>
-<span class="normal">291</span>
-<span class="normal">292</span>
-<span class="normal">293</span>
-<span class="normal">294</span>
-<span class="normal">295</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/acl&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">AclResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/acl&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">AclResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_bucket_acl</span><span class="p">(</span><span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the access control list (ACL) for a bucket.&quot;&quot;&quot;</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">get_bucket_acl</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">get_bucket_acl</span><span class="p">(</span><span class="n">bucket</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span>
         <span class="s2">&quot;owner&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Owner&quot;</span><span class="p">,</span> <span class="p">{}),</span>
         <span class="s2">&quot;grants&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Grants&quot;</span><span class="p">,</span> <span class="p">[]),</span>
@@ -2757,20 +2973,18 @@ empty + delete (no MAPI involved).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/acl&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/acl&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">put_bucket_acl</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">AclPolicy</span><span class="p">,</span>
@@ -2778,10 +2992,8 @@ empty + delete (no MAPI involved).</p>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set the access control list (ACL) for a bucket.&quot;&quot;&quot;</span>
     <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span>
-        <span class="n">s3</span><span class="o">.</span><span class="n">put_bucket_acl</span><span class="p">,</span>
+        <span class="n">s3</span><span class="o">.</span><span class="n">put_bucket_acl</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
         <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
-        <span class="n">bucket</span><span class="p">,</span>
-        <span class="n">body</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;updated&quot;</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>
@@ -2810,14 +3022,14 @@ empty + delete (no MAPI involved).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/cors&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">CorsResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/cors&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">CorsResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_bucket_cors</span><span class="p">(</span><span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the CORS configuration for a bucket.&quot;&quot;&quot;</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">get_bucket_cors</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">get_bucket_cors</span><span class="p">(</span><span class="n">bucket</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;cors_rules&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;CORSRules&quot;</span><span class="p">,</span> <span class="p">[])}</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2845,20 +3057,18 @@ empty + delete (no MAPI involved).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">324</span>
-<span class="normal">325</span>
-<span class="normal">326</span>
-<span class="normal">327</span>
-<span class="normal">328</span>
-<span class="normal">329</span>
-<span class="normal">330</span>
-<span class="normal">331</span>
-<span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/cors&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/cors&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">put_bucket_cors</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">CorsConfiguration</span><span class="p">,</span>
@@ -2866,10 +3076,8 @@ empty + delete (no MAPI involved).</p>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Set the CORS configuration for a bucket.&quot;&quot;&quot;</span>
     <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span>
-        <span class="n">s3</span><span class="o">.</span><span class="n">put_bucket_cors</span><span class="p">,</span>
+        <span class="n">s3</span><span class="o">.</span><span class="n">put_bucket_cors</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
         <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
-        <span class="n">bucket</span><span class="p">,</span>
-        <span class="n">body</span><span class="o">.</span><span class="n">model_dump</span><span class="p">(</span><span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;updated&quot;</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>
@@ -2898,18 +3106,18 @@ empty + delete (no MAPI involved).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">340</span>
-<span class="normal">341</span>
-<span class="normal">342</span>
-<span class="normal">343</span>
-<span class="normal">344</span>
-<span class="normal">345</span>
-<span class="normal">346</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/cors&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/cors&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">BucketMutationResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">delete_bucket_cors</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete the CORS configuration for a bucket.&quot;&quot;&quot;</span>
-    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">delete_bucket_cors</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">delete_bucket_cors</span><span class="p">(</span><span class="n">bucket</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;deleted&quot;</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2937,23 +3145,23 @@ empty + delete (no MAPI involved).</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/buckets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">352</span>
-<span class="normal">353</span>
-<span class="normal">354</span>
-<span class="normal">355</span>
-<span class="normal">356</span>
-<span class="normal">357</span>
-<span class="normal">358</span>
-<span class="normal">359</span>
-<span class="normal">360</span>
-<span class="normal">361</span>
-<span class="normal">362</span>
-<span class="normal">363</span>
-<span class="normal">364</span>
-<span class="normal">365</span>
-<span class="normal">366</span>
-<span class="normal">367</span>
-<span class="normal">368</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/uploads&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ListMultipartUploadsResponse</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">{bucket}</span><span class="s2">/uploads&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ListMultipartUploadsResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_multipart_uploads</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span>
@@ -2962,7 +3170,7 @@ empty + delete (no MAPI involved).</p>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;List in-progress multipart uploads for a bucket.&quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span>
-        <span class="n">s3</span><span class="o">.</span><span class="n">list_multipart_uploads</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">max_uploads</span>
+        <span class="n">s3</span><span class="o">.</span><span class="n">list_multipart_uploads</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">max_uploads</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
     <span class="p">)</span>
     <span class="n">uploads</span> <span class="o">=</span> <span class="p">[</span><span class="n">MultipartUploadInfo</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Uploads&quot;</span><span class="p">,</span> <span class="p">[])]</span>
     <span class="k">return</span> <span class="n">ListMultipartUploadsResponse</span><span class="p">(</span>
@@ -3041,7 +3249,14 @@ Returns 202 with task_id for polling.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/objects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">195</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
 <span class="normal">196</span>
 <span class="normal">197</span>
 <span class="normal">198</span>
@@ -3071,21 +3286,13 @@ Returns 202 with task_id for polling.</p>
 <span class="normal">222</span>
 <span class="normal">223</span>
 <span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/download&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ZipTaskResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">202</span><span class="p">)</span>
+<span class="normal">225</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/download&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ZipTaskResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">202</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">start_zip_download</span><span class="p">(</span>
     <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">BulkDownloadRequest</span><span class="p">,</span>
     <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">),</span>
-    <span class="n">cache</span><span class="p">:</span> <span class="n">CacheService</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_cache_service</span><span class="p">),</span>
+    <span class="n">cache</span><span class="p">:</span> <span class="n">KVCache</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_cache_service</span><span class="p">),</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Start a background ZIP download task.</span>
 
@@ -3110,7 +3317,6 @@ Returns 202 with task_id for polling.</p>
 
     <span class="n">task_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
 
-    <span class="c1"># Schedule the ZIP build as a background task</span>
     <span class="n">asyncio</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span><span class="n">_build_zip</span><span class="p">(</span><span class="n">task_id</span><span class="p">,</span> <span class="n">s3</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">keys</span><span class="p">,</span> <span class="n">cache</span><span class="p">))</span>
 
     <span class="k">return</span> <span class="n">ZipTaskResponse</span><span class="p">(</span>
@@ -3144,7 +3350,15 @@ Returns 202 with task_id for polling.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/objects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">236</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
 <span class="normal">237</span>
 <span class="normal">238</span>
 <span class="normal">239</span>
@@ -3188,20 +3402,11 @@ Returns 202 with task_id for polling.</p>
 <span class="normal">277</span>
 <span class="normal">278</span>
 <span class="normal">279</span>
-<span class="normal">280</span>
-<span class="normal">281</span>
-<span class="normal">282</span>
-<span class="normal">283</span>
-<span class="normal">284</span>
-<span class="normal">285</span>
-<span class="normal">286</span>
-<span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/download/</span><span class="si">{task_id}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="normal">280</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/download/</span><span class="si">{task_id}</span><span class="s2">&quot;</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_zip_download</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">cache</span><span class="p">:</span> <span class="n">CacheService</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_cache_service</span><span class="p">),</span>
+    <span class="n">cache</span><span class="p">:</span> <span class="n">KVCache</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_cache_service</span><span class="p">),</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Poll ZIP task status or download the completed ZIP.&quot;&quot;&quot;</span>
     <span class="n">state</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_get_task_state</span><span class="p">(</span><span class="n">task_id</span><span class="p">,</span> <span class="n">cache</span><span class="p">)</span>
@@ -3227,7 +3432,6 @@ Returns 202 with task_id for polling.</p>
             <span class="p">},</span>
         <span class="p">)</span>
 
-    <span class="c1"># status == &quot;ready&quot; — stream the file</span>
     <span class="n">zip_path</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">zip_path</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">zip_path</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
         <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="s2">&quot;ZIP file not found on disk&quot;</span><span class="p">)</span>
@@ -3277,16 +3481,16 @@ Returns 202 with task_id for polling.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/objects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">370</span>
-<span class="normal">371</span>
-<span class="normal">372</span>
-<span class="normal">373</span>
-<span class="normal">374</span>
-<span class="normal">375</span>
-<span class="normal">376</span>
-<span class="normal">377</span>
-<span class="normal">378</span>
-<span class="normal">379</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/folder&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">CreateFolderResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">201</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/folder&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">CreateFolderResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">201</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_folder</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">CreateFolderRequest</span><span class="p">,</span>
@@ -3294,7 +3498,7 @@ Returns 202 with task_id for polling.</p>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a folder (zero-byte object with trailing slash).&quot;&quot;&quot;</span>
     <span class="n">key</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">folder_name</span> <span class="k">if</span> <span class="n">body</span><span class="o">.</span><span class="n">folder_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">body</span><span class="o">.</span><span class="n">folder_name</span><span class="si">}</span><span class="s2">/&quot;</span>
-    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">put_object</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;folder &#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">))</span>
+    <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">put_object</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">)),</span> <span class="sa">f</span><span class="s2">&quot;folder &#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">CreateFolderResponse</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3394,11 +3598,7 @@ Anyone with the URL can access the object — no credentials needed.</p>
 <span class="normal">58</span>
 <span class="normal">59</span>
 <span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/presign&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">PresignedUrlResponse</span><span class="p">)</span>
+<span class="normal">61</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/presign&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">PresignedUrlResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">generate_presigned_url</span><span class="p">(</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">PresignedUrlRequest</span><span class="p">,</span>
     <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">),</span>
@@ -3415,12 +3615,8 @@ Anyone with the URL can access the object — no credentials needed.</p>
             <span class="n">detail</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;method must be one of: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_ALLOWED_METHODS</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="n">url</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span>
-        <span class="n">s3</span><span class="o">.</span><span class="n">generate_presigned_url</span><span class="p">,</span>
+        <span class="n">s3</span><span class="o">.</span><span class="n">generate_presigned_url</span><span class="p">(</span><span class="n">body</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">expires_in</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">method</span><span class="p">),</span>
         <span class="sa">f</span><span class="s2">&quot;object &#39;</span><span class="si">{</span><span class="n">body</span><span class="o">.</span><span class="n">key</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
-        <span class="n">body</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span>
-        <span class="n">body</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
-        <span class="n">body</span><span class="o">.</span><span class="n">expires_in</span><span class="p">,</span>
-        <span class="n">body</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">PresignedUrlResponse</span><span class="p">(</span>
         <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
@@ -3439,7 +3635,7 @@ Anyone with the URL can access the object — no credentials needed.</p>
 
 
 <h3 id="app.api.v1.endpoints.s3.credentials.get_s3_credentials" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">get_s3_credentials</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">storage_settings</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_storage_settings</span><span class="p">))</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">get_s3_credentials</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">storage_settings</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_storage_settings</span><span class="p">),</span> <span class="n">s3_settings</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_settings</span><span class="p">))</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-async"><code>async</code></small>
@@ -3457,7 +3653,11 @@ MinIO/generic: returns the configured S3 access key and secret key.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/credentials.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">68</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
 <span class="normal">69</span>
 <span class="normal">70</span>
 <span class="normal">71</span>
@@ -3480,15 +3680,11 @@ MinIO/generic: returns the configured S3 access key and secret key.</p>
 <span class="normal">88</span>
 <span class="normal">89</span>
 <span class="normal">90</span>
-<span class="normal">91</span>
-<span class="normal">92</span>
-<span class="normal">93</span>
-<span class="normal">94</span>
-<span class="normal">95</span>
-<span class="normal">96</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/credentials&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">S3CredentialsResponse</span><span class="p">)</span>
+<span class="normal">91</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/credentials&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">S3CredentialsResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_s3_credentials</span><span class="p">(</span>
     <span class="n">token</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Depends</span><span class="p">(</span><span class="n">oauth2_scheme</span><span class="p">)],</span>
     <span class="n">storage_settings</span><span class="p">:</span> <span class="n">StorageSettings</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_storage_settings</span><span class="p">),</span>
+    <span class="n">s3_settings</span><span class="p">:</span> <span class="n">S3Settings</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_settings</span><span class="p">),</span>
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the S3 credentials for the authenticated user.</span>
 
@@ -3498,7 +3694,6 @@ MinIO/generic: returns the configured S3 access key and secret key.</p>
     <span class="k">if</span> <span class="n">storage_settings</span><span class="o">.</span><span class="n">storage_backend</span> <span class="o">==</span> <span class="s2">&quot;hcp&quot;</span><span class="p">:</span>
         <span class="n">creds</span><span class="p">:</span> <span class="n">HcpCredentials</span> <span class="o">=</span> <span class="n">verify_token_with_credentials</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
         <span class="n">access_key</span><span class="p">,</span> <span class="n">secret_key</span> <span class="o">=</span> <span class="n">derive_s3_keys</span><span class="p">(</span><span class="n">creds</span><span class="o">.</span><span class="n">username</span><span class="p">,</span> <span class="n">creds</span><span class="o">.</span><span class="n">password</span><span class="p">)</span>
-        <span class="n">s3_settings</span> <span class="o">=</span> <span class="n">get_s3_settings</span><span class="p">()</span>
         <span class="n">endpoint_url</span> <span class="o">=</span> <span class="n">s3_endpoint_for_tenant</span><span class="p">(</span><span class="n">creds</span><span class="o">.</span><span class="n">tenant</span><span class="p">,</span> <span class="n">s3_settings</span><span class="o">.</span><span class="n">hcp_domain</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">S3CredentialsResponse</span><span class="p">(</span>
             <span class="n">access_key_id</span><span class="o">=</span><span class="n">access_key</span><span class="p">,</span>
@@ -3508,7 +3703,6 @@ MinIO/generic: returns the configured S3 access key and secret key.</p>
             <span class="n">endpoint_url</span><span class="o">=</span><span class="n">endpoint_url</span><span class="p">,</span>
         <span class="p">)</span>
 
-    <span class="c1"># MinIO / generic: return configured credentials</span>
     <span class="k">return</span> <span class="n">S3CredentialsResponse</span><span class="p">(</span>
         <span class="n">access_key_id</span><span class="o">=</span><span class="n">storage_settings</span><span class="o">.</span><span class="n">s3_access_key</span><span class="p">,</span>
         <span class="n">secret_access_key</span><span class="o">=</span><span class="n">storage_settings</span><span class="o">.</span><span class="n">s3_secret_key</span><span class="o">.</span><span class="n">get_secret_value</span><span class="p">(),</span>
@@ -3735,7 +3929,7 @@ API call.  HCP validates them — login itself always succeeds.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../system/" class="md-footer__link md-footer__link--prev" aria-label="Previous: System">
+          <a href="../../error-handling/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Error Handling">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -3745,7 +3939,7 @@ API call.  HCP validates them — login itself always succeeds.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                System
+                Error Handling
               </div>
             </div>
           </a>

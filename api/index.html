@@ -318,6 +318,25 @@
     
     
       <li class="md-tabs__item">
+        <a href="../sdk/" class="md-tabs__link">
+          
+  
+  Python SDK
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../components/" class="md-tabs__link">
           
   
@@ -1308,6 +1327,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./argo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Argo Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1624,7 +1727,7 @@
   <span class="md-ellipsis">
     
   
-    Components
+    Python SDK
   
 
     
@@ -1637,6 +1740,119 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python SDK
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1902,37 +2118,37 @@
 </tr>
 <tr>
 <td><strong>Health</strong></td>
-<td><code>/healthz</code>, <code>/readyz</code>, <code>/health</code></td>
+<td><code>/liveness</code>, <code>/readiness</code>, <code>/health</code></td>
 <td>Liveness probe, readiness probe, and legacy health endpoint.</td>
 <td>Public</td>
 </tr>
 <tr>
 <td><strong>S3 Buckets</strong></td>
-<td><code>/api/v1/s3/buckets</code></td>
+<td><code>/api/v1/buckets</code></td>
 <td>Create, list, and manage S3 buckets including versioning and ACLs.</td>
 <td>JWT required</td>
 </tr>
 <tr>
 <td><strong>S3 Objects</strong></td>
-<td><code>/api/v1/s3/buckets/{bucket}/objects</code></td>
+<td><code>/api/v1/buckets/{bucket}/objects</code></td>
 <td>Upload, download, copy, and delete objects within buckets.</td>
 <td>JWT required</td>
 </tr>
 <tr>
 <td><strong>S3 Versions</strong></td>
-<td><code>/api/v1/s3/buckets/{bucket}/versions</code></td>
+<td><code>/api/v1/buckets/{bucket}/versions</code></td>
 <td>List object versions and delete markers for versioning-enabled buckets.</td>
 <td>JWT required</td>
 </tr>
 <tr>
 <td><strong>S3 Multipart</strong></td>
-<td><code>/api/v1/s3/buckets/{bucket}/multipart</code></td>
+<td><code>/api/v1/buckets/{bucket}/multipart</code></td>
 <td>Multipart upload: initiate, upload parts, complete, abort, list parts.</td>
 <td>JWT required</td>
 </tr>
 <tr>
 <td><strong>S3 Credentials</strong></td>
-<td><code>/api/v1/s3/credentials</code></td>
+<td><code>/api/v1/presign</code>, <code>/api/v1/credentials</code></td>
 <td>Generate presigned URLs and retrieve S3 access credentials.</td>
 <td>JWT required</td>
 </tr>
@@ -2032,6 +2248,12 @@
 <td>Search objects by metadata and audit operations.</td>
 <td>JWT required</td>
 </tr>
+<tr>
+<td><strong>Lance Explorer</strong></td>
+<td><code>/api/v1/lance</code></td>
+<td>Browse LanceDB datasets: list tables, inspect schemas, read rows, and search.</td>
+<td>JWT required</td>
+</tr>
 </tbody>
 </table>
 <h2 id="access-levels">Access levels<a class="headerlink" href="#access-levels" title="Permanent link">&para;</a></h2>
@@ -2049,6 +2271,9 @@
 <li><a href="system/">System Administration</a> -- System-level MAPI endpoints.</li>
 <li><a href="tenants/">Tenant Administration</a> -- Tenant-level settings and identity.</li>
 <li><a href="namespaces/">Namespaces</a> -- Namespace management, compliance, and access.</li>
+<li><a href="workflows/">Workflows</a> -- End-to-end curl and Python examples for common tasks.</li>
+<li><a href="argo/">Argo Workflows</a> -- ETL pipelines, batch processing, and presigned URL workflows with YAML and Hera.</li>
+<li><a href="error-handling/">Error Handling</a> -- Retries, idempotency, ACID patterns, and fault-tolerant uploads.</li>
 </ul>
 
 

@@ -318,6 +318,25 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../sdk/" class="md-tabs__link">
+          
+  
+  Python SDK
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../components/" class="md-tabs__link">
           
   
@@ -1025,10 +1044,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#cacheservice" class="md-nav__link">
+  <a href="#kvcache" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CacheService
+        KVCache
       
     </span>
   </a>
@@ -1608,6 +1627,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/argo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Argo Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1924,7 +2027,7 @@
   <span class="md-ellipsis">
     
   
-    Components
+    Python SDK
   
 
     
@@ -1937,6 +2040,119 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python SDK
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2137,10 +2353,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#cacheservice" class="md-nav__link">
+  <a href="#kvcache" class="md-nav__link">
     <span class="md-ellipsis">
       
-        CacheService
+        KVCache
       
     </span>
   </a>
@@ -2469,7 +2685,7 @@
     end
 
     subgraph "Caching (optional)"
-        CACHED --&gt; CS["CacheService&lt;br/&gt;Redis"]
+        CACHED --&gt; CS["KVCache&lt;br/&gt;Redis (py-key-value)"]
         MS -.-&gt; CS
         QS -.-&gt; CS
     end
@@ -2518,10 +2734,10 @@
 <li>The service makes the external call (MAPI, S3, or Query API) and returns domain objects.</li>
 <li>The router serializes the response (JSON or XML) and returns it.</li>
 </ol>
-<p>Exceptions bubble up through the same path. Domain exceptions (<code>MapiError</code>, <code>StorageError</code>) are caught by exception handlers in <code>main.py</code> and translated to HTTP responses. Routers never import <code>httpx</code> or <code>boto3</code> — they only talk to service interfaces.</p>
+<p>Exceptions bubble up through the same path. Domain exceptions (<code>MapiError</code>, <code>StorageError</code>) are caught by exception handlers in <code>main.py</code> and translated to HTTP responses. Routers never import <code>httpx</code> or <code>aioboto3</code> — they only talk to service interfaces.</p>
 <p>This layering makes the backend testable at every level. Unit tests can inject mock services. Integration tests can swap the storage backend from HCP to MinIO. The router layer is thin enough that service-level tests cover most logic.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>Settings are organized into six <code>pydantic_settings.BaseSettings</code> classes in <code>app/core/config.py</code>. Each class maps to a deployment concern, reads from <code>.env</code>, and ignores unknown variables (<code>extra = "ignore"</code>).</p>
+<p>Settings are organized into five <code>pydantic_settings.BaseSettings</code> classes in <code>app/core/config.py</code>. Each class maps to a deployment concern, reads from <code>.env</code>, and ignores unknown variables (<code>extra = "ignore"</code>).</p>
 <table>
 <thead>
 <tr>
@@ -2638,7 +2854,7 @@
 </code></pre></div>
 <p>Services live on <code>app.state</code>, initialized in the lifespan handler. Dependencies read from <code>request.app.state</code> — no module-level mutable globals.</p>
 <p>For MAPI and Query services, the dependency creates an <code>Authenticated*Service</code> wrapper that binds JWT credentials and the tenant-specific host to the shared inner service. The wrapper is created per-request and discarded after.</p>
-<p>S3 clients are special: HCP requires per-user clients because credentials are baked into the boto3 session. The dependency maintains a cache in <code>app.state.s3_cache</code> keyed by <code>HcpCredentials</code>. Each unique user gets their own boto3 client, lazily created on first request. For MinIO/generic backends, a single shared client keyed by <code>"default"</code> is used instead.</p>
+<p>S3 clients are special: HCP requires per-user clients because credentials are baked into the aioboto3 session. The dependency maintains a cache in <code>app.state.s3_cache</code> keyed by <code>HcpCredentials</code>. Each unique user gets their own aioboto3 client, lazily created on first request. For MinIO/generic backends, a single shared client keyed by <code>"default"</code> is used instead.</p>
 <h2 id="services">Services<a class="headerlink" href="#services" title="Permanent link">&para;</a></h2>
 <h3 id="mapiservice">MapiService<a class="headerlink" href="#mapiservice" title="Permanent link">&para;</a></h3>
 <p><code>MapiService</code> (<code>app/services/mapi_service.py</code>) is an async HTTP client for HCP's Management API (port 9090). It uses <code>httpx.AsyncClient</code> with lazy initialization.</p>
@@ -2664,25 +2880,25 @@
 <li><code>operation_query()</code> — searches operation logs (reads, writes, deletes)</li>
 </ul>
 <p>Both unwrap HCP's <code>{"queryResult": {...}}</code> response envelope and validate against Pydantic response models. <code>AuthenticatedQueryService</code> follows the same composition pattern as the MAPI wrapper.</p>
-<h3 id="cacheservice">CacheService<a class="headerlink" href="#cacheservice" title="Permanent link">&para;</a></h3>
-<p><code>CacheService</code> (<code>app/services/cache_service.py</code>) wraps Redis with graceful degradation. It maintains two Redis clients:</p>
+<h3 id="kvcache">KVCache<a class="headerlink" href="#kvcache" title="Permanent link">&para;</a></h3>
+<p><code>KVCache</code> (<code>app/services/kv/store.py</code>) wraps <code>py-key-value</code>'s composable async stores with graceful degradation. The factory (<code>app/services/kv/factory.py</code>) assembles the store chain:</p>
 <ul>
-<li><strong>Async client</strong> (<code>aioredis.Redis</code>) — used by MAPI and Query services running in the async event loop</li>
-<li><strong>Sync client</strong> (<code>redis.Redis</code>) — used by Storage services running inside <code>asyncio.to_thread()</code></li>
+<li><strong>With Redis</strong>: <code>RedisStore → PrefixKeysWrapper → TimeoutWrapper → RetryWrapper</code></li>
+<li><strong>Without Redis</strong>: <code>NullStore</code> (all operations are no-ops)</li>
 </ul>
-<p><code>connect()</code> attempts to reach Redis and silently disables caching if it fails. The <code>enabled</code> property reflects whether Redis is actually available. All cache operations swallow exceptions — a Redis failure never breaks the application.</p>
-<p>Operations: <code>get</code>, <code>set</code> (with TTL), <code>delete</code>, <code>invalidate_pattern</code> (SCAN-based). Each has both async and sync variants. All keys are prefixed with <code>{cache_key_prefix}:</code> (default <code>hcp:</code>).</p>
+<p><code>connect()</code> attempts to reach the backing store and silently disables caching if it fails. The <code>enabled</code> property reflects whether the store is actually available. All cache operations swallow exceptions — a store failure never breaks the application.</p>
+<p>Operations: <code>get</code>, <code>set</code> (with TTL), <code>delete</code> — all async. Values are JSON-serialized internally (with <code>default=str</code> for datetime handling) and wrapped in <code>{"_raw": ...}</code> for type safety.</p>
 <p>OTel instrumentation records three counters: <code>cache.hits</code>, <code>cache.misses</code>, <code>cache.errors</code>. Every operation also creates a trace span.</p>
 <h3 id="lanceservice">LanceService<a class="headerlink" href="#lanceservice" title="Permanent link">&para;</a></h3>
 <p><code>LanceService</code> (<code>app/services/lance_service.py</code>) connects to S3-hosted Lance datasets via <code>lancedb</code>. It provides table listing, schema inspection, paginated row reads, full-text/vector/hybrid search, and single-cell byte access.</p>
 <p>Data reads use Lance's native push-down filtering, which is more efficient than serializing through Redis. Only metadata operations (<code>list_tables</code>, <code>get_schema</code>) are cached.</p>
 <h2 id="cached-wrappers-the-composition-pattern">Cached wrappers — the composition pattern<a class="headerlink" href="#cached-wrappers-the-composition-pattern" title="Permanent link">&para;</a></h2>
-<p>All caching wrappers use composition: each wraps an <code>inner</code> service and a <code>CacheService</code>. No inheritance is involved. This means the same wrapper works regardless of whether the inner service is a base service or another wrapper.</p>
+<p>All caching wrappers use composition: each wraps an <code>inner</code> service and a <code>KVCache</code>. No inheritance is involved. This means the same wrapper works regardless of whether the inner service is a base service or another wrapper.</p>
 <pre class="mermaid"><code>graph LR
     ROUTER["Router"] --&gt; AUTH["Authenticated*Service&lt;br/&gt;(credentials)"]
     AUTH --&gt; CACHED["Cached*Service&lt;br/&gt;(TTL cache)"]
     CACHED --&gt; BASE["Base *Service&lt;br/&gt;(HTTP/S3 client)"]
-    CACHED --&gt; REDIS["CacheService&lt;br/&gt;(Redis)"]</code></pre>
+    CACHED --&gt; KV["KVCache&lt;br/&gt;(py-key-value)"]</code></pre>
 <h3 id="cachedmapiservice">CachedMapiService<a class="headerlink" href="#cachedmapiservice" title="Permanent link">&para;</a></h3>
 <p>Intercepts <code>request()</code> at the transport level:</p>
 <ul>
@@ -2721,12 +2937,12 @@
 <p>Cache keys use truncated SHA-256 hashes of the query body: <code>query:{tenant}:obj:{hash[:16]}</code> for object queries, <code>query:{tenant}:ops:{hash[:16]}</code> for operation queries.</p>
 <p>The Query API is read-only, so there's no invalidation — entries simply expire via TTL (object 60s, operation 120s).</p>
 <h3 id="cachedstorage">CachedStorage<a class="headerlink" href="#cachedstorage" title="Permanent link">&para;</a></h3>
-<p>Uses sync cache methods because storage operations run inside <code>asyncio.to_thread()</code>.</p>
+<p>Uses async cache methods via <code>KVCache</code>. All storage operations are natively async (aioboto3).</p>
 <p>Cached reads: <code>list_buckets</code>, <code>head_bucket</code>, <code>list_objects</code> (first page only — continuation tokens are not cached), <code>head_object</code>, <code>get_bucket_versioning</code>, <code>get_bucket_acl</code>, <code>get_object_acl</code>.</p>
 <p>Uncached reads: <code>get_object</code> (streams binary data), <code>list_object_versions</code>, <code>generate_presigned_url</code>.</p>
-<p>Write operations delegate first, then precisely invalidate affected cache entries. For example, <code>create_bucket</code> invalidates <code>list_buckets</code> + <code>head_bucket</code> + versioning + ACL + all <code>list_objects</code> patterns for that bucket. This precision avoids over-invalidation while keeping the cache consistent.</p>
+<p>Write operations delegate first, then precisely invalidate affected cache entries using explicit key tracking (<code>_tracked</code> dict) instead of pattern-based SCAN. For example, <code>create_bucket</code> invalidates <code>list_buckets</code> + <code>head_bucket</code> + versioning + ACL + all <code>list_objects</code> entries for that bucket. This precision avoids over-invalidation while keeping the cache consistent.</p>
 <h3 id="cachedlanceservice">CachedLanceService<a class="headerlink" href="#cachedlanceservice" title="Permanent link">&para;</a></h3>
-<p>Only caches metadata: <code>list_tables</code> (default TTL) and <code>get_schema</code> (config TTL). Data reads are not cached — Lance's native push-down is more efficient than serializing through Redis. Uncached methods are forwarded via <code>__getattr__</code>.</p>
+<p>Async wrapper around the sync <code>LanceService</code>. Caches metadata: <code>list_tables</code> (default TTL) and <code>get_schema</code> (config TTL) via <code>KVCache</code>. Data reads (<code>get_rows</code>, <code>get_vector_preview</code>, <code>get_cell_bytes</code>, <code>search</code>) are not cached — Lance's native push-down is more efficient than serializing through a cache. Uncached methods are forwarded via explicit async methods that delegate to <code>asyncio.to_thread(self._inner.method, ...)</code>.</p>
 <h2 id="routers-and-endpoints">Routers and endpoints<a class="headerlink" href="#routers-and-endpoints" title="Permanent link">&para;</a></h2>
 <p>The API is organized into five endpoint groups:</p>
 <table>
@@ -2790,10 +3006,10 @@
     <span class="k">await</span> <span class="n">hcp</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;POST&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;/tenants/</span><span class="si">{</span><span class="n">tenant_name</span><span class="si">}</span><span class="s2">/consoleSecurity&quot;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;updated&quot;</span><span class="p">}</span>
 </code></pre></div>
-<p>S3 operations use <code>run_storage()</code>, a helper in <code>app/api/errors.py</code> that wraps <code>asyncio.to_thread()</code> and catches <code>StorageError</code> → <code>HTTPException</code>:</p>
+<p>S3 operations use <code>run_storage()</code>, a helper in <code>app/api/errors.py</code> that awaits the async storage coroutine and catches <code>StorageError</code> → <code>HTTPException</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ListBucketsResponse</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_buckets</span><span class="p">(</span><span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">)):</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">list_buckets</span><span class="p">,</span> <span class="s2">&quot;buckets&quot;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">list_buckets</span><span class="p">(),</span> <span class="s2">&quot;buckets&quot;</span><span class="p">)</span>
     <span class="n">buckets</span> <span class="o">=</span> <span class="p">[</span><span class="n">BucketInfo</span><span class="o">.</span><span class="n">model_validate</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Buckets&quot;</span><span class="p">,</span> <span class="p">[])]</span>
     <span class="o">...</span>
 </code></pre></div>
@@ -2815,7 +3031,7 @@
 <p>The <code>lifespan()</code> async context manager in <code>app/main.py</code> handles startup and shutdown:</p>
 <p><strong>Startup:</strong></p>
 <ol>
-<li>Create <code>CacheService(CacheSettings())</code> and <code>await cache.connect()</code></li>
+<li>Create <code>KVCache</code> via <code>create_kv_cache(CacheSettings())</code> and <code>await cache.connect()</code></li>
 <li>Create <code>MapiService(MapiSettings())</code>, wrap with <code>CachedMapiService</code> if cache is enabled → <code>app.state.mapi</code></li>
 <li>Initialize empty dicts: <code>app.state.s3_cache = {}</code>, <code>app.state.lance_cache = {}</code></li>
 <li>Create <code>QueryService(MapiSettings())</code>, wrap with <code>CachedQueryService</code> if cache is enabled → <code>app.state.query</code></li>
@@ -2824,14 +3040,14 @@
 <h3 id="middleware-stack">Middleware stack<a class="headerlink" href="#middleware-stack" title="Permanent link">&para;</a></h3>
 <p>Middleware runs outermost-first:</p>
 <ol>
-<li><strong><code>RequestIDMiddleware</code></strong>: reads <code>X-Request-ID</code> header or generates a UUID. Sets <code>request.state.request_id</code> and correlates with the OTel span. Records HTTP metrics (<code>http.server.request.duration</code>, <code>http.server.request.count</code>). Produces structured access logs with best-effort JWT user/tenant extraction (no signature validation for logging — it only needs the <code>sub</code> and <code>tenant</code> claims). Skips logging for health paths (<code>/healthz</code>, <code>/readyz</code>, <code>/health</code>).</li>
+<li><strong><code>RequestIDMiddleware</code></strong>: reads <code>X-Request-ID</code> header or generates a UUID. Sets <code>request.state.request_id</code> and correlates with the OTel span. Records HTTP metrics (<code>http.server.request.duration</code>, <code>http.server.request.count</code>). Produces structured access logs with best-effort JWT user/tenant extraction (no signature validation for logging — it only needs the <code>sub</code> and <code>tenant</code> claims). Skips logging for health paths (<code>/liveness</code>, <code>/readiness</code>, <code>/health</code>).</li>
 <li><strong><code>GZipMiddleware</code></strong>: compresses responses larger than 500 bytes.</li>
 <li><strong><code>CORSMiddleware</code></strong>: empty <code>CORS_ORIGINS</code> allows all origins without credentials; non-empty restricts to specified origins with credentials.</li>
 </ol>
 <h3 id="health-endpoints">Health endpoints<a class="headerlink" href="#health-endpoints" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>GET /healthz</code> — liveness probe, always returns <code>{"status": "ok"}</code></li>
-<li><code>GET /readyz</code> — readiness probe, checks HCP MAPI reachability and Redis connectivity</li>
+<li><code>GET /liveness</code> — liveness probe, always returns <code>{"status": "ok"}</code></li>
+<li><code>GET /readiness</code> — readiness probe, checks HCP MAPI reachability and Redis connectivity</li>
 <li><code>GET /health</code> — legacy, returns cache status</li>
 </ul>
 <h2 id="observability">Observability<a class="headerlink" href="#observability" title="Permanent link">&para;</a></h2>
@@ -2868,17 +3084,17 @@
 <tr>
 <td><code>cache.hits</code></td>
 <td>counter</td>
-<td><code>CacheService</code></td>
+<td><code>KVCache</code></td>
 </tr>
 <tr>
 <td><code>cache.misses</code></td>
 <td>counter</td>
-<td><code>CacheService</code></td>
+<td><code>KVCache</code></td>
 </tr>
 <tr>
 <td><code>cache.errors</code></td>
 <td>counter</td>
-<td><code>CacheService</code></td>
+<td><code>KVCache</code></td>
 </tr>
 </tbody>
 </table>

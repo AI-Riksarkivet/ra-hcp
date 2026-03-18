@@ -318,6 +318,25 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../sdk/" class="md-tabs__link">
+          
+  
+  Python SDK
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../components/" class="md-tabs__link">
           
   
@@ -1314,6 +1333,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/argo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Argo Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1630,7 +1733,7 @@
   <span class="md-ellipsis">
     
   
-    Components
+    Python SDK
   
 
     
@@ -1643,6 +1746,119 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python SDK
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1866,7 +2082,7 @@
 
 
 <h1 id="storage-layer">Storage Layer<a class="headerlink" href="#storage-layer" title="Permanent link">&para;</a></h1>
-<p>The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against <code>StorageProtocol</code> (structural typing) and never imports backend-specific libraries like <code>boto3</code>.</p>
+<p>The S3 data-plane is designed to be backend-agnostic. Endpoint code type-hints against <code>StorageProtocol</code> (structural typing) and never imports backend-specific libraries like <code>aioboto3</code>.</p>
 <pre class="mermaid"><code>graph TD
     EP["S3 Endpoints"] --&gt;|"type-hints"| SP["StorageProtocol"]
 
@@ -1880,7 +2096,7 @@
     HCP_A --&gt;|"delegates via Boto3Forwarder"| OPS["Boto3Operations&lt;br/&gt;shared S3 methods"]
     GEN --&gt;|"delegates via Boto3Forwarder"| OPS
 
-    OPS --&gt; CLIENT["boto3 S3 Client"]</code></pre>
+    OPS --&gt; CLIENT["aioboto3 S3 Client"]</code></pre>
 <h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1899,7 +2115,7 @@
 <tr>
 <td><code>Boto3Operations</code></td>
 <td><code>services/storage/adapters/_boto3_ops.py</code></td>
-<td>Shared boto3 operations — composed into adapters via <code>Boto3Forwarder</code></td>
+<td>Shared async S3 operations (aioboto3) — composed into adapters via <code>Boto3Forwarder</code></td>
 </tr>
 <tr>
 <td><code>Boto3Forwarder</code></td>
@@ -1919,7 +2135,7 @@
 <tr>
 <td><code>CachedStorage</code></td>
 <td><code>services/cached_storage.py</code></td>
-<td>Caching decorator — wraps any <code>StorageProtocol</code> implementation with TTL-based Redis caching</td>
+<td>Caching decorator — wraps any <code>StorageProtocol</code> implementation with TTL-based caching via KVCache</td>
 </tr>
 <tr>
 <td><code>StorageError</code></td>
@@ -1929,7 +2145,7 @@
 <tr>
 <td><code>create_storage</code></td>
 <td><code>services/storage/factory.py</code></td>
-<td>Factory function — instantiates the correct adapter based on <code>storage_backend</code> setting</td>
+<td>Async factory function — instantiates and connects the correct adapter based on <code>storage_backend</code> setting</td>
 </tr>
 </tbody>
 </table>

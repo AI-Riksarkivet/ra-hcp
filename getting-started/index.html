@@ -318,6 +318,25 @@
     
     
       <li class="md-tabs__item">
+        <a href="../sdk/" class="md-tabs__link">
+          
+  
+  Python SDK
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../components/" class="md-tabs__link">
           
   
@@ -1347,6 +1366,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/argo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Argo Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1663,7 +1766,7 @@
   <span class="md-ellipsis">
     
   
-    Components
+    Python SDK
   
 
     
@@ -1676,6 +1779,119 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python SDK
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sdk/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1992,14 +2208,17 @@ make<span class="w"> </span>install-uv<span class="w">      </span><span class="
 <p>The mock server is the easiest way to get started. Log in with username <code>admin</code> and password <code>password</code>.</p>
 </div>
 <h2 id="start-the-frontend">Start the Frontend<a class="headerlink" href="#start-the-frontend" title="Permanent link">&para;</a></h2>
-<p>Install frontend dependencies and start the dev server:</p>
-<div class="highlight"><pre><span></span><code>make<span class="w"> </span>frontend-install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>frontend-dev
+<p>Start the frontend dev server:</p>
+<div class="highlight"><pre><span></span><code>make<span class="w"> </span>frontend-dev
 </code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Frontend dependencies are installed automatically by <code>make setup</code>. If you skipped setup, run <code>cd frontend &amp;&amp; deno install</code> first.</p>
+</div>
 <h2 id="redis-cache-optional">Redis Cache (Optional)<a class="headerlink" href="#redis-cache-optional" title="Permanent link">&para;</a></h2>
 <p>Redis provides response caching to reduce load on the HCP system. It is entirely optional.</p>
-<div class="highlight"><pre><span></span><code>make<span class="w"> </span>redis<span class="w">          </span><span class="c1"># Start Redis in Docker</span>
-make<span class="w"> </span>redis-stop<span class="w">     </span><span class="c1"># Stop Redis</span>
-make<span class="w"> </span>redis-cli<span class="w">      </span><span class="c1"># Open the Redis CLI</span>
+<div class="highlight"><pre><span></span><code>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>.docker/docker-compose.yml<span class="w"> </span>up<span class="w"> </span>redis<span class="w"> </span>-d<span class="w">   </span><span class="c1"># Start Redis</span>
+docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>.docker/docker-compose.yml<span class="w"> </span>down<span class="w"> </span>redis<span class="w">     </span><span class="c1"># Stop Redis</span>
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>

@@ -318,6 +318,25 @@
     
     
       <li class="md-tabs__item">
+        <a href="../../sdk/" class="md-tabs__link">
+          
+  
+  Python SDK
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../../components/" class="md-tabs__link">
           
   
@@ -665,6 +684,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#storage-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Backend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redis-cache" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -702,6 +732,17 @@
     <span class="md-ellipsis">
       
         Application
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frontend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend
       
     </span>
   </a>
@@ -1330,6 +1371,90 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/argo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Argo Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1646,7 +1771,7 @@
   <span class="md-ellipsis">
     
   
-    Components
+    Python SDK
   
 
     
@@ -1659,6 +1784,119 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python SDK
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1753,6 +1991,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#storage-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage Backend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#redis-cache" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1790,6 +2039,17 @@
     <span class="md-ellipsis">
       
         Application
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frontend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend
       
     </span>
   </a>
@@ -1987,13 +2247,61 @@
 <td><code>S3_REGION</code></td>
 <td>str</td>
 <td><code>"us-east-1"</code></td>
-<td>AWS region. HCP ignores this value, but boto3 requires it to be set.</td>
+<td>AWS region. HCP ignores this value, but aioboto3/botocore requires it to be set.</td>
 </tr>
 </tbody>
 </table>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>S3 credentials are derived from the MAPI credentials automatically. The base64-encoded <code>HCP_USERNAME</code> becomes the access key, and the MD5 hash of <code>HCP_PASSWORD</code> becomes the secret key. There is no need to configure S3 credentials separately.</p>
+</div>
+<h2 id="storage-backend">Storage Backend<a class="headerlink" href="#storage-backend" title="Permanent link">&para;</a></h2>
+<p>These variables control which S3-compatible storage adapter the backend uses. Most deployments use the default <code>hcp</code> backend.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STORAGE_BACKEND</code></td>
+<td>str</td>
+<td><code>"hcp"</code></td>
+<td>Storage adapter: <code>hcp</code>, <code>minio</code>, or <code>generic</code>.</td>
+</tr>
+<tr>
+<td><code>S3_ADDRESSING_STYLE</code></td>
+<td>str</td>
+<td><code>"auto"</code></td>
+<td>S3 addressing style: <code>auto</code>, <code>path</code>, or <code>virtual</code>.</td>
+</tr>
+<tr>
+<td><code>S3_ACCESS_KEY</code></td>
+<td>str</td>
+<td><code>""</code></td>
+<td>Direct S3 access key (MinIO/generic backends only).</td>
+</tr>
+<tr>
+<td><code>S3_SECRET_KEY</code></td>
+<td>str</td>
+<td><code>""</code></td>
+<td>Direct S3 secret key (MinIO/generic backends only).</td>
+</tr>
+<tr>
+<td><code>S3_VERIFY_SSL</code></td>
+<td>bool</td>
+<td><code>False</code></td>
+<td>Verify SSL certificates for S3 connections.</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When using the <code>hcp</code> backend, S3 credentials are derived from <code>HCP_USERNAME</code> and <code>HCP_PASSWORD</code> automatically. The <code>S3_ACCESS_KEY</code> and <code>S3_SECRET_KEY</code> variables are only needed for <code>minio</code> or <code>generic</code> backends.</p>
 </div>
 <h2 id="redis-cache">Redis Cache<a class="headerlink" href="#redis-cache" title="Permanent link">&para;</a></h2>
 <p>Redis caching is optional. When <code>REDIS_URL</code> is empty, all caching is disabled and every request hits HCP directly.</p>
@@ -2148,6 +2456,32 @@
 <td>str</td>
 <td><code>""</code></td>
 <td>Root path prefix when the API sits behind a reverse proxy (e.g., <code>/proxy/8000</code>).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="frontend">Frontend<a class="headerlink" href="#frontend" title="Permanent link">&para;</a></h2>
+<p>These variables configure the SvelteKit frontend. They are set as environment variables when starting the frontend server (not in <code>.env</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BACKEND_URL</code></td>
+<td>str</td>
+<td><code>"http://127.0.0.1:8000"</code></td>
+<td>URL of the FastAPI backend. The frontend proxies all <code>/api/*</code> requests here.</td>
+</tr>
+<tr>
+<td><code>COOKIE_SECURE</code></td>
+<td>str</td>
+<td><code>""</code></td>
+<td>Set to <code>"true"</code> or <code>"false"</code> to override the Secure flag on session cookies. Defaults to <code>true</code> in production, <code>false</code> in dev.</td>
 </tr>
 </tbody>
 </table>

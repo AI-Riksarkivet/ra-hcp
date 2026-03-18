@@ -58,6 +58,15 @@
         <loc>https://ai-riksarkivet.github.io/hcp/api/system/</loc>
       </url>
       <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/api/workflows/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/api/argo/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/api/error-handling/</loc>
+      </url>
+      <url>
         <loc>https://ai-riksarkivet.github.io/hcp/api/reference/endpoints/</loc>
       </url>
       <url>
@@ -80,6 +89,12 @@
       </url>
       <url>
         <loc>https://ai-riksarkivet.github.io/hcp/api/reference/content-class/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/reference/</loc>
       </url>
       <url>
         <loc>https://ai-riksarkivet.github.io/hcp/components/</loc>
