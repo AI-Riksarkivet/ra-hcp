@@ -44,8 +44,8 @@ class Profile(BaseModel):
     verify_ssl: bool = True
     timeout: float = 30.0
     log_level: str = "warning"
-    multipart_threshold: int = 64 * 1024 * 1024
-    multipart_chunk: int = 16 * 1024 * 1024
+    multipart_threshold: int = 100 * 1024 * 1024
+    multipart_chunk: int = 64 * 1024 * 1024
     multipart_concurrency: int = 6
     otel_endpoint: str = ""
     otel_protocol: str = "http/protobuf"
