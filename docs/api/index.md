@@ -57,14 +57,43 @@ All endpoints require a JWT bearer token obtained via the [Authentication](authe
 - **System admin** -- Requires a system-level HCP user account (login without tenant).
 - **Tenant admin / security / monitor / compliance** -- Requires a tenant-scoped user account with the corresponding HCP role (`ADMINISTRATOR`, `SECURITY`, `MONITOR`, or `COMPLIANCE`).
 
+## Python SDK
+
+For scripting and automation, the [rahcp Python SDK](../sdk/index.md) provides a high-level async client that handles authentication, retries, presigned URL transfers, and multipart uploads automatically:
+
+```python
+from rahcp_client import HCPClient
+
+async with HCPClient.from_env() as client:
+    # S3 operations
+    await client.s3.upload("bucket", "key", Path("file.bin"))
+    await client.s3.download("bucket", "key", Path("output.bin"))
+    result = await client.s3.list_objects("bucket", prefix="data/")
+
+    # MAPI operations
+    namespaces = await client.mapi.list_namespaces("tenant")
+```
+
+The CLI is included by default:
+
+```bash
+uv pip install rahcp
+rahcp s3 ls my-bucket
+rahcp s3 upload-all my-bucket ./local-dir
+rahcp s3 verify my-bucket ./local-dir
+```
+
+See the [Python SDK documentation](../sdk/index.md) for full details.
+
 ## Related pages
 
+- [Python SDK](../sdk/index.md) -- `rahcp-client` async client with automatic retries, presigned URLs, and multipart uploads.
 - [Authentication](authentication.md) -- Login flow, JWT details, and code examples.
 - [S3 Buckets](s3-buckets.md) -- Bucket CRUD, versioning, and ACLs.
 - [S3 Objects](s3-objects.md) -- Object upload, download, copy, and delete.
 - [System Administration](system.md) -- System-level MAPI endpoints.
 - [Tenant Administration](tenants.md) -- Tenant-level settings and identity.
 - [Namespaces](namespaces.md) -- Namespace management, compliance, and access.
-- [Workflows](workflows.md) -- End-to-end curl and Python examples for common tasks.
+- [Workflows](workflows.md) -- End-to-end curl, Python, and SDK examples for common tasks.
 - [Argo Workflows](argo.md) -- ETL pipelines, batch processing, and presigned URL workflows with YAML and Hera.
 - [Error Handling](error-handling.md) -- Retries, idempotency, ACID patterns, and fault-tolerant uploads.

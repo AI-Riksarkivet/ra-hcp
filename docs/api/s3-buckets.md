@@ -4,6 +4,18 @@ Manage S3-compatible buckets on the HCP system. All endpoints require JWT authen
 
 **Base path:** `/api/v1/buckets`
 
+!!! tip "rahcp SDK and CLI"
+    ```python
+    # SDK
+    buckets = await client.s3.list_buckets()
+    ```
+    ```bash
+    # CLI
+    rahcp s3 ls                          # list buckets
+    rahcp s3 ls my-bucket --prefix data/ # list objects
+    ```
+    See the [Python SDK](../sdk/index.md) for full documentation.
+
 !!! tip "Full schema details"
     See the auto-generated [S3 Schema Reference](reference/s3.md) for exact field types and defaults, or the [Swagger UI](/docs#/S3%20Buckets) for try-it-out.
 

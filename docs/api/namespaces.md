@@ -4,6 +4,19 @@ Namespace endpoints manage storage namespaces within an HCP tenant. Each namespa
 
 All endpoints require JWT authentication. See [Authentication](authentication.md) for details.
 
+!!! tip "rahcp SDK and CLI"
+    ```python
+    ns = await client.mapi.list_namespaces("tenant", verbose=True)
+    await client.mapi.create_namespace("tenant", {"name": "new-ns", "hardQuota": "100 GB"})
+    template = await client.mapi.export_namespace("tenant", "my-ns")
+    ```
+    ```bash
+    rahcp ns list dev-ai --verbose
+    rahcp ns export dev-ai my-ns > template.json
+    rahcp ns import dev-ai template.json
+    ```
+    See the [Python SDK](../sdk/index.md) for full documentation.
+
 ---
 
 ## Namespace Management

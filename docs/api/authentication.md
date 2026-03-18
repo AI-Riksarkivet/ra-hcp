@@ -2,6 +2,16 @@
 
 The HCP Unified API uses **OAuth2 password flow** to issue JWT bearer tokens. Credentials provided at login are encrypted into the token and forwarded to HCP on every subsequent API request -- the API itself does not store passwords.
 
+!!! tip "Use the rahcp SDK"
+    The [Python SDK](../sdk/index.md) handles authentication automatically -- including token refresh on 401:
+    ```python
+    from rahcp_client import HCPClient
+    async with HCPClient(endpoint="http://localhost:8000/api/v1",
+                          username="admin", password="secret", tenant="dev-ai") as client:
+        await client.s3.list_buckets()  # authenticated automatically
+    ```
+    Or from environment variables: `client = HCPClient.from_env()`
+
 ## Auth flow
 
 1. **Login** by sending your credentials to `POST /api/v1/auth/token`.

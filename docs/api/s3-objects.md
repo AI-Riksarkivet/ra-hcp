@@ -4,6 +4,22 @@ Manage objects within S3-compatible buckets. All endpoints require JWT authentic
 
 **Base path:** `/api/v1/buckets/{bucket}/objects`
 
+!!! tip "rahcp SDK and CLI"
+    ```python
+    # Upload (auto presigned, auto multipart for large files)
+    await client.s3.upload("bucket", "key", Path("file.bin"))
+    # Download
+    await client.s3.download("bucket", "key", Path("output.bin"))
+    ```
+    ```bash
+    # CLI — single file or entire directory
+    rahcp s3 upload my-bucket data/file.bin ./file.bin
+    rahcp s3 upload-all my-bucket ./local-dir
+    rahcp s3 download my-bucket data/file.bin -o ./file.bin
+    rahcp s3 download-all my-bucket -o ./local-backup
+    ```
+    See the [Python SDK](../sdk/index.md) for full documentation.
+
 !!! tip "Full schema details"
     See the auto-generated [S3 Schema Reference](reference/s3.md) for exact field types and defaults, or the [Swagger UI](/docs#/S3%20Objects) for try-it-out.
 
