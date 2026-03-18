@@ -5,6 +5,15 @@ Log in with a system-level username (no tenant prefix) to obtain a valid token.
 
 Base URL: `/api/v1/mapi`
 
+!!! tip "rahcp SDK"
+    System-level access — omit the tenant:
+    ```python
+    async with HCPClient(endpoint="...", username="sysadmin", password="...") as client:
+        # System-level MAPI operations
+        ...
+    ```
+    See the [Python SDK](../sdk/index.md) for full documentation.
+
 ---
 
 ## Replication Links

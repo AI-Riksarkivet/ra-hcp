@@ -3,6 +3,18 @@
 All tenant endpoints require JWT authentication via the `Authorization: Bearer <token>` header.
 See [Authentication](authentication.md) for details on obtaining tokens.
 
+!!! tip "rahcp SDK and CLI"
+    ```python
+    async with HCPClient.from_env() as client:
+        namespaces = await client.mapi.list_namespaces("dev-ai", verbose=True)
+        await client.mapi.create_namespace("dev-ai", {"name": "new-ns", "hardQuota": "100 GB"})
+    ```
+    ```bash
+    rahcp ns list dev-ai --verbose
+    rahcp ns create dev-ai --name new-ns --quota "100 GB"
+    ```
+    See the [Python SDK](../sdk/index.md) for full documentation.
+
 ## Roles
 
 Tenant-level user accounts are assigned one or more roles that control access to management operations:

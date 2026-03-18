@@ -2,6 +2,9 @@
 
 Production scripts need to handle transient failures, token expiry, and partial-success scenarios. HCP's S3 layer is **eventually consistent** for certain operations -- the patterns below help build resilient automation.
 
+!!! tip "The rahcp SDK handles most of this automatically"
+    The [Python SDK](../sdk/index.md) includes built-in retries with exponential backoff, automatic token refresh on 401, presigned URL error safety, and the staged-commit pattern as `commit_staging()` / `cleanup_staging()`. The patterns below are for raw `httpx`/`curl` usage or when you need custom error handling beyond what the SDK provides.
+
 ```mermaid
 graph LR
     A["Client Request"] --> B{"Success?"}
