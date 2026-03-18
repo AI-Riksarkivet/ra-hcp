@@ -43,6 +43,12 @@ class Profile(BaseModel):
     tenant: str = ""
     verify_ssl: bool = True
     log_level: str = "warning"
+    multipart_threshold: int = 64 * 1024 * 1024
+    multipart_chunk: int = 16 * 1024 * 1024
+    multipart_concurrency: int = 6
+    otel_endpoint: str = ""
+    otel_protocol: str = "http/protobuf"
+    otel_service_name: str = "rahcp-cli"
 
 
 class CLIConfig(BaseModel):
@@ -87,7 +93,6 @@ def load_config(path: str | None = None) -> CLIConfig:
         )
 
     # Flat format (backwards compat) — single "default" profile
-    # Pass all values through — Pydantic handles type coercion
     return CLIConfig(
         default="default",
         profiles={"default": Profile(**raw)},

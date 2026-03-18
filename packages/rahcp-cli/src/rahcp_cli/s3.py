@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -71,7 +72,6 @@ def ls(
                     print_json(data)
                 else:
                     objects = data.get("objects", [])
-                    # Client-side filter
                     if filter_key:
                         objects = [o for o in objects if filter_key in o.get("Key", "")]
                     rows = [
@@ -93,7 +93,6 @@ def ls(
                         columns=["Key", "Size", "LastModified"],
                         title=title,
                     )
-                    # Pagination hint
                     next_token = data.get("next_continuation_token")
                     if next_token:
                         console.print(
@@ -177,7 +176,7 @@ def download_all(
         dest.mkdir(parents=True, exist_ok=True)
         sem = asyncio.Semaphore(workers)
 
-        async def _download_one(client, key: str, size: int) -> str:
+        async def _download_one(client: Any, key: str, size: int) -> str:
             """Returns 'ok', 'skipped', or 'error'."""
             file_path = dest / key
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -247,7 +246,6 @@ def upload_all(
             raise SystemExit(1)
         sem = asyncio.Semaphore(workers)
 
-        # Collect all files
         files = [f for f in src.rglob("*") if f.is_file()]
         if not files:
             console.print("[dim]No files found.[/dim]")
@@ -257,7 +255,7 @@ def upload_all(
             f"Uploading {len(files)} files from {src}/ → s3://{bucket}/{prefix}"
         )
 
-        async def _upload_one(client, file_path: Path) -> str:
+        async def _upload_one(client: Any, file_path: Path) -> str:
             rel = file_path.relative_to(src)
             key = f"{prefix}{rel}" if prefix else str(rel)
             async with sem:

@@ -3,14 +3,13 @@ name = "rahcp"
 version = "0.1.0"
 description = "Python SDK & CLI for HCP Unified API"
 requires-python = ">=3.13"
-dependencies = ["rahcp-client"]
+dependencies = ["rahcp-client", "rahcp-cli"]
 
 [project.optional-dependencies]
-cli = ["rahcp-cli"]
 lance = ["rahcp-lance"]
 etl = ["rahcp-etl"]
 validate = ["rahcp-validate"]
-all = ["rahcp-cli", "rahcp-lance", "rahcp-etl", "rahcp-validate"]
+all = ["rahcp-lance", "rahcp-etl", "rahcp-validate"]
 
 [tool.uv.workspace]
 members = ["packages/*"]

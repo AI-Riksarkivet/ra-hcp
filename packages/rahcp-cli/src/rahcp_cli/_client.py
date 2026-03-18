@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import typer
 
+if TYPE_CHECKING:
+    from rahcp_client import HCPClient
 
-def make_client(ctx: typer.Context):  # type: ignore[no-untyped-def]  # noqa: ANN201
+
+def make_client(ctx: typer.Context) -> HCPClient:
     """Create an HCPClient from resolved settings.
 
     Priority: CLI flags > env vars > config file > defaults.
@@ -21,4 +26,6 @@ def make_client(ctx: typer.Context):  # type: ignore[no-untyped-def]  # noqa: AN
         password=ctx.obj.get("password", ""),
         tenant=ctx.obj.get("tenant"),
         verify_ssl=ctx.obj.get("verify_ssl", True),
+        multipart_threshold=ctx.obj.get("multipart_threshold", 64 * 1024 * 1024),
+        multipart_chunk=ctx.obj.get("multipart_chunk", 16 * 1024 * 1024),
     )

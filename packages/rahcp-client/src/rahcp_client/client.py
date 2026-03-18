@@ -67,8 +67,23 @@ class HCPClient:
         retry_base_delay: float = 1.0,
         multipart_threshold: int = 64 * 1024 * 1024,
         multipart_chunk: int = 16 * 1024 * 1024,
+        multipart_concurrency: int = 6,
         verify_ssl: bool = True,
     ) -> None:
+        """Initialize the HCP client.
+
+        Args:
+            endpoint: Base URL for the HCP Unified API.
+            username: Username for authentication.
+            password: Password for authentication.
+            tenant: HCP tenant name (routes requests to the correct tenant).
+            timeout: HTTP request timeout in seconds.
+            max_retries: Maximum number of retry attempts for transient errors.
+            retry_base_delay: Base delay between retries in seconds (doubles each attempt).
+            multipart_threshold: File size in bytes above which multipart upload is used.
+            multipart_chunk: Part size in bytes for multipart uploads.
+            verify_ssl: Whether to verify TLS certificates.
+        """
         self.endpoint = endpoint.rstrip("/")
         self.username = username
         self.password = password
@@ -77,6 +92,7 @@ class HCPClient:
         self.retry_base_delay = retry_base_delay
         self.multipart_threshold = multipart_threshold
         self.multipart_chunk = multipart_chunk
+        self.multipart_concurrency = multipart_concurrency
         self.verify_ssl = verify_ssl
 
         self._http = httpx.AsyncClient(
@@ -112,10 +128,9 @@ class HCPClient:
             retry_base_delay=settings.retry_base_delay,
             multipart_threshold=settings.multipart_threshold,
             multipart_chunk=settings.multipart_chunk,
+            multipart_concurrency=settings.multipart_concurrency,
             verify_ssl=settings.verify_ssl,
         )
-
-    # ── Context manager ─────────────────────────────────────────────
 
     async def __aenter__(self) -> HCPClient:
         try:
@@ -134,8 +149,6 @@ class HCPClient:
     ) -> None:
         await self._http.aclose()
 
-    # ── Operation namespaces ────────────────────────────────────────
-
     @property
     def s3(self) -> S3Ops:
         """S3 data-plane operations."""
@@ -153,8 +166,6 @@ class HCPClient:
 
             self._mapi = MapiOps(self)
         return self._mapi
-
-    # ── Auth ────────────────────────────────────────────────────────
 
     async def _login(self) -> None:
         """Authenticate and store the bearer token."""
@@ -178,8 +189,6 @@ class HCPClient:
         if self._token:
             return {"Authorization": f"Bearer {self._token}"}
         return {}
-
-    # ── Core request with retry + auto-refresh ──────────────────────
 
     async def request(
         self,

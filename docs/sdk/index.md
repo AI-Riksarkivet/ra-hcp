@@ -26,11 +26,8 @@ graph TD
 Requires **Python >= 3.13** and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-# Core client only
+# SDK + CLI (default)
 uv pip install rahcp
-
-# With CLI
-uv pip install "rahcp[cli]"
 
 # With OpenTelemetry tracing
 uv pip install "rahcp-client[otel]"
@@ -38,9 +35,17 @@ uv pip install "rahcp-client[otel]"
 # With Lance dataset support
 uv pip install "rahcp[lance]"
 
+# With ETL pipelines (NATS JetStream)
+uv pip install "rahcp[etl]"
+
+# With image validation (Pillow)
+uv pip install "rahcp[validate]"
+
 # Everything
 uv pip install "rahcp[all]"
 ```
+
+The default install includes both the Python SDK (`rahcp-client`) and the CLI (`rahcp-cli`). The heavier packages (Lance, ETL, validation) are opt-in.
 
 For local development from the repository:
 
@@ -127,6 +132,7 @@ asyncio.run(main())
 | `retry_base_delay` | `float` | `1.0` | Base delay for exponential backoff |
 | `multipart_threshold` | `int` | `67108864` | File size threshold for multipart upload (64 MB) |
 | `multipart_chunk` | `int` | `16777216` | Chunk size per multipart part (16 MB) |
+| `multipart_concurrency` | `int` | `6` | Number of parallel part uploads |
 | `verify_ssl` | `bool` | `True` | Verify SSL certificates for S3 data transfers |
 
 #### From environment variables
@@ -135,7 +141,7 @@ asyncio.run(main())
 client = HCPClient.from_env()
 ```
 
-Reads from `HCP_ENDPOINT`, `HCP_USERNAME`, `HCP_PASSWORD`, `HCP_TENANT`, `HCP_TIMEOUT`, `HCP_MAX_RETRIES`, `HCP_VERIFY_SSL`.
+Reads from `HCP_ENDPOINT`, `HCP_USERNAME`, `HCP_PASSWORD`, `HCP_TENANT`, `HCP_TIMEOUT`, `HCP_MAX_RETRIES`, `HCP_MULTIPART_THRESHOLD`, `HCP_MULTIPART_CHUNK`, `HCP_MULTIPART_CONCURRENCY`, `HCP_VERIFY_SSL`.
 
 #### Properties
 
@@ -334,6 +340,20 @@ OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic%20...
 
 When OTel is **not** installed, the tracer is a no-op -- zero overhead, no dependency. Structured logging via Python's `logging` module is always active (method, path, status, duration in ms).
 
+OTEL can also be configured programmatically in the SDK:
+
+```python
+from rahcp_client.tracing import configure_tracing
+
+configure_tracing(
+    service_name="my-etl-pipeline",
+    endpoint="https://otlp-gateway.example.com/otlp",
+    protocol="http/protobuf",  # or "grpc"
+)
+```
+
+Or via the CLI config file (`otel_endpoint`, `otel_protocol`, `otel_service_name` fields per profile).
+
 #### Logging
 
 Control log verbosity with the `--log-level` flag, the `RAHCP_LOG_LEVEL` env var, or the `log_level` profile setting:
@@ -371,7 +391,8 @@ flowchart TD
     STATUS2 -->|"200-399"| OK
     STATUS2 -->|"401"| FAIL["Raise AuthenticationError"]
 
-    STATUS -->|"408, 429, 500,<br/>502, 503, 504"| BACKOFF["Wait: base * 2^attempt"]
+    STATUS -->|"408, 429, 500,<br/>503, 504"| BACKOFF["Wait: base * 2^attempt"]
+    STATUS -->|"502"| UPSTREAM["Raise UpstreamError<br/>(no retry)"]
     BACKOFF --> RETRY2["Retry (up to max_retries)"]
     RETRY2 --> STATUS
     RETRY2 -->|"retries exhausted"| RETRIABLE["Raise RetryableError"]
@@ -382,6 +403,7 @@ flowchart TD
     style OK fill:#d4edda,stroke:#28a745
     style FAIL fill:#f8d7da,stroke:#dc3545
     style RETRIABLE fill:#f8d7da,stroke:#dc3545
+    style UPSTREAM fill:#f8d7da,stroke:#dc3545
 ```
 
 ---
@@ -434,6 +456,9 @@ profiles:
     tenant: dev-ai
     verify_ssl: false       # disable for local dev
     log_level: info         # debug | info | warning | error
+    multipart_threshold: 67108864   # 64 MB (trigger multipart above this)
+    multipart_chunk: 16777216       # 16 MB per part
+    multipart_concurrency: 6       # parallel part uploads
 
   prod:
     endpoint: https://hcp-api.example.com/api/v1
@@ -442,6 +467,9 @@ profiles:
     tenant: prod-archive
     verify_ssl: true        # always verify in production
     log_level: warning      # quiet in production
+    otel_endpoint: https://otlp-gateway.example.com/otlp
+    otel_protocol: http/protobuf   # or grpc
+    otel_service_name: rahcp-cli
 ```
 
 #### Global options
@@ -455,6 +483,7 @@ profiles:
 | `--password` / `-p` | `HCP_PASSWORD` | Password |
 | `--tenant` / `-t` | `HCP_TENANT` | Tenant |
 | `--log-level` | `RAHCP_LOG_LEVEL` | Log level: `debug`, `info`, `warning`, `error` |
+| `--otel-endpoint` | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint for traces (empty = disabled) |
 | `--json` | -- | Output raw JSON |
 
 ### Commands

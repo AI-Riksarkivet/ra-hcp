@@ -44,8 +44,6 @@ class S3Ops:
         """Create an httpx client for presigned URL operations."""
         return httpx.AsyncClient(verify=self._client.verify_ssl)
 
-    # ── Presigned URL operations (preferred path) ───────────────────
-
     async def presign_get(self, bucket: str, key: str, *, expires: int = 3600) -> str:
         """Get a presigned download URL."""
         resp = await self._client.request(
@@ -91,8 +89,6 @@ class S3Ops:
             },
         )
         return resp.json()["urls"]
-
-    # ── Convenience wrappers (use presigned internally) ─────────────
 
     async def upload(self, bucket: str, key: str, data: bytes | Path) -> str:
         """Upload data — auto-selects presigned PUT or multipart based on size.
@@ -149,15 +145,13 @@ class S3Ops:
             resp.raise_for_status()
         return resp.content
 
-    # ── Multipart (presigned, parallel) ─────────────────────────────
-
     async def upload_multipart(
         self,
         bucket: str,
         key: str,
         path: Path,
         *,
-        concurrency: int = 6,
+        concurrency: int | None = None,
     ) -> str:
         """Presigned multipart upload for large files.
 
@@ -166,10 +160,10 @@ class S3Ops:
         3. Upload parts in parallel (bounded semaphore)
         4. Complete multipart (or abort on failure)
         """
+        concurrency = concurrency or self._client.multipart_concurrency
         file_size = await asyncio.to_thread(lambda: path.stat().st_size)
         chunk = self._client.multipart_chunk
 
-        # Initiate
         resp = await self._client.request(
             "POST",
             f"/buckets/{bucket}/multipart/{key}",
@@ -177,7 +171,6 @@ class S3Ops:
         upload_id = resp.json()["upload_id"]
 
         try:
-            # Presign all parts
             resp = await self._client.request(
                 "POST",
                 f"/buckets/{bucket}/multipart/{key}/presign",
@@ -191,7 +184,6 @@ class S3Ops:
             part_urls = [p["url"] for p in data["urls"]]
             part_size = data.get("part_size", chunk)
 
-            # Upload parts in parallel — each returns its part info
             sem = asyncio.Semaphore(concurrency)
 
             async def _upload_part(part_num: int, url: str) -> dict[str, Any]:
@@ -214,7 +206,6 @@ class S3Ops:
                 *[_upload_part(i, url) for i, url in enumerate(part_urls)]
             )
 
-            # Complete
             parts_sorted = sorted(parts, key=lambda p: p["part_number"])
             resp = await self._client.request(
                 "POST",
@@ -247,8 +238,6 @@ class S3Ops:
             except Exception:
                 log.warning("Failed to abort multipart upload: %s", upload_id)
             raise
-
-    # ── Bulk operations ─────────────────────────────────────────────
 
     async def list_buckets(self) -> dict[str, Any]:
         """List all S3 buckets."""
@@ -315,8 +304,6 @@ class S3Ops:
         """Get object metadata."""
         resp = await self._client.request("HEAD", f"/buckets/{bucket}/objects/{key}")
         return dict(resp.headers)
-
-    # ── Staging pattern ─────────────────────────────────────────────
 
     async def commit_staging(
         self, bucket: str, staging_prefix: str, dest_prefix: str

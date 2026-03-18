@@ -70,6 +70,12 @@ def main(
         envvar="RAHCP_LOG_LEVEL",
         help="Log level: debug, info, warning, error",
     ),
+    otel_endpoint: str = typer.Option(
+        None,
+        "--otel-endpoint",
+        envvar="OTEL_EXPORTER_OTLP_ENDPOINT",
+        help="OTLP endpoint for traces (empty = disabled)",
+    ),
     output_json: bool = typer.Option(
         False,
         "--json",
@@ -82,7 +88,6 @@ def main(
     cfg = load_config(config)
     p = cfg.resolve(profile)
 
-    # Configure logging
     level = (log_level or p.log_level).upper()
     logging.basicConfig(
         level=getattr(logging, level, logging.WARNING),
@@ -90,10 +95,22 @@ def main(
         datefmt="%H:%M:%S",
     )
 
-    # CLI flags > env vars > profile > defaults
+    resolved_otel = otel_endpoint or p.otel_endpoint
+    if resolved_otel:
+        from rahcp_client.tracing import configure_tracing
+
+        configure_tracing(
+            service_name=p.otel_service_name,
+            endpoint=resolved_otel,
+            protocol=p.otel_protocol,
+        )
+
     ctx.obj["endpoint"] = endpoint or p.endpoint
     ctx.obj["username"] = username or p.username
     ctx.obj["password"] = password or p.password
     ctx.obj["tenant"] = tenant_name or p.tenant
     ctx.obj["verify_ssl"] = p.verify_ssl
+    ctx.obj["multipart_threshold"] = p.multipart_threshold
+    ctx.obj["multipart_chunk"] = p.multipart_chunk
+    ctx.obj["multipart_concurrency"] = p.multipart_concurrency
     ctx.obj["json"] = output_json

@@ -20,7 +20,6 @@ def run(coro: Coroutine[Any, Any, None]) -> None:
         from rahcp_client.errors import HCPError
 
         if isinstance(exc, HCPError):
-            # Clean one-line error
             label = type(exc).__name__
             console.print(f"[red]{label}:[/red] {exc.message}")
         else:

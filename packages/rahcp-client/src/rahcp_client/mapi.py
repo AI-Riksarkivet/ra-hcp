@@ -27,8 +27,6 @@ class MapiOps:
     def __init__(self, client: HCPClient) -> None:
         self._client = client
 
-    # ── Namespaces (full CRUD — the core admin workflow) ────────────
-
     async def list_namespaces(
         self, tenant: str, *, verbose: bool = False
     ) -> list[dict[str, Any]]:

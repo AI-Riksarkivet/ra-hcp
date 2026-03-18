@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -69,7 +70,7 @@ def create_namespace(
     quota: str = typer.Option(None, "--quota"),
 ) -> None:
     """Create a namespace."""
-    ns_data: dict = {"name": name}
+    ns_data: dict[str, Any] = {"name": name}
     if quota:
         ns_data["hardQuota"] = quota
 
