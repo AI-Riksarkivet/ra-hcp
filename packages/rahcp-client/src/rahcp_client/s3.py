@@ -44,6 +44,16 @@ class S3Ops:
         """Create an httpx client for presigned URL operations."""
         return httpx.AsyncClient(verify=self._client.verify_ssl)
 
+    @staticmethod
+    def _raise_for_presigned(resp: httpx.Response, bucket: str, key: str) -> None:
+        """Raise a clean error for presigned URL failures, without leaking the signed URL."""
+        if resp.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                f"{resp.status_code} {resp.reason_phrase} for {bucket}/{key}",
+                request=resp.request,
+                response=resp,
+            )
+
     async def presign_get(self, bucket: str, key: str, *, expires: int = 3600) -> str:
         """Get a presigned download URL."""
         resp = await self._client.request(
@@ -112,7 +122,7 @@ class S3Ops:
             url = await self.presign_put(bucket, key)
             async with self._http() as http:
                 resp = await http.put(url, content=content)
-                resp.raise_for_status()
+                self._raise_for_presigned(resp, bucket, key)
             log.debug("Uploaded %s/%s (%s bytes)", bucket, key, len(content))
             return resp.headers.get("etag", "")
 
@@ -124,7 +134,7 @@ class S3Ops:
             url = await self.presign_get(bucket, key)
             async with self._http() as http:
                 async with http.stream("GET", url) as resp:
-                    resp.raise_for_status()
+                    self._raise_for_presigned(resp, bucket, key)
                     total = 0
                     f = await asyncio.to_thread(dest.open, "wb")
                     try:
@@ -142,7 +152,7 @@ class S3Ops:
         url = await self.presign_get(bucket, key)
         async with self._http() as http:
             resp = await http.get(url)
-            resp.raise_for_status()
+            self._raise_for_presigned(resp, bucket, key)
         return resp.content
 
     async def upload_multipart(
@@ -199,7 +209,9 @@ class S3Ops:
                 async with sem:
                     async with self._http() as http:
                         r = await http.put(url, content=part_data)
-                        r.raise_for_status()
+                        self._raise_for_presigned(
+                            r, bucket, f"{key} (part {part_num + 1})"
+                        )
                         return {"part_number": part_num + 1, "etag": r.headers["etag"]}
 
             parts = await asyncio.gather(

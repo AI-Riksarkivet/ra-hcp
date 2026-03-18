@@ -50,9 +50,13 @@ The default install includes both the Python SDK (`rahcp-client`) and the CLI (`
 For local development from the repository:
 
 ```bash
-cd packages
-uv sync
+uv sync                    # install all workspace packages
+uv run rahcp s3 ls         # run CLI via uv
+uv run rahcp auth whoami   # check current identity
 ```
+
+!!! tip "uv run vs rahcp"
+    When developing locally, use `uv run rahcp` to run the CLI without installing globally. After `uv pip install rahcp`, you can use `rahcp` directly.
 
 ---
 
@@ -415,7 +419,7 @@ Command-line interface built on [Typer](https://typer.tiangolo.com/) and [Rich](
 ### Quick start
 
 ```bash
-# Authenticate and check identity
+# Check identity
 rahcp auth whoami
 
 # List buckets
@@ -424,11 +428,17 @@ rahcp s3 ls
 # List objects in a bucket
 rahcp s3 ls my-bucket --prefix data/
 
-# Upload a file
+# Upload a single file
 rahcp s3 upload my-bucket reports/q1.pdf ./q1-report.pdf
 
-# Download a file
+# Upload an entire directory
+rahcp s3 upload-all my-bucket ./local-data --prefix data/
+
+# Download a single file
 rahcp s3 download my-bucket reports/q1.pdf --output ./q1.pdf
+
+# Download all objects from a bucket
+rahcp s3 download-all my-bucket --output ./local-backup
 
 # Delete objects
 rahcp s3 rm my-bucket temp/file1.txt temp/file2.txt
@@ -436,6 +446,13 @@ rahcp s3 rm my-bucket temp/file1.txt temp/file2.txt
 # Get a presigned URL
 rahcp s3 presign my-bucket reports/q1.pdf --expires 7200
 ```
+
+!!! tip "Local development"
+    When running from the repo without installing, prefix with `uv run`:
+    ```bash
+    uv run rahcp s3 ls
+    uv run rahcp s3 upload-all mlflow-artifacts /path/to/dump
+    ```
 
 ### Configuration
 
