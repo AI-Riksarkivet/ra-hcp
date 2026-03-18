@@ -12,7 +12,7 @@ graph TD
     VAL["rahcp-validate<br/><small>File validation</small>"]
 
     ROOT --> CLIENT
-    ROOT -.->|optional| CLI
+    ROOT --> CLI
     ROOT -.->|optional| LANCE
     ROOT -.->|optional| ETL
     ROOT -.->|optional| VAL
