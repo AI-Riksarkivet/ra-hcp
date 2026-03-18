@@ -23,3 +23,4 @@ class HCPSettings(BaseSettings):
     retry_base_delay: float = 1.0
     multipart_threshold: int = 64 * 1024 * 1024  # 64 MB
     multipart_chunk: int = 16 * 1024 * 1024  # 16 MB
+    verify_ssl: bool = True

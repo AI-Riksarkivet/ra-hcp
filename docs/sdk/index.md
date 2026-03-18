@@ -52,6 +52,34 @@ uv sync
 
 Async HTTP client built on `httpx`. Handles authentication, retries, presigned URL transfers, and multipart uploads.
 
+### How it works
+
+The SDK never sends file data through the backend API. Instead, it uses **presigned URLs** -- short-lived, signed S3 URLs that allow direct transfer between your code and HCP storage:
+
+```mermaid
+sequenceDiagram
+    participant App as Your Code
+    participant API as HCP Backend API
+    participant S3 as HCP S3 Storage
+
+    App->>API: POST /auth/token (username, password)
+    API-->>App: JWT token
+
+    note over App,S3: Upload flow (presigned PUT)
+    App->>API: POST /presign {bucket, key, method: "put_object"}
+    API-->>App: Presigned URL (valid 10 min)
+    App->>S3: PUT presigned-url (file bytes)
+    S3-->>App: 200 OK + ETag
+
+    note over App,S3: Download flow (presigned GET)
+    App->>API: POST /presign {bucket, key, method: "get_object"}
+    API-->>App: Presigned URL (valid 1 hour)
+    App->>S3: GET presigned-url
+    S3-->>App: File bytes
+```
+
+This design keeps the backend stateless and avoids bottlenecking large transfers through the API server.
+
 ### Quick start
 
 ```python
@@ -96,6 +124,7 @@ asyncio.run(main())
 | `retry_base_delay` | `float` | `1.0` | Base delay for exponential backoff |
 | `multipart_threshold` | `int` | `67108864` | File size threshold for multipart upload (64 MB) |
 | `multipart_chunk` | `int` | `16777216` | Chunk size per multipart part (16 MB) |
+| `verify_ssl` | `bool` | `True` | Verify SSL certificates for S3 data transfers |
 
 #### From environment variables
 
@@ -103,13 +132,39 @@ asyncio.run(main())
 client = HCPClient.from_env()
 ```
 
-Reads from `HCP_ENDPOINT`, `HCP_USERNAME`, `HCP_PASSWORD`, `HCP_TENANT`, `HCP_TIMEOUT`, `HCP_MAX_RETRIES`.
+Reads from `HCP_ENDPOINT`, `HCP_USERNAME`, `HCP_PASSWORD`, `HCP_TENANT`, `HCP_TIMEOUT`, `HCP_MAX_RETRIES`, `HCP_VERIFY_SSL`.
+
+#### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `client.s3` | `S3Ops` | S3 data-plane operations (lazy-loaded) |
+| `client.mapi` | `MapiOps` | MAPI namespace administration (lazy-loaded) |
+| `client.token` | `str \| None` | Current JWT bearer token (set after login) |
 
 ### S3 operations
 
 `client.s3` returns an `S3Ops` instance with these methods:
 
 #### Uploads and downloads
+
+The `upload()` method automatically selects the best transfer strategy based on file size:
+
+```mermaid
+flowchart TD
+    START["client.s3.upload(bucket, key, data)"] --> SIZE{File size}
+    SIZE -->|"< 64 MB"| PRESIGN["Presign PUT URL"]
+    SIZE -->|">= 64 MB"| MULTI["Multipart upload"]
+
+    PRESIGN --> PUT["PUT file bytes to presigned URL"]
+    PUT --> ETAG["Return ETag"]
+
+    MULTI --> INIT["Initiate multipart"]
+    INIT --> PARTS["Presign N part URLs"]
+    PARTS --> PARALLEL["Upload parts in parallel<br/>(semaphore, default 6)"]
+    PARALLEL --> COMPLETE["Complete multipart"]
+    COMPLETE --> ETAG
+```
 
 ```python
 # Upload (auto-selects presigned PUT or multipart based on file size)
@@ -126,6 +181,8 @@ data = await client.s3.download_bytes("bucket", "key")
 ```
 
 #### Presigned URLs
+
+All data transfers use presigned URLs internally. You can also generate them directly for sharing or browser-based transfers:
 
 ```python
 # Single presigned URL
@@ -165,7 +222,29 @@ await client.s3.copy("dest-bucket", "dest-key", "src-bucket", "src-key")
 
 #### Staging pattern
 
-Atomic directory-level operations: upload to a staging prefix, validate, then commit to the final prefix in one step.
+Atomic directory-level operations: upload to a staging prefix, validate, then commit to the final prefix in one step. This prevents downstream consumers from seeing partial results.
+
+```mermaid
+flowchart LR
+    subgraph Write["1. Write to staging"]
+        W1["upload obj-1"] --> STG[("staging/<br/>batch-1/")]
+        W2["upload obj-2"] --> STG
+        W3["upload obj-N"] --> STG
+    end
+
+    subgraph Commit["2. Commit"]
+        STG -->|"copy all"| FINAL[("final/<br/>batch-1/")]
+        STG -->|"delete staging"| GONE["(removed)"]
+    end
+
+    subgraph Fail["On failure"]
+        STG -.->|"cleanup_staging()"| GONE2["(removed)"]
+    end
+
+    style FINAL fill:#d4edda,stroke:#28a745
+    style GONE fill:#f8f9fa,stroke:#dee2e6
+    style GONE2 fill:#f8d7da,stroke:#dc3545
+```
 
 ```python
 # Move all objects from staging/ to final/
@@ -234,7 +313,30 @@ except HCPError as e:
 
 ### Retry behavior
 
-The client automatically retries transient failures (408, 429, 500, 502, 503, 504) with exponential backoff. On a `401` response, it re-authenticates once and retries.
+The client automatically retries transient failures with exponential backoff:
+
+```mermaid
+flowchart TD
+    REQ["Send request"] --> STATUS{Response status}
+    STATUS -->|"200-399"| OK["Return response"]
+    STATUS -->|"401"| REAUTH["Re-authenticate"]
+    REAUTH --> RETRY1["Retry once"]
+    RETRY1 --> STATUS2{Status}
+    STATUS2 -->|"200-399"| OK
+    STATUS2 -->|"401"| FAIL["Raise AuthenticationError"]
+
+    STATUS -->|"408, 429, 500,<br/>502, 503, 504"| BACKOFF["Wait: base * 2^attempt"]
+    BACKOFF --> RETRY2["Retry (up to max_retries)"]
+    RETRY2 --> STATUS
+    RETRY2 -->|"retries exhausted"| RETRIABLE["Raise RetryableError"]
+
+    STATUS -->|"404"| NOT_FOUND["Raise NotFoundError"]
+    STATUS -->|"409"| CONFLICT["Raise ConflictError"]
+
+    style OK fill:#d4edda,stroke:#28a745
+    style FAIL fill:#f8d7da,stroke:#dc3545
+    style RETRIABLE fill:#f8d7da,stroke:#dc3545
+```
 
 ---
 
@@ -284,12 +386,14 @@ profiles:
     username: admin
     password: secret
     tenant: dev-ai
+    verify_ssl: false       # disable for local dev
 
   prod:
     endpoint: https://hcp-api.example.com/api/v1
     username: svc-account
     password: ""
     tenant: prod-archive
+    verify_ssl: true        # always verify in production
 ```
 
 #### Global options
@@ -319,6 +423,7 @@ profiles:
 | `ls [BUCKET]` | List buckets (no args) or objects in a bucket |
 | `upload BUCKET KEY FILE` | Upload file (auto multipart for large files) |
 | `download BUCKET KEY` | Download object (with `--output` / `-o`) |
+| `download-all BUCKET` | Download all objects to local directory |
 | `rm BUCKET KEY [KEY ...]` | Delete one or more objects |
 | `presign BUCKET KEY` | Generate presigned download URL (with `--expires`) |
 
@@ -360,6 +465,35 @@ rahcp s3 ls ai-lagfart --prefix data/ -n 10 -f .tif
 ```
 
 When results are truncated, the CLI prints a `More results available` hint with the exact `--page` command to fetch the next page.
+
+##### `rahcp s3 download-all` -- bulk download
+
+Download all objects from a bucket (or prefix) to a local directory with concurrent transfers:
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--prefix` | `-p` | `""` | Only download keys under this prefix |
+| `--output` | `-o` | `.` | Local destination directory |
+| `--workers` | `-w` | `10` | Number of concurrent downloads |
+
+**Examples:**
+
+```bash
+# Download entire bucket to current directory
+rahcp s3 download-all my-bucket
+
+# Download a prefix to a specific directory
+rahcp s3 download-all my-bucket --prefix data/scans/ -o ./local-scans
+
+# Use 20 concurrent downloads
+rahcp s3 download-all my-bucket -w 20
+```
+
+The command automatically:
+
+- Paginates through all objects (handles continuation tokens)
+- Skips files that already exist locally with matching size
+- Reports progress: downloaded, skipped, and error counts
 
 #### `rahcp ns`
 
@@ -457,6 +591,24 @@ Stateful ETL orchestration with [NATS JetStream](https://docs.nats.io/nats-conce
 ### Pipeline DAG
 
 Define multi-stage pipelines with per-stage retry policies and checkpoint-based resumption:
+
+```mermaid
+flowchart LR
+    subgraph Pipeline
+        E["extract<br/><small>retries: 3</small>"] --> T["transform<br/><small>retries: 3</small>"]
+        T --> L["load<br/><small>retries: 3</small>"]
+    end
+
+    E -.->|checkpoint| KV[("NATS KV<br/><small>etl-checkpoints</small>")]
+    T -.->|checkpoint| KV
+    L -.->|clear| KV
+
+    L --> OK["Result"]
+
+    style OK fill:#d4edda,stroke:#28a745
+```
+
+Each stage saves a checkpoint after success. If the pipeline fails and is re-run with the same `pipeline_id`, it resumes from the last checkpoint.
 
 ```python
 import asyncio

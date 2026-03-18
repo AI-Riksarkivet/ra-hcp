@@ -47,6 +47,7 @@ class HCPClient:
         retry_base_delay: float = 1.0,
         multipart_threshold: int = 64 * 1024 * 1024,
         multipart_chunk: int = 16 * 1024 * 1024,
+        verify_ssl: bool = True,
     ) -> None:
         self.endpoint = endpoint.rstrip("/")
         self.username = username
@@ -56,6 +57,7 @@ class HCPClient:
         self.retry_base_delay = retry_base_delay
         self.multipart_threshold = multipart_threshold
         self.multipart_chunk = multipart_chunk
+        self.verify_ssl = verify_ssl
 
         self._http = httpx.AsyncClient(
             base_url=self.endpoint,
@@ -64,6 +66,11 @@ class HCPClient:
         self._token: str | None = None
         self._s3: S3Ops | None = None
         self._mapi: MapiOps | None = None
+
+    @property
+    def token(self) -> str | None:
+        """The current bearer token (set after login)."""
+        return self._token
 
     @classmethod
     def from_env(cls) -> HCPClient:
@@ -79,13 +86,18 @@ class HCPClient:
             retry_base_delay=settings.retry_base_delay,
             multipart_threshold=settings.multipart_threshold,
             multipart_chunk=settings.multipart_chunk,
+            verify_ssl=settings.verify_ssl,
         )
 
     # ── Context manager ─────────────────────────────────────────────
 
     async def __aenter__(self) -> HCPClient:
-        if self.username and self.password:
-            await self._login()
+        try:
+            if self.username and self.password:
+                await self._login()
+        except Exception:
+            await self._http.aclose()
+            raise
         return self
 
     async def __aexit__(

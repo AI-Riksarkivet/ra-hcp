@@ -20,15 +20,17 @@ def whoami(ctx: typer.Context) -> None:
 
     async def _whoami() -> None:
         async with make_client(ctx) as client:
-            token = client._token
+            token = client.token
             if not token:
                 console.print("[red]Not authenticated. Check your config.[/red]")
                 raise typer.Exit(1)
-            # Decode JWT payload (no verification — just reading claims)
-            payload_b64 = token.split(".")[1]
-            # Add padding
-            payload_b64 += "=" * (4 - len(payload_b64) % 4)
-            payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+            try:
+                payload_b64 = token.split(".")[1]
+                payload_b64 += "=" * (4 - len(payload_b64) % 4)
+                payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+            except (IndexError, json.JSONDecodeError, Exception) as exc:
+                console.print(f"[red]Invalid token format:[/red] {exc}")
+                raise typer.Exit(1) from exc
             if ctx.obj["json"]:
                 print_json(payload)
             else:

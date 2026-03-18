@@ -79,4 +79,5 @@ def main(
     ctx.obj["username"] = username or p.username
     ctx.obj["password"] = password or p.password
     ctx.obj["tenant"] = tenant_name or p.tenant
+    ctx.obj["verify_ssl"] = p.verify_ssl
     ctx.obj["json"] = output_json

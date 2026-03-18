@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import typer
@@ -153,6 +154,80 @@ def rm(
             else:
                 await client.s3.delete_bulk(bucket, keys)
             console.print(f"[green]Deleted[/green] {len(keys)} object(s)")
+
+    run(_run())
+
+
+@app.command("download-all")
+def download_all(
+    ctx: typer.Context,
+    bucket: str = typer.Argument(...),
+    prefix: str = typer.Option(
+        "", "--prefix", "-p", help="Only download keys under this prefix"
+    ),
+    dest_dir: str = typer.Option(
+        ".", "--output", "-o", help="Local destination directory"
+    ),
+    workers: int = typer.Option(10, "--workers", "-w", help="Concurrent downloads"),
+) -> None:
+    """Download all objects from a bucket to a local directory."""
+
+    async def _run() -> None:
+        dest = Path(dest_dir)
+        dest.mkdir(parents=True, exist_ok=True)
+        sem = asyncio.Semaphore(workers)
+
+        async def _download_one(
+            client, key: str, size: int
+        ) -> str:
+            """Returns 'ok', 'skipped', or 'error'."""
+            file_path = dest / key
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            if file_path.exists() and file_path.stat().st_size == size:
+                return "skipped"
+            async with sem:
+                try:
+                    bytes_dl = await client.s3.download(bucket, key, file_path)
+                    console.print(f"  [green]{key}[/green] ({_human_size(bytes_dl)})")
+                    return "ok"
+                except Exception as exc:
+                    console.print(f"  [red]{key}[/red] — {exc}")
+                    return "error"
+
+        async with make_client(ctx) as client:
+            total = 0
+            skipped = 0
+            errors = 0
+            token = None
+            while True:
+                data = await client.s3.list_objects(
+                    bucket, prefix, max_keys=1000, continuation_token=token
+                )
+                objects = data.get("objects", [])
+                tasks = [
+                    _download_one(client, obj["Key"], obj.get("Size", 0))
+                    for obj in objects
+                    if not (obj["Key"].endswith("/") and obj.get("Size", 0) == 0)
+                ]
+                if tasks:
+                    results = await asyncio.gather(*tasks)
+                    for r in results:
+                        if r == "ok":
+                            total += 1
+                        elif r == "skipped":
+                            skipped += 1
+                        else:
+                            errors += 1
+                if not data.get("is_truncated"):
+                    break
+                token = data.get("next_continuation_token")
+
+            parts = [f"Downloaded {total} files"]
+            if skipped:
+                parts.append(f"skipped {skipped} existing")
+            if errors:
+                parts.append(f"[red]{errors} errors[/red]")
+            console.print(f"\n[bold]Done.[/bold] {', '.join(parts)} → {dest}/")
 
     run(_run())
 

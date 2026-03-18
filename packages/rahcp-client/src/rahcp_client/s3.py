@@ -7,6 +7,8 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import httpx
+
 if TYPE_CHECKING:
     from rahcp_client.client import HCPClient
 
@@ -35,6 +37,10 @@ class S3Ops:
 
     def __init__(self, client: HCPClient) -> None:
         self._client = client
+
+    def _http(self) -> httpx.AsyncClient:
+        """Create an httpx client for presigned URL operations."""
+        return httpx.AsyncClient(verify=self._client.verify_ssl)
 
     # ── Presigned URL operations (preferred path) ───────────────────
 
@@ -92,17 +98,15 @@ class S3Ops:
         Returns the ETag of the uploaded object.
         """
         if isinstance(data, Path):
-            size = data.stat().st_size
+            size = await asyncio.to_thread(lambda: data.stat().st_size)
             if size >= self._client.multipart_threshold:
                 return await self.upload_multipart(bucket, key, data)
-            content = data.read_bytes()
+            content = await asyncio.to_thread(data.read_bytes)
         else:
             content = data
 
         url = await self.presign_put(bucket, key)
-        import httpx
-
-        async with httpx.AsyncClient() as http:
+        async with self._http() as http:
             resp = await http.put(url, content=content)
             resp.raise_for_status()
         return resp.headers.get("etag", "")
@@ -110,24 +114,23 @@ class S3Ops:
     async def download(self, bucket: str, key: str, dest: Path) -> int:
         """Download an object via presigned GET. Returns byte count."""
         url = await self.presign_get(bucket, key)
-        import httpx
-
-        async with httpx.AsyncClient() as http:
+        async with self._http() as http:
             async with http.stream("GET", url) as resp:
                 resp.raise_for_status()
                 total = 0
-                with dest.open("wb") as f:
+                f = await asyncio.to_thread(dest.open, "wb")
+                try:
                     async for chunk in resp.aiter_bytes(chunk_size=8192):
-                        f.write(chunk)
+                        await asyncio.to_thread(f.write, chunk)
                         total += len(chunk)
+                finally:
+                    await asyncio.to_thread(f.close)
         return total
 
     async def download_bytes(self, bucket: str, key: str) -> bytes:
         """Download an object as bytes via presigned GET."""
         url = await self.presign_get(bucket, key)
-        import httpx
-
-        async with httpx.AsyncClient() as http:
+        async with self._http() as http:
             resp = await http.get(url)
             resp.raise_for_status()
         return resp.content
@@ -147,9 +150,9 @@ class S3Ops:
         1. Initiate multipart → upload_id
         2. Presign each part
         3. Upload parts in parallel (bounded semaphore)
-        4. Complete multipart
+        4. Complete multipart (or abort on failure)
         """
-        file_size = path.stat().st_size
+        file_size = await asyncio.to_thread(lambda: path.stat().st_size)
         chunk = self._client.multipart_chunk
 
         # Initiate
@@ -159,56 +162,77 @@ class S3Ops:
         )
         upload_id = resp.json()["upload_id"]
 
-        # Presign all parts
-        resp = await self._client.request(
-            "POST",
-            f"/buckets/{bucket}/multipart/{key}/presign",
-            json={
-                "upload_id": upload_id,
-                "file_size": file_size,
-                "part_size": chunk,
-            },
-        )
-        data = resp.json()
-        part_urls = [p["url"] for p in data["urls"]]
-        part_size = data.get("part_size", chunk)
+        try:
+            # Presign all parts
+            resp = await self._client.request(
+                "POST",
+                f"/buckets/{bucket}/multipart/{key}/presign",
+                json={
+                    "upload_id": upload_id,
+                    "file_size": file_size,
+                    "part_size": chunk,
+                },
+            )
+            data = resp.json()
+            part_urls = [p["url"] for p in data["urls"]]
+            part_size = data.get("part_size", chunk)
 
-        # Upload parts in parallel
-        import httpx
+            # Upload parts in parallel — each returns its part info
+            sem = asyncio.Semaphore(concurrency)
 
-        sem = asyncio.Semaphore(concurrency)
-        parts: list[dict[str, Any]] = []
+            async def _upload_part(part_num: int, url: str) -> dict[str, Any]:
+                offset = part_num * part_size
+                read_size = min(part_size, file_size - offset)
 
-        async def _upload_part(part_num: int, url: str) -> None:
-            offset = part_num * part_size
-            read_size = min(part_size, file_size - offset)
-            with path.open("rb") as f:
-                f.seek(offset)
-                part_data = f.read(read_size)
-            async with sem:
-                async with httpx.AsyncClient() as http:
-                    r = await http.put(url, content=part_data)
-                    r.raise_for_status()
-                    parts.append(
-                        {"part_number": part_num + 1, "etag": r.headers["etag"]}
-                    )
+                def _read_chunk() -> bytes:
+                    with path.open("rb") as f:
+                        f.seek(offset)
+                        return f.read(read_size)
 
-        await asyncio.gather(*[_upload_part(i, url) for i, url in enumerate(part_urls)])
+                part_data = await asyncio.to_thread(_read_chunk)
+                async with sem:
+                    async with self._http() as http:
+                        r = await http.put(url, content=part_data)
+                        r.raise_for_status()
+                        return {"part_number": part_num + 1, "etag": r.headers["etag"]}
 
-        # Complete
-        parts.sort(key=lambda p: p["part_number"])
-        resp = await self._client.request(
-            "POST",
-            f"/buckets/{bucket}/multipart/{key}/complete",
-            json={
-                "upload_id": upload_id,
-                "parts": [
-                    {"ETag": p["etag"], "PartNumber": p["part_number"]} for p in parts
-                ],
-            },
-        )
-        log.info("Multipart upload complete: %s/%s (%d parts)", bucket, key, len(parts))
-        return resp.json().get("etag", "")
+            parts = await asyncio.gather(
+                *[_upload_part(i, url) for i, url in enumerate(part_urls)]
+            )
+
+            # Complete
+            parts_sorted = sorted(parts, key=lambda p: p["part_number"])
+            resp = await self._client.request(
+                "POST",
+                f"/buckets/{bucket}/multipart/{key}/complete",
+                json={
+                    "upload_id": upload_id,
+                    "parts": [
+                        {"ETag": p["etag"], "PartNumber": p["part_number"]}
+                        for p in parts_sorted
+                    ],
+                },
+            )
+            log.info(
+                "Multipart upload complete: %s/%s (%d parts)",
+                bucket,
+                key,
+                len(parts_sorted),
+            )
+            return resp.json().get("etag", "")
+
+        except Exception:
+            # Abort the multipart upload to avoid dangling uploads
+            log.warning("Multipart upload failed, aborting: %s/%s", bucket, key)
+            try:
+                await self._client.request(
+                    "POST",
+                    f"/buckets/{bucket}/multipart/{key}/abort",
+                    json={"upload_id": upload_id},
+                )
+            except Exception:
+                log.warning("Failed to abort multipart upload: %s", upload_id)
+            raise
 
     # ── Bulk operations ─────────────────────────────────────────────
 
@@ -296,11 +320,20 @@ class S3Ops:
         return count
 
     async def cleanup_staging(self, bucket: str, staging_prefix: str) -> int:
-        """Delete all objects under a staging prefix. Returns count."""
-        data = await self.list_objects(bucket, staging_prefix)
-        objects = data.get("objects", [])
-        if not objects:
-            return 0
-        keys = [obj["Key"] for obj in objects]
-        await self.delete_bulk(bucket, keys)
-        return len(keys)
+        """Delete all objects under a staging prefix. Paginates. Returns count."""
+        total = 0
+        token: str | None = None
+        while True:
+            data = await self.list_objects(
+                bucket, staging_prefix, continuation_token=token
+            )
+            objects = data.get("objects", [])
+            if not objects:
+                break
+            keys = [obj["Key"] for obj in objects]
+            await self.delete_bulk(bucket, keys)
+            total += len(keys)
+            if not data.get("is_truncated"):
+                break
+            token = data.get("next_continuation_token")
+        return total

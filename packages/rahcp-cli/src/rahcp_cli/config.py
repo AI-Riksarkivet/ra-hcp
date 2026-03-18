@@ -37,6 +37,7 @@ class Profile(BaseModel):
     username: str = ""
     password: str = ""
     tenant: str = ""
+    verify_ssl: bool = True
 
 
 class CLIConfig(BaseModel):

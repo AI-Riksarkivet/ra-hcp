@@ -20,4 +20,5 @@ def make_client(ctx: typer.Context):  # type: ignore[no-untyped-def]  # noqa: AN
         username=ctx.obj.get("username", ""),
         password=ctx.obj.get("password", ""),
         tenant=ctx.obj.get("tenant"),
+        verify_ssl=ctx.obj.get("verify_ssl", True),
     )
