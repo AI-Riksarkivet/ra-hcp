@@ -2440,6 +2440,18 @@
 <h1 id="namespaces-api">Namespaces API<a class="headerlink" href="#namespaces-api" title="Permanent link">&para;</a></h1>
 <p>Namespace endpoints manage storage namespaces within an HCP tenant. Each namespace is a logical container for objects with its own configuration for protocols, compliance, indexing, and access control.</p>
 <p>All endpoints require JWT authentication. See <a href="../authentication/">Authentication</a> for details.</p>
+<div class="admonition tip">
+<p class="admonition-title">rahcp SDK and CLI</p>
+<p><div class="highlight"><pre><span></span><code><span class="n">ns</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">mapi</span><span class="o">.</span><span class="n">list_namespaces</span><span class="p">(</span><span class="s2">&quot;tenant&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">mapi</span><span class="o">.</span><span class="n">create_namespace</span><span class="p">(</span><span class="s2">&quot;tenant&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;new-ns&quot;</span><span class="p">,</span> <span class="s2">&quot;hardQuota&quot;</span><span class="p">:</span> <span class="s2">&quot;100 GB&quot;</span><span class="p">})</span>
+<span class="n">template</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">mapi</span><span class="o">.</span><span class="n">export_namespace</span><span class="p">(</span><span class="s2">&quot;tenant&quot;</span><span class="p">,</span> <span class="s2">&quot;my-ns&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>rahcp<span class="w"> </span>ns<span class="w"> </span>list<span class="w"> </span>dev-ai<span class="w"> </span>--verbose
+rahcp<span class="w"> </span>ns<span class="w"> </span><span class="nb">export</span><span class="w"> </span>dev-ai<span class="w"> </span>my-ns<span class="w"> </span>&gt;<span class="w"> </span>template.json
+rahcp<span class="w"> </span>ns<span class="w"> </span>import<span class="w"> </span>dev-ai<span class="w"> </span>template.json
+</code></pre></div>
+See the <a href="../../sdk/">Python SDK</a> for full documentation.</p>
+</div>
 <hr />
 <h2 id="namespace-management">Namespace Management<a class="headerlink" href="#namespace-management" title="Permanent link">&para;</a></h2>
 <p><strong>Base path:</strong> <code>/api/v1/mapi/tenants/{tenant_name}/namespaces</code></p>

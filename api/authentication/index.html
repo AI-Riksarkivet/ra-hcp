@@ -2229,6 +2229,16 @@
 
 <h1 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h1>
 <p>The HCP Unified API uses <strong>OAuth2 password flow</strong> to issue JWT bearer tokens. Credentials provided at login are encrypted into the token and forwarded to HCP on every subsequent API request -- the API itself does not store passwords.</p>
+<div class="admonition tip">
+<p class="admonition-title">Use the rahcp SDK</p>
+<p>The <a href="../../sdk/">Python SDK</a> handles authentication automatically -- including token refresh on 401:
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">HCPClient</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">HCPClient</span><span class="p">(</span><span class="n">endpoint</span><span class="o">=</span><span class="s2">&quot;http://localhost:8000/api/v1&quot;</span><span class="p">,</span>
+                      <span class="n">username</span><span class="o">=</span><span class="s2">&quot;admin&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;secret&quot;</span><span class="p">,</span> <span class="n">tenant</span><span class="o">=</span><span class="s2">&quot;dev-ai&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+    <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">list_buckets</span><span class="p">()</span>  <span class="c1"># authenticated automatically</span>
+</code></pre></div>
+Or from environment variables: <code>client = HCPClient.from_env()</code></p>
+</div>
 <h2 id="auth-flow">Auth flow<a class="headerlink" href="#auth-flow" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Login</strong> by sending your credentials to <code>POST /api/v1/auth/token</code>.</li>

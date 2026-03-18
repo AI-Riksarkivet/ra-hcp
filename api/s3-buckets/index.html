@@ -2173,6 +2173,17 @@
 <p>Manage S3-compatible buckets on the HCP system. All endpoints require JWT authentication.</p>
 <p><strong>Base path:</strong> <code>/api/v1/buckets</code></p>
 <div class="admonition tip">
+<p class="admonition-title">rahcp SDK and CLI</p>
+<p><div class="highlight"><pre><span></span><code><span class="c1"># SDK</span>
+<span class="n">buckets</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">list_buckets</span><span class="p">()</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># CLI</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>ls<span class="w">                          </span><span class="c1"># list buckets</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>ls<span class="w"> </span>my-bucket<span class="w"> </span>--prefix<span class="w"> </span>data/<span class="w"> </span><span class="c1"># list objects</span>
+</code></pre></div>
+See the <a href="../../sdk/">Python SDK</a> for full documentation.</p>
+</div>
+<div class="admonition tip">
 <p class="admonition-title">Full schema details</p>
 <p>See the auto-generated <a href="../reference/s3/">S3 Schema Reference</a> for exact field types and defaults, or the <a href="..//docs#/S3%20Buckets">Swagger UI</a> for try-it-out.</p>
 </div>
