@@ -627,6 +627,18 @@ graph TD
 
 Write results to a temporary prefix, verify them, then "commit" by copying to the final location. On failure, the exit handler deletes the staging prefix.
 
+!!! tip "Use the rahcp SDK"
+    The SDK handles the staged-commit pattern in two method calls:
+    ```python
+    async with HCPClient.from_env() as client:
+        # Write files to staging/...
+        for f in files:
+            await client.s3.upload("bucket", f"staging/batch-1/{f.name}", f)
+        # Commit: copy staging → final, delete staging
+        count = await client.s3.commit_staging("bucket", "staging/batch-1/", "final/batch-1/")
+        # On failure: await client.s3.cleanup_staging("bucket", "staging/batch-1/")
+    ```
+
 ```mermaid
 graph LR
     subgraph S3["HCP S3"]
@@ -726,6 +738,38 @@ graph LR
     echo "Committed $FINAL_KEY"
     ```
 
+=== "rahcp SDK"
+
+    ```python
+    from rahcp_client import HCPClient
+    from pathlib import Path
+
+    async def staged_upload_sdk(
+        bucket: str,
+        local_dir: Path,
+        staging_prefix: str,
+        final_prefix: str,
+    ):
+        """Upload files to staging, then commit to final — or clean up on failure."""
+        async with HCPClient.from_env() as client:
+            try:
+                # 1. Write all files to staging
+                for f in local_dir.rglob("*"):
+                    if f.is_file():
+                        key = f"{staging_prefix}{f.relative_to(local_dir)}"
+                        await client.s3.upload(bucket, key, f)
+
+                # 2. Commit: copy staging → final, delete staging
+                count = await client.s3.commit_staging(bucket, staging_prefix, final_prefix)
+                print(f"Committed {count} files to {final_prefix}")
+
+            except Exception:
+                # 3. Rollback: delete staging prefix
+                deleted = await client.s3.cleanup_staging(bucket, staging_prefix)
+                print(f"Rolled back {deleted} staged files")
+                raise
+    ```
+
 !!! warning "Multipart uploads are not atomic"
     A multipart upload is only visible after `CompleteMultipartUpload`. If the workflow fails between uploading parts and completing, the parts remain as invisible orphans consuming storage. Always use exit handlers to call `AbortMultipartUpload` on failure, and consider enabling `artifactGC` on the workflow to clean up Argo-managed artifacts.
 
@@ -733,5 +777,6 @@ graph LR
 
 ## Related pages
 
+- [Python SDK](../sdk/index.md) -- `rahcp-client` with built-in retries, presigned URLs, staged-commit, and multipart uploads.
 - [API Workflows](workflows.md) -- curl and Python examples for authentication, S3 operations, tenant/namespace management, and more.
 - [Argo Workflows](argo.md) -- ETL pipelines, presigned URL workflows, and batch fan-out/fan-in with YAML and Hera.
