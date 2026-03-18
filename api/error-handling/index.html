@@ -2231,6 +2231,10 @@
     style C fill:#d4edda,stroke:#28a745
     style F fill:#f8d7da,stroke:#dc3545</code></pre>
 <h2 id="retry-with-exponential-backoff">Retry with exponential backoff<a class="headerlink" href="#retry-with-exponential-backoff" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">SDK does this automatically</p>
+<p><code>HCPClient</code> retries transient errors (408, 429, 500-504) with exponential backoff and refreshes tokens on 401 — no manual retry logic needed. The code below is for raw <code>httpx</code> usage.</p>
+</div>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
@@ -2268,6 +2272,10 @@
 </code></pre></div>
 <hr />
 <h2 id="auto-refreshing-auth-wrapper">Auto-refreshing auth wrapper<a class="headerlink" href="#auto-refreshing-auth-wrapper" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">SDK does this automatically</p>
+<p><code>HCPClient</code> re-authenticates on 401 automatically. The wrapper below is for raw <code>httpx</code>.</p>
+</div>
 <pre class="mermaid"><code>sequenceDiagram
     participant Client as HCPClient
     participant API as HCP API
@@ -2471,6 +2479,10 @@ hcp_request<span class="w"> </span>PUT<span class="w"> </span><span class="s2">&
 </div>
 <hr />
 <h2 id="multipart-upload-with-fault-tolerance">Multipart upload with fault tolerance<a class="headerlink" href="#multipart-upload-with-fault-tolerance" title="Permanent link">&para;</a></h2>
+<div class="admonition note">
+<p class="admonition-title">SDK does this automatically</p>
+<p><code>client.s3.upload()</code> auto-selects multipart for files &gt;= 100 MB, uploads parts in parallel, and aborts on failure. The code below is for raw <code>httpx</code>.</p>
+</div>
 <p>Presigned multipart upload can resume after partial failures. If some parts fail, re-upload only the missing ones:</p>
 <pre class="mermaid"><code>graph TD
     INIT["1. Initiate&lt;br/&gt;&lt;small&gt;POST /multipart/presign&lt;/small&gt;"] --&gt; PARTS
