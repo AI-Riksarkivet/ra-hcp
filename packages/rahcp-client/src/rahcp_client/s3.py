@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from rahcp_client.tracing import tracer
+
 if TYPE_CHECKING:
     from rahcp_client.client import HCPClient
 
@@ -97,35 +99,47 @@ class S3Ops:
 
         Returns the ETag of the uploaded object.
         """
-        if isinstance(data, Path):
-            size = await asyncio.to_thread(lambda: data.stat().st_size)
-            if size >= self._client.multipart_threshold:
-                return await self.upload_multipart(bucket, key, data)
-            content = await asyncio.to_thread(data.read_bytes)
-        else:
-            content = data
+        with tracer.start_as_current_span("s3.upload") as span:
+            span.set_attribute("s3.bucket", bucket)
+            span.set_attribute("s3.key", key)
 
-        url = await self.presign_put(bucket, key)
-        async with self._http() as http:
-            resp = await http.put(url, content=content)
-            resp.raise_for_status()
-        return resp.headers.get("etag", "")
+            if isinstance(data, Path):
+                size = await asyncio.to_thread(lambda: data.stat().st_size)
+                span.set_attribute("s3.size", size)
+                if size >= self._client.multipart_threshold:
+                    return await self.upload_multipart(bucket, key, data)
+                content = await asyncio.to_thread(data.read_bytes)
+            else:
+                content = data
+                span.set_attribute("s3.size", len(content))
+
+            url = await self.presign_put(bucket, key)
+            async with self._http() as http:
+                resp = await http.put(url, content=content)
+                resp.raise_for_status()
+            log.debug("Uploaded %s/%s (%s bytes)", bucket, key, len(content))
+            return resp.headers.get("etag", "")
 
     async def download(self, bucket: str, key: str, dest: Path) -> int:
         """Download an object via presigned GET. Returns byte count."""
-        url = await self.presign_get(bucket, key)
-        async with self._http() as http:
-            async with http.stream("GET", url) as resp:
-                resp.raise_for_status()
-                total = 0
-                f = await asyncio.to_thread(dest.open, "wb")
-                try:
-                    async for chunk in resp.aiter_bytes(chunk_size=8192):
-                        await asyncio.to_thread(f.write, chunk)
-                        total += len(chunk)
-                finally:
-                    await asyncio.to_thread(f.close)
-        return total
+        with tracer.start_as_current_span("s3.download") as span:
+            span.set_attribute("s3.bucket", bucket)
+            span.set_attribute("s3.key", key)
+            url = await self.presign_get(bucket, key)
+            async with self._http() as http:
+                async with http.stream("GET", url) as resp:
+                    resp.raise_for_status()
+                    total = 0
+                    f = await asyncio.to_thread(dest.open, "wb")
+                    try:
+                        async for chunk in resp.aiter_bytes(chunk_size=8192):
+                            await asyncio.to_thread(f.write, chunk)
+                            total += len(chunk)
+                    finally:
+                        await asyncio.to_thread(f.close)
+            span.set_attribute("s3.bytes", total)
+            log.debug("Downloaded %s/%s (%d bytes)", bucket, key, total)
+            return total
 
     async def download_bytes(self, bucket: str, key: str) -> bytes:
         """Download an object as bytes via presigned GET."""

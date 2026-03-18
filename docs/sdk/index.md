@@ -32,6 +32,9 @@ uv pip install rahcp
 # With CLI
 uv pip install "rahcp[cli]"
 
+# With OpenTelemetry tracing
+uv pip install "rahcp-client[otel]"
+
 # With Lance dataset support
 uv pip install "rahcp[lance]"
 
@@ -310,6 +313,25 @@ except NotFoundError:
 except HCPError as e:
     print(f"HCP error {e.status_code}: {e.message}")
 ```
+
+### Observability
+
+The SDK has optional OpenTelemetry tracing. Every API request creates a span with method, path, and status code attributes.
+
+```bash
+# Install with OTel support
+uv pip install "rahcp-client[otel]"
+```
+
+When `opentelemetry-api` is installed, the SDK creates spans automatically:
+
+```python
+# Spans are created for every request:
+#   span name: "POST /presign"
+#   attributes: http.method, http.path, http.status_code
+```
+
+When OTel is **not** installed, the tracer is a no-op — zero overhead, no dependency. Structured logging via Python's `logging` module is always active (method, path, status, duration in ms).
 
 ### Retry behavior
 

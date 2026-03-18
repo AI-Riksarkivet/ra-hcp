@@ -1,9 +1,10 @@
-"""HCPClient — async HTTP client with auth, retry, and auto-refresh."""
+"""HCPClient — async HTTP client with auth, retry, tracing, and auto-refresh."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
@@ -15,6 +16,7 @@ from rahcp_client.errors import (
     RetryableError,
     error_for_status,
 )
+from rahcp_client.tracing import tracer
 
 if TYPE_CHECKING:
     from rahcp_client.mapi import MapiOps
@@ -143,7 +145,7 @@ class HCPClient:
             )
         data = response.json()
         self._token = data["access_token"]
-        log.debug("Authenticated as %s", self.username)
+        log.info("Authenticated as %s (tenant=%s)", self.username, self.tenant or "system")
 
     def _auth_headers(self) -> dict[str, str]:
         """Return authorization headers if a token is available."""
@@ -164,49 +166,71 @@ class HCPClient:
         content: bytes | None = None,
         headers: dict[str, str] | None = None,
     ) -> httpx.Response:
-        """Send an HTTP request with retry and automatic 401 refresh.
-
-        This is the internal workhorse — operation classes (S3Ops, MapiOps)
-        delegate here.
-        """
+        """Send an HTTP request with retry, tracing, and automatic 401 refresh."""
         merged_headers = {**self._auth_headers(), **(headers or {})}
         last_error: Exception | None = None
 
-        for attempt in range(self.max_retries + 1):
-            try:
-                response = await self._http.request(
-                    method,
-                    path,
-                    params=params,
-                    json=json,
-                    data=data,
-                    content=content,
-                    headers=merged_headers,
-                )
-            except httpx.TransportError as exc:
-                last_error = RetryableError(str(exc))
-                await self._backoff(attempt)
-                continue
+        with tracer.start_as_current_span(f"{method} {path}") as span:
+            span.set_attribute("http.method", method)
+            span.set_attribute("http.path", path)
 
-            # Auto-refresh on 401
-            if response.status_code == 401 and self.username and attempt == 0:
-                log.debug("Token expired, refreshing...")
-                await self._login()
-                merged_headers = {**self._auth_headers(), **(headers or {})}
-                continue
-
-            # Retry on transient status codes
-            if response.status_code in _RETRYABLE_STATUSES:
-                last_error = error_for_status(response.status_code, response.text)
-                if attempt < self.max_retries:
+            for attempt in range(self.max_retries + 1):
+                t0 = time.monotonic()
+                try:
+                    response = await self._http.request(
+                        method,
+                        path,
+                        params=params,
+                        json=json,
+                        data=data,
+                        content=content,
+                        headers=merged_headers,
+                    )
+                except httpx.TransportError as exc:
+                    duration = (time.monotonic() - t0) * 1000
+                    log.warning(
+                        "%s %s — transport error after %.0fms (attempt %d): %s",
+                        method, path, duration, attempt + 1, exc,
+                    )
+                    last_error = RetryableError(str(exc))
                     await self._backoff(attempt)
                     continue
 
-            # Success or non-retryable error
-            if response.status_code >= 400:
-                raise error_for_status(response.status_code, response.text)
+                duration = (time.monotonic() - t0) * 1000
+                span.set_attribute("http.status_code", response.status_code)
 
-            return response
+                log.debug(
+                    "%s %s → %d (%.0fms)",
+                    method, path, response.status_code, duration,
+                )
+
+                # Auto-refresh on 401
+                if response.status_code == 401 and self.username and attempt == 0:
+                    log.info("Token expired, refreshing...")
+                    await self._login()
+                    merged_headers = {**self._auth_headers(), **(headers or {})}
+                    continue
+
+                # Retry on transient status codes
+                if response.status_code in _RETRYABLE_STATUSES:
+                    log.warning(
+                        "%s %s → %d (attempt %d/%d, retrying)",
+                        method, path, response.status_code, attempt + 1, self.max_retries + 1,
+                    )
+                    last_error = error_for_status(response.status_code, response.text)
+                    if attempt < self.max_retries:
+                        await self._backoff(attempt)
+                        continue
+
+                # Success or non-retryable error
+                if response.status_code >= 400:
+                    log.error(
+                        "%s %s → %d (%.0fms): %s",
+                        method, path, response.status_code, duration, response.text[:200],
+                    )
+                    raise error_for_status(response.status_code, response.text)
+
+                return response
 
         # Exhausted all retries
         if last_error:
