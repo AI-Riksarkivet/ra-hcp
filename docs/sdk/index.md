@@ -421,8 +421,9 @@ profiles:
 | Command | Description |
 |---------|-------------|
 | `ls [BUCKET]` | List buckets (no args) or objects in a bucket |
-| `upload BUCKET KEY FILE` | Upload file (auto multipart for large files) |
-| `download BUCKET KEY` | Download object (with `--output` / `-o`) |
+| `upload BUCKET KEY FILE` | Upload single file (auto multipart for large files) |
+| `upload-all BUCKET DIR` | Upload entire local directory to bucket |
+| `download BUCKET KEY` | Download single object (with `--output` / `-o`) |
 | `download-all BUCKET` | Download all objects to local directory |
 | `rm BUCKET KEY [KEY ...]` | Delete one or more objects |
 | `presign BUCKET KEY` | Generate presigned download URL (with `--expires`) |
@@ -494,6 +495,57 @@ The command automatically:
 - Paginates through all objects (handles continuation tokens)
 - Skips files that already exist locally with matching size
 - Reports progress: downloaded, skipped, and error counts
+
+##### `rahcp s3 upload-all` -- bulk upload
+
+Upload an entire local directory to a bucket, preserving the directory structure as S3 key prefixes:
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--prefix` | `-p` | `""` | Key prefix to prepend to all uploaded keys |
+| `--workers` | `-w` | `10` | Number of concurrent uploads |
+
+**Examples:**
+
+```bash
+# Upload a directory to a bucket (preserves folder structure)
+rahcp s3 upload-all my-bucket ./local-scans
+
+# Upload with a key prefix
+rahcp s3 upload-all my-bucket ./scans --prefix data/2025/
+
+# Use 20 concurrent uploads
+rahcp s3 upload-all my-bucket ./archive -w 20
+```
+
+The command recursively finds all files in the source directory and uploads them with keys that mirror the local path. For example, uploading `./scans/` with `--prefix data/` maps:
+
+```
+./scans/batch-1/image-001.tif  →  s3://my-bucket/data/batch-1/image-001.tif
+./scans/batch-1/image-002.tif  →  s3://my-bucket/data/batch-1/image-002.tif
+./scans/batch-2/image-003.tif  →  s3://my-bucket/data/batch-2/image-003.tif
+```
+
+##### Bulk transfer overview
+
+```mermaid
+flowchart LR
+    subgraph CLI["rahcp CLI"]
+        DA["download-all<br/><small>s3 → local</small>"]
+        UA["upload-all<br/><small>local → s3</small>"]
+    end
+
+    subgraph Local["Local Filesystem"]
+        DIR[("./local-dir/<br/>batch-1/<br/>batch-2/")]
+    end
+
+    subgraph S3["HCP S3"]
+        BKT[("s3://bucket/<br/>prefix/<br/>...")]
+    end
+
+    BKT -->|"concurrent GET<br/>(presigned URLs)"| DA --> DIR
+    DIR -->|"concurrent PUT<br/>(presigned URLs)"| UA --> BKT
+```
 
 #### `rahcp ns`
 

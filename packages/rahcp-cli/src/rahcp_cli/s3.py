@@ -177,9 +177,7 @@ def download_all(
         dest.mkdir(parents=True, exist_ok=True)
         sem = asyncio.Semaphore(workers)
 
-        async def _download_one(
-            client, key: str, size: int
-        ) -> str:
+        async def _download_one(client, key: str, size: int) -> str:
             """Returns 'ok', 'skipped', or 'error'."""
             file_path = dest / key
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -228,6 +226,59 @@ def download_all(
             if errors:
                 parts.append(f"[red]{errors} errors[/red]")
             console.print(f"\n[bold]Done.[/bold] {', '.join(parts)} → {dest}/")
+
+    run(_run())
+
+
+@app.command("upload-all")
+def upload_all(
+    ctx: typer.Context,
+    bucket: str = typer.Argument(...),
+    source_dir: str = typer.Argument(..., help="Local directory to upload"),
+    prefix: str = typer.Option("", "--prefix", "-p", help="Key prefix to prepend"),
+    workers: int = typer.Option(10, "--workers", "-w", help="Concurrent uploads"),
+) -> None:
+    """Upload all files from a local directory to a bucket."""
+
+    async def _run() -> None:
+        src = Path(source_dir)
+        if not src.is_dir():
+            console.print(f"[red]Not a directory: {src}[/red]")
+            raise SystemExit(1)
+        sem = asyncio.Semaphore(workers)
+
+        # Collect all files
+        files = [f for f in src.rglob("*") if f.is_file()]
+        if not files:
+            console.print("[dim]No files found.[/dim]")
+            return
+
+        console.print(
+            f"Uploading {len(files)} files from {src}/ → s3://{bucket}/{prefix}"
+        )
+
+        async def _upload_one(client, file_path: Path) -> str:
+            rel = file_path.relative_to(src)
+            key = f"{prefix}{rel}" if prefix else str(rel)
+            async with sem:
+                try:
+                    await client.s3.upload(bucket, key, file_path)
+                    console.print(
+                        f"  [green]{key}[/green] ({_human_size(file_path.stat().st_size)})"
+                    )
+                    return "ok"
+                except Exception as exc:
+                    console.print(f"  [red]{key}[/red] — {exc}")
+                    return "error"
+
+        async with make_client(ctx) as client:
+            results = await asyncio.gather(*[_upload_one(client, f) for f in files])
+            ok = results.count("ok")
+            errs = results.count("error")
+            parts = [f"Uploaded {ok} files"]
+            if errs:
+                parts.append(f"[red]{errs} errors[/red]")
+            console.print(f"\n[bold]Done.[/bold] {', '.join(parts)}")
 
     run(_run())
 

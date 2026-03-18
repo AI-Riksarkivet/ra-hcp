@@ -12,6 +12,7 @@ Example::
         username: admin
         password: secret
         tenant: dev-ai
+        verify_ssl: false
       prod:
         endpoint: http://localhost:8000/api/v1
         username: prod-user
@@ -21,10 +22,13 @@ Example::
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+log = logging.getLogger(__name__)
 
 CONFIG_DIR = Path.home() / ".rahcp"
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
@@ -44,7 +48,7 @@ class CLIConfig(BaseModel):
     """Config with named profiles."""
 
     default: str = ""
-    profiles: dict[str, Profile] = {}
+    profiles: dict[str, Profile] = Field(default_factory=dict)
 
     def resolve(self, name: str | None = None) -> Profile:
         """Resolve a profile by name, falling back to default."""
@@ -67,6 +71,7 @@ def load_config(path: str | None = None) -> CLIConfig:
     try:
         raw = yaml.safe_load(config_path.read_text()) or {}
     except Exception:
+        log.warning("Failed to parse config file: %s", config_path)
         return CLIConfig()
 
     # Multi-profile format
@@ -81,9 +86,8 @@ def load_config(path: str | None = None) -> CLIConfig:
         )
 
     # Flat format (backwards compat) — single "default" profile
+    # Pass all values through — Pydantic handles type coercion
     return CLIConfig(
         default="default",
-        profiles={
-            "default": Profile(**{k: v for k, v in raw.items() if isinstance(v, str)})
-        },
+        profiles={"default": Profile(**raw)},
     )
