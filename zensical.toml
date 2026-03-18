@@ -52,6 +52,7 @@ nav = [
   ]},
   { "Python SDK" = [
     { "Overview" = "sdk/index.md" },
+    { "API Reference" = "sdk/reference.md" },
   ]},
   { "Components" = [
     { "UI Components" = "components/index.md" },
@@ -156,7 +157,7 @@ custom_checkbox = true
 default_handler = "python"
 
 [project.plugins.mkdocstrings.handlers.python]
-paths = ["backend"]
+paths = ["backend", "packages/rahcp-client/src", "packages/rahcp-cli/src", "packages/rahcp-lance/src", "packages/rahcp-etl/src", "packages/rahcp-validate/src"]
 
 [project.plugins.mkdocstrings.handlers.python.options]
 docstring_style = "google"

@@ -316,11 +316,50 @@ profiles:
 
 | Command | Description |
 |---------|-------------|
-| `ls [BUCKET]` | List buckets or objects (with `--prefix`) |
+| `ls [BUCKET]` | List buckets (no args) or objects in a bucket |
 | `upload BUCKET KEY FILE` | Upload file (auto multipart for large files) |
-| `download BUCKET KEY` | Download object (with `--output`) |
+| `download BUCKET KEY` | Download object (with `--output` / `-o`) |
 | `rm BUCKET KEY [KEY ...]` | Delete one or more objects |
 | `presign BUCKET KEY` | Generate presigned download URL (with `--expires`) |
+
+##### `rahcp s3 ls` -- browsing objects
+
+The `ls` command supports pagination, prefix filtering, delimiter grouping, and key search:
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--prefix` | `-p` | `""` | Filter by key prefix |
+| `--max-keys` | `-n` | `100` | Max results per page |
+| `--delimiter` | `-d` | -- | Group by delimiter (e.g. `/` for folder view) |
+| `--filter` | `-f` | -- | Client-side filter: only show keys containing this string |
+| `--page` | -- | -- | Continuation token for next page (shown when results are truncated) |
+
+**Examples:**
+
+```bash
+# List all buckets
+rahcp s3 ls
+
+# First 20 objects in a bucket
+rahcp s3 ls ai-lagfart -n 20
+
+# Only objects under data/
+rahcp s3 ls ai-lagfart --prefix data/
+
+# Top-level folders only (delimiter groups)
+rahcp s3 ls ai-lagfart -d /
+
+# Filter keys containing "lagfart"
+rahcp s3 ls ai-lagfart -f lagfart
+
+# Next page (if truncated, the CLI shows the token)
+rahcp s3 ls ai-lagfart --page <token>
+
+# Combine: first 10 TIFF files under data/
+rahcp s3 ls ai-lagfart --prefix data/ -n 10 -f .tif
+```
+
+When results are truncated, the CLI prints a `More results available` hint with the exact `--page` command to fetch the next page.
 
 #### `rahcp ns`
 

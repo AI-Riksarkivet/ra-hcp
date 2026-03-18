@@ -32,6 +32,21 @@ These variables configure the S3-compatible data plane used for object storage o
 !!! tip
     S3 credentials are derived from the MAPI credentials automatically. The base64-encoded `HCP_USERNAME` becomes the access key, and the MD5 hash of `HCP_PASSWORD` becomes the secret key. There is no need to configure S3 credentials separately.
 
+## Storage Backend
+
+These variables control which S3-compatible storage adapter the backend uses. Most deployments use the default `hcp` backend.
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `STORAGE_BACKEND` | str | `"hcp"` | Storage adapter: `hcp`, `minio`, or `generic`. |
+| `S3_ADDRESSING_STYLE` | str | `"auto"` | S3 addressing style: `auto`, `path`, or `virtual`. |
+| `S3_ACCESS_KEY` | str | `""` | Direct S3 access key (MinIO/generic backends only). |
+| `S3_SECRET_KEY` | str | `""` | Direct S3 secret key (MinIO/generic backends only). |
+| `S3_VERIFY_SSL` | bool | `False` | Verify SSL certificates for S3 connections. |
+
+!!! note
+    When using the `hcp` backend, S3 credentials are derived from `HCP_USERNAME` and `HCP_PASSWORD` automatically. The `S3_ACCESS_KEY` and `S3_SECRET_KEY` variables are only needed for `minio` or `generic` backends.
+
 ## Redis Cache
 
 Redis caching is optional. When `REDIS_URL` is empty, all caching is disabled and every request hits HCP directly.
@@ -84,6 +99,15 @@ General application settings.
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `ROOT_PATH` | str | `""` | Root path prefix when the API sits behind a reverse proxy (e.g., `/proxy/8000`). |
+
+## Frontend
+
+These variables configure the SvelteKit frontend. They are set as environment variables when starting the frontend server (not in `.env`).
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `BACKEND_URL` | str | `"http://127.0.0.1:8000"` | URL of the FastAPI backend. The frontend proxies all `/api/*` requests here. |
+| `COOKIE_SECURE` | str | `""` | Set to `"true"` or `"false"` to override the Secure flag on session cookies. Defaults to `true` in production, `false` in dev. |
 
 ## Docker Publishing
 
