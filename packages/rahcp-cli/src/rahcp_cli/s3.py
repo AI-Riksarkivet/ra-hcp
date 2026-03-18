@@ -28,6 +28,23 @@ def _human_size(size: int | str) -> str:
     return f"{n:,.1f} PB"
 
 
+def _short_error(exc: Exception) -> str:
+    """Extract a clean error message, stripping presigned URLs and verbose httpx output."""
+    import httpx as _httpx
+
+    if isinstance(exc, _httpx.HTTPStatusError):
+        return f"{exc.response.status_code} {exc.response.reason_phrase}"
+    msg = str(exc)
+    if "https://" in msg and "X-Amz-" in msg:
+        # Strip presigned URL noise — just show the status
+        for part in msg.split("\n"):
+            if "Client error" in part or "Server error" in part:
+                status = part.split("'")[1] if "'" in part else part[:80]
+                return status
+        return msg[:80]
+    return msg[:200]
+
+
 def _short_date(dt: str) -> str:
     """Shorten ISO date to readable format."""
     if not dt:
@@ -188,7 +205,7 @@ def download_all(
                     console.print(f"  [green]{key}[/green] ({_human_size(bytes_dl)})")
                     return "ok"
                 except Exception as exc:
-                    console.print(f"  [red]{key}[/red] — {exc}")
+                    console.print(f"  [red]{key}[/red] — {_short_error(exc)}")
                     return "error"
 
         async with make_client(ctx) as client:
@@ -266,7 +283,7 @@ def upload_all(
                     )
                     return "ok"
                 except Exception as exc:
-                    console.print(f"  [red]{key}[/red] — {exc}")
+                    console.print(f"  [red]{key}[/red] — {_short_error(exc)}")
                     return "error"
 
         async with make_client(ctx) as client:

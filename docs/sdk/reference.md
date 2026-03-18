@@ -24,6 +24,10 @@ Auto-generated from source code docstrings.
 
 ::: rahcp_client.errors
 
+### Tracing
+
+::: rahcp_client.tracing
+
 ---
 
 ## rahcp-cli
