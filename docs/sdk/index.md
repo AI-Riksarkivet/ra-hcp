@@ -134,8 +134,8 @@ asyncio.run(main())
 | `timeout` | `float` | `30.0` | Request timeout in seconds |
 | `max_retries` | `int` | `4` | Maximum retries for transient failures |
 | `retry_base_delay` | `float` | `1.0` | Base delay for exponential backoff |
-| `multipart_threshold` | `int` | `67108864` | File size threshold for multipart upload (64 MB) |
-| `multipart_chunk` | `int` | `16777216` | Chunk size per multipart part (16 MB) |
+| `multipart_threshold` | `int` | `104857600` | File size threshold for multipart upload (100 MB) |
+| `multipart_chunk` | `int` | `67108864` | Chunk size per multipart part (64 MB) |
 | `multipart_concurrency` | `int` | `6` | Number of parallel part uploads |
 | `verify_ssl` | `bool` | `True` | Verify SSL certificates for S3 data transfers |
 
@@ -166,8 +166,8 @@ The `upload()` method automatically selects the best transfer strategy based on 
 ```mermaid
 flowchart TD
     START["client.s3.upload(bucket, key, data)"] --> SIZE{File size}
-    SIZE -->|"< 64 MB"| PRESIGN["Presign PUT URL"]
-    SIZE -->|">= 64 MB"| MULTI["Multipart upload"]
+    SIZE -->|"< 100 MB"| PRESIGN["Presign PUT URL"]
+    SIZE -->|">= 100 MB"| MULTI["Multipart upload"]
 
     PRESIGN --> PUT["PUT file bytes to presigned URL"]
     PUT --> ETAG["Return ETag"]
@@ -476,8 +476,8 @@ profiles:
     verify_ssl: false       # disable for local dev
     timeout: 60             # seconds per request (default 30)
     log_level: info         # debug | info | warning | error
-    multipart_threshold: 67108864   # 64 MB (trigger multipart above this)
-    multipart_chunk: 16777216       # 16 MB per part
+    multipart_threshold: 104857600  # 100 MB (trigger multipart above this)
+    multipart_chunk: 67108864       # 64 MB per part
     multipart_concurrency: 6       # parallel part uploads
 
   prod:
