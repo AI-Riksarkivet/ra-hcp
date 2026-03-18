@@ -285,12 +285,13 @@ def upload_all(
             key = f"{prefix}{rel}" if prefix else str(rel)
             local_size = file_path.stat().st_size
 
-            # Skip if already exists with matching size
+            # Skip if already exists
             if skip_existing:
                 try:
                     meta = await client.s3.head(bucket, key)
-                    remote_size = int(meta.get("content-length", -1))
-                    if remote_size == local_size:
+                    # Object exists — skip if size matches or size unknown
+                    remote_size = meta.get("content-length")
+                    if remote_size is None or int(remote_size) == local_size:
                         console.print(f"  [dim]{key}[/dim] — skipped (exists)")
                         return "skipped"
                 except NotFoundError:
