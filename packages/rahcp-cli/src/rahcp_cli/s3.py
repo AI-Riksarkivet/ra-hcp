@@ -260,7 +260,9 @@ def upload_all(
     """Upload all files from a local directory to a bucket."""
 
     async def _run() -> None:
-        from rahcp_client.errors import ConflictError, NotFoundError
+        import httpx as _httpx
+
+        from rahcp_client.errors import NotFoundError
 
         src = Path(source_dir)
         if not src.is_dir():
@@ -302,10 +304,10 @@ def upload_all(
                         f"  [green]{key}[/green] ({_human_size(local_size)})"
                     )
                     return "ok"
-                except ConflictError:
-                    # Object already exists (no versioning) — treat as skipped
-                    return "skipped"
-                except Exception as exc:
+                except (_httpx.HTTPStatusError, Exception) as exc:
+                    # 409 from presigned PUT = object exists, treat as skipped
+                    if isinstance(exc, _httpx.HTTPStatusError) and exc.response.status_code == 409:
+                        return "skipped"
                     console.print(f"  [red]{key}[/red] — {_short_error(exc)}")
                     return "error"
 

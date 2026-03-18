@@ -274,7 +274,8 @@ class HCPClient:
                 # Success or non-retryable error
                 if response.status_code >= 400:
                     safe_body = _redact(response.text)
-                    log.error(
+                    _log = log.debug if response.status_code == 404 else log.error
+                    _log(
                         "%s %s → %d (%.0fms): %s",
                         method,
                         path,
