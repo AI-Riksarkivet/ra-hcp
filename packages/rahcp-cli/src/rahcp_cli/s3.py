@@ -291,6 +291,7 @@ def upload_all(
                     meta = await client.s3.head(bucket, key)
                     remote_size = int(meta.get("content-length", -1))
                     if remote_size == local_size:
+                        console.print(f"  [dim]{key}[/dim] — skipped (exists)")
                         return "skipped"
                 except NotFoundError:
                     pass  # doesn't exist yet — upload it
@@ -305,9 +306,11 @@ def upload_all(
                     )
                     return "ok"
                 except ConflictError:
+                    console.print(f"  [dim]{key}[/dim] — skipped (exists)")
                     return "skipped"
                 except _httpx.HTTPStatusError as exc:
                     if exc.response.status_code == 409:
+                        console.print(f"  [dim]{key}[/dim] — skipped (exists)")
                         return "skipped"
                     console.print(f"  [red]{key}[/red] — {_short_error(exc)}")
                     return "error"
