@@ -2215,6 +2215,10 @@
 
 <h1 id="error-handling-retries-and-idempotency">Error Handling, Retries, and Idempotency<a class="headerlink" href="#error-handling-retries-and-idempotency" title="Permanent link">&para;</a></h1>
 <p>Production scripts need to handle transient failures, token expiry, and partial-success scenarios. HCP's S3 layer is <strong>eventually consistent</strong> for certain operations -- the patterns below help build resilient automation.</p>
+<div class="admonition tip">
+<p class="admonition-title">The rahcp SDK handles most of this automatically</p>
+<p>The <a href="../../sdk/">Python SDK</a> includes built-in retries with exponential backoff, automatic token refresh on 401, presigned URL error safety, and the staged-commit pattern as <code>commit_staging()</code> / <code>cleanup_staging()</code>. The patterns below are for raw <code>httpx</code>/<code>curl</code> usage or when you need custom error handling beyond what the SDK provides.</p>
+</div>
 <pre class="mermaid"><code>graph LR
     A["Client Request"] --&gt; B{"Success?"}
     B --&gt;|Yes| C["Return Response"]

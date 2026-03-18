@@ -2763,6 +2763,15 @@
 <p>All System API endpoints require JWT authentication with <strong>system-level admin credentials</strong>.
 Log in with a system-level username (no tenant prefix) to obtain a valid token.</p>
 <p>Base URL: <code>/api/v1/mapi</code></p>
+<div class="admonition tip">
+<p class="admonition-title">rahcp SDK</p>
+<p>System-level access — omit the tenant:
+<div class="highlight"><pre><span></span><code><span class="k">async</span> <span class="k">with</span> <span class="n">HCPClient</span><span class="p">(</span><span class="n">endpoint</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s2">&quot;sysadmin&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+    <span class="c1"># System-level MAPI operations</span>
+    <span class="o">...</span>
+</code></pre></div>
+See the <a href="../../sdk/">Python SDK</a> for full documentation.</p>
+</div>
 <hr />
 <h2 id="replication-links">Replication Links<a class="headerlink" href="#replication-links" title="Permanent link">&para;</a></h2>
 <p>Manage replication links between HCP systems.</p>
