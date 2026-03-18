@@ -17,6 +17,8 @@
 	let tenant = $derived(page.data.tenant as string | undefined);
 
 	let nsData = $derived(tenant ? get_namespaces({ tenant }) : undefined);
+	// Chargeback is fetched on demand — only when the user switches to the chargeback
+	// tab or when it's needed by stats. Cached for 60s by the backend (CACHE_STATS_TTL).
 	let chargebackData = $derived(tenant ? get_tenant_chargeback({ tenant }) : undefined);
 
 	let activeTab = $state('namespaces');

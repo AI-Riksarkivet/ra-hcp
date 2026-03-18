@@ -23,6 +23,10 @@ export interface NsProtocols {
   cifsEnabled?: boolean;
   nfsEnabled?: boolean;
   smtpEnabled?: boolean;
+  hs3Enabled?: boolean;
+  restEnabled?: boolean;
+  hswiftEnabled?: boolean;
+  webdavEnabled?: boolean;
 }
 
 export type { IpSettings } from "./tenant-info.remote.js";
@@ -121,6 +125,19 @@ export const create_namespace = command(
         : JSON.stringify(err.detail);
       error(res.status, detail);
     }
+
+    // Enable HS3 (S3-compatible API) by default on new namespaces
+    const enc = encodeURIComponent(body.name);
+    await apiFetch(
+      `/api/v1/mapi/tenants/${tenant}/namespaces/${enc}/protocols/http`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hs3Enabled: true }),
+      },
+    ).catch((err) =>
+      console.warn("[namespaces.remote] Failed to enable HS3:", err)
+    );
   },
 );
 
@@ -162,12 +179,24 @@ export const get_ns_protocols = query(
   z.object({ tenant: z.string(), name: z.string() }),
   async ({ tenant, name }) => {
     try {
-      const res = await apiFetch(
-        `/api/v1/mapi/tenants/${tenant}/namespaces/${
-          encodeURIComponent(name)
-        }/protocols`,
-      );
-      if (res.ok) return (await res.json()) as NsProtocols;
+      const enc = encodeURIComponent(name);
+      const [summaryRes, httpRes] = await Promise.all([
+        apiFetch(`/api/v1/mapi/tenants/${tenant}/namespaces/${enc}/protocols`),
+        apiFetch(
+          `/api/v1/mapi/tenants/${tenant}/namespaces/${enc}/protocols/http`,
+        ),
+      ]);
+      const summary = summaryRes.ok
+        ? ((await summaryRes.json()) as NsProtocols)
+        : ({} as NsProtocols);
+      if (httpRes.ok) {
+        const http = (await httpRes.json()) as Record<string, unknown>;
+        summary.hs3Enabled = (http.hs3Enabled as boolean) ?? false;
+        summary.restEnabled = (http.restEnabled as boolean) ?? false;
+        summary.hswiftEnabled = (http.hswiftEnabled as boolean) ?? false;
+        summary.webdavEnabled = (http.webdavEnabled as boolean) ?? false;
+      }
+      return summary;
     } catch (err) {
       console.error("[namespaces.remote]", err);
     }

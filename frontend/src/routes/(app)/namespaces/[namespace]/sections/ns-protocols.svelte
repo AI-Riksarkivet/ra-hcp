@@ -23,8 +23,12 @@
 	} = $props();
 
 	const PROTOCOL_DESCRIPTIONS: Record<string, string> = {
-		httpEnabled: 'Allow unencrypted HTTP access via REST API',
-		httpsEnabled: 'Allow encrypted HTTPS access via REST API',
+		hs3Enabled: 'Enable S3-compatible API access (required for SDK and S3 tools)',
+		restEnabled: 'Enable REST API access (HCP native HTTP)',
+		httpEnabled: 'Allow unencrypted HTTP access',
+		httpsEnabled: 'Allow encrypted HTTPS access',
+		hswiftEnabled: 'Enable OpenStack Swift-compatible access',
+		webdavEnabled: 'Enable WebDAV access for file browsing',
 		cifsEnabled: 'Enable Windows file sharing (SMB/CIFS) access',
 		nfsEnabled: 'Enable Unix/Linux NFS mount access',
 		smtpEnabled: 'Enable email-based object ingestion',
@@ -51,8 +55,12 @@
 		errorMsg: 'Failed to update protocols',
 	});
 
+	let localHs3Enabled = $state(false);
+	let localRestEnabled = $state(false);
 	let localHttpEnabled = $state(false);
 	let localHttpsEnabled = $state(false);
+	let localHswiftEnabled = $state(false);
+	let localWebdavEnabled = $state(false);
 	let localCifsEnabled = $state(false);
 	let localNfsEnabled = $state(false);
 	let localSmtpEnabled = $state(false);
@@ -60,16 +68,24 @@
 	$effect(() => {
 		const p = protocols;
 		void saver.syncVersion;
+		localHs3Enabled = p.hs3Enabled ?? false;
+		localRestEnabled = p.restEnabled ?? false;
 		localHttpEnabled = p.httpEnabled ?? false;
 		localHttpsEnabled = p.httpsEnabled ?? false;
+		localHswiftEnabled = p.hswiftEnabled ?? false;
+		localWebdavEnabled = p.webdavEnabled ?? false;
 		localCifsEnabled = p.cifsEnabled ?? false;
 		localNfsEnabled = p.nfsEnabled ?? false;
 		localSmtpEnabled = p.smtpEnabled ?? false;
 	});
 
 	let dirty = $derived(
-		localHttpEnabled !== (protocols.httpEnabled ?? false) ||
+		localHs3Enabled !== (protocols.hs3Enabled ?? false) ||
+			localRestEnabled !== (protocols.restEnabled ?? false) ||
+			localHttpEnabled !== (protocols.httpEnabled ?? false) ||
 			localHttpsEnabled !== (protocols.httpsEnabled ?? false) ||
+			localHswiftEnabled !== (protocols.hswiftEnabled ?? false) ||
+			localWebdavEnabled !== (protocols.webdavEnabled ?? false) ||
 			localCifsEnabled !== (protocols.cifsEnabled ?? false) ||
 			localNfsEnabled !== (protocols.nfsEnabled ?? false) ||
 			localSmtpEnabled !== (protocols.smtpEnabled ?? false)
@@ -110,49 +126,96 @@
 		{#await protocolsData}
 			<Card.Content>
 				<div class="flex flex-wrap gap-4">
-					{#each Array(5) as _, i (i)}
+					{#each Array(9) as _, i (i)}
 						<div class="h-5 w-20 animate-pulse rounded bg-muted"></div>
 					{/each}
 				</div>
 			</Card.Content>
 		{:then}
-			<Card.Content>
-				<div class="flex flex-wrap gap-x-6 gap-y-3">
-					{@render protoSwitch(
-						'proto-http',
-						'HTTP',
-						localHttpEnabled,
-						(v) => (localHttpEnabled = v),
-						PROTOCOL_DESCRIPTIONS.httpEnabled
-					)}
-					{@render protoSwitch(
-						'proto-https',
-						'HTTPS',
-						localHttpsEnabled,
-						(v) => (localHttpsEnabled = v),
-						PROTOCOL_DESCRIPTIONS.httpsEnabled
-					)}
-					{@render protoSwitch(
-						'proto-cifs',
-						'CIFS',
-						localCifsEnabled,
-						(v) => (localCifsEnabled = v),
-						PROTOCOL_DESCRIPTIONS.cifsEnabled
-					)}
-					{@render protoSwitch(
-						'proto-nfs',
-						'NFS',
-						localNfsEnabled,
-						(v) => (localNfsEnabled = v),
-						PROTOCOL_DESCRIPTIONS.nfsEnabled
-					)}
-					{@render protoSwitch(
-						'proto-smtp',
-						'SMTP',
-						localSmtpEnabled,
-						(v) => (localSmtpEnabled = v),
-						PROTOCOL_DESCRIPTIONS.smtpEnabled
-					)}
+			<Card.Content class="space-y-4">
+				<div>
+					<p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+						Data Access
+					</p>
+					<div class="flex flex-wrap gap-x-6 gap-y-3">
+						{@render protoSwitch(
+							'proto-hs3',
+							'S3 (HS3)',
+							localHs3Enabled,
+							(v) => (localHs3Enabled = v),
+							PROTOCOL_DESCRIPTIONS.hs3Enabled
+						)}
+						{@render protoSwitch(
+							'proto-rest',
+							'REST',
+							localRestEnabled,
+							(v) => (localRestEnabled = v),
+							PROTOCOL_DESCRIPTIONS.restEnabled
+						)}
+						{@render protoSwitch(
+							'proto-hswift',
+							'Swift',
+							localHswiftEnabled,
+							(v) => (localHswiftEnabled = v),
+							PROTOCOL_DESCRIPTIONS.hswiftEnabled
+						)}
+						{@render protoSwitch(
+							'proto-webdav',
+							'WebDAV',
+							localWebdavEnabled,
+							(v) => (localWebdavEnabled = v),
+							PROTOCOL_DESCRIPTIONS.webdavEnabled
+						)}
+					</div>
+				</div>
+				<div>
+					<p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+						Transport
+					</p>
+					<div class="flex flex-wrap gap-x-6 gap-y-3">
+						{@render protoSwitch(
+							'proto-http',
+							'HTTP',
+							localHttpEnabled,
+							(v) => (localHttpEnabled = v),
+							PROTOCOL_DESCRIPTIONS.httpEnabled
+						)}
+						{@render protoSwitch(
+							'proto-https',
+							'HTTPS',
+							localHttpsEnabled,
+							(v) => (localHttpsEnabled = v),
+							PROTOCOL_DESCRIPTIONS.httpsEnabled
+						)}
+					</div>
+				</div>
+				<div>
+					<p class="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+						File System & Other
+					</p>
+					<div class="flex flex-wrap gap-x-6 gap-y-3">
+						{@render protoSwitch(
+							'proto-cifs',
+							'CIFS',
+							localCifsEnabled,
+							(v) => (localCifsEnabled = v),
+							PROTOCOL_DESCRIPTIONS.cifsEnabled
+						)}
+						{@render protoSwitch(
+							'proto-nfs',
+							'NFS',
+							localNfsEnabled,
+							(v) => (localNfsEnabled = v),
+							PROTOCOL_DESCRIPTIONS.nfsEnabled
+						)}
+						{@render protoSwitch(
+							'proto-smtp',
+							'SMTP',
+							localSmtpEnabled,
+							(v) => (localSmtpEnabled = v),
+							PROTOCOL_DESCRIPTIONS.smtpEnabled
+						)}
+					</div>
 				</div>
 			</Card.Content>
 			<Card.Footer>
@@ -166,13 +229,24 @@
 								protocol: 'http' | 'cifs' | 'nfs' | 'smtp';
 								body: Record<string, unknown>;
 							}> = [];
-							if (
+							const httpChanged =
 								localHttpEnabled !== (protocols.httpEnabled ?? false) ||
-								localHttpsEnabled !== (protocols.httpsEnabled ?? false)
-							) {
+								localHttpsEnabled !== (protocols.httpsEnabled ?? false) ||
+								localHs3Enabled !== (protocols.hs3Enabled ?? false) ||
+								localRestEnabled !== (protocols.restEnabled ?? false) ||
+								localHswiftEnabled !== (protocols.hswiftEnabled ?? false) ||
+								localWebdavEnabled !== (protocols.webdavEnabled ?? false);
+							if (httpChanged) {
 								changes.push({
 									protocol: 'http',
-									body: { httpEnabled: localHttpEnabled, httpsEnabled: localHttpsEnabled },
+									body: {
+										httpEnabled: localHttpEnabled,
+										httpsEnabled: localHttpsEnabled,
+										hs3Enabled: localHs3Enabled,
+										restEnabled: localRestEnabled,
+										hswiftEnabled: localHswiftEnabled,
+										webdavEnabled: localWebdavEnabled,
+									},
 								});
 							}
 							if (localCifsEnabled !== (protocols.cifsEnabled ?? false)) {
