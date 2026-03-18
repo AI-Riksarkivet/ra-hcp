@@ -58,20 +58,22 @@ make run-api-mock
 
 ## Start the Frontend
 
-Install frontend dependencies and start the dev server:
+Start the frontend dev server:
 
 ```bash
-make frontend-install && make frontend-dev
+make frontend-dev
 ```
+
+!!! tip
+    Frontend dependencies are installed automatically by `make setup`. If you skipped setup, run `cd frontend && deno install` first.
 
 ## Redis Cache (Optional)
 
 Redis provides response caching to reduce load on the HCP system. It is entirely optional.
 
 ```bash
-make redis          # Start Redis in Docker
-make redis-stop     # Stop Redis
-make redis-cli      # Open the Redis CLI
+docker compose -f .docker/docker-compose.yml up redis -d   # Start Redis
+docker compose -f .docker/docker-compose.yml down redis     # Stop Redis
 ```
 
 !!! tip

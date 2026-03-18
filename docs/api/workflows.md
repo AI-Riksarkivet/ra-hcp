@@ -1,6 +1,9 @@
 # API Workflows
 
-Copy-paste-ready **curl** and **Python 3.13+ (`httpx`)** examples for the most common HCP API workflows. Every example assumes the API is running at `http://localhost:8000` -- adjust `BASE` to match your environment.
+Copy-paste-ready **curl**, **Python 3.13+ (`httpx`)**, and **[rahcp SDK](../sdk/index.md)** examples for the most common HCP API workflows. Every example assumes the API is running at `http://localhost:8000` -- adjust `BASE` to match your environment.
+
+!!! tip "Use the rahcp SDK for scripts and applications"
+    The `rahcp-client` SDK handles authentication, retries, presigned URLs, and multipart uploads automatically. Install it with `uv pip install rahcp` and see the [Python SDK](../sdk/index.md) page for full documentation.
 
 The HCP Unified API exposes two endpoint families under the same JWT token:
 
@@ -97,8 +100,37 @@ Obtain a JWT token once and reuse it for all subsequent requests.
         )
     ```
 
+=== "rahcp SDK"
+
+    ```python
+    from rahcp_client import HCPClient
+
+    # System-level login
+    client = HCPClient(
+        endpoint="http://localhost:8000/api/v1",
+        username="<system-admin>",
+        password="<password>",
+    )
+
+    # Tenant-scoped login
+    client = HCPClient(
+        endpoint="http://localhost:8000/api/v1",
+        username="<username>",
+        password="<password>",
+        tenant="<tenant>",
+    )
+
+    # From environment variables (HCP_ENDPOINT, HCP_USERNAME, etc.)
+    client = HCPClient.from_env()
+
+    # Use as async context manager (auto-authenticates)
+    async with client:
+        result = await client.s3.list_buckets()
+        print(result)
+    ```
+
 !!! note "Token lifetime"
-    Tokens expire after **8 hours** by default (configurable via `API_TOKEN_EXPIRE_MINUTES`). For long-running scripts, re-authenticate when you receive a `401` response.
+    Tokens expire after **8 hours** by default (configurable via `API_TOKEN_EXPIRE_MINUTES`). For long-running scripts, re-authenticate when you receive a `401` response. The rahcp SDK handles token refresh automatically.
 
 ---
 
@@ -285,6 +317,36 @@ Upload, list, download, copy, and delete objects using the S3 endpoints.
             print("Deleted original")
     ```
 
+=== "rahcp SDK"
+
+    ```python
+    from rahcp_client import HCPClient
+    from pathlib import Path
+
+    async with HCPClient.from_env() as client:
+        bucket = "my-bucket"
+
+        # Upload
+        etag = await client.s3.upload(bucket, "reports/q1.pdf", Path("/tmp/q1-report.pdf"))
+        print(f"Uploaded: {etag}")
+
+        # List
+        result = await client.s3.list_objects(bucket, prefix="reports/", max_keys=50)
+        for obj in result["objects"]:
+            print(f"  {obj['key']}  ({obj['size']} bytes)")
+
+        # Download
+        size = await client.s3.download(bucket, "reports/q1.pdf", Path("q1-report.pdf"))
+        print(f"Downloaded {size} bytes")
+
+        # Copy to archive bucket
+        await client.s3.copy("archive", "2025/q1.pdf", bucket, "reports/q1.pdf")
+
+        # Delete original
+        await client.s3.delete(bucket, "reports/q1.pdf")
+        print("Deleted original")
+    ```
+
 ---
 
 ## 4. Namespace backup / export
@@ -341,6 +403,25 @@ Export namespace configuration as a reusable template -- useful for disaster rec
             Path(filename).write_text(json.dumps(template, indent=2))
             print(f"Exported to {filename}")
             return template
+    ```
+
+=== "rahcp SDK"
+
+    ```python
+    from rahcp_client import HCPClient
+    import json
+    from pathlib import Path
+
+    async with HCPClient.from_env() as client:
+        tenant = "<tenant>"
+
+        # Export a single namespace
+        template = await client.mapi.export_namespace(tenant, "datasets")
+        Path("datasets-template.json").write_text(json.dumps(template, indent=2))
+
+        # Export multiple namespaces
+        bundle = await client.mapi.export_namespaces(tenant, ["datasets", "archives"])
+        Path("namespace-bundle.json").write_text(json.dumps(bundle, indent=2))
     ```
 
 ---
@@ -721,6 +802,28 @@ Delete, presign, or download multiple objects in a single request.
             print("Downloaded reports.zip")
     ```
 
+=== "rahcp SDK"
+
+    ```python
+    from rahcp_client import HCPClient
+
+    async with HCPClient.from_env() as client:
+        bucket = "my-bucket"
+
+        # Bulk delete
+        result = await client.s3.delete_bulk(bucket, [
+            "temp/file1.txt", "temp/file2.txt", "temp/file3.txt",
+        ])
+        print(f"Deleted: {result}")
+
+        # Bulk presigned URLs
+        urls = await client.s3.presign_bulk(bucket, [
+            "reports/q1.pdf", "reports/q2.pdf",
+        ], expires=7200)
+        for item in urls:
+            print(f"  {item['key']}: {item['url']}")
+    ```
+
 ---
 
 ## 9. Multipart upload
@@ -838,6 +941,30 @@ Upload large files using presigned multipart upload -- the recommended approach 
             print("Upload complete:", resp.json())
     ```
 
+=== "rahcp SDK"
+
+    ```python
+    from rahcp_client import HCPClient
+    from pathlib import Path
+
+    async with HCPClient.from_env() as client:
+        # upload() auto-selects multipart for files > 64 MB
+        etag = await client.s3.upload(
+            "my-bucket",
+            "large-dataset.tar.gz",
+            Path("/tmp/large-dataset.tar.gz"),
+        )
+        print(f"Uploaded: {etag}")
+
+        # Or explicitly use multipart with custom concurrency
+        etag = await client.s3.upload_multipart(
+            "my-bucket",
+            "large-dataset.tar.gz",
+            Path("/tmp/large-dataset.tar.gz"),
+            concurrency=8,
+        )
+    ```
+
 !!! warning "CORS required for browser uploads"
     If calling presigned URLs from a browser, the target HCP namespace must have CORS configured to allow `PUT` requests and expose the `ETag` header. See [S3 Objects -- CORS Configuration](s3-objects.md#cors-configuration-for-presigned-uploads) for details.
 
@@ -845,6 +972,7 @@ Upload large files using presigned multipart upload -- the recommended approach 
 
 ## Related pages
 
+- [Python SDK](../sdk/index.md) -- `rahcp-client` async client with automatic retries, presigned URLs, and multipart uploads.
 - [Authentication](authentication.md) -- Login flow, JWT details, and token refresh patterns.
 - [S3 Buckets](s3-buckets.md) -- Bucket CRUD, versioning, and ACL reference.
 - [S3 Objects](s3-objects.md) -- Object upload, download, copy, delete, and CORS configuration.

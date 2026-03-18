@@ -52,7 +52,7 @@ This layering makes the backend testable at every level. Unit tests can inject m
 
 ## Configuration
 
-Settings are organized into six `pydantic_settings.BaseSettings` classes in `app/core/config.py`. Each class maps to a deployment concern, reads from `.env`, and ignores unknown variables (`extra = "ignore"`).
+Settings are organized into five `pydantic_settings.BaseSettings` classes in `app/core/config.py`. Each class maps to a deployment concern, reads from `.env`, and ignores unknown variables (`extra = "ignore"`).
 
 | Class | Purpose | Key env vars |
 |-------|---------|-------------|

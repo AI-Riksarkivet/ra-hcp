@@ -175,12 +175,14 @@ All remote files live in `src/lib/remote/`:
 | File | Scope |
 |------|-------|
 | `users.remote.ts` | User/group CRUD, permissions, passwords |
-| `namespaces.remote.ts` | Namespace CRUD, protocols, compliance, retention, CORS, replication |
+| `namespaces.remote.ts` | Namespace CRUD, protocols, compliance, retention, CORS |
 | `content-classes.remote.ts` | Content class CRUD |
 | `tenant-info.remote.ts` | Tenant info, statistics, chargeback, settings |
 | `buckets.remote.ts` | S3 bucket/object CRUD, ACL, versioning, presign, multipart, ZIP download |
 | `search.remote.ts` | Object and operation search |
 | `lance.remote.ts` | LanceDB table discovery, schema, rows, search |
+| `system.remote.ts` | System-level admin operations |
+| `replication.remote.ts` | Replication link management |
 
 ### How apiFetch works
 

@@ -82,69 +82,44 @@ First, retrieve the S3 credentials from the API and create a Kubernetes Secret t
 
 ### Python container images
 
-The Python-based Argo templates use `httpx` and shared helpers. Build two images:
-
-**Base image** -- httpx only (used by the ETL and presigned URL examples):
+The Python-based Argo templates use the [`rahcp-client`](../sdk/index.md) SDK for all HCP S3 operations. Build one image:
 
 ```dockerfile
 FROM python:3.13-slim
-RUN pip install --no-cache-dir httpx
+RUN pip install --no-cache-dir rahcp-client "rahcp-validate"
 ```
 
 ```bash
-docker build -t my-registry/python-httpx:3.13 .
-```
-
-**Full image** -- httpx + Pillow + shared `hcp_s3` helper module (used by batch, cross-tenant, and error-handling examples):
-
-```dockerfile
-FROM python:3.13-slim
-RUN pip install --no-cache-dir httpx Pillow
-COPY hcp_s3.py /app/hcp_s3.py
-ENV PYTHONPATH="/app"
-```
-
-```bash
-docker build -t my-registry/hcp-convert:3.13 .
-docker push my-registry/hcp-convert:3.13
+docker build -t my-registry/hcp-sdk:3.13 .
+docker push my-registry/hcp-sdk:3.13
 ```
 
 Replace `my-registry/` with your actual container registry path.
 
-#### What the `hcp-convert` image provides
-
-The `hcp-convert:3.13` image bundles everything a workflow pod needs to interact with HCP S3 via presigned URLs:
+#### What the SDK image provides
 
 | Package | Purpose |
 |---------|---------|
-| **httpx** | HTTP client for presigned URL transfers and HCP API calls |
-| **Pillow** | Image validation and format conversion (TIFF, JPG, PNG, etc.) |
-| **hcp_s3** | Shared helper module that eliminates boilerplate across workflow steps |
+| **rahcp-client** | Async HTTP client with presigned URL transfers, multipart uploads, retries, and token refresh |
+| **rahcp-validate** | Image validation (TIFF, JPEG) with magic-byte checks and Pillow verification |
 
-#### `hcp_s3` helper module -- quick reference
+#### Quick reference
 
-The `hcp_s3` module is a single Python file baked into the container at import time (`import hcp_s3`). It provides presigning, transfers, verification, listing, bulk operations, and staged-commit patterns so each workflow step stays concise.
+| SDK method | Description |
+|------------|-------------|
+| `HCPClient.from_env()` | Create client from `HCP_*` env vars (or mounted Secret) |
+| `client.s3.upload(bucket, key, data)` | Upload via presigned URL (auto multipart for large files) |
+| `client.s3.download(bucket, key, dest)` | Download via presigned URL to local path |
+| `client.s3.download_bytes(bucket, key)` | Download to bytes |
+| `client.s3.head(bucket, key)` | Get object metadata (HEAD) |
+| `client.s3.list_objects(bucket, prefix)` | List objects under a prefix |
+| `client.s3.delete_bulk(bucket, keys)` | Bulk-delete object keys |
+| `client.s3.commit_staging(bucket, staging, dest)` | Copy staging to final prefix, then delete staging |
+| `client.s3.cleanup_staging(bucket, staging)` | Delete all objects under staging prefix |
+| `validate_tiff(path)` | Check TIFF magic bytes + Pillow verify |
+| `validate_jpg(path)` | Check JPEG magic bytes + full Pillow decode |
 
-| Function | Description |
-|----------|-------------|
-| `read_token(secret_path)` | Read a JWT from a mounted Kubernetes Secret |
-| `auth_headers(token)` | Build an `Authorization: Bearer` header dict |
-| `presign(base, token, bucket, key, method, expires=600)` | Get a presigned URL from the HCP API |
-| `download(base, token, bucket, key, dest)` | Presign + GET + write to local `Path`. Returns byte count |
-| `upload(base, token, bucket, key, data)` | Presign + PUT bytes. Returns ETag |
-| `verify_upload(base, token, bucket, key, expected_size)` | HEAD the object and assert `Content-Length` matches |
-| `list_objects(base, token, bucket, prefix, max_keys=1000)` | List objects under a prefix |
-| `delete_keys(base, token, bucket, keys)` | Bulk-delete a list of object keys |
-| `commit_staging(base, token, bucket, staging_prefix, dest_prefix)` | Copy all objects from staging to final prefix, then delete staging. Returns count |
-| `cleanup_staging(base, token, bucket, staging_prefix)` | Delete all objects under a staging prefix (safe on errors). Returns count |
-| `validate_tiff(path)` | Check magic bytes + `Image.verify()` — catches corrupt TIFFs |
-| `validate_jpg(path)` | Check magic bytes + `Image.load()` — forces full decode, catches truncation |
-
-The full source code is in the [cross-tenant section](#shared-helper-module----hcp_s3py) below.
-
-!!! tip "When to use which image"
-    - **`python-httpx:3.13`** -- Use for the ETL and presigned URL pipelines where pods work with raw data and don't need Pillow or shared helpers.
-    - **`hcp-convert:3.13`** -- Use for batch fan-out, cross-tenant transformations, and error-handling workflows where pods need `import hcp_s3` for concise presigned URL operations and staged-commit patterns.
+See the [Python SDK documentation](../sdk/index.md) for full API details.
 
 ### Installing Hera
 
@@ -752,28 +727,49 @@ graph TD
             parameters:
               - name: key
           script:
-            image: my-registry/hcp-convert:3.13
+            image: my-registry/hcp-sdk:3.13
             command: [python]
+            env:
+              - name: HCP_ENDPOINT
+                value: "{{workflow.parameters.hcp-api-base}}"
+              - name: HCP_USERNAME
+                valueFrom:
+                  secretKeyRef:
+                    name: hcp-credentials
+                    key: username
+              - name: HCP_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: hcp-credentials
+                    key: password
+              - name: HCP_TENANT
+                valueFrom:
+                  secretKeyRef:
+                    name: hcp-credentials
+                    key: tenant
             source: |
-              import hcp_s3, json
+              import asyncio, json
               from pathlib import Path
+              from rahcp_client import HCPClient
 
-              BASE = "{{workflow.parameters.hcp-api-base}}"
-              TOKEN = "{{workflow.parameters.hcp-token}}"
-              BUCKET = "{{workflow.parameters.bucket}}"
-              KEY = "{{inputs.parameters.key}}"
+              async def main():
+                  async with HCPClient.from_env() as client:
+                      BUCKET = "{{workflow.parameters.bucket}}"
+                      KEY = "{{inputs.parameters.key}}"
 
-              # Download via presigned URL
-              size = hcp_s3.download(BASE, TOKEN, BUCKET, KEY, Path("/tmp/data"))
+                      # Download via presigned URL
+                      size = await client.s3.download(BUCKET, KEY, Path("/tmp/data"))
 
-              # Process (placeholder — replace with your logic)
-              result = {"key": KEY, "size": size, "status": "processed"}
-              print(json.dumps(result))
+                      # Process (placeholder — replace with your logic)
+                      result = {"key": KEY, "size": size, "status": "processed"}
+                      print(json.dumps(result))
 
-              # Upload result via presigned URL
-              result_key = KEY.replace("incoming/", "processed/") + ".result.json"
-              hcp_s3.upload(BASE, TOKEN, BUCKET, result_key, json.dumps(result).encode())
-              print(f"Result uploaded to {result_key}")
+                      # Upload result via presigned URL
+                      result_key = KEY.replace("incoming/", "processed/") + ".result.json"
+                      await client.s3.upload(BUCKET, result_key, json.dumps(result).encode())
+                      print(f"Result uploaded to {result_key}")
+
+              asyncio.run(main())
 
         # ── Step 3: Fan in — aggregate results ───────────────────────
         - name: aggregate
@@ -825,51 +821,64 @@ graph TD
     )
 
 
-    @script(image="my-registry/hcp-convert:3.13", retry_strategy=RETRY)
-    def list_objects(hcp_api_base: str, hcp_token: str, bucket: str, prefix: str):
+    @script(image="my-registry/hcp-sdk:3.13", retry_strategy=RETRY)
+    def list_objects(bucket: str, prefix: str):
         """List objects from HCP and output their keys as a JSON array."""
-        import hcp_s3, json
+        import asyncio, json
         from pathlib import Path
+        from rahcp_client import HCPClient
 
-        objs = hcp_s3.list_objects(hcp_api_base, hcp_token, bucket, prefix, max_keys=100)
-        keys = [obj["key"] for obj in objs]
-        print(f"Found {len(keys)} objects")
-        Path("/tmp/keys.json").write_text(json.dumps(keys))
+        async def main():
+            async with HCPClient.from_env() as client:
+                result = await client.s3.list_objects(bucket, prefix=prefix, max_keys=100)
+                keys = [obj["key"] for obj in result["objects"]]
+                print(f"Found {len(keys)} objects")
+                Path("/tmp/keys.json").write_text(json.dumps(keys))
+
+        asyncio.run(main())
 
 
     @script(
-        image="my-registry/hcp-convert:3.13",
+        image="my-registry/hcp-sdk:3.13",
         retry_strategy=m.RetryStrategy(limit="2", backoff=m.Backoff(duration="10s", factor=2)),
     )
-    def process_single(hcp_api_base: str, hcp_token: str, bucket: str, key: str):
+    def process_single(bucket: str, key: str):
         """Download an object via presigned URL, process it, upload the result."""
-        import hcp_s3, json
+        import asyncio, json
         from pathlib import Path
+        from rahcp_client import HCPClient
 
-        # Download via presigned URL
-        size = hcp_s3.download(hcp_api_base, hcp_token, bucket, key, Path("/tmp/data"))
+        async def main():
+            async with HCPClient.from_env() as client:
+                # Download via presigned URL
+                size = await client.s3.download(bucket, key, Path("/tmp/data"))
 
-        # Process (placeholder — replace with your logic)
-        result = {"key": key, "size": size, "status": "processed"}
-        print(json.dumps(result))
+                # Process (placeholder — replace with your logic)
+                result = {"key": key, "size": size, "status": "processed"}
+                print(json.dumps(result))
 
-        # Upload result via presigned URL
-        result_key = key.replace("incoming/", "processed/") + ".result.json"
-        hcp_s3.upload(hcp_api_base, hcp_token, bucket, result_key, json.dumps(result).encode())
-        print(f"Result uploaded to {result_key}")
+                # Upload result via presigned URL
+                result_key = key.replace("incoming/", "processed/") + ".result.json"
+                await client.s3.upload(bucket, result_key, json.dumps(result).encode())
+                print(f"Result uploaded to {result_key}")
+
+        asyncio.run(main())
 
 
-    @script(image="my-registry/hcp-convert:3.13", retry_strategy=RETRY)
-    def aggregate(hcp_api_base: str, hcp_token: str, bucket: str):
+    @script(image="my-registry/hcp-sdk:3.13", retry_strategy=RETRY)
+    def aggregate(bucket: str):
         """List processed results and upload a summary."""
-        import hcp_s3, json
+        import asyncio, json
+        from rahcp_client import HCPClient
 
-        objs = hcp_s3.list_objects(hcp_api_base, hcp_token, bucket, "processed/")
-        summary = json.dumps({"objects_processed": len(objs), "status": "complete"})
-        print(summary)
+        async def main():
+            async with HCPClient.from_env() as client:
+                result = await client.s3.list_objects(bucket, prefix="processed/")
+                summary = json.dumps({"objects_processed": len(result["objects"]), "status": "complete"})
+                print(summary)
+                await client.s3.upload(bucket, "summaries/batch-result.json", summary.encode())
 
-        # Upload summary via presigned URL
-        hcp_s3.upload(hcp_api_base, hcp_token, bucket, "summaries/batch-result.json", summary.encode())
+        asyncio.run(main())
 
 
     WF_PARAMS = {
@@ -958,204 +967,28 @@ graph LR
 
 ### Security model
 
-Each tenant has its own JWT token stored in a separate Kubernetes Secret. Pods receive **only presigned URLs** -- they never see raw credentials for either tenant. The presigned URLs are short-lived (10 minutes) and scoped to specific objects.
+Each tenant has its own HCP credentials stored in a separate Kubernetes Secret. The `rahcp-client` SDK authenticates on startup using these credentials and transfers data via **presigned URLs** -- pods never access HCP S3 directly.
 
 ```bash
 # Create secrets for each tenant (run once)
-kubectl create secret generic hcp-source-token \
-  --from-literal=token="$(curl -s -X POST "$BASE/auth/token" \
-    -d "username=<source-tenant>/<username>&password=<password>" \
-    | jq -r .access_token)" \
+kubectl create secret generic hcp-source-creds \
+  --from-literal=username="<source-username>" \
+  --from-literal=password="<source-password>" \
+  --from-literal=tenant="<source-tenant>" \
   -n argo
 
-kubectl create secret generic hcp-dest-token \
-  --from-literal=token="$(curl -s -X POST "$BASE/auth/token" \
-    -d "username=<dest-tenant>/<username>&password=<password>" \
-    | jq -r .access_token)" \
+kubectl create secret generic hcp-dest-creds \
+  --from-literal=username="<dest-username>" \
+  --from-literal=password="<dest-password>" \
+  --from-literal=tenant="<dest-tenant>" \
   -n argo
-```
-
-### Shared helper module -- `hcp_s3.py`
-
-Since every workflow step repeats the same presigning, downloading, uploading, and verification logic, extract a shared module that gets baked into the container image. All `@script` functions import from it.
-
-```python
-# hcp_s3.py — bake into the container image (see Dockerfile below)
-"""Shared helpers for HCP S3 operations in Argo workflow pods."""
-
-from __future__ import annotations
-
-import hashlib
-from pathlib import Path
-
-import httpx
-
-# ── Token helpers ────────────────────────────────────────────────────
-
-def read_token(secret_path: str = "/secrets/source/token") -> str:
-    """Read a JWT token from a mounted Kubernetes Secret."""
-    return Path(secret_path).read_text().strip()
-
-
-def auth_headers(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
-# ── Presign + transfer ──────────────────────────────────────────────
-
-def presign(
-    base: str, token: str, bucket: str, key: str, method: str, expires: int = 600,
-) -> str:
-    """Get a presigned URL from the HCP API."""
-    resp = httpx.post(
-        f"{base}/presign",
-        json={"bucket": bucket, "key": key, "method": method, "expires_in": expires},
-        headers=auth_headers(token),
-    )
-    resp.raise_for_status()
-    return resp.json()["url"]
-
-
-def download(base: str, token: str, bucket: str, key: str, dest: Path) -> int:
-    """Download an object via presigned URL. Returns byte count."""
-    url = presign(base, token, bucket, key, "get_object")
-    resp = httpx.get(url, timeout=120.0)
-    resp.raise_for_status()
-    dest.write_bytes(resp.content)
-    return len(resp.content)
-
-
-def upload(
-    base: str, token: str, bucket: str, key: str, data: bytes,
-) -> str:
-    """Upload data via presigned URL. Returns the ETag for verification."""
-    url = presign(base, token, bucket, key, "put_object")
-    resp = httpx.put(url, content=data, timeout=120.0)
-    resp.raise_for_status()
-    return resp.headers.get("etag", "")
-
-
-def verify_upload(
-    base: str, token: str, bucket: str, key: str, expected_size: int,
-) -> None:
-    """HEAD the uploaded object and assert size matches."""
-    resp = httpx.head(
-        f"{base}/buckets/{bucket}/objects/{key}",
-        headers=auth_headers(token),
-        timeout=30.0,
-    )
-    resp.raise_for_status()
-    actual = int(resp.headers.get("content-length", 0))
-    if actual != expected_size:
-        raise RuntimeError(
-            f"Upload verification failed for {key}: "
-            f"expected {expected_size} bytes, got {actual}"
-        )
-
-
-# ── Listing + bulk operations ────────────────────────────────────────
-
-def list_objects(
-    base: str, token: str, bucket: str, prefix: str, max_keys: int = 1000,
-) -> list[dict]:
-    """List objects under a prefix."""
-    resp = httpx.get(
-        f"{base}/buckets/{bucket}/objects",
-        params={"prefix": prefix, "max_keys": max_keys},
-        headers=auth_headers(token),
-    )
-    resp.raise_for_status()
-    return resp.json()["objects"]
-
-
-def delete_keys(base: str, token: str, bucket: str, keys: list[str]) -> None:
-    """Bulk-delete a list of object keys."""
-    if not keys:
-        return
-    httpx.post(
-        f"{base}/buckets/{bucket}/objects/delete",
-        json={"keys": keys},
-        headers=auth_headers(token),
-    ).raise_for_status()
-
-
-def commit_staging(
-    base: str, token: str, bucket: str, staging_prefix: str, dest_prefix: str,
-) -> int:
-    """Copy all objects from staging to final prefix, then delete staging. Returns count."""
-    staged = list_objects(base, token, bucket, staging_prefix)
-    for obj in staged:
-        src = obj["key"]
-        dest = src.replace(staging_prefix, dest_prefix)
-        httpx.post(
-            f"{base}/buckets/{bucket}/objects/{dest}/copy",
-            json={"source_bucket": bucket, "source_key": src},
-            headers=auth_headers(token),
-        ).raise_for_status()
-    delete_keys(base, token, bucket, [obj["key"] for obj in staged])
-    return len(staged)
-
-
-def cleanup_staging(
-    base: str, token: str, bucket: str, staging_prefix: str,
-) -> int:
-    """Delete all objects under a staging prefix. Returns count deleted."""
-    try:
-        objs = list_objects(base, token, bucket, staging_prefix)
-        keys = [obj["key"] for obj in objs]
-        delete_keys(base, token, bucket, keys)
-        return len(keys)
-    except httpx.HTTPError:
-        print("Could not list staged objects — manual cleanup may be needed")
-        return 0
-
-
-# ── Image verification ───────────────────────────────────────────────
-
-def validate_tiff(path: Path) -> None:
-    """Verify the file is a valid TIFF by checking the magic bytes and opening it."""
-    data = path.read_bytes()
-    if len(data) < 8:
-        raise RuntimeError(f"File too small to be a TIFF: {len(data)} bytes")
-    magic = data[:4]
-    if magic not in (b"II\x2a\x00", b"MM\x00\x2a", b"II\x2b\x00", b"MM\x00\x2b"):
-        raise RuntimeError(f"Not a valid TIFF: magic bytes {magic!r}")
-    from PIL import Image
-    img = Image.open(path)
-    img.verify()  # checks for corruption without fully decoding
-
-
-def validate_jpg(path: Path) -> None:
-    """Verify the file is a valid JPEG that can be fully decoded."""
-    data = path.read_bytes()
-    if not data.startswith(b"\xff\xd8\xff"):
-        raise RuntimeError(f"Not a valid JPEG: wrong magic bytes")
-    from PIL import Image
-    img = Image.open(path)
-    img.load()  # force full decode — catches truncated files
-```
-
-### Container image
-
-Bake the helper module and dependencies into a single image used by all steps:
-
-```dockerfile
-FROM python:3.13-slim
-RUN pip install --no-cache-dir httpx Pillow
-COPY hcp_s3.py /app/hcp_s3.py
-ENV PYTHONPATH="/app"
-```
-
-```bash
-docker build -t my-registry/hcp-convert:3.13 .
-docker push my-registry/hcp-convert:3.13
 ```
 
 ### Workflow definition
 
 === "YAML"
 
-    In YAML templates each pod runs an inline script, so the shared `hcp_s3` module is imported directly:
+    Each pod gets credentials via environment variables from Kubernetes Secrets. The `rahcp-client` SDK handles authentication and presigned URL transfers automatically.
 
     ```yaml
     apiVersion: argoproj.io/v1alpha1
@@ -1176,13 +1009,6 @@ docker push my-registry/hcp-convert:3.13
             value: "ingest/"
           - name: dest-bucket
             value: "images"
-      volumes:
-        - name: source-token
-          secret:
-            secretName: hcp-source-token
-        - name: dest-token
-          secret:
-            secretName: hcp-dest-token
       templates:
         # ── Orchestrator ──────────────────────────────────────────────
         - name: convert-pipeline
@@ -1209,25 +1035,38 @@ docker push my-registry/hcp-convert:3.13
               duration: "5s"
               factor: 2
           script:
-            image: my-registry/hcp-convert:3.13
+            image: my-registry/hcp-sdk:3.13
             command: [python]
-            volumeMounts:
-              - name: source-token
-                mountPath: /secrets/source
-                readOnly: true
+            env: &source-env
+              - name: HCP_ENDPOINT
+                value: "{{workflow.parameters.hcp-api-base}}"
+              - name: HCP_USERNAME
+                valueFrom:
+                  secretKeyRef: { name: hcp-source-creds, key: username }
+              - name: HCP_PASSWORD
+                valueFrom:
+                  secretKeyRef: { name: hcp-source-creds, key: password }
+              - name: HCP_TENANT
+                valueFrom:
+                  secretKeyRef: { name: hcp-source-creds, key: tenant }
             source: |
-              import json
+              import asyncio, json
               from pathlib import Path
-              import hcp_s3
+              from rahcp_client import HCPClient
 
-              BASE = "{{workflow.parameters.hcp-api-base}}"
-              TOKEN = hcp_s3.read_token("/secrets/source/token")
-              BUCKET = "{{workflow.parameters.source-bucket}}"
+              async def main():
+                  async with HCPClient.from_env() as client:
+                      result = await client.s3.list_objects(
+                          "{{workflow.parameters.source-bucket}}",
+                          prefix="{{workflow.parameters.source-prefix}}",
+                          max_keys=500,
+                      )
+                      keys = [o["key"] for o in result["objects"]
+                              if o["key"].lower().endswith((".tiff", ".tif"))]
+                      print(f"Found {len(keys)} TIFF files")
+                      Path("/tmp/keys.json").write_text(json.dumps(keys))
 
-              objs = hcp_s3.list_objects(BASE, TOKEN, BUCKET, "{{workflow.parameters.source-prefix}}", max_keys=500)
-              keys = [o["key"] for o in objs if o["key"].lower().endswith((".tiff", ".tif"))]
-              print(f"Found {len(keys)} TIFF files")
-              Path("/tmp/keys.json").write_text(json.dumps(keys))
+              asyncio.run(main())
           outputs:
             parameters:
               - name: keys
@@ -1261,15 +1100,29 @@ docker push my-registry/hcp-convert:3.13
             parameters:
               - name: key
           script:
-            image: my-registry/hcp-convert:3.13
+            image: my-registry/hcp-sdk:3.13
             command: [python]
-            volumeMounts:
-              - name: source-token
-                mountPath: /secrets/source
-                readOnly: true
-              - name: dest-token
-                mountPath: /secrets/dest
-                readOnly: true
+            env:
+              - name: HCP_ENDPOINT
+                value: "{{workflow.parameters.hcp-api-base}}"
+              - name: HCP_USERNAME
+                valueFrom:
+                  secretKeyRef: { name: hcp-source-creds, key: username }
+              - name: HCP_PASSWORD
+                valueFrom:
+                  secretKeyRef: { name: hcp-source-creds, key: password }
+              - name: HCP_TENANT
+                valueFrom:
+                  secretKeyRef: { name: hcp-source-creds, key: tenant }
+              - name: DST_USERNAME
+                valueFrom:
+                  secretKeyRef: { name: hcp-dest-creds, key: username }
+              - name: DST_PASSWORD
+                valueFrom:
+                  secretKeyRef: { name: hcp-dest-creds, key: password }
+              - name: DST_TENANT
+                valueFrom:
+                  secretKeyRef: { name: hcp-dest-creds, key: tenant }
             resources:
               requests:
                 memory: "512Mi"
@@ -1277,95 +1130,116 @@ docker push my-registry/hcp-convert:3.13
               limits:
                 memory: "1Gi"
             source: |
+              import asyncio, os
               from pathlib import Path
               from PIL import Image
-              import hcp_s3
+              from rahcp_client import HCPClient
+              from rahcp_validate.images import validate_tiff, validate_jpg
 
-              BASE = "{{workflow.parameters.hcp-api-base}}"
-              SRC_TOKEN = hcp_s3.read_token("/secrets/source/token")
-              DST_TOKEN = hcp_s3.read_token("/secrets/dest/token")
-              SRC_BUCKET = "{{workflow.parameters.source-bucket}}"
-              DST_BUCKET = "{{workflow.parameters.dest-bucket}}"
-              KEY = "{{inputs.parameters.key}}"
-              WF = "{{workflow.name}}"
+              async def main():
+                  endpoint = os.environ["HCP_ENDPOINT"]
+                  SRC_BUCKET = "{{workflow.parameters.source-bucket}}"
+                  DST_BUCKET = "{{workflow.parameters.dest-bucket}}"
+                  KEY = "{{inputs.parameters.key}}"
+                  WF = "{{workflow.name}}"
 
-              # 1. Download and validate TIFF
-              tiff_path = Path("/tmp/input.tiff")
-              size = hcp_s3.download(BASE, SRC_TOKEN, SRC_BUCKET, KEY, tiff_path)
-              hcp_s3.validate_tiff(tiff_path)
-              print(f"Downloaded and validated {KEY} ({size} bytes)")
+                  src = HCPClient(endpoint=endpoint,
+                      username=os.environ["HCP_USERNAME"],
+                      password=os.environ["HCP_PASSWORD"],
+                      tenant=os.environ["HCP_TENANT"])
+                  dst = HCPClient(endpoint=endpoint,
+                      username=os.environ["DST_USERNAME"],
+                      password=os.environ["DST_PASSWORD"],
+                      tenant=os.environ["DST_TENANT"])
 
-              # 2. Convert TIFF → JPG and validate output
-              jpg_path = Path("/tmp/output.jpg")
-              img = Image.open(tiff_path)
-              img.convert("RGB").save(jpg_path, "JPEG", quality=85)
-              hcp_s3.validate_jpg(jpg_path)
-              jpg_data = jpg_path.read_bytes()
-              print(f"Converted to JPG ({len(jpg_data)} bytes, {img.size[0]}x{img.size[1]})")
+                  async with src, dst:
+                      # 1. Download and validate TIFF
+                      tiff_path = Path("/tmp/input.tiff")
+                      size = await src.s3.download(SRC_BUCKET, KEY, tiff_path)
+                      validate_tiff(tiff_path)
+                      print(f"Downloaded and validated {KEY} ({size} bytes)")
 
-              # 3. Upload to staging and verify
-              filename = KEY.split("/")[-1].rsplit(".", 1)[0] + ".jpg"
-              staging_key = f"staging/{WF}/{filename}"
-              hcp_s3.upload(BASE, DST_TOKEN, DST_BUCKET, staging_key, jpg_data)
-              hcp_s3.verify_upload(BASE, DST_TOKEN, DST_BUCKET, staging_key, len(jpg_data))
-              print(f"Uploaded and verified {staging_key}")
+                      # 2. Convert TIFF → JPG and validate output
+                      jpg_path = Path("/tmp/output.jpg")
+                      img = Image.open(tiff_path)
+                      img.convert("RGB").save(jpg_path, "JPEG", quality=85)
+                      validate_jpg(jpg_path)
+                      print(f"Converted to JPG ({img.size[0]}x{img.size[1]})")
+
+                      # 3. Upload to staging and verify
+                      filename = KEY.split("/")[-1].rsplit(".", 1)[0] + ".jpg"
+                      staging_key = f"staging/{WF}/{filename}"
+                      await dst.s3.upload(DST_BUCKET, staging_key, jpg_path)
+                      meta = await dst.s3.head(DST_BUCKET, staging_key)
+                      print(f"Uploaded and verified {staging_key}")
+
+              asyncio.run(main())
 
         # ── Commit staging → published ────────────────────────────────
         - name: verify-and-commit
           retryStrategy:
             limit: 2
           script:
-            image: my-registry/hcp-convert:3.13
+            image: my-registry/hcp-sdk:3.13
             command: [python]
-            volumeMounts:
-              - name: dest-token
-                mountPath: /secrets/dest
-                readOnly: true
+            env: &dest-env
+              - name: HCP_ENDPOINT
+                value: "{{workflow.parameters.hcp-api-base}}"
+              - name: HCP_USERNAME
+                valueFrom:
+                  secretKeyRef: { name: hcp-dest-creds, key: username }
+              - name: HCP_PASSWORD
+                valueFrom:
+                  secretKeyRef: { name: hcp-dest-creds, key: password }
+              - name: HCP_TENANT
+                valueFrom:
+                  secretKeyRef: { name: hcp-dest-creds, key: tenant }
             source: |
-              import hcp_s3
+              import asyncio
+              from rahcp_client import HCPClient
 
-              BASE = "{{workflow.parameters.hcp-api-base}}"
-              TOKEN = hcp_s3.read_token("/secrets/dest/token")
-              BUCKET = "{{workflow.parameters.dest-bucket}}"
-              WF = "{{workflow.name}}"
+              async def main():
+                  async with HCPClient.from_env() as client:
+                      count = await client.s3.commit_staging(
+                          "{{workflow.parameters.dest-bucket}}",
+                          "staging/{{workflow.name}}/",
+                          "published/",
+                      )
+                      print(f"Committed {count} JPGs to published/")
 
-              count = hcp_s3.commit_staging(
-                  BASE, TOKEN, BUCKET,
-                  staging_prefix=f"staging/{WF}/",
-                  dest_prefix="published/",
-              )
-              print(f"Committed {count} JPGs to published/")
+              asyncio.run(main())
 
         # ── Exit handler — clean up staging on failure ────────────────
         - name: cleanup
           script:
-            image: my-registry/hcp-convert:3.13
+            image: my-registry/hcp-sdk:3.13
             command: [python]
-            volumeMounts:
-              - name: dest-token
-                mountPath: /secrets/dest
-                readOnly: true
+            env: *dest-env
             source: |
-              import hcp_s3
+              import asyncio
 
               STATUS = "{{workflow.status}}"
               if STATUS == "Succeeded":
                   print("Workflow succeeded — no cleanup needed")
                   exit(0)
 
-              BASE = "{{workflow.parameters.hcp-api-base}}"
-              TOKEN = hcp_s3.read_token("/secrets/dest/token")
-              BUCKET = "{{workflow.parameters.dest-bucket}}"
-              WF = "{{workflow.name}}"
+              from rahcp_client import HCPClient
 
-              print(f"Workflow {STATUS} — cleaning up staging/{WF}/...")
-              deleted = hcp_s3.cleanup_staging(BASE, TOKEN, BUCKET, f"staging/{WF}/")
-              print(f"Deleted {deleted} staged objects")
+              async def main():
+                  async with HCPClient.from_env() as client:
+                      print(f"Workflow {STATUS} — cleaning up staging/...")
+                      deleted = await client.s3.cleanup_staging(
+                          "{{workflow.parameters.dest-bucket}}",
+                          "staging/{{workflow.name}}/",
+                      )
+                      print(f"Deleted {deleted} staged objects")
+
+              asyncio.run(main())
     ```
 
 === "Hera"
 
-    The Hera version uses the same `hcp_s3` module. Each `@script` function is compact because the heavy lifting lives in the shared helpers.
+    Each `@script` function uses the `rahcp-client` SDK. Credentials are injected via environment variables from Kubernetes Secrets.
 
     ```python
     from hera.workflows import (
@@ -1378,7 +1252,7 @@ docker push my-registry/hcp-convert:3.13
     )
 
     HCP_BASE = "http://hcp-api.default.svc:8000/api/v1"
-    IMAGE = "my-registry/hcp-convert:3.13"
+    IMAGE = "my-registry/hcp-sdk:3.13"
 
     RETRY = m.RetryStrategy(limit="3", backoff=m.Backoff(duration="5s", factor=2))
     RETRY_CONVERT = m.RetryStrategy(
@@ -1386,115 +1260,138 @@ docker push my-registry/hcp-convert:3.13
         backoff=m.Backoff(duration="15s", factor=2, max_duration="2m"),
     )
 
-    # Volume mounts for tenant tokens
-    SRC_VOL = m.Volume(name="source-token", secret=m.SecretVolumeSource(secret_name="hcp-source-token"))
-    DST_VOL = m.Volume(name="dest-token", secret=m.SecretVolumeSource(secret_name="hcp-dest-token"))
-    SRC_MOUNT = m.VolumeMount(name="source-token", mount_path="/secrets/source", read_only=True)
-    DST_MOUNT = m.VolumeMount(name="dest-token", mount_path="/secrets/dest", read_only=True)
+    # Environment variables from K8s Secrets
+    def _secret_env(secret_name: str, prefix: str = "HCP") -> list[m.EnvVar]:
+        return [
+            m.EnvVar(name=f"{prefix}_ENDPOINT", value=HCP_BASE),
+            m.EnvVar(name=f"{prefix}_USERNAME", value_from=m.EnvVarSource(
+                secret_key_ref=m.SecretKeySelector(name=secret_name, key="username"))),
+            m.EnvVar(name=f"{prefix}_PASSWORD", value_from=m.EnvVarSource(
+                secret_key_ref=m.SecretKeySelector(name=secret_name, key="password"))),
+            m.EnvVar(name=f"{prefix}_TENANT", value_from=m.EnvVarSource(
+                secret_key_ref=m.SecretKeySelector(name=secret_name, key="tenant"))),
+        ]
+
+    SRC_ENV = _secret_env("hcp-source-creds")
+    DST_ENV = _secret_env("hcp-dest-creds")
+    BOTH_ENV = SRC_ENV + _secret_env("hcp-dest-creds", prefix="DST")
 
 
-    @script(image=IMAGE, retry_strategy=RETRY, volume_mounts=[SRC_MOUNT])
-    def list_tiffs(hcp_api_base: str, source_bucket: str, source_prefix: str):
+    @script(image=IMAGE, retry_strategy=RETRY, env=SRC_ENV)
+    def list_tiffs(source_bucket: str, source_prefix: str):
         """List TIFF files in the source tenant."""
-        import json
+        import asyncio, json
         from pathlib import Path
-        import hcp_s3
+        from rahcp_client import HCPClient
 
-        token = hcp_s3.read_token("/secrets/source/token")
-        objs = hcp_s3.list_objects(hcp_api_base, token, source_bucket, source_prefix, max_keys=500)
-        keys = [o["key"] for o in objs if o["key"].lower().endswith((".tiff", ".tif"))]
-        print(f"Found {len(keys)} TIFF files")
-        Path("/tmp/keys.json").write_text(json.dumps(keys))
+        async def main():
+            async with HCPClient.from_env() as client:
+                result = await client.s3.list_objects(source_bucket, prefix=source_prefix, max_keys=500)
+                keys = [o["key"] for o in result["objects"]
+                        if o["key"].lower().endswith((".tiff", ".tif"))]
+                print(f"Found {len(keys)} TIFF files")
+                Path("/tmp/keys.json").write_text(json.dumps(keys))
+
+        asyncio.run(main())
 
 
     @script(
         image=IMAGE,
         retry_strategy=RETRY_CONVERT,
         active_deadline_seconds=600,
-        volume_mounts=[SRC_MOUNT, DST_MOUNT],
+        env=BOTH_ENV,
         resources=m.ResourceRequirements(
             requests={"memory": "512Mi", "cpu": "500m"},
             limits={"memory": "1Gi"},
         ),
     )
-    def convert_single(
-        hcp_api_base: str,
-        source_bucket: str,
-        dest_bucket: str,
-        key: str,
-        workflow_name: str,
-    ):
+    def convert_single(source_bucket: str, dest_bucket: str, key: str, workflow_name: str):
         """Download TIFF, validate, convert to JPG, validate, upload, verify."""
+        import asyncio, os
         from pathlib import Path
         from PIL import Image
-        import hcp_s3
+        from rahcp_client import HCPClient
+        from rahcp_validate.images import validate_tiff, validate_jpg
 
-        src_token = hcp_s3.read_token("/secrets/source/token")
-        dst_token = hcp_s3.read_token("/secrets/dest/token")
+        async def main():
+            endpoint = os.environ["HCP_ENDPOINT"]
+            src = HCPClient(endpoint=endpoint,
+                username=os.environ["HCP_USERNAME"],
+                password=os.environ["HCP_PASSWORD"],
+                tenant=os.environ["HCP_TENANT"])
+            dst = HCPClient(endpoint=endpoint,
+                username=os.environ["DST_USERNAME"],
+                password=os.environ["DST_PASSWORD"],
+                tenant=os.environ["DST_TENANT"])
 
-        # 1. Download and validate TIFF
-        tiff_path = Path("/tmp/input.tiff")
-        size = hcp_s3.download(hcp_api_base, src_token, source_bucket, key, tiff_path)
-        hcp_s3.validate_tiff(tiff_path)
-        print(f"Downloaded and validated {key} ({size} bytes)")
+            async with src, dst:
+                # 1. Download and validate TIFF
+                tiff_path = Path("/tmp/input.tiff")
+                size = await src.s3.download(source_bucket, key, tiff_path)
+                validate_tiff(tiff_path)
+                print(f"Downloaded and validated {key} ({size} bytes)")
 
-        # 2. Convert TIFF → JPG and validate output
-        jpg_path = Path("/tmp/output.jpg")
-        img = Image.open(tiff_path)
-        img.convert("RGB").save(jpg_path, "JPEG", quality=85)
-        hcp_s3.validate_jpg(jpg_path)
-        jpg_data = jpg_path.read_bytes()
-        print(f"Converted to JPG ({len(jpg_data)} bytes, {img.size[0]}x{img.size[1]})")
+                # 2. Convert TIFF → JPG and validate output
+                jpg_path = Path("/tmp/output.jpg")
+                img = Image.open(tiff_path)
+                img.convert("RGB").save(jpg_path, "JPEG", quality=85)
+                validate_jpg(jpg_path)
+                print(f"Converted to JPG ({img.size[0]}x{img.size[1]})")
 
-        # 3. Upload to staging and verify the upload
-        filename = key.split("/")[-1].rsplit(".", 1)[0] + ".jpg"
-        staging_key = f"staging/{workflow_name}/{filename}"
-        hcp_s3.upload(hcp_api_base, dst_token, dest_bucket, staging_key, jpg_data)
-        hcp_s3.verify_upload(hcp_api_base, dst_token, dest_bucket, staging_key, len(jpg_data))
-        print(f"Uploaded and verified {staging_key}")
+                # 3. Upload to staging and verify
+                filename = key.split("/")[-1].rsplit(".", 1)[0] + ".jpg"
+                staging_key = f"staging/{workflow_name}/{filename}"
+                await dst.s3.upload(dest_bucket, staging_key, jpg_path)
+                await dst.s3.head(dest_bucket, staging_key)
+                print(f"Uploaded and verified {staging_key}")
+
+        asyncio.run(main())
 
 
-    @script(image=IMAGE, retry_strategy=m.RetryStrategy(limit="2"), volume_mounts=[DST_MOUNT])
-    def verify_and_commit(hcp_api_base: str, dest_bucket: str, workflow_name: str):
+    @script(image=IMAGE, retry_strategy=m.RetryStrategy(limit="2"), env=DST_ENV)
+    def verify_and_commit(dest_bucket: str, workflow_name: str):
         """Commit staged JPGs to published/ prefix."""
-        import hcp_s3
+        import asyncio
+        from rahcp_client import HCPClient
 
-        token = hcp_s3.read_token("/secrets/dest/token")
-        count = hcp_s3.commit_staging(
-            hcp_api_base, token, dest_bucket,
-            staging_prefix=f"staging/{workflow_name}/",
-            dest_prefix="published/",
-        )
-        print(f"Committed {count} JPGs to published/")
+        async def main():
+            async with HCPClient.from_env() as client:
+                count = await client.s3.commit_staging(
+                    dest_bucket,
+                    f"staging/{workflow_name}/",
+                    "published/",
+                )
+                print(f"Committed {count} JPGs to published/")
+
+        asyncio.run(main())
 
 
-    @script(image=IMAGE, volume_mounts=[DST_MOUNT])
-    def cleanup(hcp_api_base: str, dest_bucket: str, workflow_name: str):
+    @script(image=IMAGE, env=DST_ENV)
+    def cleanup(dest_bucket: str, workflow_name: str):
         """Exit handler: delete staging prefix on failure."""
-        import os
-        import hcp_s3
+        import asyncio, os
+        from rahcp_client import HCPClient
 
         status = os.environ.get("ARGO_WORKFLOW_STATUS", "Unknown")
         if status == "Succeeded":
             print("Workflow succeeded — no cleanup needed")
             return
 
-        token = hcp_s3.read_token("/secrets/dest/token")
-        print(f"Workflow {status} — cleaning up staging/{workflow_name}/...")
-        deleted = hcp_s3.cleanup_staging(hcp_api_base, token, dest_bucket, f"staging/{workflow_name}/")
-        print(f"Deleted {deleted} staged objects")
+        async def main():
+            async with HCPClient.from_env() as client:
+                print(f"Workflow {status} — cleaning up staging/{workflow_name}/...")
+                deleted = await client.s3.cleanup_staging(dest_bucket, f"staging/{workflow_name}/")
+                print(f"Deleted {deleted} staged objects")
 
+        asyncio.run(main())
 
-    WF_PARAMS = {"hcp_api_base": "{{workflow.parameters.hcp-api-base}}"}
 
     with Workflow(
         generate_name="hcp-tiff-to-jpg-",
         entrypoint="convert-pipeline",
         active_deadline_seconds=7200,
         on_exit="cleanup",
-        volumes=[SRC_VOL, DST_VOL],
         arguments=[
-            Parameter(name="hcp-api-base", value=HCP_BASE),
             Parameter(name="source-bucket", value="scans"),
             Parameter(name="source-prefix", value="ingest/"),
             Parameter(name="dest-bucket", value="images"),
@@ -1504,7 +1401,6 @@ docker push my-registry/hcp-convert:3.13
             disc = list_tiffs(
                 name="discover",
                 arguments={
-                    **WF_PARAMS,
                     "source_bucket": "{{workflow.parameters.source-bucket}}",
                     "source_prefix": "{{workflow.parameters.source-prefix}}",
                 },
@@ -1513,7 +1409,6 @@ docker push my-registry/hcp-convert:3.13
                 convert_single(
                     name="convert-tiff",
                     arguments={
-                        **WF_PARAMS,
                         "source_bucket": "{{workflow.parameters.source-bucket}}",
                         "dest_bucket": "{{workflow.parameters.dest-bucket}}",
                         "key": "{{item}}",
@@ -1524,7 +1419,6 @@ docker push my-registry/hcp-convert:3.13
             ver = verify_and_commit(
                 name="verify",
                 arguments={
-                    **WF_PARAMS,
                     "dest_bucket": "{{workflow.parameters.dest-bucket}}",
                     "workflow_name": "{{workflow.name}}",
                 },
@@ -1534,7 +1428,6 @@ docker push my-registry/hcp-convert:3.13
         cleanup(
             name="cleanup",
             arguments={
-                **WF_PARAMS,
                 "dest_bucket": "{{workflow.parameters.dest-bucket}}",
                 "workflow_name": "{{workflow.name}}",
             },
@@ -1575,7 +1468,7 @@ The key security and reliability properties:
 3. **3-stage verification** -- every image is validated after download, after conversion, and after upload. Corrupt or truncated files are caught immediately and the pod retries.
 4. **Staged-commit** -- JPGs are written to `staging/{workflow-name}/` in the destination tenant, then committed to `published/` only if all conversions succeed.
 5. **Exit handler cleanup** -- if any conversion pod fails, the exit handler deletes all staged objects from the destination tenant.
-6. **DRY helpers** -- all presigning, transfer, and verification logic lives in `hcp_s3.py`, shared across every step.
+6. **DRY helpers** -- all presigning, transfer, and verification logic is handled by the `rahcp-client` SDK, shared across every step.
 
 ---
 
@@ -1709,50 +1602,66 @@ graph TD
             parameters:
               - name: key
           script:
-            image: my-registry/hcp-convert:3.13
+            image: my-registry/hcp-sdk:3.13
             command: [python]
+            env: &hcp-env
+              - name: HCP_ENDPOINT
+                value: "{{workflow.parameters.hcp-api-base}}"
+              - name: HCP_USERNAME
+                valueFrom:
+                  secretKeyRef: { name: hcp-credentials, key: username }
+              - name: HCP_PASSWORD
+                valueFrom:
+                  secretKeyRef: { name: hcp-credentials, key: password }
+              - name: HCP_TENANT
+                valueFrom:
+                  secretKeyRef: { name: hcp-credentials, key: tenant }
             source: |
-              import hcp_s3, json
+              import asyncio, json
               from pathlib import Path
+              from rahcp_client import HCPClient
 
-              BASE = "{{workflow.parameters.hcp-api-base}}"
-              TOKEN = "{{workflow.parameters.hcp-token}}"
-              BUCKET = "{{workflow.parameters.bucket}}"
-              KEY = "{{inputs.parameters.key}}"
-              WF = "{{workflow.name}}"
+              async def main():
+                  async with HCPClient.from_env() as client:
+                      BUCKET = "{{workflow.parameters.bucket}}"
+                      KEY = "{{inputs.parameters.key}}"
+                      WF = "{{workflow.name}}"
 
-              # Download via presigned URL
-              size = hcp_s3.download(BASE, TOKEN, BUCKET, KEY, Path("/tmp/data"))
+                      # Download via presigned URL
+                      size = await client.s3.download(BUCKET, KEY, Path("/tmp/data"))
 
-              # Process (placeholder — replace with your logic)
-              result = json.dumps({"key": KEY, "size": size, "status": "processed"})
+                      # Process (placeholder — replace with your logic)
+                      result = json.dumps({"key": KEY, "size": size, "status": "processed"})
 
-              # Write to STAGING prefix — not visible to consumers yet
-              staging_key = f"staging/{WF}/{KEY.split('/')[-1]}.result.json"
-              hcp_s3.upload(BASE, TOKEN, BUCKET, staging_key, result.encode())
-              print(f"Staged: {staging_key}")
+                      # Write to STAGING prefix — not visible to consumers yet
+                      staging_key = f"staging/{WF}/{KEY.split('/')[-1]}.result.json"
+                      await client.s3.upload(BUCKET, staging_key, result.encode())
+                      print(f"Staged: {staging_key}")
+
+              asyncio.run(main())
 
         # ── Commit — copy staging → final prefix ─────────────────────
         - name: commit-results
           retryStrategy:
             limit: 2
           script:
-            image: my-registry/hcp-convert:3.13
+            image: my-registry/hcp-sdk:3.13
             command: [python]
+            env: *hcp-env
             source: |
-              import hcp_s3
+              import asyncio
+              from rahcp_client import HCPClient
 
-              BASE = "{{workflow.parameters.hcp-api-base}}"
-              TOKEN = "{{workflow.parameters.hcp-token}}"
-              BUCKET = "{{workflow.parameters.bucket}}"
-              WF = "{{workflow.name}}"
+              async def main():
+                  async with HCPClient.from_env() as client:
+                      count = await client.s3.commit_staging(
+                          "{{workflow.parameters.bucket}}",
+                          "staging/{{workflow.name}}/",
+                          "processed/",
+                      )
+                      print(f"Committed {count} results, staging cleaned up")
 
-              count = hcp_s3.commit_staging(
-                  BASE, TOKEN, BUCKET,
-                  staging_prefix=f"staging/{WF}/",
-                  dest_prefix="processed/",
-              )
-              print(f"Committed {count} results, staging cleaned up")
+              asyncio.run(main())
 
         # ── Exit handler — clean up staging on failure ────────────────
         - name: cleanup
@@ -1799,85 +1708,96 @@ graph TD
     )
 
     HCP_BASE = "http://hcp-api.default.svc:8000/api/v1"
-    CONVERT_IMAGE = "my-registry/hcp-convert:3.13"
+    IMAGE = "my-registry/hcp-sdk:3.13"
 
-    RETRY = m.RetryStrategy(
-        limit="3",
-        backoff=m.Backoff(duration="5s", factor=2),
-    )
+    # Inject credentials from K8s Secret as env vars
+    HCP_ENV = [
+        m.EnvVar(name="HCP_ENDPOINT", value=HCP_BASE),
+        m.EnvVar(name="HCP_USERNAME", value_from=m.EnvVarSource(
+            secret_key_ref=m.SecretKeySelector(name="hcp-credentials", key="username"))),
+        m.EnvVar(name="HCP_PASSWORD", value_from=m.EnvVarSource(
+            secret_key_ref=m.SecretKeySelector(name="hcp-credentials", key="password"))),
+        m.EnvVar(name="HCP_TENANT", value_from=m.EnvVarSource(
+            secret_key_ref=m.SecretKeySelector(name="hcp-credentials", key="tenant"))),
+    ]
+
+    RETRY = m.RetryStrategy(limit="3", backoff=m.Backoff(duration="5s", factor=2))
     RETRY_POD = m.RetryStrategy(
-        limit="2",
-        retry_policy="Always",
+        limit="2", retry_policy="Always",
         backoff=m.Backoff(duration="10s", factor=2, max_duration="2m"),
     )
 
 
-    @script(image=CONVERT_IMAGE, retry_strategy=RETRY)
-    def list_objects(hcp_api_base: str, hcp_token: str, bucket: str, prefix: str):
+    @script(image=IMAGE, retry_strategy=RETRY, env=HCP_ENV)
+    def list_objects(bucket: str, prefix: str):
         """List objects and output keys as JSON array."""
-        import hcp_s3, json
+        import asyncio, json
         from pathlib import Path
+        from rahcp_client import HCPClient
 
-        objs = hcp_s3.list_objects(hcp_api_base, hcp_token, bucket, prefix, max_keys=100)
-        keys = [obj["key"] for obj in objs]
-        print(f"Found {len(keys)} objects")
-        Path("/tmp/keys.json").write_text(json.dumps(keys))
+        async def main():
+            async with HCPClient.from_env() as client:
+                result = await client.s3.list_objects(bucket, prefix=prefix, max_keys=100)
+                keys = [obj["key"] for obj in result["objects"]]
+                print(f"Found {len(keys)} objects")
+                Path("/tmp/keys.json").write_text(json.dumps(keys))
+
+        asyncio.run(main())
 
 
-    @script(image=CONVERT_IMAGE, retry_strategy=RETRY_POD, active_deadline_seconds=300)
-    def process_single(
-        hcp_api_base: str, hcp_token: str, bucket: str, key: str, workflow_name: str,
-    ):
+    @script(image=IMAGE, retry_strategy=RETRY_POD, active_deadline_seconds=300, env=HCP_ENV)
+    def process_single(bucket: str, key: str, workflow_name: str):
         """Download, process, and write result to staging prefix."""
-        import hcp_s3, json
+        import asyncio, json
         from pathlib import Path
+        from rahcp_client import HCPClient
 
-        # Download via presigned URL
-        size = hcp_s3.download(hcp_api_base, hcp_token, bucket, key, Path("/tmp/data"))
+        async def main():
+            async with HCPClient.from_env() as client:
+                size = await client.s3.download(bucket, key, Path("/tmp/data"))
+                result = json.dumps({"key": key, "size": size, "status": "processed"})
+                staging_key = f"staging/{workflow_name}/{key.split('/')[-1]}.result.json"
+                await client.s3.upload(bucket, staging_key, result.encode())
+                print(f"Staged: {staging_key}")
 
-        # Process (placeholder — replace with your logic)
-        result = json.dumps({"key": key, "size": size, "status": "processed"})
-
-        # Write to staging prefix (not visible to consumers)
-        staging_key = f"staging/{workflow_name}/{key.split('/')[-1]}.result.json"
-        hcp_s3.upload(hcp_api_base, hcp_token, bucket, staging_key, result.encode())
-        print(f"Staged: {staging_key}")
+        asyncio.run(main())
 
 
-    @script(image=CONVERT_IMAGE, retry_strategy=m.RetryStrategy(limit="2"))
-    def commit_results(hcp_api_base: str, hcp_token: str, bucket: str, workflow_name: str):
+    @script(image=IMAGE, retry_strategy=m.RetryStrategy(limit="2"), env=HCP_ENV)
+    def commit_results(bucket: str, workflow_name: str):
         """Copy staging → processed, then delete staging."""
-        import hcp_s3
+        import asyncio
+        from rahcp_client import HCPClient
 
-        count = hcp_s3.commit_staging(
-            hcp_api_base, hcp_token, bucket,
-            staging_prefix=f"staging/{workflow_name}/",
-            dest_prefix="processed/",
-        )
-        print(f"Committed {count} results, staging cleaned up")
+        async def main():
+            async with HCPClient.from_env() as client:
+                count = await client.s3.commit_staging(
+                    bucket, f"staging/{workflow_name}/", "processed/",
+                )
+                print(f"Committed {count} results, staging cleaned up")
+
+        asyncio.run(main())
 
 
-    @script(image=CONVERT_IMAGE)
-    def cleanup(hcp_api_base: str, hcp_token: str, bucket: str, workflow_name: str):
+    @script(image=IMAGE, env=HCP_ENV)
+    def cleanup(bucket: str, workflow_name: str):
         """Exit handler: delete staging prefix on failure."""
-        import hcp_s3, os
+        import asyncio, os
+        from rahcp_client import HCPClient
 
         status = os.environ.get("ARGO_WORKFLOW_STATUS", "Unknown")
-        if status != "Succeeded":
-            print(f"Workflow {status} — cleaning up staging/{workflow_name}/...")
-            deleted = hcp_s3.cleanup_staging(
-                hcp_api_base, hcp_token, bucket, f"staging/{workflow_name}/",
-            )
-            print(f"Deleted {deleted} staged objects")
-        else:
+        if status == "Succeeded":
             print("Workflow succeeded — no cleanup needed")
+            return
 
+        async def main():
+            async with HCPClient.from_env() as client:
+                print(f"Workflow {status} — cleaning up staging/{workflow_name}/...")
+                deleted = await client.s3.cleanup_staging(bucket, f"staging/{workflow_name}/")
+                print(f"Deleted {deleted} staged objects")
 
-    WF_PARAMS = {
-        "hcp_api_base": "{{workflow.parameters.hcp-api-base}}",
-        "hcp_token": "{{workflow.parameters.hcp-token}}",
-        "bucket": "{{workflow.parameters.bucket}}",
-    }
+        asyncio.run(main())
+
 
     with Workflow(
         generate_name="hcp-batch-safe-",
@@ -1886,7 +1806,6 @@ graph TD
         on_exit="cleanup",
         arguments=[
             Parameter(name="hcp-api-base", value=HCP_BASE),
-            Parameter(name="hcp-token", value="<your-token>"),
             Parameter(name="bucket", value="datasets"),
             Parameter(name="prefix", value="incoming/"),
         ],
@@ -1894,13 +1813,16 @@ graph TD
         with DAG(name="batch-pipeline"):
             disc = list_objects(
                 name="discover",
-                arguments={**WF_PARAMS, "prefix": "{{workflow.parameters.prefix}}"},
+                arguments={
+                    "bucket": "{{workflow.parameters.bucket}}",
+                    "prefix": "{{workflow.parameters.prefix}}",
+                },
             )
             with Steps(name="fan-out") as fan:
                 process_single(
                     name="process-object",
                     arguments={
-                        **WF_PARAMS,
+                        "bucket": "{{workflow.parameters.bucket}}",
                         "key": "{{item}}",
                         "workflow_name": "{{workflow.name}}",
                     },
@@ -1908,14 +1830,19 @@ graph TD
                 )
             com = commit_results(
                 name="commit",
-                arguments={**WF_PARAMS, "workflow_name": "{{workflow.name}}"},
+                arguments={
+                    "bucket": "{{workflow.parameters.bucket}}",
+                    "workflow_name": "{{workflow.name}}",
+                },
             )
             disc >> fan >> com
 
-        # Exit handler (registered by name)
         cleanup(
             name="cleanup",
-            arguments={**WF_PARAMS, "workflow_name": "{{workflow.name}}"},
+            arguments={
+                "bucket": "{{workflow.parameters.bucket}}",
+                "workflow_name": "{{workflow.name}}",
+            },
         )
 
     w.create()
@@ -1924,8 +1851,8 @@ graph TD
 The key patterns in this workflow:
 
 1. **Staged writes** -- fan-out pods write to `staging/{{workflow.name}}/` instead of the final `processed/` prefix. Downstream consumers never see partial results.
-2. **Commit step** -- only runs if ALL fan-out pods succeed. Copies staging to final, then deletes staging.
-3. **Exit handler (`onExit: cleanup`)** -- guaranteed to run on failure. Deletes the staging prefix so no orphaned objects remain.
+2. **Commit step** -- only runs if ALL fan-out pods succeed. Uses `client.s3.commit_staging()` to copy staging to final prefix, then deletes staging.
+3. **Exit handler (`onExit: cleanup`)** -- guaranteed to run on failure. Uses `client.s3.cleanup_staging()` to delete the staging prefix.
 4. **Per-pod retries** -- `retryPolicy: Always` retries on OOM kills and node evictions (not just script errors). `activeDeadlineSeconds: 300` prevents hung pods.
 5. **Workflow timeout** -- `activeDeadlineSeconds: 3600` ensures the entire workflow fails rather than running forever.
 
@@ -1933,5 +1860,6 @@ The key patterns in this workflow:
 
 ## Related pages
 
+- [Python SDK](../sdk/index.md) -- `rahcp-client` async client with automatic retries, presigned URLs, and multipart uploads.
 - [API Workflows](workflows.md) -- curl and Python examples for authentication, S3 operations, tenant/namespace management, and more.
 - [Error Handling](error-handling.md) -- Retries, exit handlers, ACID patterns, and Argo-native retry/timeout configuration.

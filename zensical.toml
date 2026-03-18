@@ -50,6 +50,9 @@ nav = [
     { "Group Account" = "api/reference/group-account.md" },
     { "Content Class" = "api/reference/content-class.md" },
   ]},
+  { "Python SDK" = [
+    { "Overview" = "sdk/index.md" },
+  ]},
   { "Components" = [
     { "UI Components" = "components/index.md" },
   ]},
