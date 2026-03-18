@@ -26,6 +26,7 @@ def make_client(ctx: typer.Context) -> HCPClient:
         password=ctx.obj.get("password", ""),
         tenant=ctx.obj.get("tenant"),
         verify_ssl=ctx.obj.get("verify_ssl", True),
+        timeout=ctx.obj.get("timeout", 30.0),
         multipart_threshold=ctx.obj.get("multipart_threshold", 64 * 1024 * 1024),
         multipart_chunk=ctx.obj.get("multipart_chunk", 16 * 1024 * 1024),
     )

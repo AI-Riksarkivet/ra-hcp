@@ -110,6 +110,7 @@ def main(
     ctx.obj["password"] = password or p.password
     ctx.obj["tenant"] = tenant_name or p.tenant
     ctx.obj["verify_ssl"] = p.verify_ssl
+    ctx.obj["timeout"] = p.timeout
     ctx.obj["multipart_threshold"] = p.multipart_threshold
     ctx.obj["multipart_chunk"] = p.multipart_chunk
     ctx.obj["multipart_concurrency"] = p.multipart_concurrency

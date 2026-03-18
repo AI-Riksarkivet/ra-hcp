@@ -474,6 +474,7 @@ profiles:
     password: secret
     tenant: dev-ai
     verify_ssl: false       # disable for local dev
+    timeout: 60             # seconds per request (default 30)
     log_level: info         # debug | info | warning | error
     multipart_threshold: 67108864   # 64 MB (trigger multipart above this)
     multipart_chunk: 16777216       # 16 MB per part
