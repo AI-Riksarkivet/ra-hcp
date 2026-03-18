@@ -367,6 +367,10 @@ class ListObjectVersionsResponse(BaseModel):
 class PresignedMultipartRequest(BaseModel):
     """Request body for presigned multipart upload."""
 
+    upload_id: str | None = Field(
+        None,
+        description="Existing upload ID from initiate. If omitted, a new multipart upload is created.",
+    )
     file_size: int = Field(..., gt=0, description="Total file size in bytes")
     part_size: int = Field(
         25 * 1024 * 1024,

@@ -119,10 +119,15 @@ async def presign_multipart_upload(
             detail=f"Too many parts ({total_parts}). Increase part_size or reduce file_size. S3 maximum is 10,000 parts.",
         )
 
-    result = await run_storage(
-        s3.create_multipart_upload(bucket, key), f"object '{key}'"
-    )
-    upload_id = result["UploadId"]
+    if body.upload_id:
+        # Reuse existing upload from a prior initiate call
+        upload_id = body.upload_id
+    else:
+        # Create a new multipart upload (one-step flow)
+        result = await run_storage(
+            s3.create_multipart_upload(bucket, key), f"object '{key}'"
+        )
+        upload_id = result["UploadId"]
 
     urls: list[PresignedPartUrl] = []
     for i in range(1, total_parts + 1):
