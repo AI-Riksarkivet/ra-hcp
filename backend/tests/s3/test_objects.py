@@ -215,13 +215,19 @@ async def test_download_objects_bulk(
     assert resp.status_code == 202
     task_id = resp.json()["task_id"]
 
-    # Allow the background task to complete
-    await asyncio.sleep(0.1)
+    # Poll until the background task completes (avoids flaky sleep)
+    for _ in range(50):
+        resp = await client.get(
+            f"/api/v1/buckets/my-bucket/objects/download/{task_id}",
+            headers=auth_headers,
+        )
+        if (
+            resp.status_code == 200
+            and resp.headers.get("content-type") == "application/zip"
+        ):
+            break
+        await asyncio.sleep(0.02)
 
-    resp = await client.get(
-        f"/api/v1/buckets/my-bucket/objects/download/{task_id}",
-        headers=auth_headers,
-    )
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/zip"
 
@@ -264,12 +270,19 @@ async def test_download_objects_bulk_skips_missing(
     assert resp.status_code == 202
     task_id = resp.json()["task_id"]
 
-    await asyncio.sleep(0.1)
+    # Poll until the background task completes
+    for _ in range(50):
+        resp = await client.get(
+            f"/api/v1/buckets/my-bucket/objects/download/{task_id}",
+            headers=auth_headers,
+        )
+        if (
+            resp.status_code == 200
+            and resp.headers.get("content-type") == "application/zip"
+        ):
+            break
+        await asyncio.sleep(0.02)
 
-    resp = await client.get(
-        f"/api/v1/buckets/my-bucket/objects/download/{task_id}",
-        headers=auth_headers,
-    )
     assert resp.status_code == 200
     zf = zipfile.ZipFile(io.BytesIO(resp.content))
     assert zf.namelist() == ["good.txt"]
