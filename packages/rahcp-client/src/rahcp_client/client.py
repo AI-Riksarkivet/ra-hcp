@@ -88,6 +88,7 @@ class HCPClient:
         self.username = username
         self.password = password
         self.tenant = tenant
+        self.timeout = timeout
         self.max_retries = max_retries
         self.retry_base_delay = retry_base_delay
         self.multipart_threshold = multipart_threshold
