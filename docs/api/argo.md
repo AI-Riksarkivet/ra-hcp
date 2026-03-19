@@ -445,6 +445,14 @@ graph LR
     w.create()
     ```
 
+=== "rahcp SDK (YAML)"
+
+    Standalone runnable YAML — uses the SDK in script blocks with credentials from a K8s Secret. No Hera dependency.
+
+    ```yaml
+    --8<-- "examples/argo-etl-pipeline.yaml:workflow"
+    ```
+
 ---
 
 ## Presigned URL pipeline
@@ -1004,6 +1012,14 @@ graph TD
     w.create()
     ```
 
+=== "rahcp SDK (YAML)"
+
+    Standalone runnable YAML — uses the SDK in script blocks with credentials from a K8s Secret. No Hera dependency.
+
+    ```yaml
+    --8<-- "examples/argo-batch-fanout.yaml:workflow"
+    ```
+
 !!! tip "Which approach to use?"
     - **S3 artifacts** (YAML or Hera DAG): Best when Argo has direct network access to HCP S3. Argo handles download/upload automatically. Requires the S3 credentials Secret.
     - **Presigned URLs** (YAML or Hera Steps): Best when pods cannot reach HCP directly or you want to avoid distributing S3 credentials. The HCP API generates short-lived URLs that anyone can use.
@@ -1519,6 +1535,14 @@ kubectl create secret generic hcp-dest-creds \
     w.create()
     ```
 
+=== "rahcp SDK (YAML)"
+
+    Standalone runnable YAML — uses the SDK in script blocks with dual-tenant credentials from K8s Secrets. No Hera dependency.
+
+    ```yaml
+    --8<-- "examples/argo-tiff-to-jpg.yaml:workflow"
+    ```
+
 ### Verification pipeline
 
 Each image goes through a 3-stage verification before it reaches the `published/` prefix:
@@ -1938,6 +1962,26 @@ The key patterns in this workflow:
 3. **Exit handler (`onExit: cleanup`)** -- guaranteed to run on failure. Uses `client.s3.cleanup_staging()` to delete the staging prefix.
 4. **Per-pod retries** -- `retryPolicy: Always` retries on OOM kills and node evictions (not just script errors). `activeDeadlineSeconds: 300` prevents hung pods.
 5. **Workflow timeout** -- `activeDeadlineSeconds: 3600` ensures the entire workflow fails rather than running forever.
+
+---
+
+## Runnable examples
+
+The `examples/` directory contains standalone, runnable versions of the workflows on this page. These files are the **single source of truth** — the "rahcp SDK (YAML)" tabs above include directly from them via snippet markers, so docs and examples can never drift.
+
+| File | Pattern |
+|------|---------|
+| [`examples/argo-etl-pipeline.yaml`](https://github.com/riksarkivet/ra-hcp/blob/main/examples/argo-etl-pipeline.yaml) | ETL DAG with SDK script blocks |
+| [`examples/argo-batch-fanout.yaml`](https://github.com/riksarkivet/ra-hcp/blob/main/examples/argo-batch-fanout.yaml) | Fan-out over HCP objects with SDK |
+| [`examples/argo-tiff-to-jpg.yaml`](https://github.com/riksarkivet/ra-hcp/blob/main/examples/argo-tiff-to-jpg.yaml) | Cross-tenant TIFF→JPG with staging + exit handler |
+
+```bash
+# Submit directly
+argo submit examples/argo-etl-pipeline.yaml
+
+# Lint without submitting
+argo lint examples/argo-batch-fanout.yaml
+```
 
 ---
 

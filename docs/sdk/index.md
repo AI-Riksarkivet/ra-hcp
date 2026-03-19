@@ -267,6 +267,100 @@ count = await client.s3.commit_staging("bucket", "staging/batch-1/", "final/batc
 count = await client.s3.cleanup_staging("bucket", "staging/batch-1/")
 ```
 
+??? example "Full runnable example — staging_commit.py"
+
+    ```python
+    --8<-- "examples/staging_commit.py:staging-commit"
+    ```
+
+### Bulk transfers (SDK)
+
+The `bulk_upload` and `bulk_download` functions provide the same producer-consumer pipeline used by the CLI, available for programmatic use:
+
+```python
+import asyncio
+from pathlib import Path
+from rahcp_client import (
+    HCPClient,
+    TransferTracker,
+    BulkUploadConfig,
+    BulkDownloadConfig,
+    bulk_upload,
+    bulk_download,
+)
+
+async def main():
+    async with HCPClient.from_env() as client:
+        tracker = TransferTracker(Path(".upload-tracker.db"))
+
+        stats = await bulk_upload(BulkUploadConfig(
+            client=client,
+            bucket="images-batch",
+            source_dir=Path("/data/scans"),
+            tracker=tracker,
+            prefix="2025/",
+            workers=20,
+            on_progress=lambda s: print(f"{s.done} files, {s.mb_per_sec:.1f} MB/s"),
+            on_error=lambda key, exc: print(f"FAILED: {key} — {exc}"),
+        ))
+
+        print(f"Done: {stats.ok} uploaded, {stats.skipped} skipped, {stats.errors} errors")
+        print(f"Throughput: {stats.mb_per_sec:.1f} MB/s over {stats.elapsed:.0f}s")
+        tracker.close()
+
+asyncio.run(main())
+```
+
+#### BulkUploadConfig
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `client` | `HCPClient` | required | Authenticated client instance |
+| `bucket` | `str` | required | Target S3 bucket |
+| `source_dir` | `Path` | required | Local directory to upload |
+| `tracker` | `TransferTracker` | required | SQLite progress tracker |
+| `prefix` | `str` | `""` | Key prefix prepended to all keys |
+| `workers` | `int` | `10` | Number of concurrent upload workers |
+| `queue_depth` | `int` | `8` | Queue size multiplier (queue = workers × depth) |
+| `skip_existing` | `bool` | `True` | Skip files already on remote with matching size |
+| `retry_errors` | `bool` | `False` | Only process files marked as error in tracker |
+| `include` | `list[str]` | `[]` | Glob patterns — only matching filenames are transferred |
+| `exclude` | `list[str]` | `[]` | Glob patterns — matching filenames are skipped |
+| `verify_upload` | `bool` | `False` | HEAD check after each upload to verify size matches |
+| `on_progress` | callback | `None` | Called periodically with `TransferStats` |
+| `on_error` | callback | `None` | Called on each file failure with `(key, exception)` |
+| `progress_interval` | `float` | `5.0` | Minimum seconds between progress callbacks |
+
+#### BulkDownloadConfig
+
+Same fields as upload, except `source_dir` is replaced by `dest_dir: Path`, `verify_upload` becomes `verify_download`, and there is no `skip_existing` (downloads always skip files with matching size on disk).
+
+#### TransferTracker
+
+SQLModel-backed SQLite database for tracking transfer state:
+
+```python
+from rahcp_client import TransferTracker, TransferStatus
+
+tracker = TransferTracker(Path("my-job.db"), flush_every=200)
+
+# Mark files
+tracker.mark("folder/file.jpg", 12345, TransferStatus.done)
+tracker.mark("folder/bad.jpg", 0, TransferStatus.error, "SSL timeout")
+
+# Query state
+done = tracker.done_keys()           # set[str] — instant skip lookups
+errors = tracker.error_entries()     # list[(key, size)] — for retry
+summary = tracker.summary()          # {"pending": 0, "done": 500, "error": 3}
+
+# Lifecycle
+tracker.flush()   # write buffered marks to DB
+tracker.commit()  # alias for flush
+tracker.close()   # flush + release resources
+```
+
+Marks are buffered in memory and flushed to SQLite every `flush_every` entries (default 200) or on explicit `flush()` / `close()`. The database uses WAL mode for safe concurrent access.
+
 ### MAPI operations
 
 `client.mapi` returns a `MapiOps` instance for namespace administration:
@@ -476,9 +570,18 @@ profiles:
     verify_ssl: false       # disable for local dev
     timeout: 60             # seconds per request (default 30)
     log_level: info         # debug | info | warning | error
+
+    # Multipart upload thresholds
     multipart_threshold: 104857600  # 100 MB (trigger multipart above this)
     multipart_chunk: 67108864       # 64 MB per part
     multipart_concurrency: 6       # parallel part uploads
+
+    # Bulk transfer defaults (upload-all / download-all)
+    bulk_workers: 20                # concurrent transfers
+    bulk_progress_interval: 5.0     # seconds between progress reports
+    bulk_queue_depth: 8             # queue size = workers × this
+    bulk_tracker_flush_every: 200   # tracker DB writes buffered per flush
+    bulk_tracker_dir: ""            # tracker DB directory (default: ~/.rahcp/)
 
   prod:
     endpoint: https://hcp-api.example.com/api/v1
@@ -487,6 +590,7 @@ profiles:
     tenant: prod-archive
     verify_ssl: true        # always verify in production
     log_level: warning      # quiet in production
+    bulk_workers: 30        # more workers for production throughput
     otel_endpoint: https://otlp-gateway.example.com/otlp
     otel_protocol: http/protobuf   # or grpc
     otel_service_name: rahcp-cli
@@ -520,9 +624,9 @@ profiles:
 |---------|-------------|
 | `ls [BUCKET]` | List buckets (no args) or objects in a bucket |
 | `upload BUCKET KEY FILE` | Upload single file (auto multipart for large files) |
-| `upload-all BUCKET DIR` | Upload entire local directory to bucket |
+| `upload-all BUCKET DIR` | Upload directory with tracked resume and parallel workers |
 | `download BUCKET KEY` | Download single object (with `--output` / `-o`) |
-| `download-all BUCKET` | Download all objects to local directory |
+| `download-all BUCKET` | Download bucket with tracked resume and parallel workers |
 | `rm BUCKET KEY [KEY ...]` | Delete one or more objects |
 | `presign BUCKET KEY` | Generate presigned download URL (with `--expires`) |
 | `verify BUCKET DIR` | Verify all local files exist in bucket with matching sizes |
@@ -568,13 +672,18 @@ When results are truncated, the CLI prints a `More results available` hint with 
 
 ##### `rahcp s3 download-all` -- bulk download
 
-Download all objects from a bucket (or prefix) to a local directory with concurrent transfers:
+Download all objects from a bucket (or prefix) to a local directory with concurrent transfers. Uses a producer-consumer pipeline with SQLite-backed progress tracking for crash-safe resume.
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--prefix` | `-p` | `""` | Only download keys under this prefix |
 | `--output` | `-o` | `.` | Local destination directory |
 | `--workers` | `-w` | `10` | Number of concurrent downloads |
+| `--include` / `-I` | -- | all files | Only download keys matching these glob patterns (repeatable) |
+| `--exclude` / `-E` | -- | none | Skip keys matching these glob patterns (repeatable) |
+| `--verify` | -- | off | Verify each download by checking file size after transfer |
+| `--retry-errors` | -- | off | Only retry files that failed in a previous run |
+| `--tracker-db` | -- | `~/.rahcp/.download-tracker.db` | Path to SQLite tracker database |
 
 **Examples:**
 
@@ -587,23 +696,37 @@ rahcp s3 download-all my-bucket --prefix data/scans/ -o ./local-scans
 
 # Use 20 concurrent downloads
 rahcp s3 download-all my-bucket -w 20
+
+# Retry only files that failed last time
+rahcp s3 download-all my-bucket --retry-errors
+
+# Only download JPEGs
+rahcp s3 download-all my-bucket --include '*.jpg' --include '*.jpeg'
+
+# Skip temp files
+rahcp s3 download-all my-bucket --exclude '*.tmp' --exclude '*.log'
+
+# Verify file integrity after each download
+rahcp s3 download-all my-bucket --verify
+
+# Use a custom tracker location
+rahcp s3 download-all my-bucket --tracker-db /tmp/my-download.db
 ```
-
-The command automatically:
-
-- Paginates through all objects (handles continuation tokens)
-- Skips files that already exist locally with matching size
-- Reports progress: downloaded, skipped, and error counts
 
 ##### `rahcp s3 upload-all` -- bulk upload
 
-Upload an entire local directory to a bucket, preserving the directory structure as S3 key prefixes:
+Upload an entire local directory to a bucket, preserving the directory structure as S3 key prefixes. Uses a producer-consumer pipeline with SQLite-backed progress tracking for crash-safe resume.
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--prefix` | `-p` | `""` | Key prefix to prepend to all uploaded keys |
 | `--workers` | `-w` | `10` | Number of concurrent uploads |
 | `--skip-existing` / `--overwrite` | -- | `--skip-existing` | Skip files that already exist with matching size (idempotent) |
+| `--include` / `-I` | -- | all files | Only upload files matching these glob patterns (repeatable) |
+| `--exclude` / `-E` | -- | none | Skip files matching these glob patterns (repeatable) |
+| `--verify` | -- | off | Verify each upload by checking remote size after transfer |
+| `--retry-errors` | -- | off | Only retry files that failed in a previous run |
+| `--tracker-db` | -- | `~/.rahcp/.upload-tracker.db` | Path to SQLite tracker database |
 
 **Examples:**
 
@@ -620,6 +743,18 @@ rahcp s3 upload-all my-bucket ./scans --overwrite
 # Use 20 concurrent uploads
 rahcp s3 upload-all my-bucket ./archive -w 20
 
+# Only upload JPEGs (skip .txt, .tmp, etc.)
+rahcp s3 upload-all my-bucket ./scans --include '*.jpg'
+
+# Upload everything except temp files
+rahcp s3 upload-all my-bucket ./data --exclude '*.tmp' --exclude '*.log'
+
+# Verify integrity after each upload (slower but safer)
+rahcp s3 upload-all my-bucket ./critical-data --verify
+
+# Retry only files that failed last time
+rahcp s3 upload-all my-bucket ./archive --retry-errors
+
 # After upload, verify everything made it
 rahcp s3 verify my-bucket ./scans --prefix data/2025/
 ```
@@ -634,14 +769,184 @@ The command recursively finds all files in the source directory and uploads them
 ./scans/batch-2/image-003.tif  →  s3://my-bucket/data/batch-2/image-003.tif
 ```
 
-##### `rahcp s3 verify` -- post-upload verification
+##### Bulk transfer tracking
 
-Compare a local directory against the bucket to confirm all files were uploaded correctly:
+Both `upload-all` and `download-all` track progress in a local SQLite database (`.upload-tracker.db` / `.download-tracker.db` in the current working directory by default). This enables:
+
+- **Instant resume** -- on re-run, completed files are skipped without any network calls
+- **Selective retry** -- `--retry-errors` retries only files that failed previously
+- **Progress visibility** -- periodic stats with files/s and MB/s throughput
+
+The tracker database persists across runs. To start fresh, delete the `.db` file.
+
+Tracker location resolution: `--tracker-db` flag > `bulk_tracker_dir` in profile > `~/.rahcp/`.
+
+```mermaid
+flowchart TD
+    START["rahcp s3 upload-all"] --> TRACKER["Open .upload-tracker.db"]
+    TRACKER --> SCAN["Scan local files<br/>(background thread)"]
+    SCAN --> QUEUE["asyncio.Queue<br/>(bounded)"]
+    QUEUE --> W1["Worker 1"]
+    QUEUE --> W2["Worker 2"]
+    QUEUE --> WN["Worker N"]
+    W1 --> CHECK{In tracker<br/>as done?}
+    CHECK -->|yes| SKIP["Skip (no network)"]
+    CHECK -->|no| UPLOAD["Upload via<br/>presigned URL"]
+    UPLOAD -->|success| MARK_DONE["Mark done in DB"]
+    UPLOAD -->|failure| MARK_ERR["Mark error in DB"]
+    W2 --> CHECK
+    WN --> CHECK
+
+    style SKIP fill:#f8f9fa,stroke:#dee2e6
+    style MARK_DONE fill:#d4edda,stroke:#28a745
+    style MARK_ERR fill:#f8d7da,stroke:#dc3545
+```
+
+##### Performance tuning
+
+Bulk transfer throughput depends on network bandwidth, HCP endpoint capacity, file sizes, and local I/O. The default settings are conservative — here's how to tune them for your hardware.
+
+**Key settings:**
+
+| Setting | config.yaml | CLI | Default | What it controls |
+|---------|------------|-----|---------|-----------------|
+| `bulk_workers` | Yes | `--workers` | 10 | Concurrent upload/download coroutines |
+| `bulk_queue_depth` | Yes | — | 8 | Queue size = workers × depth. Higher = more files buffered ahead |
+| `bulk_progress_interval` | Yes | — | 5.0 | Seconds between progress reports |
+| `bulk_tracker_flush_every` | Yes | — | 200 | Marks buffered before writing to SQLite |
+| `bulk_tracker_dir` | Yes | `--tracker-db` | `~/.rahcp/` | Where the tracker DB lives |
+| `multipart_threshold` | Yes | — | 100 MB | Files above this use multipart upload |
+| `multipart_chunk` | Yes | — | 64 MB | Part size for multipart uploads |
+| `multipart_concurrency` | Yes | — | 6 | Parallel parts per multipart upload |
+| `verify_ssl` | Yes | — | true | Set `false` for self-signed HCP certs |
+
+**Tuning by scenario:**
+
+=== "Many small files (< 5 MB each)"
+
+    The bottleneck is request overhead — each file needs a presigned URL request + a PUT. Increase workers aggressively:
+
+    ```yaml
+    bulk_workers: 40        # more concurrent requests
+    bulk_queue_depth: 12    # keep workers fed
+    bulk_tracker_flush_every: 500  # less frequent DB writes
+    ```
+
+    Expected: 30-60 files/s depending on network latency to HCP.
+
+=== "Fewer large files (> 100 MB each)"
+
+    The bottleneck is bandwidth. Workers don't help much — tune multipart instead:
+
+    ```yaml
+    bulk_workers: 10        # fewer concurrent transfers
+    multipart_threshold: 52428800   # 50 MB — trigger multipart sooner
+    multipart_chunk: 33554432       # 32 MB parts — more parallelism per file
+    multipart_concurrency: 10       # more parallel parts
+    ```
+
+=== "Mixed sizes (archive directories)"
+
+    Balance between request concurrency and bandwidth:
+
+    ```yaml
+    bulk_workers: 20
+    bulk_queue_depth: 8
+    multipart_concurrency: 6
+    ```
+
+=== "Slow or high-latency network"
+
+    Reduce workers to avoid overwhelming the connection, increase timeouts:
+
+    ```yaml
+    bulk_workers: 5
+    timeout: 120
+    verify_ssl: false       # if SSL handshake adds latency
+    ```
+
+=== "Fast datacenter network (> 1 Gbps)"
+
+    Push workers high and reduce overhead:
+
+    ```yaml
+    bulk_workers: 60
+    bulk_queue_depth: 16
+    bulk_tracker_flush_every: 1000
+    ```
+
+**How to diagnose bottlenecks:**
+
+| Symptom | Likely bottleneck | Fix |
+|---------|------------------|-----|
+| files/s increases with more workers | Worker-bound | Increase `bulk_workers` |
+| files/s plateaus despite more workers | Network or HCP-bound | Don't increase workers further |
+| MB/s is high but files/s is low | Large files | Normal — fewer files but more bytes per file |
+| MB/s is low and CPU is low | Network latency | Increase `bulk_workers` to overlap round-trips |
+| High memory usage (>10 GB) | Large file list in memory | Normal for millions of files — `done_keys` set + file list |
+| Errors appearing | SSL, timeout, or HCP rate limit | Check `verify_ssl`, increase `timeout`, reduce workers |
+
+**Monitoring a running transfer:**
 
 ```bash
+# Reattach to the tmux session
+tmux attach -t upload
+
+# Check tracker DB from another terminal
+uv run python -c "
+from rahcp_client import TransferTracker
+from pathlib import Path
+t = TransferTracker(Path.home() / '.rahcp/.upload-tracker.db')
+print(t.summary())
+t.close()
+"
+
+# Verify what's on S3 so far
+rahcp s3 ls my-bucket -n 5
+```
+
+**Running long transfers safely:**
+
+Always run bulk transfers inside `tmux` or `screen` so they survive SSH disconnects:
+
+```bash
+tmux new -s upload
+rahcp s3 upload-all my-bucket ./data --workers 20
+# Ctrl+B, D to detach — reattach with: tmux attach -t upload
+```
+
+If the process is interrupted (Ctrl+C, crash, reboot), re-run the same command. The tracker skips all completed files instantly — no re-upload, no HEAD requests.
+
+##### Integrity verification
+
+There are two ways to verify transfers. Choose based on your needs:
+
+**Option 1: `--verify` flag (inline, per-file)**
+
+Checks each file immediately after transfer. Adds one HEAD request per upload or one size check per download.
+
+```bash
+rahcp s3 upload-all my-bucket ./critical-data --verify
+rahcp s3 download-all my-bucket --verify
+```
+
+**Cost:** 50% more API calls on upload (presign + PUT + HEAD per file instead of presign + PUT). On a 1.9M file upload at 40 files/s, this drops throughput to ~25-30 files/s and adds ~5-7 hours. Downloads are cheaper — the size check is local (no extra API call).
+
+**When to use:** Mission-critical data where a single corrupt file is unacceptable and you need immediate detection.
+
+**Option 2: `rahcp s3 verify` (post-transfer, batch)**
+
+Runs a single pass after the transfer is complete. Lists all remote objects and compares sizes against local files.
+
+```bash
+# After upload finishes
 rahcp s3 verify my-bucket ./local-scans
 rahcp s3 verify my-bucket ./scans --prefix data/2025/
 ```
+
+**Cost:** One paginated listing (1 request per 1000 objects) + local file walk. For 1.9M files, that's ~1,900 API calls total vs ~1.9M HEAD calls with `--verify`.
+
+**When to use:** Most transfers. Run once at the end — if anything is missing or wrong, use `--retry-errors` to fix it.
 
 Output:
 ```
@@ -656,13 +961,16 @@ Verification: 603 local files, 601 remote objects
 
 Exits with code 1 if any files are missing or have size mismatches, making it usable in scripts and CI.
 
+**Recommendation:** For large transfers (>10K files), use `verify` after the transfer. For small critical batches (<1K files), use `--verify` inline.
+
 ##### Bulk transfer overview
 
 ```mermaid
 flowchart LR
-    subgraph CLI["rahcp CLI"]
+    subgraph CLI["rahcp CLI / SDK"]
         DA["download-all<br/><small>s3 → local</small>"]
         UA["upload-all<br/><small>local → s3</small>"]
+        DB[("SQLite<br/>tracker")]
     end
 
     subgraph Local["Local Filesystem"]
@@ -673,8 +981,10 @@ flowchart LR
         BKT[("s3://bucket/<br/>prefix/<br/>...")]
     end
 
-    BKT -->|"concurrent GET<br/>(presigned URLs)"| DA --> DIR
-    DIR -->|"concurrent PUT<br/>(presigned URLs)"| UA --> BKT
+    BKT -->|"N concurrent GET<br/>(presigned URLs)"| DA --> DIR
+    DIR -->|"N concurrent PUT<br/>(presigned URLs)"| UA --> BKT
+    DA -.->|"track state"| DB
+    UA -.->|"track state"| DB
 ```
 
 #### `rahcp ns`
