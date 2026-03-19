@@ -681,6 +681,7 @@ Download all objects from a bucket (or prefix) to a local directory with concurr
 | `--workers` | `-w` | `10` | Number of concurrent downloads |
 | `--include` / `-I` | -- | all files | Only download keys matching these glob patterns (repeatable) |
 | `--exclude` / `-E` | -- | none | Skip keys matching these glob patterns (repeatable) |
+| `--validate` | -- | off | Validate each file after download (auto-detects format by extension) |
 | `--verify` | -- | off | Verify each download by checking file size after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
 | `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
@@ -694,11 +695,11 @@ rahcp s3 download-all my-bucket
 # Download a prefix to a specific directory
 rahcp s3 download-all my-bucket --prefix data/scans/ -o ./local-scans
 
-# Use 20 concurrent downloads
-rahcp s3 download-all my-bucket -w 20
+# Download only JPEGs with validation and verification
+rahcp s3 download-all my-bucket --include '*.jpg' --validate --verify -o ./output
 
 # Retry only files that failed last time
-rahcp s3 download-all my-bucket --retry-errors
+rahcp s3 download-all my-bucket --retry-errors --validate --verify
 
 # Only download JPEGs
 rahcp s3 download-all my-bucket --include '*.jpg' --include '*.jpeg'
@@ -724,7 +725,8 @@ Upload an entire local directory to a bucket, preserving the directory structure
 | `--skip-existing` / `--overwrite` | -- | `--skip-existing` | Skip files that already exist with matching size (idempotent) |
 | `--include` / `-I` | -- | all files | Only upload files matching these glob patterns (repeatable) |
 | `--exclude` / `-E` | -- | none | Skip files matching these glob patterns (repeatable) |
-| `--verify` | -- | off | Verify each upload by checking remote size after transfer |
+| `--validate` | -- | off | Validate each file before upload (auto-detects format by extension) |
+| `--verify` | -- | off | Verify each upload by checking remote size (HEAD) after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
 | `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
 
@@ -737,26 +739,49 @@ rahcp s3 upload-all my-bucket ./local-scans
 # Upload with a key prefix
 rahcp s3 upload-all my-bucket ./scans --prefix data/2025/
 
-# Force overwrite existing files (on versioned namespaces)
-rahcp s3 upload-all my-bucket ./scans --overwrite
-
-# Use 20 concurrent uploads
-rahcp s3 upload-all my-bucket ./archive -w 20
-
-# Only upload JPEGs (skip .txt, .tmp, etc.)
-rahcp s3 upload-all my-bucket ./scans --include '*.jpg'
+# Only upload JPEGs, validate and verify each one (maximum safety)
+rahcp s3 upload-all my-bucket ./scans --include '*.jpg' --validate --verify
 
 # Upload everything except temp files
 rahcp s3 upload-all my-bucket ./data --exclude '*.tmp' --exclude '*.log'
 
-# Verify integrity after each upload (slower but safer)
-rahcp s3 upload-all my-bucket ./critical-data --verify
-
 # Retry only files that failed last time
-rahcp s3 upload-all my-bucket ./archive --retry-errors
+rahcp s3 upload-all my-bucket ./archive --retry-errors --validate --verify
 
-# After upload, verify everything made it
+# After upload, batch-verify everything
 rahcp s3 verify my-bucket ./scans --prefix data/2025/
+```
+
+**How `--validate` works:**
+
+Auto-detects file type by extension and runs format-specific checks:
+
+| Extension | Validation |
+|-----------|-----------|
+| `.jpg` / `.jpeg` | SOI/EOI markers + Pillow full decode |
+| `.tif` / `.tiff` | Magic bytes + version 42 + Pillow full decode |
+| `.png` | PNG signature + Pillow full decode |
+| Other | Skipped (no validation error) |
+
+Requires `rahcp-validate` (`uv pip install 'rahcp-cli[validate]'`).
+
+**Error handling:**
+
+Failed files (validation, transfer, or verification) are marked as `error` in the tracker with the reason. The job **continues** — it does not stop on errors. After completion:
+
+```bash
+# See what failed
+uv run python -c "
+from rahcp_client import TransferTracker
+from pathlib import Path
+t = TransferTracker(Path('.rahcp/.upload-tracker.db'))
+for key, size in t.error_entries():
+    print(key)
+t.close()
+"
+
+# Retry only the failures
+rahcp s3 upload-all my-bucket ./scans --retry-errors --validate --verify
 ```
 
 The command is **idempotent by default** -- re-running it skips files that already exist in the bucket with matching size. This makes it safe to retry after partial failures.

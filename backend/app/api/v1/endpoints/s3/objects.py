@@ -11,7 +11,7 @@ import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from starlette.background import BackgroundTask as StarletteBackgroundTask
 
 from app.api.dependencies import get_cache_service, get_s3_service
@@ -27,7 +27,6 @@ from app.schemas.s3 import (
     CreateFolderResponse,
     DeleteObjectsRequest,
     DeleteObjectsResponse,
-    HeadObjectResponse,
     ListObjectsResponse,
     ObjectInfo,
     ObjectMutationResponse,
@@ -396,18 +395,21 @@ async def download_object(
     )
 
 
-@router.head("/{key:path}", response_model=HeadObjectResponse)
+@router.head("/{key:path}", status_code=200)
 async def head_object(
     bucket: str,
     key: str,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
     result = await run_storage(s3.head_object(bucket, key), f"object '{key}'")
-    return HeadObjectResponse(
-        content_length=result.get("ContentLength"),
-        content_type=result.get("ContentType"),
-        etag=result.get("ETag"),
-        last_modified=str(result.get("LastModified", "")),
+    return Response(
+        status_code=200,
+        headers={
+            "content-length": str(result.get("ContentLength", 0)),
+            "content-type": result.get("ContentType", "application/octet-stream"),
+            "etag": result.get("ETag", ""),
+            "last-modified": str(result.get("LastModified", "")),
+        },
     )
 
 

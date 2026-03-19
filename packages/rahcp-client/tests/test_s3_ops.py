@@ -111,8 +111,11 @@ async def test_copy():
 @respx.mock
 async def test_head():
     respx.head(f"{BASE}/buckets/b/objects/file.txt").mock(
-        return_value=httpx.Response(200, headers={"content-length": "1234"})
+        return_value=httpx.Response(
+            200, headers={"content-length": "1234", "etag": '"abc"'}
+        )
     )
     async with _make_client() as client:
-        headers = await client.s3.head("b", "file.txt")
-    assert headers["content-length"] == "1234"
+        meta = await client.s3.head("b", "file.txt")
+    assert meta["content-length"] == "1234"
+    assert meta["etag"] == '"abc"'

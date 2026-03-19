@@ -343,16 +343,17 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
             for key, _ in cfg.tracker.error_entries():
                 await queue.put(src / key)
         else:
-            files = await asyncio.to_thread(
-                lambda: [
-                    f
-                    for f in src.rglob("*")
-                    if f.is_file()
-                    and _matches_filters(f.name, cfg.include, cfg.exclude)
-                ]
-            )
-            for f in files:
-                await queue.put(f)
+            loop = asyncio.get_running_loop()
+
+            def _scan_and_enqueue() -> None:
+                for f in src.rglob("*"):
+                    if f.is_file() and _matches_filters(
+                        f.name, cfg.include, cfg.exclude
+                    ):
+                        future = asyncio.run_coroutine_threadsafe(queue.put(f), loop)
+                        future.result()  # blocks thread until queue has space
+
+            await asyncio.to_thread(_scan_and_enqueue)
         for _ in range(cfg.workers):
             await queue.put(_DONE)
 

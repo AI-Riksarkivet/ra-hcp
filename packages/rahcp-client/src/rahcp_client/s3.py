@@ -337,7 +337,7 @@ class S3Ops:
         )
 
     async def head(self, bucket: str, key: str) -> dict[str, Any]:
-        """Get object metadata."""
+        """Get object metadata (content-length, content-type, etag, last-modified)."""
         resp = await self._client.request("HEAD", f"/buckets/{bucket}/objects/{key}")
         return dict(resp.headers)
 
