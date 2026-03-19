@@ -12,14 +12,29 @@ from rahcp_client.errors import (
     RetryableError,
     UpstreamError,
 )
+from rahcp_client.bulk import (
+    BulkDownloadConfig,
+    BulkUploadConfig,
+    TransferStats,
+    bulk_download,
+    bulk_upload,
+)
+from rahcp_client.tracker import TransferStatus, TransferTracker
 
 __all__ = [
-    "HCPClient",
-    "HCPSettings",
-    "HCPError",
     "AuthenticationError",
+    "BulkDownloadConfig",
+    "BulkUploadConfig",
     "ConflictError",
+    "HCPClient",
+    "HCPError",
+    "HCPSettings",
     "NotFoundError",
     "RetryableError",
+    "TransferStats",
+    "TransferStatus",
+    "TransferTracker",
     "UpstreamError",
+    "bulk_download",
+    "bulk_upload",
 ]

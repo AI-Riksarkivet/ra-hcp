@@ -5,11 +5,15 @@ description = "CLI for HCP Unified API"
 requires-python = ">=3.13"
 dependencies = ["rahcp-client", "typer>=0.15", "rich>=13.0", "pyyaml>=6.0"]
 
+[project.optional-dependencies]
+validate = ["rahcp-validate"]
+
 [project.scripts]
 rahcp = "rahcp_cli.main:app"
 
 [tool.uv.sources]
 rahcp-client = { workspace = true }
+rahcp-validate = { workspace = true }
 
 [dependency-groups]
 dev = ["pytest>=8.0"]

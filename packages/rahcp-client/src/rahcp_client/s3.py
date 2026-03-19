@@ -200,7 +200,9 @@ class S3Ops:
             sem = asyncio.Semaphore(concurrency)
 
             # Use a generous timeout for part uploads (16 MB chunks)
-            part_timeout = httpx.Timeout(max(300.0, self._client.timeout * 5), connect=30.0)
+            part_timeout = httpx.Timeout(
+                max(300.0, self._client.timeout * 5), connect=30.0
+            )
 
             async def _upload_part(part_num: int, url: str) -> dict[str, Any]:
                 offset = part_num * part_size
@@ -218,13 +220,22 @@ class S3Ops:
                     ) as http:
                         log.debug(
                             "Uploading part %d/%d (%d bytes) for %s/%s",
-                            part_num + 1, len(part_urls), len(part_data), bucket, key,
+                            part_num + 1,
+                            len(part_urls),
+                            len(part_data),
+                            bucket,
+                            key,
                         )
                         r = await http.put(url, content=part_data)
                         self._raise_for_presigned(
                             r, bucket, f"{key} (part {part_num + 1})"
                         )
-                        log.debug("Part %d/%d uploaded (etag: %s)", part_num + 1, len(part_urls), r.headers.get("etag", "?"))
+                        log.debug(
+                            "Part %d/%d uploaded (etag: %s)",
+                            part_num + 1,
+                            len(part_urls),
+                            r.headers.get("etag", "?"),
+                        )
                         return {"part_number": part_num + 1, "etag": r.headers["etag"]}
 
             parts = await asyncio.gather(

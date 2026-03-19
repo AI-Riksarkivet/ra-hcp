@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from PIL import Image  # ty: ignore[unresolved-import]
@@ -66,6 +67,59 @@ def validate_jpg(path: Path) -> None:
             img.load()
     except Exception as exc:
         raise ValidationError(path, f"JPEG load failed: {exc}") from exc
+
+
+def validate_png(path: Path) -> None:
+    """Verify a PNG file is not corrupt.
+
+    Checks PNG signature and that Pillow can fully load it.
+    Raises ``ValidationError`` on failure.
+    """
+    _check_exists(path)
+
+    with path.open("rb") as f:
+        header = f.read(8)
+    if header != b"\x89PNG\r\n\x1a\n":
+        raise ValidationError(path, "Invalid PNG signature")
+
+    try:
+        with Image.open(path) as img:
+            img.load()
+    except Exception as exc:
+        raise ValidationError(path, f"PNG load failed: {exc}") from exc
+
+
+# Extension → validator mapping
+_VALIDATORS: dict[str, Callable[[Path], None]] = {}
+
+
+def _register_validators() -> dict[str, Callable[[Path], None]]:
+    """Build the extension → validator mapping."""
+    if not _VALIDATORS:
+        _VALIDATORS.update(
+            {
+                ".jpg": validate_jpg,
+                ".jpeg": validate_jpg,
+                ".tif": validate_tiff,
+                ".tiff": validate_tiff,
+                ".png": validate_png,
+            }
+        )
+    return _VALIDATORS
+
+
+def validate_by_extension(path: Path) -> None:
+    """Auto-detect file type by extension and validate.
+
+    Supported: .jpg, .jpeg, .tif, .tiff, .png.
+    Unknown extensions are skipped (no error).
+    Raises ``ValidationError`` if the file is corrupt.
+    """
+    validators = _register_validators()
+    ext = path.suffix.lower()
+    validator = validators.get(ext)
+    if validator:
+        validator(path)
 
 
 def _check_exists(path: Path) -> None:

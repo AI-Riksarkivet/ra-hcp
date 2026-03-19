@@ -6,8 +6,10 @@ import logging
 
 import typer
 
+from pathlib import Path
+
 from rahcp_cli import auth, namespace, s3
-from rahcp_cli.config import load_config
+from rahcp_cli.config import CONFIG_DIR, load_config
 
 app = typer.Typer(
     name="rahcp",
@@ -85,6 +87,9 @@ def main(
     """CLI flags > env vars > profile > defaults."""
     ctx.ensure_object(dict)
 
+    config_path = Path(config) if config else CONFIG_DIR / "config.yaml"
+    config_dir = config_path.parent
+
     cfg = load_config(config)
     p = cfg.resolve(profile)
 
@@ -114,4 +119,10 @@ def main(
     ctx.obj["multipart_threshold"] = p.multipart_threshold
     ctx.obj["multipart_chunk"] = p.multipart_chunk
     ctx.obj["multipart_concurrency"] = p.multipart_concurrency
+    ctx.obj["bulk_workers"] = p.bulk_workers
+    ctx.obj["bulk_progress_interval"] = p.bulk_progress_interval
+    ctx.obj["bulk_queue_depth"] = p.bulk_queue_depth
+    ctx.obj["bulk_tracker_flush_every"] = p.bulk_tracker_flush_every
+    ctx.obj["bulk_tracker_dir"] = p.bulk_tracker_dir
+    ctx.obj["config_dir"] = str(config_dir)
     ctx.obj["json"] = output_json

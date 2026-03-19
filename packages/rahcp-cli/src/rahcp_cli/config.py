@@ -37,16 +37,28 @@ CONFIG_PATH = CONFIG_DIR / "config.yaml"
 class Profile(BaseModel):
     """A named connection profile."""
 
+    # Connection
     endpoint: str = "http://localhost:8000/api/v1"
     username: str = ""
     password: str = ""
     tenant: str = ""
     verify_ssl: bool = True
     timeout: float = 30.0
-    log_level: str = "warning"
+
+    # Multipart upload
     multipart_threshold: int = 100 * 1024 * 1024
     multipart_chunk: int = 64 * 1024 * 1024
     multipart_concurrency: int = 6
+
+    # Bulk transfer defaults
+    bulk_workers: int = 10
+    bulk_progress_interval: float = 5.0
+    bulk_queue_depth: int = 8
+    bulk_tracker_flush_every: int = 200
+    bulk_tracker_dir: str = ""
+
+    # Observability
+    log_level: str = "warning"
     otel_endpoint: str = ""
     otel_protocol: str = "http/protobuf"
     otel_service_name: str = "rahcp-cli"

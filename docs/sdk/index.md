@@ -683,7 +683,7 @@ Download all objects from a bucket (or prefix) to a local directory with concurr
 | `--exclude` / `-E` | -- | none | Skip keys matching these glob patterns (repeatable) |
 | `--verify` | -- | off | Verify each download by checking file size after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
-| `--tracker-db` | -- | `~/.rahcp/.download-tracker.db` | Path to SQLite tracker database |
+| `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
 
 **Examples:**
 
@@ -726,7 +726,7 @@ Upload an entire local directory to a bucket, preserving the directory structure
 | `--exclude` / `-E` | -- | none | Skip files matching these glob patterns (repeatable) |
 | `--verify` | -- | off | Verify each upload by checking remote size after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
-| `--tracker-db` | -- | `~/.rahcp/.upload-tracker.db` | Path to SQLite tracker database |
+| `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
 
 **Examples:**
 
@@ -779,7 +779,7 @@ Both `upload-all` and `download-all` track progress in a local SQLite database (
 
 The tracker database persists across runs. To start fresh, delete the `.db` file.
 
-Tracker location resolution: `--tracker-db` flag > `bulk_tracker_dir` in profile > `~/.rahcp/`.
+Tracker location resolution: `--tracker-db` flag > `bulk_tracker_dir` in profile > config file directory (e.g. `~/.rahcp/` or `.rahcp/` if using `--config`).
 
 ```mermaid
 flowchart TD
@@ -814,7 +814,7 @@ Bulk transfer throughput depends on network bandwidth, HCP endpoint capacity, fi
 | `bulk_queue_depth` | Yes | — | 8 | Queue size = workers × depth. Higher = more files buffered ahead |
 | `bulk_progress_interval` | Yes | — | 5.0 | Seconds between progress reports |
 | `bulk_tracker_flush_every` | Yes | — | 200 | Marks buffered before writing to SQLite |
-| `bulk_tracker_dir` | Yes | `--tracker-db` | `~/.rahcp/` | Where the tracker DB lives |
+| `bulk_tracker_dir` | Yes | `--tracker-db` | same dir as config.yaml | Where the tracker DB lives |
 | `multipart_threshold` | Yes | — | 100 MB | Files above this use multipart upload |
 | `multipart_chunk` | Yes | — | 64 MB | Part size for multipart uploads |
 | `multipart_concurrency` | Yes | — | 6 | Parallel parts per multipart upload |

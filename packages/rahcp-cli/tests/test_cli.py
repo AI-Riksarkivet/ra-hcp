@@ -148,10 +148,20 @@ def test_ns_export():
 # ── s3 download-all ─────────────────────────────────────────────────
 
 
+def _fake_download(dest_dir):
+    """Create a mock download that writes a .tmp file so rename succeeds."""
+
+    async def _download(bucket, key, tmp_path):
+        tmp_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path.write_bytes(b"x" * 5)
+        return 5
+
+    return _download
+
+
 def test_s3_download_all(tmp_path):
     """Paginates, downloads files, skips folders and existing files."""
     client = FakeClient()
-    # Page 1: two objects + one folder, truncated
     page1 = {
         "objects": [
             {"Key": "data/", "Size": 0},
@@ -161,31 +171,38 @@ def test_s3_download_all(tmp_path):
         "is_truncated": True,
         "next_continuation_token": "tok2",
     }
-    # Page 2: one more object, not truncated
     page2 = {
         "objects": [{"Key": "data/c.txt", "Size": 4}],
         "is_truncated": False,
     }
     client.s3.list_objects = AsyncMock(side_effect=[page1, page2])
-    client.s3.download = AsyncMock(return_value=5)
+    client.s3.download = AsyncMock(side_effect=_fake_download(tmp_path))
 
     with (
         patch("rahcp_cli.s3.make_client", return_value=client),
         patch("rahcp_cli.namespace.make_client", return_value=client),
         patch("rahcp_cli.auth.make_client", return_value=client),
     ):
+        tracker_db = str(tmp_path / ".tracker.db")
         result = runner.invoke(
-            app, ["s3", "download-all", "mybucket", "-o", str(tmp_path)]
+            app,
+            [
+                "s3",
+                "download-all",
+                "mybucket",
+                "-o",
+                str(tmp_path),
+                "--tracker-db",
+                tracker_db,
+            ],
         )
     assert result.exit_code == 0
     assert "Downloaded 3 files" in result.output
-    # Folder (data/) should be skipped — only 3 file downloads
     assert client.s3.download.call_count == 3
 
 
 def test_s3_download_all_skips_existing(tmp_path):
     """Files with matching size are skipped."""
-    # Pre-create a file with matching size
     (tmp_path / "data").mkdir()
     (tmp_path / "data" / "exists.txt").write_text("hello")  # 5 bytes
 
@@ -199,20 +216,29 @@ def test_s3_download_all_skips_existing(tmp_path):
             "is_truncated": False,
         }
     )
-    client.s3.download = AsyncMock(return_value=3)
+    client.s3.download = AsyncMock(side_effect=_fake_download(tmp_path))
 
     with (
         patch("rahcp_cli.s3.make_client", return_value=client),
         patch("rahcp_cli.namespace.make_client", return_value=client),
         patch("rahcp_cli.auth.make_client", return_value=client),
     ):
+        tracker_db = str(tmp_path / ".tracker.db")
         result = runner.invoke(
-            app, ["s3", "download-all", "mybucket", "-o", str(tmp_path)]
+            app,
+            [
+                "s3",
+                "download-all",
+                "mybucket",
+                "-o",
+                str(tmp_path),
+                "--tracker-db",
+                tracker_db,
+            ],
         )
     assert result.exit_code == 0
     assert "Downloaded 1 files" in result.output
     assert "skipped 1 existing" in result.output
-    # Only new.txt should be downloaded
     assert client.s3.download.call_count == 1
 
 
