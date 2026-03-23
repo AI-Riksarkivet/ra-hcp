@@ -29,8 +29,15 @@ spec:
       http:
         paths:
           {{- if $.Values.frontend.enabled }}
-          - path: /api
+          - path: /docs
             pathType: Prefix
+            backend:
+              service:
+                name: {{ include "ra-hcp.fullname" $ }}
+                port:
+                  number: {{ $.Values.service.port }}
+          - path: /openapi.json
+            pathType: Exact
             backend:
               service:
                 name: {{ include "ra-hcp.fullname" $ }}
