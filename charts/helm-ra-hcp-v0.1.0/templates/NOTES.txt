@@ -34,3 +34,19 @@ ra-hcp has been deployed!
 
 2. Check the health endpoint:
   curl http://127.0.0.1:{{ .Values.service.port }}/health
+{{- if and .Values.ingress.enabled .Values.ingress.className }}
+
+3. Ingress requires an nginx ingress controller. Install one per namespace:
+
+  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+  helm repo update
+  helm install {{ .Release.Name }}-nginx-controller ingress-nginx/ingress-nginx \
+    --namespace {{ .Release.Namespace }} \
+    --set controller.service.type=LoadBalancer \
+    --set controller.ingressClassResource.name="{{ .Values.ingress.className }}" \
+    --set controller.ingressClassResource.controller="k8s.io/ingress-nginx-{{ .Release.Name }}" \
+    --set controller.ingressClassResource.default=false \
+    --set controller.ingressClass="{{ .Values.ingress.className }}" \
+    --set controller.scope.enabled=true \
+    --set controller.scope.namespace="{{ .Release.Namespace }}"
+{{- end }}
