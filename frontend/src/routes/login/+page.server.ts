@@ -59,9 +59,10 @@ export const actions = {
 
       setSessionCookies(cookies, tokenData.access_token, result.data.tenant);
     } catch (err) {
-      console.error("Login fetch failed:", err);
+      const msg = err instanceof Error ? err.message : "unknown error";
+      console.error(`[login] fetch failed: ${msg}`);
       return fail(500, {
-        error: `Unable to connect to backend service (${BACKEND_URL})`,
+        error: `Unable to connect to backend service`,
       });
     }
 

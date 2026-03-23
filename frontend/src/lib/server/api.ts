@@ -22,7 +22,8 @@ export async function apiFetch(
     }
     return res;
   } catch (err) {
-    console.error(`[apiFetch] ${init?.method ?? "GET"} ${url} failed:`, err);
+    const msg = err instanceof Error ? err.message : "unknown error";
+    console.error(`[apiFetch] ${init?.method ?? "GET"} ${url} failed: ${msg}`);
     throw err;
   }
 }

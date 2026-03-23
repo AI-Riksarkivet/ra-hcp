@@ -26,9 +26,10 @@ const handler: RequestHandler = async ({ params, request, locals }) => {
       duplex: "half",
     });
   } catch (err) {
-    console.error(`[proxy] ${request.method} ${target} failed:`, err);
+    const msg = err instanceof Error ? err.message : "unknown error";
+    console.error(`[proxy] ${request.method} ${target} failed: ${msg}`);
     return new Response(
-      JSON.stringify({ detail: `Backend unreachable: ${BACKEND_URL}` }),
+      JSON.stringify({ detail: "Backend service unavailable" }),
       { status: 502, headers: { "content-type": "application/json" } },
     );
   }
