@@ -2,14 +2,29 @@ import { getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
 import { BACKEND_URL } from "$lib/server/env.js";
 
-export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+export async function apiFetch(
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
   const event = getRequestEvent();
   const token = event.locals.token;
   const headers = new Headers(init?.headers);
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  return fetch(`${BACKEND_URL}${path}`, { ...init, headers });
+  const url = `${BACKEND_URL}${path}`;
+  try {
+    const res = await fetch(url, { ...init, headers });
+    if (!res.ok) {
+      console.warn(
+        `[apiFetch] ${init?.method ?? "GET"} ${url} → ${res.status}`,
+      );
+    }
+    return res;
+  } catch (err) {
+    console.error(`[apiFetch] ${init?.method ?? "GET"} ${url} failed:`, err);
+    throw err;
+  }
 }
 
 export async function throwIfNotOk(

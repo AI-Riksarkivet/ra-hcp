@@ -14,15 +14,30 @@ const handler: RequestHandler = async ({ params, request, locals }) => {
     headers.set("authorization", `Bearer ${locals.token}`);
   }
 
-  const response = await fetch(target, {
-    method: request.method,
-    headers,
-    body: request.method !== "GET" && request.method !== "HEAD"
-      ? request.body
-      : undefined,
-    // @ts-expect-error duplex is needed for streaming request bodies
-    duplex: "half",
-  });
+  let response: Response;
+  try {
+    response = await fetch(target, {
+      method: request.method,
+      headers,
+      body: request.method !== "GET" && request.method !== "HEAD"
+        ? request.body
+        : undefined,
+      // @ts-expect-error duplex is needed for streaming request bodies
+      duplex: "half",
+    });
+  } catch (err) {
+    console.error(`[proxy] ${request.method} ${target} failed:`, err);
+    return new Response(
+      JSON.stringify({ detail: `Backend unreachable: ${BACKEND_URL}` }),
+      { status: 502, headers: { "content-type": "application/json" } },
+    );
+  }
+
+  if (!response.ok) {
+    console.warn(
+      `[proxy] ${request.method} ${target} → ${response.status}`,
+    );
+  }
 
   const responseHeaders: Record<string, string> = {
     "content-type": response.headers.get("content-type") ??
