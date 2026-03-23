@@ -9,7 +9,8 @@ RUN deno install
 
 # Copy source and build
 COPY frontend/ .
-RUN deno task build
+RUN deno task build && \
+    chmod -R a+rX node_modules
 
 # ── Production stage ─────────────────────────────────────────────────
 FROM denoland/deno:2.7.1
@@ -21,6 +22,8 @@ WORKDIR /app
 COPY --from=builder --chown=1000:1000 /app/.deno-deploy /app/.deno-deploy
 COPY --from=builder --chown=1000:1000 /app/node_modules /app/node_modules
 COPY --from=builder --chown=1000:1000 /app/deno.json /app/deno.lock /app/package.json /app/
+
+ENV DENO_DIR=/deno-dir
 
 USER 1000
 
