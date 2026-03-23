@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/favicon.ico">
-      <meta name="generator" content="zensical-0.0.27">
+      <meta name="generator" content="zensical-0.0.28">
     
     
       
@@ -36,7 +36,7 @@
       
         
       
-      <link rel="stylesheet" href="../assets/stylesheets/modern/main.50057488.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.6f2fbb28.min.css">
       
         
           
@@ -1859,6 +1859,56 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#bulk-transfers-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk transfers (SDK)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bulk transfers (SDK)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bulkuploadconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BulkUploadConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bulkdownloadconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BulkDownloadConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transfertracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TransferTracker
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#mapi-operations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2066,10 +2116,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rahcp-s3-verify-post-upload-verification" class="md-nav__link">
+  <a href="#bulk-transfer-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        rahcp s3 verify -- post-upload verification
+        Bulk transfer tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance tuning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integrity-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integrity verification
       
     </span>
   </a>
@@ -2576,6 +2648,56 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#bulk-transfers-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk transfers (SDK)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bulk transfers (SDK)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bulkuploadconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BulkUploadConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bulkdownloadconfig" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BulkDownloadConfig
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transfertracker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TransferTracker
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#mapi-operations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2783,10 +2905,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#rahcp-s3-verify-post-upload-verification" class="md-nav__link">
+  <a href="#bulk-transfer-tracking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        rahcp s3 verify -- post-upload verification
+        Bulk transfer tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance tuning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integrity-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integrity verification
       
     </span>
   </a>
@@ -3355,6 +3499,207 @@ uv<span class="w"> </span>run<span class="w"> </span>rahcp<span class="w"> </spa
 <span class="c1"># Clean up staging on failure</span>
 <span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">cleanup_staging</span><span class="p">(</span><span class="s2">&quot;bucket&quot;</span><span class="p">,</span> <span class="s2">&quot;staging/batch-1/&quot;</span><span class="p">)</span>
 </code></pre></div>
+<details class="example">
+<summary>Full runnable example — staging_commit.py</summary>
+<div class="highlight"><pre><span></span><code>        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># 1. Upload files to a staging prefix</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Uploading to staging/...&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+                <span class="n">record</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;record-</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;processed&quot;</span><span class="p">}</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">record</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">STAGING_PREFIX</span><span class="si">}</span><span class="s2">record-</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">.json&quot;</span>
+                <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">upload</span><span class="p">(</span><span class="n">BUCKET</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Staged </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># 2. Verify all files landed</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">list_objects</span><span class="p">(</span><span class="n">BUCKET</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">STAGING_PREFIX</span><span class="p">)</span>
+            <span class="n">staged_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;objects&quot;</span><span class="p">])</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Staged </span><span class="si">{</span><span class="n">staged_count</span><span class="si">}</span><span class="s2"> objects&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">staged_count</span> <span class="o">!=</span> <span class="mi">5</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected 5 staged objects, got </span><span class="si">{</span><span class="n">staged_count</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># 3. Commit: copy staging → final, then delete staging</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Committing </span><span class="si">{</span><span class="n">STAGING_PREFIX</span><span class="si">}</span><span class="s2"> → </span><span class="si">{</span><span class="n">FINAL_PREFIX</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+            <span class="n">committed</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">commit_staging</span><span class="p">(</span>
+                <span class="n">BUCKET</span><span class="p">,</span> <span class="n">STAGING_PREFIX</span><span class="p">,</span> <span class="n">FINAL_PREFIX</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Committed </span><span class="si">{</span><span class="n">committed</span><span class="si">}</span><span class="s2"> objects&quot;</span><span class="p">)</span>
+
+            <span class="c1"># 4. Verify final prefix</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">list_objects</span><span class="p">(</span><span class="n">BUCKET</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">FINAL_PREFIX</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Final prefix contains </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;objects&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> objects:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;objects&quot;</span><span class="p">]:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">obj</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="c1"># Clean up staging on any failure</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Error — cleaning up staging prefix...&quot;</span><span class="p">)</span>
+            <span class="n">deleted</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">cleanup_staging</span><span class="p">(</span><span class="n">BUCKET</span><span class="p">,</span> <span class="n">STAGING_PREFIX</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Deleted </span><span class="si">{</span><span class="n">deleted</span><span class="si">}</span><span class="s2"> staged objects&quot;</span><span class="p">)</span>
+            <span class="k">raise</span>
+</code></pre></div>
+</details>
+<h3 id="bulk-transfers-sdk">Bulk transfers (SDK)<a class="headerlink" href="#bulk-transfers-sdk" title="Permanent link">&para;</a></h3>
+<p>The <code>bulk_upload</code> and <code>bulk_download</code> functions provide the same producer-consumer pipeline used by the CLI, available for programmatic use:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_client</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">HCPClient</span><span class="p">,</span>
+    <span class="n">TransferTracker</span><span class="p">,</span>
+    <span class="n">BulkUploadConfig</span><span class="p">,</span>
+    <span class="n">BulkDownloadConfig</span><span class="p">,</span>
+    <span class="n">bulk_upload</span><span class="p">,</span>
+    <span class="n">bulk_download</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">HCPClient</span><span class="o">.</span><span class="n">from_env</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="n">tracker</span> <span class="o">=</span> <span class="n">TransferTracker</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.upload-tracker.db&quot;</span><span class="p">))</span>
+
+        <span class="n">stats</span> <span class="o">=</span> <span class="k">await</span> <span class="n">bulk_upload</span><span class="p">(</span><span class="n">BulkUploadConfig</span><span class="p">(</span>
+            <span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
+            <span class="n">bucket</span><span class="o">=</span><span class="s2">&quot;images-batch&quot;</span><span class="p">,</span>
+            <span class="n">source_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/data/scans&quot;</span><span class="p">),</span>
+            <span class="n">tracker</span><span class="o">=</span><span class="n">tracker</span><span class="p">,</span>
+            <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;2025/&quot;</span><span class="p">,</span>
+            <span class="n">workers</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+            <span class="n">on_progress</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">s</span><span class="o">.</span><span class="n">done</span><span class="si">}</span><span class="s2"> files, </span><span class="si">{</span><span class="n">s</span><span class="o">.</span><span class="n">mb_per_sec</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> MB/s&quot;</span><span class="p">),</span>
+            <span class="n">on_error</span><span class="o">=</span><span class="k">lambda</span> <span class="n">key</span><span class="p">,</span> <span class="n">exc</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;FAILED: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">),</span>
+        <span class="p">))</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Done: </span><span class="si">{</span><span class="n">stats</span><span class="o">.</span><span class="n">ok</span><span class="si">}</span><span class="s2"> uploaded, </span><span class="si">{</span><span class="n">stats</span><span class="o">.</span><span class="n">skipped</span><span class="si">}</span><span class="s2"> skipped, </span><span class="si">{</span><span class="n">stats</span><span class="o">.</span><span class="n">errors</span><span class="si">}</span><span class="s2"> errors&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Throughput: </span><span class="si">{</span><span class="n">stats</span><span class="o">.</span><span class="n">mb_per_sec</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> MB/s over </span><span class="si">{</span><span class="n">stats</span><span class="o">.</span><span class="n">elapsed</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">s&quot;</span><span class="p">)</span>
+        <span class="n">tracker</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+<h4 id="bulkuploadconfig">BulkUploadConfig<a class="headerlink" href="#bulkuploadconfig" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>client</code></td>
+<td><code>HCPClient</code></td>
+<td>required</td>
+<td>Authenticated client instance</td>
+</tr>
+<tr>
+<td><code>bucket</code></td>
+<td><code>str</code></td>
+<td>required</td>
+<td>Target S3 bucket</td>
+</tr>
+<tr>
+<td><code>source_dir</code></td>
+<td><code>Path</code></td>
+<td>required</td>
+<td>Local directory to upload</td>
+</tr>
+<tr>
+<td><code>tracker</code></td>
+<td><code>TransferTracker</code></td>
+<td>required</td>
+<td>SQLite progress tracker</td>
+</tr>
+<tr>
+<td><code>prefix</code></td>
+<td><code>str</code></td>
+<td><code>""</code></td>
+<td>Key prefix prepended to all keys</td>
+</tr>
+<tr>
+<td><code>workers</code></td>
+<td><code>int</code></td>
+<td><code>10</code></td>
+<td>Number of concurrent upload workers</td>
+</tr>
+<tr>
+<td><code>queue_depth</code></td>
+<td><code>int</code></td>
+<td><code>8</code></td>
+<td>Queue size multiplier (queue = workers × depth)</td>
+</tr>
+<tr>
+<td><code>skip_existing</code></td>
+<td><code>bool</code></td>
+<td><code>True</code></td>
+<td>Skip files already on remote with matching size</td>
+</tr>
+<tr>
+<td><code>retry_errors</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Only process files marked as error in tracker</td>
+</tr>
+<tr>
+<td><code>include</code></td>
+<td><code>list[str]</code></td>
+<td><code>[]</code></td>
+<td>Glob patterns — only matching filenames are transferred</td>
+</tr>
+<tr>
+<td><code>exclude</code></td>
+<td><code>list[str]</code></td>
+<td><code>[]</code></td>
+<td>Glob patterns — matching filenames are skipped</td>
+</tr>
+<tr>
+<td><code>verify_upload</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>HEAD check after each upload to verify size matches</td>
+</tr>
+<tr>
+<td><code>on_progress</code></td>
+<td>callback</td>
+<td><code>None</code></td>
+<td>Called periodically with <code>TransferStats</code></td>
+</tr>
+<tr>
+<td><code>on_error</code></td>
+<td>callback</td>
+<td><code>None</code></td>
+<td>Called on each file failure with <code>(key, exception)</code></td>
+</tr>
+<tr>
+<td><code>progress_interval</code></td>
+<td><code>float</code></td>
+<td><code>5.0</code></td>
+<td>Minimum seconds between progress callbacks</td>
+</tr>
+</tbody>
+</table>
+<h4 id="bulkdownloadconfig">BulkDownloadConfig<a class="headerlink" href="#bulkdownloadconfig" title="Permanent link">&para;</a></h4>
+<p>Same fields as upload, except <code>source_dir</code> is replaced by <code>dest_dir: Path</code>, <code>verify_upload</code> becomes <code>verify_download</code>, and there is no <code>skip_existing</code> (downloads always skip files with matching size on disk).</p>
+<h4 id="transfertracker">TransferTracker<a class="headerlink" href="#transfertracker" title="Permanent link">&para;</a></h4>
+<p>SQLModel-backed SQLite database for tracking transfer state:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransferTracker</span><span class="p">,</span> <span class="n">TransferStatus</span>
+
+<span class="n">tracker</span> <span class="o">=</span> <span class="n">TransferTracker</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;my-job.db&quot;</span><span class="p">),</span> <span class="n">flush_every</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+
+<span class="c1"># Mark files</span>
+<span class="n">tracker</span><span class="o">.</span><span class="n">mark</span><span class="p">(</span><span class="s2">&quot;folder/file.jpg&quot;</span><span class="p">,</span> <span class="mi">12345</span><span class="p">,</span> <span class="n">TransferStatus</span><span class="o">.</span><span class="n">done</span><span class="p">)</span>
+<span class="n">tracker</span><span class="o">.</span><span class="n">mark</span><span class="p">(</span><span class="s2">&quot;folder/bad.jpg&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">TransferStatus</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="s2">&quot;SSL timeout&quot;</span><span class="p">)</span>
+
+<span class="c1"># Query state</span>
+<span class="n">done</span> <span class="o">=</span> <span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">()</span>           <span class="c1"># set[str] — instant skip lookups</span>
+<span class="n">errors</span> <span class="o">=</span> <span class="n">tracker</span><span class="o">.</span><span class="n">error_entries</span><span class="p">()</span>     <span class="c1"># list[(key, size)] — for retry</span>
+<span class="n">summary</span> <span class="o">=</span> <span class="n">tracker</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>          <span class="c1"># {&quot;pending&quot;: 0, &quot;done&quot;: 500, &quot;error&quot;: 3}</span>
+
+<span class="c1"># Lifecycle</span>
+<span class="n">tracker</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>   <span class="c1"># write buffered marks to DB</span>
+<span class="n">tracker</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>  <span class="c1"># alias for flush</span>
+<span class="n">tracker</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>   <span class="c1"># flush + release resources</span>
+</code></pre></div>
+<p>Marks are buffered in memory and flushed to SQLite every <code>flush_every</code> entries (default 200) or on explicit <code>flush()</code> / <code>close()</code>. The database uses WAL mode for safe concurrent access.</p>
 <h3 id="mapi-operations">MAPI operations<a class="headerlink" href="#mapi-operations" title="Permanent link">&para;</a></h3>
 <p><code>client.mapi</code> returns a <code>MapiOps</code> instance for namespace administration:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># List namespaces</span>
@@ -3568,9 +3913,18 @@ uv<span class="w"> </span>run<span class="w"> </span>rahcp<span class="w"> </spa
 <span class="w">    </span><span class="nt">verify_ssl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">       </span><span class="c1"># disable for local dev</span>
 <span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span><span class="w">             </span><span class="c1"># seconds per request (default 30)</span>
 <span class="w">    </span><span class="nt">log_level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">info</span><span class="w">         </span><span class="c1"># debug | info | warning | error</span>
+
+<span class="w">    </span><span class="c1"># Multipart upload thresholds</span>
 <span class="w">    </span><span class="nt">multipart_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">104857600</span><span class="w">  </span><span class="c1"># 100 MB (trigger multipart above this)</span>
 <span class="w">    </span><span class="nt">multipart_chunk</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">67108864</span><span class="w">       </span><span class="c1"># 64 MB per part</span>
 <span class="w">    </span><span class="nt">multipart_concurrency</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span><span class="w">       </span><span class="c1"># parallel part uploads</span>
+
+<span class="w">    </span><span class="c1"># Bulk transfer defaults (upload-all / download-all)</span>
+<span class="w">    </span><span class="nt">bulk_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span><span class="w">                </span><span class="c1"># concurrent transfers</span>
+<span class="w">    </span><span class="nt">bulk_progress_interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5.0</span><span class="w">     </span><span class="c1"># seconds between progress reports</span>
+<span class="w">    </span><span class="nt">bulk_queue_depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span><span class="w">             </span><span class="c1"># queue size = workers × this</span>
+<span class="w">    </span><span class="nt">bulk_tracker_flush_every</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span><span class="w">   </span><span class="c1"># tracker DB writes buffered per flush</span>
+<span class="w">    </span><span class="nt">bulk_tracker_dir</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">            </span><span class="c1"># tracker DB directory (default: ~/.rahcp/)</span>
 
 <span class="w">  </span><span class="nt">prod</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://hcp-api.example.com/api/v1</span>
@@ -3579,6 +3933,7 @@ uv<span class="w"> </span>run<span class="w"> </span>rahcp<span class="w"> </spa
 <span class="w">    </span><span class="nt">tenant</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prod-archive</span>
 <span class="w">    </span><span class="nt">verify_ssl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">        </span><span class="c1"># always verify in production</span>
 <span class="w">    </span><span class="nt">log_level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">warning</span><span class="w">      </span><span class="c1"># quiet in production</span>
+<span class="w">    </span><span class="nt">bulk_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w">        </span><span class="c1"># more workers for production throughput</span>
 <span class="w">    </span><span class="nt">otel_endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://otlp-gateway.example.com/otlp</span>
 <span class="w">    </span><span class="nt">otel_protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http/protobuf</span><span class="w">   </span><span class="c1"># or grpc</span>
 <span class="w">    </span><span class="nt">otel_service_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rahcp-cli</span>
@@ -3675,7 +4030,7 @@ uv<span class="w"> </span>run<span class="w"> </span>rahcp<span class="w"> </spa
 </tr>
 <tr>
 <td><code>upload-all BUCKET DIR</code></td>
-<td>Upload entire local directory to bucket</td>
+<td>Upload directory with tracked resume and parallel workers</td>
 </tr>
 <tr>
 <td><code>download BUCKET KEY</code></td>
@@ -3683,7 +4038,7 @@ uv<span class="w"> </span>run<span class="w"> </span>rahcp<span class="w"> </spa
 </tr>
 <tr>
 <td><code>download-all BUCKET</code></td>
-<td>Download all objects to local directory</td>
+<td>Download bucket with tracked resume and parallel workers</td>
 </tr>
 <tr>
 <td><code>rm BUCKET KEY [KEY ...]</code></td>
@@ -3767,7 +4122,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>ls<span class="w"> </span
 </code></pre></div>
 <p>When results are truncated, the CLI prints a <code>More results available</code> hint with the exact <code>--page</code> command to fetch the next page.</p>
 <h5 id="rahcp-s3-download-all-bulk-download"><code>rahcp s3 download-all</code> -- bulk download<a class="headerlink" href="#rahcp-s3-download-all-bulk-download" title="Permanent link">&para;</a></h5>
-<p>Download all objects from a bucket (or prefix) to a local directory with concurrent transfers:</p>
+<p>Download all objects from a bucket (or prefix) to a local directory with concurrent transfers. Uses a producer-consumer pipeline with SQLite-backed progress tracking for crash-safe resume.</p>
 <table>
 <thead>
 <tr>
@@ -3796,6 +4151,42 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>ls<span class="w"> </span
 <td><code>10</code></td>
 <td>Number of concurrent downloads</td>
 </tr>
+<tr>
+<td><code>--include</code> / <code>-I</code></td>
+<td>--</td>
+<td>all files</td>
+<td>Only download keys matching these glob patterns (repeatable)</td>
+</tr>
+<tr>
+<td><code>--exclude</code> / <code>-E</code></td>
+<td>--</td>
+<td>none</td>
+<td>Skip keys matching these glob patterns (repeatable)</td>
+</tr>
+<tr>
+<td><code>--validate</code></td>
+<td>--</td>
+<td>off</td>
+<td>Validate each file after download (auto-detects format by extension)</td>
+</tr>
+<tr>
+<td><code>--verify</code></td>
+<td>--</td>
+<td>off</td>
+<td>Verify each download by checking file size after transfer</td>
+</tr>
+<tr>
+<td><code>--retry-errors</code></td>
+<td>--</td>
+<td>off</td>
+<td>Only retry files that failed in a previous run</td>
+</tr>
+<tr>
+<td><code>--tracker-db</code></td>
+<td>--</td>
+<td>same dir as config.yaml</td>
+<td>Path to SQLite tracker database</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Examples:</strong></p>
@@ -3805,17 +4196,26 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="
 <span class="c1"># Download a prefix to a specific directory</span>
 rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="w"> </span>my-bucket<span class="w"> </span>--prefix<span class="w"> </span>data/scans/<span class="w"> </span>-o<span class="w"> </span>./local-scans
 
-<span class="c1"># Use 20 concurrent downloads</span>
-rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="w"> </span>my-bucket<span class="w"> </span>-w<span class="w"> </span><span class="m">20</span>
+<span class="c1"># Download only JPEGs with validation and verification</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="w"> </span>my-bucket<span class="w"> </span>--include<span class="w"> </span><span class="s1">&#39;*.jpg&#39;</span><span class="w"> </span>--validate<span class="w"> </span>--verify<span class="w"> </span>-o<span class="w"> </span>./output
+
+<span class="c1"># Retry only files that failed last time</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="w"> </span>my-bucket<span class="w"> </span>--retry-errors<span class="w"> </span>--validate<span class="w"> </span>--verify
+
+<span class="c1"># Only download JPEGs</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="w"> </span>my-bucket<span class="w"> </span>--include<span class="w"> </span><span class="s1">&#39;*.jpg&#39;</span><span class="w"> </span>--include<span class="w"> </span><span class="s1">&#39;*.jpeg&#39;</span>
+
+<span class="c1"># Skip temp files</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="w"> </span>my-bucket<span class="w"> </span>--exclude<span class="w"> </span><span class="s1">&#39;*.tmp&#39;</span><span class="w"> </span>--exclude<span class="w"> </span><span class="s1">&#39;*.log&#39;</span>
+
+<span class="c1"># Verify file integrity after each download</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="w"> </span>my-bucket<span class="w"> </span>--verify
+
+<span class="c1"># Use a custom tracker location</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="w"> </span>my-bucket<span class="w"> </span>--tracker-db<span class="w"> </span>/tmp/my-download.db
 </code></pre></div>
-<p>The command automatically:</p>
-<ul>
-<li>Paginates through all objects (handles continuation tokens)</li>
-<li>Skips files that already exist locally with matching size</li>
-<li>Reports progress: downloaded, skipped, and error counts</li>
-</ul>
 <h5 id="rahcp-s3-upload-all-bulk-upload"><code>rahcp s3 upload-all</code> -- bulk upload<a class="headerlink" href="#rahcp-s3-upload-all-bulk-upload" title="Permanent link">&para;</a></h5>
-<p>Upload an entire local directory to a bucket, preserving the directory structure as S3 key prefixes:</p>
+<p>Upload an entire local directory to a bucket, preserving the directory structure as S3 key prefixes. Uses a producer-consumer pipeline with SQLite-backed progress tracking for crash-safe resume.</p>
 <table>
 <thead>
 <tr>
@@ -3844,6 +4244,42 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="
 <td><code>--skip-existing</code></td>
 <td>Skip files that already exist with matching size (idempotent)</td>
 </tr>
+<tr>
+<td><code>--include</code> / <code>-I</code></td>
+<td>--</td>
+<td>all files</td>
+<td>Only upload files matching these glob patterns (repeatable)</td>
+</tr>
+<tr>
+<td><code>--exclude</code> / <code>-E</code></td>
+<td>--</td>
+<td>none</td>
+<td>Skip files matching these glob patterns (repeatable)</td>
+</tr>
+<tr>
+<td><code>--validate</code></td>
+<td>--</td>
+<td>off</td>
+<td>Validate each file before upload (auto-detects format by extension)</td>
+</tr>
+<tr>
+<td><code>--verify</code></td>
+<td>--</td>
+<td>off</td>
+<td>Verify each upload by checking remote size (HEAD) after transfer</td>
+</tr>
+<tr>
+<td><code>--retry-errors</code></td>
+<td>--</td>
+<td>off</td>
+<td>Only retry files that failed in a previous run</td>
+</tr>
+<tr>
+<td><code>--tracker-db</code></td>
+<td>--</td>
+<td>same dir as config.yaml</td>
+<td>Path to SQLite tracker database</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Examples:</strong></p>
@@ -3853,14 +4289,61 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 <span class="c1"># Upload with a key prefix</span>
 rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./scans<span class="w"> </span>--prefix<span class="w"> </span>data/2025/
 
-<span class="c1"># Force overwrite existing files (on versioned namespaces)</span>
-rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./scans<span class="w"> </span>--overwrite
+<span class="c1"># Only upload JPEGs, validate and verify each one (maximum safety)</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./scans<span class="w"> </span>--include<span class="w"> </span><span class="s1">&#39;*.jpg&#39;</span><span class="w"> </span>--validate<span class="w"> </span>--verify
 
-<span class="c1"># Use 20 concurrent uploads</span>
-rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./archive<span class="w"> </span>-w<span class="w"> </span><span class="m">20</span>
+<span class="c1"># Upload everything except temp files</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./data<span class="w"> </span>--exclude<span class="w"> </span><span class="s1">&#39;*.tmp&#39;</span><span class="w"> </span>--exclude<span class="w"> </span><span class="s1">&#39;*.log&#39;</span>
 
-<span class="c1"># After upload, verify everything made it</span>
+<span class="c1"># Retry only files that failed last time</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./archive<span class="w"> </span>--retry-errors<span class="w"> </span>--validate<span class="w"> </span>--verify
+
+<span class="c1"># After upload, batch-verify everything</span>
 rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </span>my-bucket<span class="w"> </span>./scans<span class="w"> </span>--prefix<span class="w"> </span>data/2025/
+</code></pre></div>
+<p><strong>How <code>--validate</code> works:</strong></p>
+<p>Auto-detects file type by extension and runs format-specific checks:</p>
+<table>
+<thead>
+<tr>
+<th>Extension</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.jpg</code> / <code>.jpeg</code></td>
+<td>SOI/EOI markers + Pillow full decode</td>
+</tr>
+<tr>
+<td><code>.tif</code> / <code>.tiff</code></td>
+<td>Magic bytes + version 42 + Pillow full decode</td>
+</tr>
+<tr>
+<td><code>.png</code></td>
+<td>PNG signature + Pillow full decode</td>
+</tr>
+<tr>
+<td>Other</td>
+<td>Skipped (no validation error)</td>
+</tr>
+</tbody>
+</table>
+<p>Requires <code>rahcp-validate</code> (<code>uv pip install 'rahcp-cli[validate]'</code>).</p>
+<p><strong>Error handling:</strong></p>
+<p>Failed files (validation, transfer, or verification) are marked as <code>error</code> in the tracker with the reason. The job <strong>continues</strong> — it does not stop on errors. After completion:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># See what failed</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<span class="s2">from rahcp_client import TransferTracker</span>
+<span class="s2">from pathlib import Path</span>
+<span class="s2">t = TransferTracker(Path(&#39;.rahcp/.upload-tracker.db&#39;))</span>
+<span class="s2">for key, size in t.error_entries():</span>
+<span class="s2">    print(key)</span>
+<span class="s2">t.close()</span>
+<span class="s2">&quot;</span>
+
+<span class="c1"># Retry only the failures</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./scans<span class="w"> </span>--retry-errors<span class="w"> </span>--validate<span class="w"> </span>--verify
 </code></pre></div>
 <p>The command is <strong>idempotent by default</strong> -- re-running it skips files that already exist in the bucket with matching size. This makes it safe to retry after partial failures.</p>
 <p>The command recursively finds all files in the source directory and uploads them with keys that mirror the local path. For example, uploading <code>./scans/</code> with <code>--prefix data/</code> maps:</p>
@@ -3868,11 +4351,236 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
 ./scans/batch-1/image-002.tif  →  s3://my-bucket/data/batch-1/image-002.tif
 ./scans/batch-2/image-003.tif  →  s3://my-bucket/data/batch-2/image-003.tif
 </code></pre></div>
-<h5 id="rahcp-s3-verify-post-upload-verification"><code>rahcp s3 verify</code> -- post-upload verification<a class="headerlink" href="#rahcp-s3-verify-post-upload-verification" title="Permanent link">&para;</a></h5>
-<p>Compare a local directory against the bucket to confirm all files were uploaded correctly:</p>
-<div class="highlight"><pre><span></span><code>rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </span>my-bucket<span class="w"> </span>./local-scans
+<h5 id="bulk-transfer-tracking">Bulk transfer tracking<a class="headerlink" href="#bulk-transfer-tracking" title="Permanent link">&para;</a></h5>
+<p>Both <code>upload-all</code> and <code>download-all</code> track progress in a local SQLite database (<code>.upload-tracker.db</code> / <code>.download-tracker.db</code> in the current working directory by default). This enables:</p>
+<ul>
+<li><strong>Instant resume</strong> -- on re-run, completed files are skipped without any network calls</li>
+<li><strong>Selective retry</strong> -- <code>--retry-errors</code> retries only files that failed previously</li>
+<li><strong>Progress visibility</strong> -- periodic stats with files/s and MB/s throughput</li>
+</ul>
+<p>The tracker database persists across runs. To start fresh, delete the <code>.db</code> file.</p>
+<p>Tracker location resolution: <code>--tracker-db</code> flag &gt; <code>bulk_tracker_dir</code> in profile &gt; config file directory (e.g. <code>~/.rahcp/</code> or <code>.rahcp/</code> if using <code>--config</code>).</p>
+<pre class="mermaid"><code>flowchart TD
+    START["rahcp s3 upload-all"] --&gt; TRACKER["Open .upload-tracker.db"]
+    TRACKER --&gt; SCAN["Scan local files&lt;br/&gt;(background thread)"]
+    SCAN --&gt; QUEUE["asyncio.Queue&lt;br/&gt;(bounded)"]
+    QUEUE --&gt; W1["Worker 1"]
+    QUEUE --&gt; W2["Worker 2"]
+    QUEUE --&gt; WN["Worker N"]
+    W1 --&gt; CHECK{In tracker&lt;br/&gt;as done?}
+    CHECK --&gt;|yes| SKIP["Skip (no network)"]
+    CHECK --&gt;|no| UPLOAD["Upload via&lt;br/&gt;presigned URL"]
+    UPLOAD --&gt;|success| MARK_DONE["Mark done in DB"]
+    UPLOAD --&gt;|failure| MARK_ERR["Mark error in DB"]
+    W2 --&gt; CHECK
+    WN --&gt; CHECK
+
+    style SKIP fill:#f8f9fa,stroke:#dee2e6
+    style MARK_DONE fill:#d4edda,stroke:#28a745
+    style MARK_ERR fill:#f8d7da,stroke:#dc3545</code></pre>
+<h5 id="performance-tuning">Performance tuning<a class="headerlink" href="#performance-tuning" title="Permanent link">&para;</a></h5>
+<p>Bulk transfer throughput depends on network bandwidth, HCP endpoint capacity, file sizes, and local I/O. The default settings are conservative — here's how to tune them for your hardware.</p>
+<p><strong>Key settings:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>config.yaml</th>
+<th>CLI</th>
+<th>Default</th>
+<th>What it controls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bulk_workers</code></td>
+<td>Yes</td>
+<td><code>--workers</code></td>
+<td>10</td>
+<td>Concurrent upload/download coroutines</td>
+</tr>
+<tr>
+<td><code>bulk_queue_depth</code></td>
+<td>Yes</td>
+<td>—</td>
+<td>8</td>
+<td>Queue size = workers × depth. Higher = more files buffered ahead</td>
+</tr>
+<tr>
+<td><code>bulk_progress_interval</code></td>
+<td>Yes</td>
+<td>—</td>
+<td>5.0</td>
+<td>Seconds between progress reports</td>
+</tr>
+<tr>
+<td><code>bulk_tracker_flush_every</code></td>
+<td>Yes</td>
+<td>—</td>
+<td>200</td>
+<td>Marks buffered before writing to SQLite</td>
+</tr>
+<tr>
+<td><code>bulk_tracker_dir</code></td>
+<td>Yes</td>
+<td><code>--tracker-db</code></td>
+<td>same dir as config.yaml</td>
+<td>Where the tracker DB lives</td>
+</tr>
+<tr>
+<td><code>multipart_threshold</code></td>
+<td>Yes</td>
+<td>—</td>
+<td>100 MB</td>
+<td>Files above this use multipart upload</td>
+</tr>
+<tr>
+<td><code>multipart_chunk</code></td>
+<td>Yes</td>
+<td>—</td>
+<td>64 MB</td>
+<td>Part size for multipart uploads</td>
+</tr>
+<tr>
+<td><code>multipart_concurrency</code></td>
+<td>Yes</td>
+<td>—</td>
+<td>6</td>
+<td>Parallel parts per multipart upload</td>
+</tr>
+<tr>
+<td><code>verify_ssl</code></td>
+<td>Yes</td>
+<td>—</td>
+<td>true</td>
+<td>Set <code>false</code> for self-signed HCP certs</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tuning by scenario:</strong></p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Many small files (&lt; 5 MB each)</label><label for="__tabbed_1_2">Fewer large files (&gt; 100 MB each)</label><label for="__tabbed_1_3">Mixed sizes (archive directories)</label><label for="__tabbed_1_4">Slow or high-latency network</label><label for="__tabbed_1_5">Fast datacenter network (&gt; 1 Gbps)</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>The bottleneck is request overhead — each file needs a presigned URL request + a PUT. Increase workers aggressively:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">bulk_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">40</span><span class="w">        </span><span class="c1"># more concurrent requests</span>
+<span class="nt">bulk_queue_depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">12</span><span class="w">    </span><span class="c1"># keep workers fed</span>
+<span class="nt">bulk_tracker_flush_every</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span><span class="w">  </span><span class="c1"># less frequent DB writes</span>
+</code></pre></div>
+<p>Expected: 30-60 files/s depending on network latency to HCP.</p>
+</div>
+<div class="tabbed-block">
+<p>The bottleneck is bandwidth. Workers don't help much — tune multipart instead:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">bulk_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">        </span><span class="c1"># fewer concurrent transfers</span>
+<span class="nt">multipart_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">52428800</span><span class="w">   </span><span class="c1"># 50 MB — trigger multipart sooner</span>
+<span class="nt">multipart_chunk</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">33554432</span><span class="w">       </span><span class="c1"># 32 MB parts — more parallelism per file</span>
+<span class="nt">multipart_concurrency</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">       </span><span class="c1"># more parallel parts</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Balance between request concurrency and bandwidth:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">bulk_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20</span>
+<span class="nt">bulk_queue_depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="nt">multipart_concurrency</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Reduce workers to avoid overwhelming the connection, increase timeouts:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">bulk_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120</span>
+<span class="nt">verify_ssl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">       </span><span class="c1"># if SSL handshake adds latency</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Push workers high and reduce overhead:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">bulk_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+<span class="nt">bulk_queue_depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16</span>
+<span class="nt">bulk_tracker_flush_every</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>How to diagnose bottlenecks:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely bottleneck</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>files/s increases with more workers</td>
+<td>Worker-bound</td>
+<td>Increase <code>bulk_workers</code></td>
+</tr>
+<tr>
+<td>files/s plateaus despite more workers</td>
+<td>Network or HCP-bound</td>
+<td>Don't increase workers further</td>
+</tr>
+<tr>
+<td>MB/s is high but files/s is low</td>
+<td>Large files</td>
+<td>Normal — fewer files but more bytes per file</td>
+</tr>
+<tr>
+<td>MB/s is low and CPU is low</td>
+<td>Network latency</td>
+<td>Increase <code>bulk_workers</code> to overlap round-trips</td>
+</tr>
+<tr>
+<td>High memory usage (&gt;10 GB)</td>
+<td>Large file list in memory</td>
+<td>Normal for millions of files — <code>done_keys</code> set + file list</td>
+</tr>
+<tr>
+<td>Errors appearing</td>
+<td>SSL, timeout, or HCP rate limit</td>
+<td>Check <code>verify_ssl</code>, increase <code>timeout</code>, reduce workers</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Monitoring a running transfer:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Reattach to the tmux session</span>
+tmux<span class="w"> </span>attach<span class="w"> </span>-t<span class="w"> </span>upload
+
+<span class="c1"># Check tracker DB from another terminal</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<span class="s2">from rahcp_client import TransferTracker</span>
+<span class="s2">from pathlib import Path</span>
+<span class="s2">t = TransferTracker(Path.home() / &#39;.rahcp/.upload-tracker.db&#39;)</span>
+<span class="s2">print(t.summary())</span>
+<span class="s2">t.close()</span>
+<span class="s2">&quot;</span>
+
+<span class="c1"># Verify what&#39;s on S3 so far</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>ls<span class="w"> </span>my-bucket<span class="w"> </span>-n<span class="w"> </span><span class="m">5</span>
+</code></pre></div>
+<p><strong>Running long transfers safely:</strong></p>
+<p>Always run bulk transfers inside <code>tmux</code> or <code>screen</code> so they survive SSH disconnects:</p>
+<div class="highlight"><pre><span></span><code>tmux<span class="w"> </span>new<span class="w"> </span>-s<span class="w"> </span>upload
+rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./data<span class="w"> </span>--workers<span class="w"> </span><span class="m">20</span>
+<span class="c1"># Ctrl+B, D to detach — reattach with: tmux attach -t upload</span>
+</code></pre></div>
+<p>If the process is interrupted (Ctrl+C, crash, reboot), re-run the same command. The tracker skips all completed files instantly — no re-upload, no HEAD requests.</p>
+<h5 id="integrity-verification">Integrity verification<a class="headerlink" href="#integrity-verification" title="Permanent link">&para;</a></h5>
+<p>There are two ways to verify transfers. Choose based on your needs:</p>
+<p><strong>Option 1: <code>--verify</code> flag (inline, per-file)</strong></p>
+<p>Checks each file immediately after transfer. Adds one HEAD request per upload or one size check per download.</p>
+<div class="highlight"><pre><span></span><code>rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./critical-data<span class="w"> </span>--verify
+rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="w"> </span>my-bucket<span class="w"> </span>--verify
+</code></pre></div>
+<p><strong>Cost:</strong> 50% more API calls on upload (presign + PUT + HEAD per file instead of presign + PUT). On a 1.9M file upload at 40 files/s, this drops throughput to ~25-30 files/s and adds ~5-7 hours. Downloads are cheaper — the size check is local (no extra API call).</p>
+<p><strong>When to use:</strong> Mission-critical data where a single corrupt file is unacceptable and you need immediate detection.</p>
+<p><strong>Option 2: <code>rahcp s3 verify</code> (post-transfer, batch)</strong></p>
+<p>Runs a single pass after the transfer is complete. Lists all remote objects and compares sizes against local files.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># After upload finishes</span>
+rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </span>my-bucket<span class="w"> </span>./local-scans
 rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </span>my-bucket<span class="w"> </span>./scans<span class="w"> </span>--prefix<span class="w"> </span>data/2025/
 </code></pre></div>
+<p><strong>Cost:</strong> One paginated listing (1 request per 1000 objects) + local file walk. For 1.9M files, that's ~1,900 API calls total vs ~1.9M HEAD calls with <code>--verify</code>.</p>
+<p><strong>When to use:</strong> Most transfers. Run once at the end — if anything is missing or wrong, use <code>--retry-errors</code> to fix it.</p>
 <p>Output:
 <div class="highlight"><pre><span></span><code>Verification: 603 local files, 601 remote objects
 
@@ -3883,11 +4591,13 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
     ...
 </code></pre></div></p>
 <p>Exits with code 1 if any files are missing or have size mismatches, making it usable in scripts and CI.</p>
+<p><strong>Recommendation:</strong> For large transfers (&gt;10K files), use <code>verify</code> after the transfer. For small critical batches (&lt;1K files), use <code>--verify</code> inline.</p>
 <h5 id="bulk-transfer-overview">Bulk transfer overview<a class="headerlink" href="#bulk-transfer-overview" title="Permanent link">&para;</a></h5>
 <pre class="mermaid"><code>flowchart LR
-    subgraph CLI["rahcp CLI"]
+    subgraph CLI["rahcp CLI / SDK"]
         DA["download-all&lt;br/&gt;&lt;small&gt;s3 → local&lt;/small&gt;"]
         UA["upload-all&lt;br/&gt;&lt;small&gt;local → s3&lt;/small&gt;"]
+        DB[("SQLite&lt;br/&gt;tracker")]
     end
 
     subgraph Local["Local Filesystem"]
@@ -3898,8 +4608,10 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
         BKT[("s3://bucket/&lt;br/&gt;prefix/&lt;br/&gt;...")]
     end
 
-    BKT --&gt;|"concurrent GET&lt;br/&gt;(presigned URLs)"| DA --&gt; DIR
-    DIR --&gt;|"concurrent PUT&lt;br/&gt;(presigned URLs)"| UA --&gt; BKT</code></pre>
+    BKT --&gt;|"N concurrent GET&lt;br/&gt;(presigned URLs)"| DA --&gt; DIR
+    DIR --&gt;|"N concurrent PUT&lt;br/&gt;(presigned URLs)"| UA --&gt; BKT
+    DA -.-&gt;|"track state"| DB
+    UA -.-&gt;|"track state"| DB</code></pre>
 <h4 id="rahcp-ns"><code>rahcp ns</code><a class="headerlink" href="#rahcp-ns" title="Permanent link">&para;</a></h4>
 <table>
 <thead>
@@ -4183,7 +4895,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
 <hr />
 <h2 id="comparison-sdk-vs-raw-http">Comparison: SDK vs raw HTTP<a class="headerlink" href="#comparison-sdk-vs-raw-http" title="Permanent link">&para;</a></h2>
 <p>The SDK eliminates boilerplate around authentication, retries, presigned URLs, and multipart uploads. Here is the same upload workflow with raw <code>httpx</code> vs the SDK:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">rahcp SDK</label><label for="__tabbed_1_2">Raw httpx</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">rahcp SDK</label><label for="__tabbed_2_2">Raw httpx</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">HCPClient</span>
@@ -4327,11 +5039,10 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
     
       
       
-      
       <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../assets/javascripts/bundle.5fd3284f.min.js"></script>
+      <script src="../assets/javascripts/bundle.c2b142ea.min.js"></script>
       
     
   </body>

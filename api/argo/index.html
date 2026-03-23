@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.ico">
-      <meta name="generator" content="zensical-0.0.27">
+      <meta name="generator" content="zensical-0.0.28">
     
     
       
@@ -36,7 +36,7 @@
       
         
       
-      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.50057488.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.6f2fbb28.min.css">
       
         
           
@@ -1481,6 +1481,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#runnable-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runnable examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#related-pages" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2214,6 +2225,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#runnable-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runnable examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#related-pages" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2483,7 +2505,7 @@ docker<span class="w"> </span>push<span class="w"> </span>my-registry/hcp-sdk:3.
 
     IN -.-&gt;|S3 input&lt;br/&gt;artifact| E
     L -.-&gt;|S3 output&lt;br/&gt;artifact| OUT</code></pre>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">YAML</label><label for="__tabbed_2_2">Hera</label><label for="__tabbed_2_3">rahcp SDK (Hera)</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:4"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><input id="__tabbed_2_4" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">YAML</label><label for="__tabbed_2_2">Hera</label><label for="__tabbed_2_3">rahcp SDK (Hera)</label><label for="__tabbed_2_4">rahcp SDK (YAML)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argoproj.io/v1alpha1</span>
@@ -2770,6 +2792,174 @@ docker<span class="w"> </span>push<span class="w"> </span>my-registry/hcp-sdk:3.
 <span class="n">w</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
 </code></pre></div>
 </div>
+<div class="tabbed-block">
+<p>Standalone runnable YAML — uses the SDK in script blocks with credentials from a K8s Secret. No Hera dependency.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argoproj.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Workflow</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">generateName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-etl-</span>
+<span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rahcp-example</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">entrypoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">etl-pipeline</span>
+<span class="w">  </span><span class="nt">activeDeadlineSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1800</span><span class="w">            </span><span class="c1"># 30 min timeout</span>
+<span class="w">  </span><span class="nt">artifactGC</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">OnWorkflowDeletion</span>
+
+<span class="w">  </span><span class="nt">arguments</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-endpoint</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://hcp-api.default.svc:8000/api/v1&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">input-bucket</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;datasets&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">input-key</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;manifests/latest.json&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">output-bucket</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;results&quot;</span>
+
+<span class="w">  </span><span class="nt">templates</span><span class="p">:</span>
+<span class="w">    </span><span class="c1"># ── DAG orchestrator ─────────────────────────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">etl-pipeline</span>
+<span class="w">      </span><span class="nt">dag</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">extract</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">extract-data</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">transform</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">transform-data</span>
+<span class="w">            </span><span class="nt">dependencies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">extract</span><span class="p p-Indicator">]</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">load</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">load-results</span>
+<span class="w">            </span><span class="nt">dependencies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">transform</span><span class="p p-Indicator">]</span>
+
+<span class="w">    </span><span class="c1"># ── Step 1: Download manifest from HCP ───────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">extract-data</span>
+<span class="w">      </span><span class="nt">retryStrategy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">        </span><span class="nt">backoff</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;5s&quot;</span>
+<span class="w">          </span><span class="nt">factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">          </span><span class="nt">maxDuration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1m&quot;</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-registry/hcp-sdk:3.13</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="nl">&amp;hcp-env</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_ENDPOINT</span>
+<span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{workflow.parameters.hcp-endpoint}}&quot;</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_USERNAME</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-credentials</span>
+<span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">username</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_PASSWORD</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-credentials</span>
+<span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">password</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_TENANT</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-credentials</span>
+<span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tenant</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import asyncio, json</span>
+<span class="w">          </span><span class="no">from pathlib import Path</span>
+<span class="w">          </span><span class="no">from rahcp_client import HCPClient</span>
+
+<span class="w">          </span><span class="no">async def main():</span>
+<span class="w">              </span><span class="no">async with HCPClient.from_env() as client:</span>
+<span class="w">                  </span><span class="no">data = await client.s3.download_bytes(</span>
+<span class="w">                      </span><span class="no">&quot;{{workflow.parameters.input-bucket}}&quot;,</span>
+<span class="w">                      </span><span class="no">&quot;{{workflow.parameters.input-key}}&quot;,</span>
+<span class="w">                  </span><span class="no">)</span>
+<span class="w">                  </span><span class="no">manifest = json.loads(data)</span>
+<span class="w">                  </span><span class="no">print(f&quot;Extracted {len(manifest.get(&#39;files&#39;, []))} entries&quot;)</span>
+<span class="w">                  </span><span class="no">Path(&quot;/tmp/extracted.json&quot;).write_text(json.dumps(manifest))</span>
+
+<span class="w">          </span><span class="no">asyncio.run(main())</span>
+<span class="w">      </span><span class="nt">outputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">artifacts</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">extracted</span>
+<span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/tmp/extracted.json</span>
+
+<span class="w">    </span><span class="c1"># ── Step 2: Transform the data ───────────────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">transform-data</span>
+<span class="w">      </span><span class="nt">retryStrategy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">        </span><span class="nt">backoff</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;5s&quot;</span>
+<span class="w">          </span><span class="nt">factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">          </span><span class="nt">maxDuration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1m&quot;</span>
+<span class="w">      </span><span class="nt">inputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">artifacts</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">extracted</span>
+<span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/tmp/input/extracted.json</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python:3.13-slim</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import json</span>
+<span class="w">          </span><span class="no">from pathlib import Path</span>
+
+<span class="w">          </span><span class="no">data = json.loads(Path(&quot;/tmp/input/extracted.json&quot;).read_text())</span>
+
+<span class="w">          </span><span class="no"># Transform: enrich each file entry with a processed flag</span>
+<span class="w">          </span><span class="no">for entry in data.get(&quot;files&quot;, []):</span>
+<span class="w">              </span><span class="no">entry[&quot;processed&quot;] = True</span>
+<span class="w">              </span><span class="no">entry[&quot;format&quot;] = entry.get(&quot;name&quot;, &quot;&quot;).rsplit(&quot;.&quot;, 1)[-1].upper()</span>
+
+<span class="w">          </span><span class="no">results = {</span>
+<span class="w">              </span><span class="no">&quot;total&quot;: len(data.get(&quot;files&quot;, [])),</span>
+<span class="w">              </span><span class="no">&quot;files&quot;: data.get(&quot;files&quot;, []),</span>
+<span class="w">              </span><span class="no">&quot;status&quot;: &quot;transformed&quot;,</span>
+<span class="w">          </span><span class="no">}</span>
+<span class="w">          </span><span class="no">Path(&quot;/tmp/results.json&quot;).write_text(json.dumps(results, indent=2))</span>
+<span class="w">          </span><span class="no">print(f&quot;Transformed {results[&#39;total&#39;]} entries&quot;)</span>
+<span class="w">      </span><span class="nt">outputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">artifacts</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">results</span>
+<span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/tmp/results.json</span>
+
+<span class="w">    </span><span class="c1"># ── Step 3: Upload results back to HCP ───────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">load-results</span>
+<span class="w">      </span><span class="nt">retryStrategy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">        </span><span class="nt">backoff</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;5s&quot;</span>
+<span class="w">          </span><span class="nt">factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">          </span><span class="nt">maxDuration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1m&quot;</span>
+<span class="w">      </span><span class="nt">inputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">artifacts</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">results</span>
+<span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/tmp/input/results.json</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-registry/hcp-sdk:3.13</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="nv">*hcp-env</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import asyncio</span>
+<span class="w">          </span><span class="no">from pathlib import Path</span>
+<span class="w">          </span><span class="no">from rahcp_client import HCPClient</span>
+
+<span class="w">          </span><span class="no">async def main():</span>
+<span class="w">              </span><span class="no">async with HCPClient.from_env() as client:</span>
+<span class="w">                  </span><span class="no">result_path = Path(&quot;/tmp/input/results.json&quot;)</span>
+<span class="w">                  </span><span class="no">output_key = &quot;etl/{{workflow.name}}/results.json&quot;</span>
+
+<span class="w">                  </span><span class="no">await client.s3.upload(</span>
+<span class="w">                      </span><span class="no">&quot;{{workflow.parameters.output-bucket}}&quot;,</span>
+<span class="w">                      </span><span class="no">output_key,</span>
+<span class="w">                      </span><span class="no">result_path,</span>
+<span class="w">                  </span><span class="no">)</span>
+<span class="w">                  </span><span class="no"># Verify upload succeeded (head raises NotFoundError if missing)</span>
+<span class="w">                  </span><span class="no">await client.s3.head(</span>
+<span class="w">                      </span><span class="no">&quot;{{workflow.parameters.output-bucket}}&quot;,</span>
+<span class="w">                      </span><span class="no">output_key,</span>
+<span class="w">                  </span><span class="no">)</span>
+<span class="w">                  </span><span class="no">print(f&quot;Uploaded and verified → {output_key}&quot;)</span>
+
+<span class="w">          </span><span class="no">asyncio.run(main())</span>
+</code></pre></div>
+</div>
 </div>
 </div>
 <hr />
@@ -3032,7 +3222,7 @@ uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </sp
     IN[("incoming/&lt;br/&gt;*.csv")] -.-&gt; D
     P1 &amp; P2 &amp; P3 -.-&gt;|presigned PUT| OUT[("processed/&lt;br/&gt;*.result.json")]
     A -.-&gt; SUM[("summaries/&lt;br/&gt;batch.json")]</code></pre>
-<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">YAML</label><label for="__tabbed_4_2">Hera</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:3"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">YAML</label><label for="__tabbed_4_2">Hera</label><label for="__tabbed_4_3">rahcp SDK (YAML)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argoproj.io/v1alpha1</span>
@@ -3314,6 +3504,195 @@ uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </sp
 <span class="n">w</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
 </code></pre></div>
 </div>
+<div class="tabbed-block">
+<p>Standalone runnable YAML — uses the SDK in script blocks with credentials from a K8s Secret. No Hera dependency.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argoproj.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Workflow</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">generateName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-batch-</span>
+<span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rahcp-example</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">entrypoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">batch-pipeline</span>
+<span class="w">  </span><span class="nt">activeDeadlineSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span><span class="w">            </span><span class="c1"># 1 hour timeout</span>
+
+<span class="w">  </span><span class="nt">arguments</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-endpoint</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://hcp-api.default.svc:8000/api/v1&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bucket</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;datasets&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">input-prefix</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;incoming/&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">output-prefix</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;processed/&quot;</span>
+
+<span class="w">  </span><span class="nt">templates</span><span class="p">:</span>
+<span class="w">    </span><span class="c1"># ── DAG orchestrator ─────────────────────────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">batch-pipeline</span>
+<span class="w">      </span><span class="nt">dag</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">discover</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">list-objects</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">process</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fan-out</span>
+<span class="w">            </span><span class="nt">dependencies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">discover</span><span class="p p-Indicator">]</span>
+<span class="w">            </span><span class="nt">arguments</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object-keys</span>
+<span class="w">                  </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{tasks.discover.outputs.parameters.keys}}&quot;</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">summarize</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aggregate</span>
+<span class="w">            </span><span class="nt">dependencies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">process</span><span class="p p-Indicator">]</span>
+
+<span class="w">    </span><span class="c1"># ── Step 1: List objects from HCP ────────────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">list-objects</span>
+<span class="w">      </span><span class="nt">retryStrategy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">        </span><span class="nt">backoff</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;5s&quot;</span>
+<span class="w">          </span><span class="nt">factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-registry/hcp-sdk:3.13</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="nl">&amp;hcp-env</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_ENDPOINT</span>
+<span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{workflow.parameters.hcp-endpoint}}&quot;</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_USERNAME</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-credentials</span>
+<span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">username</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_PASSWORD</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-credentials</span>
+<span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">password</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_TENANT</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span>
+<span class="w">                </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-credentials</span>
+<span class="w">                </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tenant</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import asyncio, json</span>
+<span class="w">          </span><span class="no">from pathlib import Path</span>
+<span class="w">          </span><span class="no">from rahcp_client import HCPClient</span>
+
+<span class="w">          </span><span class="no">async def main():</span>
+<span class="w">              </span><span class="no">async with HCPClient.from_env() as client:</span>
+<span class="w">                  </span><span class="no">result = await client.s3.list_objects(</span>
+<span class="w">                      </span><span class="no">&quot;{{workflow.parameters.bucket}}&quot;,</span>
+<span class="w">                      </span><span class="no">prefix=&quot;{{workflow.parameters.input-prefix}}&quot;,</span>
+<span class="w">                      </span><span class="no">max_keys=200,</span>
+<span class="w">                  </span><span class="no">)</span>
+<span class="w">                  </span><span class="no">keys = [obj[&quot;key&quot;] for obj in result[&quot;objects&quot;]]</span>
+<span class="w">                  </span><span class="no">print(f&quot;Found {len(keys)} objects under {{workflow.parameters.input-prefix}}&quot;)</span>
+<span class="w">                  </span><span class="no">Path(&quot;/tmp/keys.json&quot;).write_text(json.dumps(keys))</span>
+
+<span class="w">          </span><span class="no">asyncio.run(main())</span>
+<span class="w">      </span><span class="nt">outputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">keys</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/tmp/keys.json</span>
+
+<span class="w">    </span><span class="c1"># ── Step 2: Fan out — one pod per object ─────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fan-out</span>
+<span class="w">      </span><span class="nt">inputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object-keys</span>
+<span class="w">      </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">process-object</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">process-single</span>
+<span class="w">            </span><span class="nt">arguments</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">key</span>
+<span class="w">                  </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{item}}&quot;</span>
+<span class="w">            </span><span class="nt">withParam</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{inputs.parameters.object-keys}}&quot;</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">process-single</span>
+<span class="w">      </span><span class="nt">retryStrategy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">        </span><span class="nt">backoff</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;10s&quot;</span>
+<span class="w">          </span><span class="nt">factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">      </span><span class="nt">inputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">key</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-registry/hcp-sdk:3.13</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="nv">*hcp-env</span>
+<span class="w">        </span><span class="nt">resources</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">requests</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;256Mi&quot;</span>
+<span class="w">            </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;250m&quot;</span>
+<span class="w">          </span><span class="nt">limits</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;512Mi&quot;</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import asyncio, json</span>
+<span class="w">          </span><span class="no">from pathlib import Path</span>
+<span class="w">          </span><span class="no">from rahcp_client import HCPClient</span>
+
+<span class="w">          </span><span class="no">BUCKET = &quot;{{workflow.parameters.bucket}}&quot;</span>
+<span class="w">          </span><span class="no">KEY = &quot;{{inputs.parameters.key}}&quot;</span>
+<span class="w">          </span><span class="no">OUTPUT_PREFIX = &quot;{{workflow.parameters.output-prefix}}&quot;</span>
+
+<span class="w">          </span><span class="no">async def main():</span>
+<span class="w">              </span><span class="no">async with HCPClient.from_env() as client:</span>
+<span class="w">                  </span><span class="no"># Download input via presigned URL</span>
+<span class="w">                  </span><span class="no">data = await client.s3.download_bytes(BUCKET, KEY)</span>
+<span class="w">                  </span><span class="no">print(f&quot;Downloaded {KEY} ({len(data)} bytes)&quot;)</span>
+
+<span class="w">                  </span><span class="no"># ── Your processing logic here ──────────────────</span>
+<span class="w">                  </span><span class="no">result = {</span>
+<span class="w">                      </span><span class="no">&quot;source_key&quot;: KEY,</span>
+<span class="w">                      </span><span class="no">&quot;size_bytes&quot;: len(data),</span>
+<span class="w">                      </span><span class="no">&quot;status&quot;: &quot;processed&quot;,</span>
+<span class="w">                      </span><span class="no">&quot;workflow&quot;: &quot;{{workflow.name}}&quot;,</span>
+<span class="w">                  </span><span class="no">}</span>
+
+<span class="w">                  </span><span class="no"># Upload result</span>
+<span class="w">                  </span><span class="no">filename = KEY.split(&quot;/&quot;)[-1]</span>
+<span class="w">                  </span><span class="no">result_key = f&quot;{OUTPUT_PREFIX}{filename}.result.json&quot;</span>
+<span class="w">                  </span><span class="no">await client.s3.upload(BUCKET, result_key, json.dumps(result).encode())</span>
+<span class="w">                  </span><span class="no">print(f&quot;Result → {result_key}&quot;)</span>
+
+<span class="w">          </span><span class="no">asyncio.run(main())</span>
+
+<span class="w">    </span><span class="c1"># ── Step 3: Aggregate results ────────────────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aggregate</span>
+<span class="w">      </span><span class="nt">retryStrategy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-registry/hcp-sdk:3.13</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="nv">*hcp-env</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import asyncio, json</span>
+<span class="w">          </span><span class="no">from rahcp_client import HCPClient</span>
+
+<span class="w">          </span><span class="no">BUCKET = &quot;{{workflow.parameters.bucket}}&quot;</span>
+<span class="w">          </span><span class="no">OUTPUT_PREFIX = &quot;{{workflow.parameters.output-prefix}}&quot;</span>
+
+<span class="w">          </span><span class="no">async def main():</span>
+<span class="w">              </span><span class="no">async with HCPClient.from_env() as client:</span>
+<span class="w">                  </span><span class="no">result = await client.s3.list_objects(BUCKET, prefix=OUTPUT_PREFIX, max_keys=1000)</span>
+<span class="w">                  </span><span class="no">count = len(result[&quot;objects&quot;])</span>
+
+<span class="w">                  </span><span class="no">summary = {</span>
+<span class="w">                      </span><span class="no">&quot;workflow&quot;: &quot;{{workflow.name}}&quot;,</span>
+<span class="w">                      </span><span class="no">&quot;objects_processed&quot;: count,</span>
+<span class="w">                      </span><span class="no">&quot;output_prefix&quot;: OUTPUT_PREFIX,</span>
+<span class="w">                      </span><span class="no">&quot;status&quot;: &quot;complete&quot;,</span>
+<span class="w">                  </span><span class="no">}</span>
+<span class="w">                  </span><span class="no">summary_key = f&quot;summaries/{{workflow.name}}.json&quot;</span>
+<span class="w">                  </span><span class="no">await client.s3.upload(BUCKET, summary_key, json.dumps(summary).encode())</span>
+<span class="w">                  </span><span class="no">print(f&quot;Summary ({count} objects) → {summary_key}&quot;)</span>
+
+<span class="w">          </span><span class="no">asyncio.run(main())</span>
+</code></pre></div>
+</div>
 </div>
 </div>
 <div class="admonition tip">
@@ -3373,7 +3752,7 @@ kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="
 <span class="w">  </span>-n<span class="w"> </span>argo
 </code></pre></div>
 <h3 id="workflow-definition">Workflow definition<a class="headerlink" href="#workflow-definition" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">YAML</label><label for="__tabbed_5_2">Hera</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:3"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><input id="__tabbed_5_3" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">YAML</label><label for="__tabbed_5_2">Hera</label><label for="__tabbed_5_3">rahcp SDK (YAML)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <p>Each pod gets credentials via environment variables from Kubernetes Secrets. The <code>rahcp-client</code> SDK handles authentication and presigned URL transfers automatically.</p>
@@ -3819,6 +4198,268 @@ kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="
 <span class="n">w</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
 </code></pre></div>
 </div>
+<div class="tabbed-block">
+<p>Standalone runnable YAML — uses the SDK in script blocks with dual-tenant credentials from K8s Secrets. No Hera dependency.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argoproj.io/v1alpha1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Workflow</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">generateName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-tiff-to-jpg-</span>
+<span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rahcp-example</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">entrypoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">convert-pipeline</span>
+<span class="w">  </span><span class="nt">activeDeadlineSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7200</span><span class="w">            </span><span class="c1"># 2 hours max</span>
+<span class="w">  </span><span class="nt">onExit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cleanup</span>
+
+<span class="w">  </span><span class="nt">arguments</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hcp-endpoint</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http://hcp-api.default.svc:8000/api/v1&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source-bucket</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;scans&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source-prefix</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ingest/&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dest-bucket</span>
+<span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;images&quot;</span>
+
+<span class="w">  </span><span class="nt">templates</span><span class="p">:</span>
+<span class="w">    </span><span class="c1"># ── DAG orchestrator ─────────────────────────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">convert-pipeline</span>
+<span class="w">      </span><span class="nt">dag</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">discover</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">list-tiffs</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">convert</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fan-out</span>
+<span class="w">            </span><span class="nt">dependencies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">discover</span><span class="p p-Indicator">]</span>
+<span class="w">            </span><span class="nt">arguments</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object-keys</span>
+<span class="w">                  </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{tasks.discover.outputs.parameters.keys}}&quot;</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">verify</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">verify-and-commit</span>
+<span class="w">            </span><span class="nt">dependencies</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">convert</span><span class="p p-Indicator">]</span>
+
+<span class="w">    </span><span class="c1"># ── List TIFF files in source tenant ─────────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">list-tiffs</span>
+<span class="w">      </span><span class="nt">retryStrategy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">        </span><span class="nt">backoff</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;5s&quot;</span>
+<span class="w">          </span><span class="nt">factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-registry/hcp-sdk:3.13</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="nl">&amp;source-env</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_ENDPOINT</span>
+<span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{workflow.parameters.hcp-endpoint}}&quot;</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_USERNAME</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-source-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">username</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_PASSWORD</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-source-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">password</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_TENANT</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-source-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">tenant</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import asyncio, json</span>
+<span class="w">          </span><span class="no">from pathlib import Path</span>
+<span class="w">          </span><span class="no">from rahcp_client import HCPClient</span>
+
+<span class="w">          </span><span class="no">async def main():</span>
+<span class="w">              </span><span class="no">async with HCPClient.from_env() as client:</span>
+<span class="w">                  </span><span class="no">result = await client.s3.list_objects(</span>
+<span class="w">                      </span><span class="no">&quot;{{workflow.parameters.source-bucket}}&quot;,</span>
+<span class="w">                      </span><span class="no">prefix=&quot;{{workflow.parameters.source-prefix}}&quot;,</span>
+<span class="w">                      </span><span class="no">max_keys=500,</span>
+<span class="w">                  </span><span class="no">)</span>
+<span class="w">                  </span><span class="no">keys = [</span>
+<span class="w">                      </span><span class="no">o[&quot;key&quot;] for o in result[&quot;objects&quot;]</span>
+<span class="w">                      </span><span class="no">if o[&quot;key&quot;].lower().endswith((&quot;.tiff&quot;, &quot;.tif&quot;))</span>
+<span class="w">                  </span><span class="no">]</span>
+<span class="w">                  </span><span class="no">print(f&quot;Found {len(keys)} TIFF files&quot;)</span>
+<span class="w">                  </span><span class="no">Path(&quot;/tmp/keys.json&quot;).write_text(json.dumps(keys))</span>
+
+<span class="w">          </span><span class="no">asyncio.run(main())</span>
+<span class="w">      </span><span class="nt">outputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">keys</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/tmp/keys.json</span>
+
+<span class="w">    </span><span class="c1"># ── Fan out — one conversion pod per TIFF ────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fan-out</span>
+<span class="w">      </span><span class="nt">inputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object-keys</span>
+<span class="w">      </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">convert-tiff</span>
+<span class="w">            </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">convert-single</span>
+<span class="w">            </span><span class="nt">arguments</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">key</span>
+<span class="w">                  </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{item}}&quot;</span>
+<span class="w">            </span><span class="nt">withParam</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{inputs.parameters.object-keys}}&quot;</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">convert-single</span>
+<span class="w">      </span><span class="nt">retryStrategy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">        </span><span class="nt">retryPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Always</span>
+<span class="w">        </span><span class="nt">backoff</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;15s&quot;</span>
+<span class="w">          </span><span class="nt">factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">          </span><span class="nt">maxDuration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2m&quot;</span>
+<span class="w">      </span><span class="nt">activeDeadlineSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">600</span><span class="w">          </span><span class="c1"># 10 min per image</span>
+<span class="w">      </span><span class="nt">inputs</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">key</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-registry/hcp-sdk:3.13</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
+<span class="w">          </span><span class="c1"># Source tenant credentials</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_ENDPOINT</span>
+<span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{workflow.parameters.hcp-endpoint}}&quot;</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_USERNAME</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-source-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">username</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_PASSWORD</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-source-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">password</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_TENANT</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-source-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">tenant</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">          </span><span class="c1"># Destination tenant credentials</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DST_USERNAME</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-dest-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">username</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DST_PASSWORD</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-dest-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">password</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DST_TENANT</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-dest-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">tenant</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">        </span><span class="nt">resources</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">requests</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;512Mi&quot;</span>
+<span class="w">            </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;500m&quot;</span>
+<span class="w">          </span><span class="nt">limits</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1Gi&quot;</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import asyncio, os</span>
+<span class="w">          </span><span class="no">from pathlib import Path</span>
+<span class="w">          </span><span class="no">from PIL import Image</span>
+<span class="w">          </span><span class="no">from rahcp_client import HCPClient</span>
+<span class="w">          </span><span class="no">from rahcp_validate.images import validate_tiff, validate_jpg</span>
+
+<span class="w">          </span><span class="no">async def main():</span>
+<span class="w">              </span><span class="no">endpoint = os.environ[&quot;HCP_ENDPOINT&quot;]</span>
+<span class="w">              </span><span class="no">SRC_BUCKET = &quot;{{workflow.parameters.source-bucket}}&quot;</span>
+<span class="w">              </span><span class="no">DST_BUCKET = &quot;{{workflow.parameters.dest-bucket}}&quot;</span>
+<span class="w">              </span><span class="no">KEY = &quot;{{inputs.parameters.key}}&quot;</span>
+<span class="w">              </span><span class="no">WF = &quot;{{workflow.name}}&quot;</span>
+
+<span class="w">              </span><span class="no">src = HCPClient(</span>
+<span class="w">                  </span><span class="no">endpoint=endpoint,</span>
+<span class="w">                  </span><span class="no">username=os.environ[&quot;HCP_USERNAME&quot;],</span>
+<span class="w">                  </span><span class="no">password=os.environ[&quot;HCP_PASSWORD&quot;],</span>
+<span class="w">                  </span><span class="no">tenant=os.environ[&quot;HCP_TENANT&quot;],</span>
+<span class="w">              </span><span class="no">)</span>
+<span class="w">              </span><span class="no">dst = HCPClient(</span>
+<span class="w">                  </span><span class="no">endpoint=endpoint,</span>
+<span class="w">                  </span><span class="no">username=os.environ[&quot;DST_USERNAME&quot;],</span>
+<span class="w">                  </span><span class="no">password=os.environ[&quot;DST_PASSWORD&quot;],</span>
+<span class="w">                  </span><span class="no">tenant=os.environ[&quot;DST_TENANT&quot;],</span>
+<span class="w">              </span><span class="no">)</span>
+
+<span class="w">              </span><span class="no">async with src, dst:</span>
+<span class="w">                  </span><span class="no"># 1. Download and validate TIFF</span>
+<span class="w">                  </span><span class="no">tiff_path = Path(&quot;/tmp/input.tiff&quot;)</span>
+<span class="w">                  </span><span class="no">size = await src.s3.download(SRC_BUCKET, KEY, tiff_path)</span>
+<span class="w">                  </span><span class="no">validate_tiff(tiff_path)</span>
+<span class="w">                  </span><span class="no">print(f&quot;Downloaded and validated {KEY} ({size} bytes)&quot;)</span>
+
+<span class="w">                  </span><span class="no"># 2. Convert TIFF → JPG</span>
+<span class="w">                  </span><span class="no">jpg_path = Path(&quot;/tmp/output.jpg&quot;)</span>
+<span class="w">                  </span><span class="no">img = Image.open(tiff_path)</span>
+<span class="w">                  </span><span class="no">img.convert(&quot;RGB&quot;).save(jpg_path, &quot;JPEG&quot;, quality=85)</span>
+<span class="w">                  </span><span class="no">validate_jpg(jpg_path)</span>
+<span class="w">                  </span><span class="no">print(f&quot;Converted to JPG ({img.size[0]}x{img.size[1]})&quot;)</span>
+
+<span class="w">                  </span><span class="no"># 3. Upload to staging prefix in destination tenant</span>
+<span class="w">                  </span><span class="no">filename = KEY.split(&quot;/&quot;)[-1].rsplit(&quot;.&quot;, 1)[0] + &quot;.jpg&quot;</span>
+<span class="w">                  </span><span class="no">staging_key = f&quot;staging/{WF}/{filename}&quot;</span>
+<span class="w">                  </span><span class="no">await dst.s3.upload(DST_BUCKET, staging_key, jpg_path)</span>
+
+<span class="w">                  </span><span class="no"># 4. Verify upload (head raises NotFoundError if missing)</span>
+<span class="w">                  </span><span class="no">await dst.s3.head(DST_BUCKET, staging_key)</span>
+<span class="w">                  </span><span class="no">print(f&quot;Uploaded and verified {staging_key}&quot;)</span>
+
+<span class="w">          </span><span class="no">asyncio.run(main())</span>
+
+<span class="w">    </span><span class="c1"># ── Commit staging → published ───────────────────────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">verify-and-commit</span>
+<span class="w">      </span><span class="nt">retryStrategy</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-registry/hcp-sdk:3.13</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="nl">&amp;dest-env</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_ENDPOINT</span>
+<span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{workflow.parameters.hcp-endpoint}}&quot;</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_USERNAME</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-dest-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">username</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_PASSWORD</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-dest-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">password</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">HCP_TENANT</span>
+<span class="w">            </span><span class="nt">valueFrom</span><span class="p">:</span>
+<span class="w">              </span><span class="nt">secretKeyRef</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> name</span><span class="p">:</span><span class="w"> </span><span class="nv">hcp-dest-creds</span><span class="p p-Indicator">,</span><span class="nt"> key</span><span class="p">:</span><span class="w"> </span><span class="nv">tenant</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import asyncio</span>
+<span class="w">          </span><span class="no">from rahcp_client import HCPClient</span>
+
+<span class="w">          </span><span class="no">async def main():</span>
+<span class="w">              </span><span class="no">async with HCPClient.from_env() as client:</span>
+<span class="w">                  </span><span class="no">count = await client.s3.commit_staging(</span>
+<span class="w">                      </span><span class="no">&quot;{{workflow.parameters.dest-bucket}}&quot;,</span>
+<span class="w">                      </span><span class="no">&quot;staging/{{workflow.name}}/&quot;,</span>
+<span class="w">                      </span><span class="no">&quot;published/&quot;,</span>
+<span class="w">                  </span><span class="no">)</span>
+<span class="w">                  </span><span class="no">print(f&quot;Committed {count} JPGs to published/&quot;)</span>
+
+<span class="w">          </span><span class="no">asyncio.run(main())</span>
+
+<span class="w">    </span><span class="c1"># ── Exit handler — clean up staging on failure ───────────────</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cleanup</span>
+<span class="w">      </span><span class="nt">script</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-registry/hcp-sdk:3.13</span>
+<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">python</span><span class="p p-Indicator">]</span>
+<span class="w">        </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="nv">*dest-env</span>
+<span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">import asyncio</span>
+
+<span class="w">          </span><span class="no">STATUS = &quot;{{workflow.status}}&quot;</span>
+<span class="w">          </span><span class="no">if STATUS == &quot;Succeeded&quot;:</span>
+<span class="w">              </span><span class="no">print(&quot;Workflow succeeded — no cleanup needed&quot;)</span>
+<span class="w">              </span><span class="no">exit(0)</span>
+
+<span class="w">          </span><span class="no">from rahcp_client import HCPClient</span>
+
+<span class="w">          </span><span class="no">async def main():</span>
+<span class="w">              </span><span class="no">async with HCPClient.from_env() as client:</span>
+<span class="w">                  </span><span class="no">print(f&quot;Workflow {STATUS} — cleaning up staging/...&quot;)</span>
+<span class="w">                  </span><span class="no">deleted = await client.s3.cleanup_staging(</span>
+<span class="w">                      </span><span class="no">&quot;{{workflow.parameters.dest-bucket}}&quot;,</span>
+<span class="w">                      </span><span class="no">&quot;staging/{{workflow.name}}/&quot;,</span>
+<span class="w">                  </span><span class="no">)</span>
+<span class="w">                  </span><span class="no">print(f&quot;Deleted {deleted} staged objects&quot;)</span>
+
+<span class="w">          </span><span class="no">asyncio.run(main())</span>
+</code></pre></div>
+</div>
 </div>
 </div>
 <h3 id="verification-pipeline">Verification pipeline<a class="headerlink" href="#verification-pipeline" title="Permanent link">&para;</a></h3>
@@ -4247,6 +4888,37 @@ kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="
 <li><strong>Workflow timeout</strong> -- <code>activeDeadlineSeconds: 3600</code> ensures the entire workflow fails rather than running forever.</li>
 </ol>
 <hr />
+<h2 id="runnable-examples">Runnable examples<a class="headerlink" href="#runnable-examples" title="Permanent link">&para;</a></h2>
+<p>The <code>examples/</code> directory contains standalone, runnable versions of the workflows on this page. These files are the <strong>single source of truth</strong> — the "rahcp SDK (YAML)" tabs above include directly from them via snippet markers, so docs and examples can never drift.</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/riksarkivet/ra-hcp/blob/main/examples/argo-etl-pipeline.yaml"><code>examples/argo-etl-pipeline.yaml</code></a></td>
+<td>ETL DAG with SDK script blocks</td>
+</tr>
+<tr>
+<td><a href="https://github.com/riksarkivet/ra-hcp/blob/main/examples/argo-batch-fanout.yaml"><code>examples/argo-batch-fanout.yaml</code></a></td>
+<td>Fan-out over HCP objects with SDK</td>
+</tr>
+<tr>
+<td><a href="https://github.com/riksarkivet/ra-hcp/blob/main/examples/argo-tiff-to-jpg.yaml"><code>examples/argo-tiff-to-jpg.yaml</code></a></td>
+<td>Cross-tenant TIFF→JPG with staging + exit handler</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="c1"># Submit directly</span>
+argo<span class="w"> </span>submit<span class="w"> </span>examples/argo-etl-pipeline.yaml
+
+<span class="c1"># Lint without submitting</span>
+argo<span class="w"> </span>lint<span class="w"> </span>examples/argo-batch-fanout.yaml
+</code></pre></div>
+<hr />
 <h2 id="related-pages">Related pages<a class="headerlink" href="#related-pages" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../../sdk/">Python SDK</a> -- <code>rahcp-client</code> async client with automatic retries, presigned URLs, and multipart uploads.</li>
@@ -4356,11 +5028,10 @@ kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="
     
       
       
-      
       <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.5fd3284f.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c2b142ea.min.js"></script>
       
     
   </body>
