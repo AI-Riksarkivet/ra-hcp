@@ -296,7 +296,7 @@ def upload_all(
     bucket: str = typer.Argument(...),
     source_dir: str = typer.Argument(..., help="Local directory to upload"),
     prefix: str = typer.Option("", "--prefix", "-p", help="Key prefix to prepend"),
-    workers: int = typer.Option(10, "--workers", "-w", help="Concurrent uploads"),
+    workers: int = typer.Option(0, "--workers", "-w", help="Concurrent workers (0 = use config)"),
     skip_existing: bool = typer.Option(
         True,
         "--skip-existing/--overwrite",
@@ -416,7 +416,7 @@ def download_all(
     dest_dir: str = typer.Option(
         ".", "--output", "-o", help="Local destination directory"
     ),
-    workers: int = typer.Option(10, "--workers", "-w", help="Concurrent downloads"),
+    workers: int = typer.Option(0, "--workers", "-w", help="Concurrent workers (0 = use config)"),
     retry_errors: bool = typer.Option(
         False, "--retry-errors", help="Only retry previously failed files"
     ),
