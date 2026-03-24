@@ -57,6 +57,8 @@ class Profile(BaseModel):
     bulk_tracker_flush_every: int = 200
     bulk_tracker_dir: str = ""
     bulk_tracker_prefix: str = ""
+    bulk_presign_batch_size: int = 200
+    bulk_chunk_size: int = 256 * 1024  # 256 KB
 
     # IIIF
     iiif_url: str = "https://iiifintern-ai.ra.se"

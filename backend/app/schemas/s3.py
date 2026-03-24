@@ -131,6 +131,7 @@ class BulkPresignRequest(BaseModel):
     """Request body for generating bulk presigned URLs."""
 
     keys: List[str] = Field(..., min_length=1, description="Object keys")
+    method: str = Field("get_object", description="get_object or put_object")
     expires_in: int = Field(
         3600, ge=1, le=604800, description="URL expiration in seconds (max 7 days)"
     )

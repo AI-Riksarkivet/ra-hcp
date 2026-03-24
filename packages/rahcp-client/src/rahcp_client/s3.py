@@ -89,18 +89,27 @@ class S3Ops:
         bucket: str,
         keys: list[str],
         *,
+        method: str = "get_object",
         expires: int = 3600,
-    ) -> list[dict[str, Any]]:
-        """Get presigned download URLs for multiple keys."""
+    ) -> dict[str, str]:
+        """Presign multiple keys in one API call. Returns {key: url} mapping.
+
+        Args:
+            bucket: Target bucket.
+            keys: List of object keys to presign.
+            method: "get_object" for downloads, "put_object" for uploads.
+            expires: URL expiration in seconds.
+        """
         resp = await self._client.request(
             "POST",
             f"/buckets/{bucket}/objects/presign",
             json={
                 "keys": keys,
+                "method": method,
                 "expires_in": expires,
             },
         )
-        return resp.json()["urls"]
+        return {item["key"]: item["url"] for item in resp.json()["urls"]}
 
     async def upload(self, bucket: str, key: str, data: bytes | Path) -> str:
         """Upload data — auto-selects presigned PUT or multipart based on size.

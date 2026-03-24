@@ -125,6 +125,8 @@ def main(
     ctx.obj["bulk_tracker_flush_every"] = p.bulk_tracker_flush_every
     ctx.obj["bulk_tracker_dir"] = p.bulk_tracker_dir
     ctx.obj["bulk_tracker_prefix"] = p.bulk_tracker_prefix
+    ctx.obj["bulk_presign_batch_size"] = p.bulk_presign_batch_size
+    ctx.obj["bulk_chunk_size"] = p.bulk_chunk_size
     ctx.obj["iiif_url"] = p.iiif_url
     ctx.obj["iiif_timeout"] = p.iiif_timeout
     ctx.obj["iiif_query_params"] = p.iiif_query_params

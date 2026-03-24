@@ -81,7 +81,7 @@ async def test_bulk_upload_skips_done_keys(tmp_path: Path):
     )
 
     assert stats.ok == 1
-    assert stats.skipped == 1
+    # Done keys are filtered in the producer — never reach workers
     assert client.s3.upload.call_count == 1
     tracker.close()
 

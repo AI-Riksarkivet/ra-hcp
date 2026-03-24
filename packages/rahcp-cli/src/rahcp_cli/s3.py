@@ -337,6 +337,11 @@ def upload_all(
         "--tracker-prefix",
         help="Prefix for tracker DB name (e.g. 'andraarkiv' → andraarkiv.upload-tracker.db)",
     ),
+    presign_batch_size: int = typer.Option(
+        0,
+        "--presign-batch-size",
+        help="Presign URLs in batches of this size (0 = use config default)",
+    ),
 ) -> None:
     """Upload a directory to S3 with tracked resume and parallel workers."""
 
@@ -386,6 +391,9 @@ def upload_all(
                     exclude=exclude,
                     validate_file=validate_fn,
                     verify_upload=verify,
+                    presign_batch_size=presign_batch_size
+                    or ctx.obj.get("bulk_presign_batch_size", 200),
+                    chunk_size=ctx.obj.get("bulk_chunk_size", 256 * 1024),
                     progress_interval=ctx.obj.get("bulk_progress_interval", 5.0),
                     on_progress=_print_progress,
                     on_error=_print_error,
@@ -444,6 +452,11 @@ def download_all(
         "--tracker-prefix",
         help="Prefix for tracker DB name (e.g. 'backup' → backup.download-tracker.db)",
     ),
+    presign_batch_size: int = typer.Option(
+        0,
+        "--presign-batch-size",
+        help="Presign URLs in batches of this size (0 = use config default)",
+    ),
 ) -> None:
     """Download a bucket to a local directory with tracked resume and parallel workers."""
 
@@ -487,6 +500,9 @@ def download_all(
                     exclude=exclude,
                     validate_file=validate_fn,
                     verify_download=verify,
+                    presign_batch_size=presign_batch_size
+                    or ctx.obj.get("bulk_presign_batch_size", 200),
+                    chunk_size=ctx.obj.get("bulk_chunk_size", 256 * 1024),
                     progress_interval=ctx.obj.get("bulk_progress_interval", 5.0),
                     on_progress=_print_progress,
                     on_error=_print_error,

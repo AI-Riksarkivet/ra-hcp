@@ -291,7 +291,9 @@ async def bulk_presign(
     urls = []
     for key in body.keys:
         try:
-            url = await s3.generate_presigned_url(bucket, key, body.expires_in)
+            url = await s3.generate_presigned_url(
+                bucket, key, body.expires_in, body.method
+            )
             urls.append({"key": key, "url": url})
         except Exception:
             continue

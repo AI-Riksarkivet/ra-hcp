@@ -75,7 +75,7 @@ async def test_presign_bulk():
     )
     async with _make_client() as client:
         urls = await client.s3.presign_bulk("b", ["a"])
-    assert urls[0]["url"] == "u1"
+    assert urls["a"] == "u1"
 
 
 @respx.mock
