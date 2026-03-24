@@ -71,6 +71,7 @@ async def bulk_download(cfg: BulkDownloadConfig) -> TransferStats:
                     key,
                     size=size,
                     chunk_size=cfg.chunk_size,
+                    stream_threshold=cfg.stream_threshold,
                 )
             else:
                 bytes_dl = await cfg.client.s3.download(cfg.bucket, key, tmp_path)

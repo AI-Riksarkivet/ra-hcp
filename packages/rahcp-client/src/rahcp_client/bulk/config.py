@@ -12,7 +12,9 @@ from rahcp_tracker import TrackerProtocol
 from rahcp_client.bulk.protocol import BulkClient
 
 DEFAULT_CHUNK_SIZE = 1024 * 1024  # 1 MB
-DEFAULT_STREAM_THRESHOLD = 100 * 1024 * 1024  # 100 MB — files below this are read in one shot
+DEFAULT_STREAM_THRESHOLD = (
+    100 * 1024 * 1024
+)  # 100 MB — files below this are read in one shot
 
 
 class TransferStats(BaseModel):
@@ -86,6 +88,7 @@ class BulkDownloadConfig(BaseModel):
     verify_download: bool = False
     presign_batch_size: int = 200
     chunk_size: int = DEFAULT_CHUNK_SIZE
+    stream_threshold: int = DEFAULT_STREAM_THRESHOLD
     on_progress: Callable[[TransferStats], None] | None = None
     on_error: Callable[[str, Exception], None] | None = None
     progress_interval: float = 5.0

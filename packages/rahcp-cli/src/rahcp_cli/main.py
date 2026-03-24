@@ -127,6 +127,7 @@ def main(
     ctx.obj["bulk_tracker_prefix"] = p.bulk_tracker_prefix
     ctx.obj["bulk_presign_batch_size"] = p.bulk_presign_batch_size
     ctx.obj["bulk_chunk_size"] = p.bulk_chunk_size
+    ctx.obj["bulk_stream_threshold"] = p.bulk_stream_threshold
     ctx.obj["iiif_url"] = p.iiif_url
     ctx.obj["iiif_timeout"] = p.iiif_timeout
     ctx.obj["iiif_query_params"] = p.iiif_query_params
