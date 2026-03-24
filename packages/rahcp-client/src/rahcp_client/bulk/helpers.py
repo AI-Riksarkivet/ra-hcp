@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import fnmatch
 import logging
 import time
 from collections.abc import Callable
+from pathlib import Path
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from rahcp_tracker import TrackerProtocol, TransferStatus
 
-from rahcp_client.bulk.config import TransferStats
+from rahcp_client.bulk.config import DEFAULT_STREAM_THRESHOLD, TransferStats
 from rahcp_client.bulk.protocol import BulkClient
 
 log = logging.getLogger(__name__)
@@ -149,3 +151,70 @@ def make_pool(
             max_keepalive_connections=max_connections,
         ),
     )
+
+
+# ── Shared I/O ─────────────────────────────────────────────────────
+
+
+def _raise_for_presigned(resp: httpx.Response, bucket: str, key: str) -> None:
+    """Raise a clean error for presigned URL failures."""
+    if resp.status_code >= 400:
+        raise httpx.HTTPStatusError(
+            f"{resp.status_code} for {bucket}/{key}",
+            request=resp.request,
+            response=resp,
+        )
+
+
+async def pool_upload(
+    pool: httpx.AsyncClient,
+    presigned_url: str,
+    file_path: Path,
+    bucket: str,
+    key: str,
+) -> str:
+    """Upload a file using a pre-fetched presigned URL and shared pool.
+
+    Returns the ETag from the response.
+    """
+    content = await asyncio.to_thread(file_path.read_bytes)
+    resp = await pool.put(presigned_url, content=content)
+    _raise_for_presigned(resp, bucket, key)
+    return resp.headers.get("etag", "")
+
+
+async def pool_download(
+    pool: httpx.AsyncClient,
+    presigned_url: str,
+    dest: Path,
+    bucket: str,
+    key: str,
+    *,
+    size: int = 0,
+    chunk_size: int = 256 * 1024,
+    stream_threshold: int = DEFAULT_STREAM_THRESHOLD,
+) -> int:
+    """Download a file using a pre-fetched presigned URL and shared pool.
+
+    Small files (< stream_threshold) are read in one shot to avoid
+    per-chunk thread dispatch overhead. Large files are streamed.
+
+    Returns the number of bytes downloaded.
+    """
+    if 0 < size <= stream_threshold:
+        resp = await pool.get(presigned_url)
+        _raise_for_presigned(resp, bucket, key)
+        await asyncio.to_thread(dest.write_bytes, resp.content)
+        return len(resp.content)
+
+    async with pool.stream("GET", presigned_url) as resp:
+        _raise_for_presigned(resp, bucket, key)
+        total = 0
+        f = await asyncio.to_thread(dest.open, "wb")
+        try:
+            async for chunk in resp.aiter_bytes(chunk_size=chunk_size):
+                await asyncio.to_thread(f.write, chunk)
+                total += len(chunk)
+        finally:
+            await asyncio.to_thread(f.close)
+    return total

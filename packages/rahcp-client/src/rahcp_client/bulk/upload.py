@@ -21,6 +21,7 @@ from rahcp_client.bulk.helpers import (
     mark_error,
     matches_filters,
     maybe_report,
+    pool_upload,
     record_result,
 )
 
@@ -98,15 +99,9 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
 
         try:
             if presigned_url and local_size < multipart_threshold:
-                content = await asyncio.to_thread(file_path.read_bytes)
-                resp = await pool.put(presigned_url, content=content)
-                if resp.status_code >= 400:
-                    raise httpx.HTTPStatusError(
-                        f"{resp.status_code} for {cfg.bucket}/{key}",
-                        request=resp.request,
-                        response=resp,
-                    )
-                etag = resp.headers.get("etag", "")
+                etag = await pool_upload(
+                    pool, presigned_url, file_path, cfg.bucket, key
+                )
             else:
                 etag = await cfg.client.s3.upload(cfg.bucket, key, file_path)
 

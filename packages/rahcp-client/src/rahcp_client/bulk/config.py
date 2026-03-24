@@ -12,6 +12,9 @@ from rahcp_tracker import TrackerProtocol
 from rahcp_client.bulk.protocol import BulkClient
 
 DEFAULT_CHUNK_SIZE = 256 * 1024  # 256 KB
+DEFAULT_STREAM_THRESHOLD = (
+    50 * 1024 * 1024
+)  # 50 MB — files below this are read in one shot
 
 
 class TransferStats(BaseModel):

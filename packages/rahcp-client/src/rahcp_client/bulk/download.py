@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 import logging
 
-import httpx
-
 from rahcp_tracker import TransferStatus
 
 from rahcp_client.bulk.config import BulkDownloadConfig, TransferStats
@@ -20,6 +18,7 @@ from rahcp_client.bulk.helpers import (
     mark_error,
     matches_filters,
     maybe_report,
+    pool_download,
     record_result,
 )
 
@@ -37,7 +36,6 @@ async def bulk_download(cfg: BulkDownloadConfig) -> TransferStats:
 
     verify_ssl, pool_timeout, _ = extract_client_settings(cfg.client)
     pool = make_pool(cfg.workers, verify_ssl=verify_ssl, timeout=pool_timeout)
-    chunk_size = cfg.chunk_size
 
     log.info(
         "Bulk download: s3://%s/%s → %s (%d workers, presign batch %d, %d done)",
@@ -65,22 +63,15 @@ async def bulk_download(cfg: BulkDownloadConfig) -> TransferStats:
 
         try:
             if presigned_url:
-                async with pool.stream("GET", presigned_url) as resp:
-                    if resp.status_code >= 400:
-                        raise httpx.HTTPStatusError(
-                            f"{resp.status_code} for {cfg.bucket}/{key}",
-                            request=resp.request,
-                            response=resp,
-                        )
-                    total = 0
-                    f = await asyncio.to_thread(tmp_path.open, "wb")
-                    try:
-                        async for chunk in resp.aiter_bytes(chunk_size=chunk_size):
-                            await asyncio.to_thread(f.write, chunk)
-                            total += len(chunk)
-                    finally:
-                        await asyncio.to_thread(f.close)
-                bytes_dl = total
+                bytes_dl = await pool_download(
+                    pool,
+                    presigned_url,
+                    tmp_path,
+                    cfg.bucket,
+                    key,
+                    size=size,
+                    chunk_size=cfg.chunk_size,
+                )
             else:
                 bytes_dl = await cfg.client.s3.download(cfg.bucket, key, tmp_path)
 
