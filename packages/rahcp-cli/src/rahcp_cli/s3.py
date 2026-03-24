@@ -257,8 +257,11 @@ def _resolve_tracker(
         )
         tracker_dir.mkdir(parents=True, exist_ok=True)
         effective_prefix = prefix or ctx.obj.get("bulk_tracker_prefix", "")
+        # Strip leading dot from default_name when prefixed
+        # (the dot is only for "hidden file" when unprefixed)
+        bare_name = default_name.lstrip(".")
         if effective_prefix:
-            db_path = tracker_dir / f"{effective_prefix}.{default_name}"
+            db_path = tracker_dir / f"{effective_prefix}.{bare_name}"
         else:
             db_path = tracker_dir / default_name
     db_path.parent.mkdir(parents=True, exist_ok=True)
