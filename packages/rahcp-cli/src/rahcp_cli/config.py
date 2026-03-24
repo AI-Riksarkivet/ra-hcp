@@ -56,6 +56,7 @@ class Profile(BaseModel):
     bulk_queue_depth: int = 8
     bulk_tracker_flush_every: int = 200
     bulk_tracker_dir: str = ""
+    bulk_tracker_prefix: str = ""
 
     # IIIF
     iiif_url: str = "https://iiifintern-ai.ra.se"

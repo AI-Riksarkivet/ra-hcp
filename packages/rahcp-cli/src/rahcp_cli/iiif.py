@@ -17,7 +17,10 @@ app = typer.Typer(help="IIIF image download operations", no_args_is_help=True)
 
 
 def _resolve_iiif_tracker(
-    ctx: typer.Context, tracker_db: str | None
+    ctx: typer.Context,
+    tracker_db: str | None,
+    *,
+    prefix: str | None = None,
 ) -> tuple[TrackerProtocol, Path]:
     """Create a tracker for IIIF downloads.
 
@@ -32,7 +35,12 @@ def _resolve_iiif_tracker(
         config_dir = ctx.obj.get("config_dir", "")
         tracker_dir = Path(config_dir) if config_dir else Path.home() / ".rahcp"
         tracker_dir.mkdir(parents=True, exist_ok=True)
-        db_path = tracker_dir / ".iiif-download.db"
+        effective_prefix = prefix or ctx.obj.get("bulk_tracker_prefix", "")
+        default_name = ".iiif-download.db"
+        if effective_prefix:
+            db_path = tracker_dir / f"{effective_prefix}.iiif-download.db"
+        else:
+            db_path = tracker_dir / default_name
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
     flush_every = ctx.obj.get("bulk_tracker_flush_every", 200)
@@ -107,6 +115,11 @@ def download(
         False, "--validate", help="Validate each image after download"
     ),
     tracker_db: str = typer.Option(None, "--tracker-db", help="Tracker DB path"),
+    tracker_prefix: str | None = typer.Option(
+        None,
+        "--tracker-prefix",
+        help="Prefix for tracker DB name (e.g. 'familysearch' → familysearch.iiif-download.db)",
+    ),
 ) -> None:
     """Download all images from a single IIIF batch."""
 
@@ -124,7 +137,7 @@ def download(
         effective_workers = workers or ctx.obj.get("iiif_workers", 4)
         validate_fn = _get_validator() if validate else None
 
-        tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db)
+        tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
 
         console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
         flags = []
@@ -182,6 +195,11 @@ def download_batches(
         False, "--validate", help="Validate each image after download"
     ),
     tracker_db: str = typer.Option(None, "--tracker-db", help="Tracker DB path"),
+    tracker_prefix: str | None = typer.Option(
+        None,
+        "--tracker-prefix",
+        help="Prefix for tracker DB name (e.g. 'familysearch' → familysearch.iiif-download.db)",
+    ),
 ) -> None:
     """Download images from multiple IIIF batches listed in a text file."""
 
@@ -213,7 +231,7 @@ def download_batches(
         effective_workers = workers or ctx.obj.get("iiif_workers", 4)
         validate_fn = _get_validator() if validate else None
 
-        tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db)
+        tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
 
         console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
         console.print(

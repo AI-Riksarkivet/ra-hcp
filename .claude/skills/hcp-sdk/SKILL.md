@@ -151,6 +151,17 @@ rahcp s3 upload-all images-batch ./images/ --validate --workers 20
 
 IIIF downloads use `.rahcp/.iiif-download.db`, S3 uploads use `.rahcp/.upload-tracker.db`. Both are independently resumable.
 
+Use `--tracker-prefix` to keep separate DBs per dataset (SQLite only):
+```bash
+rahcp s3 upload-all bucket ./andraarkiv --tracker-prefix andraarkiv
+# → .rahcp/andraarkiv.upload-tracker.db
+
+rahcp iiif download-batches job.txt --tracker-prefix familysearch
+# → .rahcp/familysearch.iiif-download.db
+```
+
+Or set globally in config: `bulk_tracker_prefix: andraarkiv`
+
 ## Transfer tracker
 
 All bulk operations use a tracker for crash-safe resume. Completed files are skipped instantly on re-run.
@@ -314,6 +325,7 @@ profiles:
     tenant: dev-ai
     verify_ssl: false
     bulk_workers: 20
+    bulk_tracker_prefix: ""         # prefix tracker DB names per dataset
 
     # IIIF settings
     iiif_url: https://iiifintern-ai.ra.se

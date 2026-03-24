@@ -230,11 +230,16 @@ def _print_summary(label: str, stats: TransferStats, db_path: Path) -> None:
 
 
 def _resolve_tracker(
-    ctx: typer.Context, tracker_db: str | None, default_name: str
+    ctx: typer.Context,
+    tracker_db: str | None,
+    default_name: str,
+    *,
+    prefix: str | None = None,
 ) -> tuple[TrackerProtocol, Path]:
     """Create a tracker from CLI args + profile config.
 
-    Resolution: --tracker-db flag > bulk_tracker_dir in profile > config directory
+    Resolution: --tracker-db (exact path) > prefix + default_name > config defaults.
+    Prefix from: --tracker-prefix flag > bulk_tracker_prefix in profile > none.
     """
     from rahcp_tracker import TransferTracker
 
@@ -251,7 +256,11 @@ def _resolve_tracker(
             else Path.home() / ".rahcp"
         )
         tracker_dir.mkdir(parents=True, exist_ok=True)
-        db_path = tracker_dir / default_name
+        effective_prefix = prefix or ctx.obj.get("bulk_tracker_prefix", "")
+        if effective_prefix:
+            db_path = tracker_dir / f"{effective_prefix}.{default_name}"
+        else:
+            db_path = tracker_dir / default_name
     db_path.parent.mkdir(parents=True, exist_ok=True)
     flush_every = ctx.obj.get("bulk_tracker_flush_every", 200)
     return TransferTracker(db_path, flush_every=flush_every), db_path
@@ -318,7 +327,12 @@ def upload_all(
     tracker_db: str | None = typer.Option(
         None,
         "--tracker-db",
-        help="Tracker DB path (default: same directory as config.yaml)",
+        help="Tracker DB path (overrides prefix and default)",
+    ),
+    tracker_prefix: str | None = typer.Option(
+        None,
+        "--tracker-prefix",
+        help="Prefix for tracker DB name (e.g. 'andraarkiv' → andraarkiv.upload-tracker.db)",
     ),
 ) -> None:
     """Upload a directory to S3 with tracked resume and parallel workers."""
@@ -333,7 +347,9 @@ def upload_all(
 
         validate_fn = _get_validator() if validate else None
 
-        tracker, db_path = _resolve_tracker(ctx, tracker_db, ".upload-tracker.db")
+        tracker, db_path = _resolve_tracker(
+            ctx, tracker_db, ".upload-tracker.db", prefix=tracker_prefix
+        )
         effective_workers = _resolve_workers(workers, ctx)
 
         console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
@@ -418,7 +434,12 @@ def download_all(
     tracker_db: str | None = typer.Option(
         None,
         "--tracker-db",
-        help="Tracker DB path (default: same directory as config.yaml)",
+        help="Tracker DB path (overrides prefix and default)",
+    ),
+    tracker_prefix: str | None = typer.Option(
+        None,
+        "--tracker-prefix",
+        help="Prefix for tracker DB name (e.g. 'backup' → backup.download-tracker.db)",
     ),
 ) -> None:
     """Download a bucket to a local directory with tracked resume and parallel workers."""
@@ -428,7 +449,9 @@ def download_all(
 
         dest = Path(dest_dir)
         validate_fn = _get_validator() if validate else None
-        tracker, db_path = _resolve_tracker(ctx, tracker_db, ".download-tracker.db")
+        tracker, db_path = _resolve_tracker(
+            ctx, tracker_db, ".download-tracker.db", prefix=tracker_prefix
+        )
         effective_workers = _resolve_workers(workers, ctx)
 
         console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")

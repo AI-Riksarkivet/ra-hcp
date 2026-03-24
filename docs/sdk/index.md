@@ -596,6 +596,7 @@ profiles:
     bulk_queue_depth: 8             # queue size = workers × this
     bulk_tracker_flush_every: 200   # tracker DB writes buffered per flush
     bulk_tracker_dir: ""            # tracker DB directory (default: ~/.rahcp/)
+    bulk_tracker_prefix: ""         # prefix for tracker DB names (e.g. "andraarkiv")
 
     # IIIF download settings (rahcp iiif commands)
     iiif_url: https://iiifintern-ai.ra.se
@@ -705,6 +706,7 @@ Download all objects from a bucket (or prefix) to a local directory with concurr
 | `--verify` | -- | off | Verify each download by checking file size after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
 | `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
+| `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `backup` → `backup.download-tracker.db`) |
 
 **Examples:**
 
@@ -749,6 +751,7 @@ Upload an entire local directory to a bucket, preserving the directory structure
 | `--verify` | -- | off | Verify each upload by checking remote size (HEAD) after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
 | `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
+| `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `andraarkiv` → `andraarkiv.upload-tracker.db`) |
 
 **Examples:**
 
@@ -824,7 +827,23 @@ Both `upload-all` and `download-all` track progress in a local SQLite database (
 
 The tracker database persists across runs. To start fresh, delete the `.db` file.
 
-Tracker location resolution: `--tracker-db` flag > `bulk_tracker_dir` in profile > config file directory (e.g. `~/.rahcp/` or `.rahcp/` if using `--config`).
+Tracker location resolution: `--tracker-db` (exact path) > `--tracker-prefix` + default name > `bulk_tracker_prefix` in profile > `bulk_tracker_dir` in profile > config file directory.
+
+Use `--tracker-prefix` to keep separate tracker DBs per dataset (SQLite only):
+
+```bash
+rahcp s3 upload-all bucket ./andraarkiv --tracker-prefix andraarkiv
+# → .rahcp/andraarkiv.upload-tracker.db
+
+rahcp s3 upload-all bucket ./familysearch --tracker-prefix familysearch
+# → .rahcp/familysearch.upload-tracker.db
+```
+
+Or set it in the config file to apply to all commands:
+
+```yaml
+bulk_tracker_prefix: andraarkiv
+```
 
 ```mermaid
 flowchart TD
@@ -1061,6 +1080,7 @@ Download images from [IIIF](https://iiif.io/) endpoints (e.g. Riksarkivet's inte
 | `--max-images` | `-n` | all | Limit images per batch |
 | `--validate` | -- | off | Validate each image after download |
 | `--tracker-db` | -- | `.rahcp/.iiif-download.db` | Tracker DB path |
+| `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `familysearch` → `familysearch.iiif-download.db`) |
 
 **Examples:**
 
@@ -1082,6 +1102,11 @@ rahcp iiif download-batches batches.txt -o ./images/ --workers 10
 
 # Then upload to HCP (reuses existing upload-all)
 rahcp s3 upload-all images-batch ./images/ --validate --workers 20
+
+# Use --tracker-prefix to keep separate tracker DBs per dataset
+rahcp iiif download-batches batches.txt -o ./images/ --tracker-prefix familysearch
+rahcp s3 upload-all images-batch ./images/ --tracker-prefix familysearch
+# Creates: .rahcp/familysearch.iiif-download.db, .rahcp/familysearch.upload-tracker.db
 ```
 
 IIIF settings can be configured per profile in `config.yaml`:

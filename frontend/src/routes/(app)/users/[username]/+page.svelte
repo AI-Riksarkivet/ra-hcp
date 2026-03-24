@@ -77,7 +77,7 @@
 		<!-- Top row: General + Roles | S3 Credentials -->
 		<div class="grid gap-6 xl:grid-cols-2">
 			<UserProfile {tenant} {username} />
-			<UserS3Credentials {tenant} />
+			<UserS3Credentials {tenant} {username} />
 		</div>
 
 		<!-- Namespace Access (full width) -->
