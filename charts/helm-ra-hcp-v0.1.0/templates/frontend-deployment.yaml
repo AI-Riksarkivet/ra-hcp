@@ -34,6 +34,10 @@ spec:
           env:
             - name: BACKEND_URL
               value: {{ .Values.frontend.env.BACKEND_URL | default (printf "http://%s:%v" (include "ra-hcp.fullname" .) .Values.service.port) | quote }}
+            {{- if .Values.frontend.env.ORIGIN }}
+            - name: ORIGIN
+              value: {{ .Values.frontend.env.ORIGIN | quote }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /
