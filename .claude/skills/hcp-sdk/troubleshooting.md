@@ -179,12 +179,12 @@ rahcp s3 upload-all my-bucket ./data --retry-errors
 
 | Scenario | Recommended settings |
 |----------|---------------------|
-| Many small files (< 5 MB) | `bulk_workers: 40`, `bulk_tracker_flush_every: 500` |
-| Few large files (> 100 MB) | `bulk_workers: 10`, `multipart_concurrency: 10` |
-| Slow network | `bulk_workers: 5`, `timeout: 120` |
-| Fast datacenter (> 1 Gbps) | `bulk_workers: 60`, `bulk_queue_depth: 16` |
+| Many small files (< 5 MB) | `bulk_workers: 60`, `bulk_presign_batch_size: 500`, `bulk_queue_depth: 16` |
+| Few large files (> 100 MB) | `bulk_workers: 10`, `multipart_concurrency: 10`, `bulk_chunk_size: 4194304` |
+| Slow network | `bulk_workers: 5`, `timeout: 120`, `bulk_presign_batch_size: 100` |
+| Fast datacenter (> 1 Gbps) | `bulk_workers: 60`, `bulk_presign_batch_size: 500`, `bulk_queue_depth: 16`, `bulk_tracker_flush_every: 1000` |
 
-All tunable via config file or CLI flags. See `rahcp s3 upload-all --help` for all options.
+All tunable via config file or CLI flags. `--workers 0` uses the config value. See `rahcp s3 upload-all --help` for all options.
 
 ## Running long transfers safely
 

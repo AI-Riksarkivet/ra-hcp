@@ -591,10 +591,13 @@ profiles:
     multipart_concurrency: 6       # parallel part uploads
 
     # Bulk transfer defaults (upload-all / download-all)
-    bulk_workers: 20                # concurrent transfers
+    bulk_workers: 60                # concurrent transfers
+    bulk_presign_batch_size: 500    # URLs presigned per API call
+    bulk_chunk_size: 4194304        # 4 MB — chunk size for streaming large files
+    bulk_stream_threshold: 104857600 # 100 MB — files below this are read in one shot
     bulk_progress_interval: 5.0     # seconds between progress reports
-    bulk_queue_depth: 8             # queue size = workers × this
-    bulk_tracker_flush_every: 200   # tracker DB writes buffered per flush
+    bulk_queue_depth: 16            # queue size = workers × this
+    bulk_tracker_flush_every: 500   # tracker DB writes buffered per flush
     bulk_tracker_dir: ""            # tracker DB directory (default: ~/.rahcp/)
     bulk_tracker_prefix: ""         # prefix for tracker DB names (e.g. "andraarkiv")
 
@@ -875,10 +878,14 @@ Bulk transfer throughput depends on network bandwidth, HCP endpoint capacity, fi
 | Setting | config.yaml | CLI | Default | What it controls |
 |---------|------------|-----|---------|-----------------|
 | `bulk_workers` | Yes | `--workers` | 10 | Concurrent upload/download coroutines |
+| `bulk_presign_batch_size` | Yes | `--presign-batch-size` | 200 | URLs presigned per API call (higher = fewer round-trips) |
+| `bulk_chunk_size` | Yes | — | 1 MB | Chunk size for streaming large files |
+| `bulk_stream_threshold` | Yes | — | 100 MB | Files below this are downloaded in one shot (faster) |
 | `bulk_queue_depth` | Yes | — | 8 | Queue size = workers × depth. Higher = more files buffered ahead |
 | `bulk_progress_interval` | Yes | — | 5.0 | Seconds between progress reports |
 | `bulk_tracker_flush_every` | Yes | — | 200 | Marks buffered before writing to SQLite |
 | `bulk_tracker_dir` | Yes | `--tracker-db` | same dir as config.yaml | Where the tracker DB lives |
+| `bulk_tracker_prefix` | Yes | `--tracker-prefix` | none | Prefix tracker DB name per dataset |
 | `multipart_threshold` | Yes | — | 100 MB | Files above this use multipart upload |
 | `multipart_chunk` | Yes | — | 64 MB | Part size for multipart uploads |
 | `multipart_concurrency` | Yes | — | 6 | Parallel parts per multipart upload |
@@ -891,8 +898,9 @@ Bulk transfer throughput depends on network bandwidth, HCP endpoint capacity, fi
     The bottleneck is request overhead — each file needs a presigned URL request + a PUT. Increase workers aggressively:
 
     ```yaml
-    bulk_workers: 40        # more concurrent requests
-    bulk_queue_depth: 12    # keep workers fed
+    bulk_workers: 60        # more concurrent requests
+    bulk_presign_batch_size: 500  # fewer presign API calls
+    bulk_queue_depth: 16    # keep workers fed
     bulk_tracker_flush_every: 500  # less frequent DB writes
     ```
 

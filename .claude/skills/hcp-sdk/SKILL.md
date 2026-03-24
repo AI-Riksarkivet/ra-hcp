@@ -324,7 +324,14 @@ profiles:
     password: secret
     tenant: dev-ai
     verify_ssl: false
-    bulk_workers: 20
+
+    # Bulk transfer tuning
+    bulk_workers: 60                # concurrent transfers (0 in CLI = use config)
+    bulk_presign_batch_size: 500    # URLs presigned per API call
+    bulk_chunk_size: 4194304        # 4 MB — streaming chunk size for large files
+    bulk_stream_threshold: 104857600 # 100 MB — files below this read in one shot
+    bulk_queue_depth: 16            # queue = workers × depth
+    bulk_tracker_flush_every: 500   # SQLite write frequency
     bulk_tracker_prefix: ""         # prefix tracker DB names per dataset
 
     # IIIF settings
