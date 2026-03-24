@@ -25,9 +25,13 @@ frontend/vite.config.js.timestamp-*
 frontend/vite.config.ts.timestamp-*
 
 # CLI config (contains credentials/tokens)
-.rahcp/
+.rahcp/*.db*
+.rahcp/config.yaml
 !.rahcp.example.yaml
 dump/
 
 # Docs
 site/
+
+# 
+adhoc_downloader/
