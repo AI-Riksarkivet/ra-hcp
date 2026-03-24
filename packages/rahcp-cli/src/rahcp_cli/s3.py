@@ -10,6 +10,7 @@ from rahcp_cli._client import make_client
 from rahcp_cli._output import console, print_json, print_table
 from rahcp_cli._run import run
 from rahcp_client.bulk import TransferStats
+from rahcp_tracker import TrackerProtocol
 
 app = typer.Typer(help="S3 data-plane operations", no_args_is_help=True)
 
@@ -228,12 +229,14 @@ def _print_summary(label: str, stats: TransferStats, db_path: Path) -> None:
     console.print(f"  Tracker: [bold]{db_path}[/bold]")
 
 
-def _resolve_tracker(ctx: typer.Context, tracker_db: str | None, default_name: str):
-    """Create a TransferTracker from CLI args + profile config.
+def _resolve_tracker(
+    ctx: typer.Context, tracker_db: str | None, default_name: str
+) -> tuple[TrackerProtocol, Path]:
+    """Create a tracker from CLI args + profile config.
 
     Resolution: --tracker-db flag > bulk_tracker_dir in profile > config directory
     """
-    from rahcp_client.tracker import TransferTracker
+    from rahcp_tracker import TransferTracker
 
     if tracker_db:
         db_path = Path(tracker_db)
@@ -260,10 +263,7 @@ def _resolve_workers(workers: int, ctx: typer.Context) -> int:
 
 
 def _get_validator():
-    """Load the auto-detecting file validator from rahcp-validate.
-
-    Raises a clear error if rahcp-validate is not installed.
-    """
+    """Load the file validator from rahcp-validate, or exit if not installed."""
     try:
         from rahcp_validate.images import validate_by_extension
     except ImportError:

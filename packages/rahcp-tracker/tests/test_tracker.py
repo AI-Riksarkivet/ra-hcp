@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from rahcp_client.tracker import TransferStatus, TransferTracker
+from rahcp_tracker import TrackerProtocol, TransferStatus, TransferTracker
 
 
 def test_mark_and_done_keys(tmp_path: Path):
@@ -78,3 +78,7 @@ def test_reopen_persists(tmp_path: Path):
     tracker2 = TransferTracker(db_path)
     assert "a.jpg" in tracker2.done_keys()
     tracker2.close()
+
+
+def test_transfer_tracker_satisfies_protocol():
+    assert issubclass(TransferTracker, TrackerProtocol)

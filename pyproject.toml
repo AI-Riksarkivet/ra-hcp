@@ -9,7 +9,8 @@ dependencies = ["rahcp-client", "rahcp-cli"]
 lance = ["rahcp-lance"]
 etl = ["rahcp-etl"]
 validate = ["rahcp-validate"]
-all = ["rahcp-lance", "rahcp-etl", "rahcp-validate"]
+iiif = ["rahcp-iiif"]
+all = ["rahcp-lance", "rahcp-etl", "rahcp-validate", "rahcp-iiif"]
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -21,6 +22,8 @@ rahcp-cli = { workspace = true }
 rahcp-lance = { workspace = true }
 rahcp-etl = { workspace = true }
 rahcp-validate = { workspace = true }
+rahcp-iiif = { workspace = true }
+rahcp-tracker = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

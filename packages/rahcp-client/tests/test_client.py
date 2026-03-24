@@ -12,6 +12,8 @@ from rahcp_client.errors import (
     UpstreamError,
 )
 
+pytestmark = pytest.mark.asyncio
+
 BASE = "http://test:8000/api/v1"
 
 

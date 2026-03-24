@@ -12,7 +12,9 @@ members = [
     "rahcp-cli",
     "rahcp-client",
     "rahcp-etl",
+    "rahcp-iiif",
     "rahcp-lance",
+    "rahcp-tracker",
     "rahcp-validate",
 ]
 
@@ -843,11 +845,15 @@ dependencies = [
 [package.optional-dependencies]
 all = [
     { name = "rahcp-etl" },
+    { name = "rahcp-iiif" },
     { name = "rahcp-lance" },
     { name = "rahcp-validate" },
 ]
 etl = [
     { name = "rahcp-etl" },
+]
+iiif = [
+    { name = "rahcp-iiif" },
 ]
 lance = [
     { name = "rahcp-lance" },
@@ -862,12 +868,14 @@ requires-dist = [
     { name = "rahcp-client", editable = "packages/rahcp-client" },
     { name = "rahcp-etl", marker = "extra == 'all'", editable = "packages/rahcp-etl" },
     { name = "rahcp-etl", marker = "extra == 'etl'", editable = "packages/rahcp-etl" },
+    { name = "rahcp-iiif", marker = "extra == 'all'", editable = "packages/rahcp-iiif" },
+    { name = "rahcp-iiif", marker = "extra == 'iiif'", editable = "packages/rahcp-iiif" },
     { name = "rahcp-lance", marker = "extra == 'all'", editable = "packages/rahcp-lance" },
     { name = "rahcp-lance", marker = "extra == 'lance'", editable = "packages/rahcp-lance" },
     { name = "rahcp-validate", marker = "extra == 'all'", editable = "packages/rahcp-validate" },
     { name = "rahcp-validate", marker = "extra == 'validate'", editable = "packages/rahcp-validate" },
 ]
-provides-extras = ["lance", "etl", "validate", "all"]
+provides-extras = ["lance", "etl", "validate", "iiif", "all"]
 
 [[package]]
 name = "rahcp-cli"
@@ -876,6 +884,8 @@ source = { editable = "packages/rahcp-cli" }
 dependencies = [
     { name = "pyyaml" },
     { name = "rahcp-client" },
+    { name = "rahcp-iiif" },
+    { name = "rahcp-tracker" },
     { name = "rich" },
     { name = "typer" },
 ]
@@ -894,6 +904,8 @@ dev = [
 requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rahcp-client", editable = "packages/rahcp-client" },
+    { name = "rahcp-iiif", editable = "packages/rahcp-iiif" },
+    { name = "rahcp-tracker", editable = "packages/rahcp-tracker" },
     { name = "rahcp-validate", marker = "extra == 'validate'", editable = "packages/rahcp-validate" },
     { name = "rich", specifier = ">=13.0" },
     { name = "typer", specifier = ">=0.15" },
@@ -910,7 +922,7 @@ source = { editable = "packages/rahcp-client" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic-settings" },
-    { name = "sqlmodel" },
+    { name = "rahcp-tracker" },
 ]
 
 [package.optional-dependencies]
@@ -934,7 +946,7 @@ requires-dist = [
     { name = "opentelemetry-exporter-otlp", marker = "extra == 'otel'", specifier = ">=1.29" },
     { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.29" },
     { name = "pydantic-settings", specifier = ">=2.13" },
-    { name = "sqlmodel", specifier = ">=0.0.22" },
+    { name = "rahcp-tracker", editable = "packages/rahcp-tracker" },
 ]
 provides-extras = ["otel"]
 
@@ -961,6 +973,42 @@ requires-dist = [
 ]
 
 [[package]]
+name = "rahcp-iiif"
+version = "0.1.0"
+source = { editable = "packages/rahcp-iiif" }
+dependencies = [
+    { name = "httpx" },
+    { name = "rahcp-tracker" },
+]
+
+[package.optional-dependencies]
+validate = [
+    { name = "rahcp-validate" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "respx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28" },
+    { name = "rahcp-tracker", editable = "packages/rahcp-tracker" },
+    { name = "rahcp-validate", marker = "extra == 'validate'", editable = "packages/rahcp-validate" },
+]
+provides-extras = ["validate"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-asyncio", specifier = ">=0.25" },
+    { name = "respx", specifier = ">=0.22" },
+]
+
+[[package]]
 name = "rahcp-lance"
 version = "0.1.0"
 source = { editable = "packages/rahcp-lance" }
@@ -978,6 +1026,25 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12" },
     { name = "rahcp-client", editable = "packages/rahcp-client" },
 ]
+
+[[package]]
+name = "rahcp-tracker"
+version = "0.1.0"
+source = { editable = "packages/rahcp-tracker" }
+dependencies = [
+    { name = "sqlmodel" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sqlmodel", specifier = ">=0.0.22" }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.0" }]
 
 [[package]]
 name = "rahcp-validate"

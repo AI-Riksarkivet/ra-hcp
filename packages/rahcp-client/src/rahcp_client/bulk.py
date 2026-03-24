@@ -12,7 +12,7 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, SkipValidation
 
-from rahcp_client.tracker import TransferStatus, TransferTracker
+from rahcp_tracker import TrackerProtocol, TransferStatus
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ _DONE = object()
 
 
 class S3Client(Protocol):
-    """Protocol for the S3 operations required by bulk transfers."""
+    """Minimal S3 interface required by the bulk transfer engine."""
 
     async def head(self, bucket: str, key: str) -> dict: ...
     async def upload(self, bucket: str, key: str, data: Path) -> str: ...
@@ -39,7 +39,7 @@ class S3Client(Protocol):
 
 
 class BulkClient(Protocol):
-    """Protocol for the client object passed to bulk configs."""
+    """Client that exposes an ``s3`` property satisfying :class:`S3Client`."""
 
     @property
     def s3(self) -> S3Client: ...
@@ -59,14 +59,17 @@ class TransferStats(BaseModel):
 
     @property
     def done(self) -> int:
+        """Total files processed (ok + skipped + errors)."""
         return self.ok + self.skipped + self.errors
 
     @property
     def files_per_sec(self) -> float:
+        """Throughput in files per second."""
         return self.ok / self.elapsed if self.elapsed > 0 else 0.0
 
     @property
     def mb_per_sec(self) -> float:
+        """Throughput in megabytes per second."""
         return (
             (self.total_bytes / 1024 / 1024) / self.elapsed if self.elapsed > 0 else 0.0
         )
@@ -83,7 +86,7 @@ class BulkUploadConfig(BaseModel):
     client: SkipValidation[BulkClient]
     bucket: str
     source_dir: Path
-    tracker: TransferTracker
+    tracker: TrackerProtocol
     prefix: str = ""
     workers: int = 10
     queue_depth: int = 8
@@ -106,7 +109,7 @@ class BulkDownloadConfig(BaseModel):
     client: SkipValidation[BulkClient]
     bucket: str
     dest_dir: Path
-    tracker: TransferTracker
+    tracker: TrackerProtocol
     prefix: str = ""
     workers: int = 10
     queue_depth: int = 8
@@ -166,7 +169,7 @@ def _record_result(counters: _Counters, result: str, byte_count: int = 0) -> Non
 
 
 def _mark_done(
-    tracker: TransferTracker,
+    tracker: TrackerProtocol,
     done_keys: set[str],
     key: str,
     size: int,
@@ -188,7 +191,7 @@ def _mark_done(
 
 
 def _mark_error(
-    tracker: TransferTracker,
+    tracker: TrackerProtocol,
     key: str,
     size: int,
     exc: Exception,
@@ -214,6 +217,7 @@ def _maybe_report(
 
 
 def _build_stats(counters: _Counters) -> TransferStats:
+    """Create a ``TransferStats`` snapshot from the current counters."""
     return TransferStats(
         ok=counters.ok,
         skipped=counters.skipped,
@@ -257,7 +261,6 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
 
         local_size = file_path.stat().st_size
 
-        # Pre-upload validation (runs in thread to avoid blocking event loop)
         validated = False
         if cfg.validate_file:
             try:
@@ -408,7 +411,6 @@ async def bulk_download(cfg: BulkDownloadConfig) -> TransferStats:
                 )
             tmp_path.rename(file_path)
 
-            # Post-download validation
             validated = False
             if cfg.validate_file:
                 try:

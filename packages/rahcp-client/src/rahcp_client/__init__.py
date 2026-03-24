@@ -19,7 +19,7 @@ from rahcp_client.bulk import (
     bulk_download,
     bulk_upload,
 )
-from rahcp_client.tracker import TransferStatus, TransferTracker
+from rahcp_tracker import TrackerProtocol, TransferStatus, TransferTracker
 
 __all__ = [
     "AuthenticationError",
@@ -31,6 +31,7 @@ __all__ = [
     "HCPSettings",
     "NotFoundError",
     "RetryableError",
+    "TrackerProtocol",
     "TransferStats",
     "TransferStatus",
     "TransferTracker",

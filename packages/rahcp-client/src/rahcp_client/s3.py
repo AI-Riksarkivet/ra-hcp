@@ -41,7 +41,6 @@ class S3Ops:
         self._client = client
 
     def _http(self) -> httpx.AsyncClient:
-        """Create an httpx client for presigned URL operations."""
         return httpx.AsyncClient(
             verify=self._client.verify_ssl,
             timeout=httpx.Timeout(self._client.timeout, connect=10.0),
@@ -199,7 +198,6 @@ class S3Ops:
 
             sem = asyncio.Semaphore(concurrency)
 
-            # Use a generous timeout for part uploads (16 MB chunks)
             part_timeout = httpx.Timeout(
                 max(300.0, self._client.timeout * 5), connect=30.0
             )
@@ -263,7 +261,6 @@ class S3Ops:
             return resp.json().get("etag", "")
 
         except Exception:
-            # Abort the multipart upload to avoid dangling uploads
             log.warning("Multipart upload failed, aborting: %s/%s", bucket, key)
             try:
                 await self._client.request(

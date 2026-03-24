@@ -3,6 +3,8 @@
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from rahcp_client.bulk import (
     BulkDownloadConfig,
     BulkUploadConfig,
@@ -10,7 +12,9 @@ from rahcp_client.bulk import (
     bulk_download,
     bulk_upload,
 )
-from rahcp_client.tracker import TransferStatus, TransferTracker
+from rahcp_tracker import TransferStatus, TransferTracker
+
+pytestmark = pytest.mark.asyncio
 
 
 def _make_client():

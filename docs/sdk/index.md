@@ -1,22 +1,28 @@
 # Python SDK
 
-The `rahcp` Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with five installable packages:
+The `rahcp` Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with seven installable packages:
 
 ```mermaid
 graph TD
     ROOT["rahcp (umbrella)"]
+    TRACKER["rahcp-tracker<br/><small>Transfer state tracking</small>"]
     CLIENT["rahcp-client<br/><small>Async HTTP client</small>"]
     CLI["rahcp-cli<br/><small>Typer CLI</small>"]
+    IIIF["rahcp-iiif<br/><small>IIIF image downloader</small>"]
     LANCE["rahcp-lance<br/><small>LanceDB datasets</small>"]
     ETL["rahcp-etl<br/><small>JetStream pipelines</small>"]
     VAL["rahcp-validate<br/><small>File validation</small>"]
 
     ROOT --> CLIENT
     ROOT --> CLI
+    ROOT -.->|optional| IIIF
     ROOT -.->|optional| LANCE
     ROOT -.->|optional| ETL
     ROOT -.->|optional| VAL
+    CLIENT --> TRACKER
+    IIIF --> TRACKER
     CLI --> CLIENT
+    CLI --> IIIF
     LANCE --> CLIENT
     ETL --> CLIENT
 ```
@@ -41,6 +47,9 @@ uv pip install "rahcp[etl]"
 # With image validation (Pillow)
 uv pip install "rahcp[validate]"
 
+# With IIIF image downloader
+uv pip install "rahcp[iiif]"
+
 # Everything
 uv pip install "rahcp[all]"
 ```
@@ -62,7 +71,7 @@ uv run rahcp auth whoami   # check current identity
 
 ## rahcp-client
 
-Async HTTP client built on `httpx`. Handles authentication, retries, presigned URL transfers, and multipart uploads.
+Async HTTP client built on `httpx`. Handles authentication, retries, presigned URL transfers, multipart uploads, and bulk transfers. Uses `rahcp-tracker` for resumable progress tracking.
 
 ### How it works
 
@@ -280,18 +289,12 @@ The `bulk_upload` and `bulk_download` functions provide the same producer-consum
 ```python
 import asyncio
 from pathlib import Path
-from rahcp_client import (
-    HCPClient,
-    TransferTracker,
-    BulkUploadConfig,
-    BulkDownloadConfig,
-    bulk_upload,
-    bulk_download,
-)
+from rahcp_client import HCPClient, BulkUploadConfig, BulkDownloadConfig, bulk_upload, bulk_download
+from rahcp_tracker import SqliteTracker
 
 async def main():
     async with HCPClient.from_env() as client:
-        tracker = TransferTracker(Path(".upload-tracker.db"))
+        tracker = SqliteTracker(Path(".upload-tracker.db"))
 
         stats = await bulk_upload(BulkUploadConfig(
             client=client,
@@ -318,7 +321,7 @@ asyncio.run(main())
 | `client` | `HCPClient` | required | Authenticated client instance |
 | `bucket` | `str` | required | Target S3 bucket |
 | `source_dir` | `Path` | required | Local directory to upload |
-| `tracker` | `TransferTracker` | required | SQLite progress tracker |
+| `tracker` | `TrackerProtocol` | required | Progress tracker (default: `SqliteTracker`) |
 | `prefix` | `str` | `""` | Key prefix prepended to all keys |
 | `workers` | `int` | `10` | Number of concurrent upload workers |
 | `queue_depth` | `int` | `8` | Queue size multiplier (queue = workers × depth) |
@@ -326,6 +329,7 @@ asyncio.run(main())
 | `retry_errors` | `bool` | `False` | Only process files marked as error in tracker |
 | `include` | `list[str]` | `[]` | Glob patterns — only matching filenames are transferred |
 | `exclude` | `list[str]` | `[]` | Glob patterns — matching filenames are skipped |
+| `validate_file` | `Callable` | `None` | Pre-upload validation callback `fn(Path)` — raises on failure |
 | `verify_upload` | `bool` | `False` | HEAD check after each upload to verify size matches |
 | `on_progress` | callback | `None` | Called periodically with `TransferStats` |
 | `on_error` | callback | `None` | Called on each file failure with `(key, exception)` |
@@ -335,17 +339,19 @@ asyncio.run(main())
 
 Same fields as upload, except `source_dir` is replaced by `dest_dir: Path`, `verify_upload` becomes `verify_download`, and there is no `skip_existing` (downloads always skip files with matching size on disk).
 
-#### TransferTracker
+#### Transfer tracking (rahcp-tracker)
 
-SQLModel-backed SQLite database for tracking transfer state:
+Transfer state is managed by the standalone `rahcp-tracker` package. The tracker is shared across S3 bulk transfers and IIIF downloads — any backend implementing `TrackerProtocol` can be used.
+
+The default backend is `SqliteTracker` (aliased as `TransferTracker` for backwards compatibility), backed by SQLite with WAL mode and buffered writes.
 
 ```python
-from rahcp_client import TransferTracker, TransferStatus
+from rahcp_tracker import SqliteTracker, TransferStatus
 
-tracker = TransferTracker(Path("my-job.db"), flush_every=200)
+tracker = SqliteTracker(Path("my-job.db"), flush_every=200)
 
 # Mark files
-tracker.mark("folder/file.jpg", 12345, TransferStatus.done)
+tracker.mark("folder/file.jpg", 12345, TransferStatus.done, etag='"abc"')
 tracker.mark("folder/bad.jpg", 0, TransferStatus.error, "SSL timeout")
 
 # Query state
@@ -354,12 +360,20 @@ errors = tracker.error_entries()     # list[(key, size)] — for retry
 summary = tracker.summary()          # {"pending": 0, "done": 500, "error": 3}
 
 # Lifecycle
-tracker.flush()   # write buffered marks to DB
-tracker.commit()  # alias for flush
+tracker.commit()  # flush buffered marks to DB
 tracker.close()   # flush + release resources
 ```
 
-Marks are buffered in memory and flushed to SQLite every `flush_every` entries (default 200) or on explicit `flush()` / `close()`. The database uses WAL mode for safe concurrent access.
+The tracker package is structured for pluggable backends:
+
+```
+rahcp-tracker/
+  models.py     — TransferStatus enum + Transfer table (SQLModel, shared across backends)
+  protocol.py   — TrackerProtocol (interface — 8 methods any backend must implement)
+  sqlite.py     — SqliteTracker (default SQLite implementation)
+```
+
+To add a new backend (e.g. Postgres), implement `TrackerProtocol` in a new file — no changes to `bulk.py`, the CLI, or any consumer code. The `Transfer` SQLModel table in `models.py` works with both SQLite and Postgres via SQLAlchemy's dialect system.
 
 ### MAPI operations
 
@@ -583,6 +597,12 @@ profiles:
     bulk_tracker_flush_every: 200   # tracker DB writes buffered per flush
     bulk_tracker_dir: ""            # tracker DB directory (default: ~/.rahcp/)
 
+    # IIIF download settings (rahcp iiif commands)
+    iiif_url: https://iiifintern-ai.ra.se
+    iiif_timeout: 60
+    iiif_query_params: full/max/0/default.jpg   # IIIF image API params
+    iiif_workers: 4                 # concurrent IIIF downloads
+
   prod:
     endpoint: https://hcp-api.example.com/api/v1
     username: svc-account
@@ -772,9 +792,9 @@ Failed files (validation, transfer, or verification) are marked as `error` in th
 ```bash
 # See what failed
 uv run python -c "
-from rahcp_client import TransferTracker
+from rahcp_tracker import SqliteTracker
 from pathlib import Path
-t = TransferTracker(Path('.rahcp/.upload-tracker.db'))
+t = SqliteTracker(Path('.rahcp/.upload-tracker.db'))
 for key, size in t.error_entries():
     print(key)
 t.close()
@@ -919,9 +939,9 @@ tmux attach -t upload
 
 # Check tracker DB from another terminal
 uv run python -c "
-from rahcp_client import TransferTracker
+from rahcp_tracker import SqliteTracker
 from pathlib import Path
-t = TransferTracker(Path.home() / '.rahcp/.upload-tracker.db')
+t = SqliteTracker(Path.home() / '.rahcp/.upload-tracker.db')
 print(t.summary())
 t.close()
 "
@@ -1022,6 +1042,165 @@ flowchart LR
 | `delete TENANT NS` | Delete namespace |
 | `export TENANT NS` | Export namespace as JSON template (with `--output`) |
 | `import TENANT FILE` | Create namespace(s) from exported template |
+
+#### `rahcp iiif`
+
+Download images from [IIIF](https://iiif.io/) endpoints (e.g. Riksarkivet's internal image server) with parallel workers and resumable tracking.
+
+| Command | Description |
+|---------|-------------|
+| `download BATCH_ID` | Download all images from a single IIIF batch |
+| `download-batches JOB_FILE` | Download images from multiple batches listed in a text file |
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--output` | `-o` | `.` | Output directory |
+| `--workers` | `-w` | `4` | Concurrent downloads |
+| `--query-params` | `-q` | `full/max/0/default.jpg` | IIIF image API parameters |
+| `--iiif-url` | -- | `https://iiifintern-ai.ra.se` | IIIF server base URL |
+| `--max-images` | `-n` | all | Limit images per batch |
+| `--validate` | -- | off | Validate each image after download |
+| `--tracker-db` | -- | `.rahcp/.iiif-download.db` | Tracker DB path |
+
+**Examples:**
+
+```bash
+# Download a single batch
+rahcp iiif download C0074667 -o ./images/
+
+# Download with validation and custom resolution
+rahcp iiif download C0074667 -o ./images/ \
+  --validate --query-params "full/,1200/0/default.jpg"
+
+# Download multiple batches from a job file
+cat > batches.txt << EOF
+C0074667
+C0074865
+A0065852
+EOF
+rahcp iiif download-batches batches.txt -o ./images/ --workers 10
+
+# Then upload to HCP (reuses existing upload-all)
+rahcp s3 upload-all images-batch ./images/ --validate --workers 20
+```
+
+IIIF settings can be configured per profile in `config.yaml`:
+
+```yaml
+profiles:
+  dev:
+    iiif_url: https://iiifintern-ai.ra.se
+    iiif_timeout: 60
+    iiif_query_params: full/max/0/default.jpg
+    iiif_workers: 4
+```
+
+Override priority: CLI flags > env vars (`IIIF_URL`) > config file > defaults.
+
+---
+
+## rahcp-tracker
+
+Standalone package for pluggable transfer state tracking. Used by both `rahcp-client` (S3 bulk transfers) and `rahcp-iiif` (IIIF downloads).
+
+```bash
+uv pip install rahcp-tracker
+```
+
+| Class | Description |
+|-------|-------------|
+| `TrackerProtocol` | Interface (Protocol) — 8 methods any backend must implement |
+| `SqliteTracker` | Default SQLite implementation with WAL mode and buffered writes |
+| `TransferTracker` | Backwards-compatible alias for `SqliteTracker` |
+| `Transfer` | SQLModel table definition — shared across SQLite and Postgres |
+| `TransferStatus` | Enum: `pending`, `done`, `error` |
+
+```python
+from rahcp_tracker import SqliteTracker, TransferStatus
+
+tracker = SqliteTracker(Path("my-job.db"))
+tracker.mark("file.jpg", 12345, TransferStatus.done, etag='"abc"', validated=True)
+print(tracker.summary())  # {"pending": 0, "done": 1, "error": 0}
+tracker.close()
+```
+
+The `Transfer` model in `models.py` tracks: `key`, `size`, `status`, `error`, `etag`, `validated`, `verified`, `updated_at`.
+
+---
+
+## rahcp-iiif
+
+Async IIIF image downloader with resumable tracking. Downloads images from Riksarkivet IIIF endpoints in parallel, with optional validation via `rahcp-validate`.
+
+```bash
+uv pip install rahcp-iiif
+# With validation:
+uv pip install "rahcp-iiif[validate]"
+```
+
+### Quick start
+
+```python
+import asyncio
+from pathlib import Path
+from rahcp_tracker import SqliteTracker
+from rahcp_iiif import download_batch, download_batches
+
+async def main():
+    tracker = SqliteTracker(Path(".iiif-download.db"))
+
+    # Download a single batch
+    stats = await download_batch(
+        "C0074667",
+        Path("./images"),
+        tracker,
+        workers=10,
+    )
+    print(f"Downloaded {stats.ok}, skipped {stats.skipped}, errors {stats.errors}")
+
+    # Or download multiple batches
+    stats = await download_batches(
+        ["C0074667", "C0074865", "A0065852"],
+        Path("./images"),
+        tracker,
+        workers=10,
+        query_params="full/,1200/0/default.jpg",  # custom resolution
+    )
+    tracker.close()
+
+asyncio.run(main())
+```
+
+### Manifest parsing
+
+```python
+from rahcp_iiif import get_image_ids, build_image_url
+
+# Get all image IDs from a IIIF manifest
+image_ids = await get_image_ids("C0074667")
+# → ["C0074667_00001", "C0074667_00002", ...]
+
+# Build the download URL for a specific image
+url = build_image_url("C0074667_00001", query_params="full/,1200/0/default.jpg")
+# → "https://iiifintern-ai.ra.se/arkis!C0074667_00001/full/,1200/0/default.jpg"
+```
+
+### Configuration
+
+| Setting | Env var | Default | Description |
+|---------|---------|---------|-------------|
+| `base_url` | `IIIF_URL` | `https://iiifintern-ai.ra.se` | IIIF server base URL |
+| `timeout` | `IIIF_TIMEOUT` | `60` | Request timeout in seconds |
+| `query_params` | `IIIF_QUERY_PARAMS` | `full/max/0/default.jpg` | IIIF image API parameters |
+
+The `query_params` string follows the [IIIF Image API](https://iiif.io/api/image/3.0/) format: `{region}/{size}/{rotation}/{quality}.{format}`. Common values:
+
+| `query_params` | Description |
+|----------------|-------------|
+| `full/max/0/default.jpg` | Full resolution JPEG (default) |
+| `full/,1200/0/default.jpg` | Scale to 1200px height |
+| `full/800,/0/default.jpg` | Scale to 800px width |
+| `full/200,200/0/default.jpg` | Fixed 200x200 thumbnail |
 
 ---
 

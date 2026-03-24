@@ -3,9 +3,12 @@
 import json
 
 import httpx
+import pytest
 import respx
 
 from rahcp_client import HCPClient
+
+pytestmark = pytest.mark.asyncio
 
 BASE = "http://test:8000/api/v1"
 

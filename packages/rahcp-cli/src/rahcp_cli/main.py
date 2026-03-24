@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import typer
 
-from pathlib import Path
-
-from rahcp_cli import auth, namespace, s3
+from rahcp_cli import auth, iiif, namespace, s3
 from rahcp_cli.config import CONFIG_DIR, load_config
 
 app = typer.Typer(
@@ -20,6 +19,7 @@ app = typer.Typer(
 app.add_typer(auth.app, name="auth")
 app.add_typer(s3.app, name="s3")
 app.add_typer(namespace.app, name="ns")
+app.add_typer(iiif.app, name="iiif")
 
 
 @app.callback()
@@ -84,11 +84,11 @@ def main(
         help="Output raw JSON",
     ),
 ) -> None:
-    """CLI flags > env vars > profile > defaults."""
+    """Resolve settings with priority: CLI flags > env vars > profile > defaults."""
     ctx.ensure_object(dict)
 
-    config_path = Path(config) if config else CONFIG_DIR / "config.yaml"
-    config_dir = config_path.parent
+    resolved_config_path = Path(config) if config else CONFIG_DIR / "config.yaml"
+    config_dir = resolved_config_path.parent
 
     cfg = load_config(config)
     p = cfg.resolve(profile)
@@ -124,5 +124,9 @@ def main(
     ctx.obj["bulk_queue_depth"] = p.bulk_queue_depth
     ctx.obj["bulk_tracker_flush_every"] = p.bulk_tracker_flush_every
     ctx.obj["bulk_tracker_dir"] = p.bulk_tracker_dir
+    ctx.obj["iiif_url"] = p.iiif_url
+    ctx.obj["iiif_timeout"] = p.iiif_timeout
+    ctx.obj["iiif_query_params"] = p.iiif_query_params
+    ctx.obj["iiif_workers"] = p.iiif_workers
     ctx.obj["config_dir"] = str(config_dir)
     ctx.obj["json"] = output_json

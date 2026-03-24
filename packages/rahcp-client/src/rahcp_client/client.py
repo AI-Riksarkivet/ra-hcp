@@ -34,12 +34,12 @@ def _redact(text: str, max_len: int = 200) -> str:
 
     truncated = text[:max_len]
     try:
-        data = _json.loads(truncated)
-        if isinstance(data, dict):
-            for key in data:
+        parsed = _json.loads(truncated)
+        if isinstance(parsed, dict):
+            for key in parsed:
                 if key.lower() in _SENSITIVE_KEYS:
-                    data[key] = "[REDACTED]"
-            return _json.dumps(data)
+                    parsed[key] = "[REDACTED]"
+            return _json.dumps(parsed)
     except (ValueError, TypeError):
         pass
     return truncated
@@ -247,14 +247,12 @@ class HCPClient:
                     duration,
                 )
 
-                # Auto-refresh on 401
                 if response.status_code == 401 and self.username and attempt == 0:
                     log.info("Token expired, refreshing...")
                     await self._login()
                     merged_headers = {**self._auth_headers(), **(headers or {})}
                     continue
 
-                # Retry on transient status codes
                 if response.status_code in _RETRYABLE_STATUSES:
                     log.warning(
                         "%s %s → %d (attempt %d/%d, retrying)",
@@ -271,11 +269,10 @@ class HCPClient:
                         await self._backoff(attempt)
                         continue
 
-                # Success or non-retryable error
                 if response.status_code >= 400:
                     safe_body = _redact(response.text)
-                    _log = log.debug if response.status_code == 404 else log.error
-                    _log(
+                    log_fn = log.debug if response.status_code == 404 else log.error
+                    log_fn(
                         "%s %s → %d (%.0fms): %s",
                         method,
                         path,
@@ -287,7 +284,6 @@ class HCPClient:
 
                 return response
 
-        # Exhausted all retries
         if last_error:
             raise last_error
         raise RetryableError("All retries exhausted")  # pragma: no cover

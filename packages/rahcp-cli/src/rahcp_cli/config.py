@@ -57,6 +57,12 @@ class Profile(BaseModel):
     bulk_tracker_flush_every: int = 200
     bulk_tracker_dir: str = ""
 
+    # IIIF
+    iiif_url: str = "https://iiifintern-ai.ra.se"
+    iiif_timeout: float = 60.0
+    iiif_query_params: str = "full/max/0/default.jpg"
+    iiif_workers: int = 4
+
     # Observability
     log_level: str = "warning"
     otel_endpoint: str = ""

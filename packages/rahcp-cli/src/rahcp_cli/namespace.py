@@ -30,7 +30,6 @@ def list_namespaces(
             if ctx.obj["json"]:
                 print_json(data)
             else:
-                # Non-verbose returns {"name": ["ns1", ...]}, verbose returns list of dicts
                 if isinstance(data, dict) and "name" in data:
                     names = data["name"]
                     rows = (

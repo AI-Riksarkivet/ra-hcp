@@ -1,33 +1,14 @@
-"""Transfer tracker — SQLModel-backed state for bulk upload/download."""
+"""SqliteTracker — thread-safe, buffered transfer tracker backed by SQLite."""
 
 from __future__ import annotations
 
 import threading
 from datetime import datetime, timezone
-from enum import Enum
 from pathlib import Path
 
-from sqlmodel import Field, Session, SQLModel, create_engine, func, select, text
+from sqlmodel import Session, SQLModel, create_engine, func, select, text
 
-
-class TransferStatus(str, Enum):
-    pending = "pending"
-    done = "done"
-    error = "error"
-
-
-class Transfer(SQLModel, table=True):
-    """One tracked file in a bulk transfer."""
-
-    key: str = Field(primary_key=True)
-    size: int
-    status: TransferStatus = TransferStatus.pending
-    error: str | None = None
-    etag: str | None = None
-    validated: bool = False
-    verified: bool = False
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
+from rahcp_tracker.models import Transfer, TransferStatus
 
 _UPSERT_SQL = text(
     "INSERT INTO transfer (key, size, status, error, etag, validated, verified, updated_at) "
@@ -44,7 +25,7 @@ _MIGRATE_COLUMNS = [
 ]
 
 
-class TransferTracker:
+class SqliteTracker:
     """Thread-safe, buffered transfer tracker backed by SQLite.
 
     Marks are buffered in memory and flushed to the database either
@@ -53,7 +34,7 @@ class TransferTracker:
 
     Usage::
 
-        tracker = TransferTracker(Path(".upload-tracker.db"))
+        tracker = SqliteTracker(Path(".upload-tracker.db"))
         tracker.mark("folder/file.jpg", 12345, TransferStatus.done, etag='"abc123"')
         tracker.flush()
         done = tracker.done_keys()

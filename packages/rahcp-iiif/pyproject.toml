@@ -1,26 +1,22 @@
 [project]
-name = "rahcp-cli"
+name = "rahcp-iiif"
 version = "0.1.0"
-description = "CLI for HCP Unified API"
+description = "Async IIIF image downloader with resumable tracking"
 requires-python = ">=3.13"
-dependencies = ["rahcp-client", "rahcp-tracker", "rahcp-iiif", "typer>=0.15", "rich>=13.0", "pyyaml>=6.0"]
+dependencies = ["rahcp-tracker", "httpx>=0.28"]
 
 [project.optional-dependencies]
 validate = ["rahcp-validate"]
 
-[project.scripts]
-rahcp = "rahcp_cli.main:app"
-
 [tool.uv.sources]
-rahcp-client = { workspace = true }
-rahcp-iiif = { workspace = true }
 rahcp-tracker = { workspace = true }
 rahcp-validate = { workspace = true }
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.25", "respx>=0.22"]
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [build-system]
