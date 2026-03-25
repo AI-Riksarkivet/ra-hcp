@@ -248,7 +248,7 @@ Autoscaling is also supported — set `autoscaling.enabled: true` to let Kuberne
 | Many concurrent users + HA | Both — `replicaCount: 2, backend.workers: 4` gives 8 processes across 2 nodes |
 
 !!! note "SDK `bulk_workers` vs server workers"
-    The SDK's `bulk_workers` setting controls how many files are transferred in parallel on **your machine**. Server workers (gunicorn/replicas) control how many API requests the **backend** handles in parallel. These are completely different — SDK workers talk directly to HCP S3 for file data. The backend is only involved for presigning URLs (~2 requests/second during bulk transfers). See [Performance tuning](../sdk/index.md#performance-tuning) in the SDK docs for details.
+    The SDK's `bulk_workers` setting controls how many files are transferred in parallel on **your machine**. Server workers (gunicorn/replicas) control how many API requests the **backend** handles in parallel. These are completely different — SDK workers talk directly to HCP S3 for file data. The backend is only involved for presigning URLs (~2 requests/second during bulk transfers). See [Performance tuning](../sdk/cli.md#performance-tuning) in the SDK docs for details.
 
 ### Health Probes
 

@@ -28,31 +28,44 @@ nav = [
     { "Frontend" = "architecture/frontend.md" },
     { "Deployment" = "architecture/deployment.md" },
   ]},
-  { "API Guide" = [
-    { "Overview" = "api/index.md" },
-    { "Authentication" = "api/authentication.md" },
-    { "S3 Buckets" = "api/s3-buckets.md" },
-    { "S3 Objects" = "api/s3-objects.md" },
-    { "Tenants" = "api/tenants.md" },
-    { "Namespaces" = "api/namespaces.md" },
-    { "System" = "api/system.md" },
-    { "Workflows" = "api/workflows.md" },
-    { "Argo Workflows" = "api/argo.md" },
-    { "Error Handling" = "api/error-handling.md" },
+  { "API" = [
+    { "Guide" = [
+      { "Overview" = "api/index.md" },
+      { "Authentication" = "api/authentication.md" },
+      { "S3 Buckets" = "api/s3-buckets.md" },
+      { "S3 Objects" = "api/s3-objects.md" },
+      { "Tenants" = "api/tenants.md" },
+      { "Namespaces" = "api/namespaces.md" },
+      { "System" = "api/system.md" },
+      { "Workflows" = "api/workflows.md" },
+      { "Argo Workflows" = "api/argo.md" },
+      { "Error Handling" = "api/error-handling.md" },
+    ]},
+    { "Reference" = [
+      { "Endpoints" = "api/reference/endpoints.md" },
+      { "Common" = "api/reference/common.md" },
+      { "S3" = "api/reference/s3.md" },
+      { "Tenant" = "api/reference/tenant.md" },
+      { "Namespace" = "api/reference/namespace.md" },
+      { "User Account" = "api/reference/user-account.md" },
+      { "Group Account" = "api/reference/group-account.md" },
+      { "Content Class" = "api/reference/content-class.md" },
+    ]},
   ]},
-  { "API Reference" = [
-    { "Endpoints" = "api/reference/endpoints.md" },
-    { "Common" = "api/reference/common.md" },
-    { "S3" = "api/reference/s3.md" },
-    { "Tenant" = "api/reference/tenant.md" },
-    { "Namespace" = "api/reference/namespace.md" },
-    { "User Account" = "api/reference/user-account.md" },
-    { "Group Account" = "api/reference/group-account.md" },
-    { "Content Class" = "api/reference/content-class.md" },
-  ]},
-  { "Python SDK" = [
-    { "Overview" = "sdk/index.md" },
-    { "API Reference" = "sdk/reference.md" },
+  { "SDK" = [
+    { "Packages" = [
+      { "Overview" = "sdk/index.md" },
+      { "Client" = "sdk/client.md" },
+      { "CLI" = "sdk/cli.md" },
+      { "Transfer Tracker" = "sdk/tracker.md" },
+      { "IIIF Downloader" = "sdk/iiif.md" },
+      { "LanceDB" = "sdk/lance.md" },
+      { "ETL Pipelines" = "sdk/etl.md" },
+      { "Validation" = "sdk/validation.md" },
+    ]},
+    { "Reference" = [
+      { "API Reference" = "sdk/reference.md" },
+    ]},
   ]},
   { "Components" = [
     { "UI Components" = "components/index.md" },
@@ -86,6 +99,7 @@ features = [
     "navigation.path",
     "navigation.tabs",
     "navigation.tabs.sticky",
+    "navigation.sections",
     "navigation.top",
     "navigation.tracking",
     "search.highlight",
@@ -170,3 +184,5 @@ show_bases = true
 merge_init_into_class = true
 members_order = "source"
 filters = ["!^_"]
+show_if_no_docstring = false
+inherited_members = false
