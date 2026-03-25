@@ -21,8 +21,10 @@ graph TD
     ROOT -.->|optional| VAL
     CLIENT --> TRACKER
     IIIF --> TRACKER
+    IIIF -.->|optional| VAL
     CLI --> CLIENT
     CLI --> IIIF
+    CLI -.->|optional| VAL
     LANCE --> CLIENT
     ETL --> CLIENT
 ```
@@ -322,10 +324,12 @@ asyncio.run(main())
 | `client` | `HCPClient` | required | Authenticated client instance |
 | `bucket` | `str` | required | Target S3 bucket |
 | `source_dir` | `Path` | required | Local directory to upload |
-| `tracker` | `TrackerProtocol` | required | Progress tracker (default: `SqliteTracker`) |
+| `tracker` | `TrackerProtocol` | required | Progress tracker (e.g. `SqliteTracker`) |
 | `prefix` | `str` | `""` | Key prefix prepended to all keys |
 | `workers` | `int` | `10` | Number of concurrent upload workers |
 | `queue_depth` | `int` | `8` | Queue size multiplier (queue = workers × depth) |
+| `presign_batch_size` | `int` | `200` | URLs presigned per API call (higher = fewer round-trips) |
+| `chunk_size` | `int` | `1048576` | Chunk size in bytes for streaming uploads (1 MB) |
 | `skip_existing` | `bool` | `True` | Skip files already on remote with matching size |
 | `retry_errors` | `bool` | `False` | Only process files marked as error in tracker |
 | `include` | `list[str]` | `[]` | Glob patterns — only matching filenames are transferred |
@@ -338,7 +342,28 @@ asyncio.run(main())
 
 #### BulkDownloadConfig
 
-Same fields as upload, except `source_dir` is replaced by `dest_dir: Path`, `verify_upload` becomes `verify_download`, and there is no `skip_existing` (downloads always skip files with matching size on disk).
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `client` | `HCPClient` | required | Authenticated client instance |
+| `bucket` | `str` | required | Source S3 bucket |
+| `dest_dir` | `Path` | required | Local destination directory |
+| `tracker` | `TrackerProtocol` | required | Progress tracker (e.g. `SqliteTracker`) |
+| `prefix` | `str` | `""` | Only download keys under this prefix |
+| `workers` | `int` | `10` | Number of concurrent download workers |
+| `queue_depth` | `int` | `8` | Queue size multiplier (queue = workers × depth) |
+| `presign_batch_size` | `int` | `200` | URLs presigned per API call (higher = fewer round-trips) |
+| `chunk_size` | `int` | `1048576` | Chunk size in bytes for streaming large files (1 MB) |
+| `stream_threshold` | `int` | `104857600` | Files below this (100 MB) are downloaded in one shot |
+| `retry_errors` | `bool` | `False` | Only process files marked as error in tracker |
+| `include` | `list[str]` | `[]` | Glob patterns — only matching keys are downloaded |
+| `exclude` | `list[str]` | `[]` | Glob patterns — matching keys are skipped |
+| `validate_file` | `Callable` | `None` | Post-download validation callback `fn(Path)` — raises on failure |
+| `verify_download` | `bool` | `False` | Verify each download by checking file size after transfer |
+| `on_progress` | callback | `None` | Called periodically with `TransferStats` |
+| `on_error` | callback | `None` | Called on each file failure with `(key, exception)` |
+| `progress_interval` | `float` | `5.0` | Minimum seconds between progress callbacks |
+
+Downloads always skip files that already exist on disk with matching size (no `skip_existing` flag — this behavior is always on).
 
 #### Transfer tracking (rahcp-tracker)
 
@@ -352,13 +377,17 @@ from rahcp_tracker import SqliteTracker, TransferStatus
 tracker = SqliteTracker(Path("my-job.db"), flush_every=200)
 
 # Mark files
-tracker.mark("folder/file.jpg", 12345, TransferStatus.done, etag='"abc"')
+tracker.mark("folder/file.jpg", 12345, TransferStatus.done, etag='"abc"', validated=True)
 tracker.mark("folder/bad.jpg", 0, TransferStatus.error, "SSL timeout")
 
 # Query state
 done = tracker.done_keys()           # set[str] — instant skip lookups
 errors = tracker.error_entries()     # list[(key, size)] — for retry
 summary = tracker.summary()          # {"pending": 0, "done": 500, "error": 3}
+
+# Audit — find files needing post-transfer verification or validation
+unverified = tracker.unverified_keys()    # list[(key, size, etag)]
+unvalidated = tracker.unvalidated_keys()  # list[(key, size)]
 
 # Lifecycle
 tracker.commit()  # flush buffered marks to DB
@@ -1652,7 +1681,7 @@ Pre-upload file validation with format-specific checks and composable rules.
 
 ```python
 from pathlib import Path
-from rahcp_validate.images import validate_tiff, validate_jpg, ValidationError
+from rahcp_validate import validate_tiff, validate_jpg, validate_png, ValidationError
 
 try:
     validate_tiff(Path("scan.tiff"))
@@ -1666,9 +1695,25 @@ except ValidationError as e:
     print(f"Invalid: {e.reason}")
 ```
 
+Or use `validate_by_extension()` to auto-detect format from the file extension:
+
+```python
+from rahcp_validate import validate_by_extension
+
+# Automatically picks validate_jpg, validate_tiff, or validate_png based on extension
+validate_by_extension(Path("scan.tiff"))  # runs TIFF checks
+validate_by_extension(Path("photo.jpg"))  # runs JPEG checks
+validate_by_extension(Path("image.png"))  # runs PNG checks
+validate_by_extension(Path("data.csv"))   # skipped (no validator for .csv)
+```
+
+This is what the `--validate` flag in the CLI uses internally.
+
 **TIFF checks:** magic bytes (II/MM), version == 42, full Pillow load.
 
 **JPEG checks:** SOI marker (0xFFD8), EOI marker (0xFFD9), full Pillow decode.
+
+**PNG checks:** PNG signature bytes, full Pillow decode.
 
 ### Composable rules
 
