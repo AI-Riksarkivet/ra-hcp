@@ -15,9 +15,14 @@ class FakeClient:
     """Fake HCPClient that skips HTTP entirely."""
 
     def __init__(self, **method_returns):
+        from rahcp_client.bulk.protocol import TransferSettings
+
         self.token = "test-token"
         self.s3 = MagicMock()
         self.mapi = MagicMock()
+        self.transfer_settings = TransferSettings(
+            verify_ssl=False, timeout=30.0, multipart_threshold=100 * 1024 * 1024
+        )
         for attr, value in method_returns.items():
             parts = attr.split(".")
             obj = self
