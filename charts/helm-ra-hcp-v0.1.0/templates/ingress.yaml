@@ -50,13 +50,6 @@ spec:
                 name: {{ include "ra-hcp.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
-          - path: /liveness
-            pathType: Exact
-            backend:
-              service:
-                name: {{ include "ra-hcp.fullname" $ }}
-                port:
-                  number: {{ $.Values.service.port }}
           - path: /
             pathType: Prefix
             backend:
