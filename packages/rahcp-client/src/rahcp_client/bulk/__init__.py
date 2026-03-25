@@ -3,9 +3,9 @@
 ::
 
     bulk/
-        protocol.py   — S3Client, BulkClient (interfaces the engine needs)
+        protocol.py   — S3Client, BulkClient, TransferSettings (interfaces)
         config.py     — BulkUploadConfig, BulkDownloadConfig, TransferStats
-        helpers.py    — Counters, connection pooling, presign helpers
+        helpers.py    — Counters, pipeline runner, pooling, validation
         upload.py     — bulk_upload()
         download.py   — bulk_download()
 """

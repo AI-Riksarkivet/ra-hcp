@@ -19,12 +19,17 @@ pytestmark = pytest.mark.asyncio
 
 def _make_client():
     """Create a mock HCPClient with S3 operations."""
+    from rahcp_client.bulk.protocol import TransferSettings
+
     client = MagicMock()
     client.s3 = MagicMock()
     client.s3.upload = AsyncMock(return_value='"abc123"')
     client.s3.download = AsyncMock(return_value=100)
     client.s3.head = AsyncMock(side_effect=Exception("not found"))
     client.s3.list_objects = AsyncMock()
+    client.transfer_settings = TransferSettings(
+        verify_ssl=False, timeout=30.0, multipart_threshold=100 * 1024 * 1024
+    )
     return client
 
 
