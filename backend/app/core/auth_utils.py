@@ -13,7 +13,7 @@ import hashlib
 def build_hcp_auth_token(username: str, password: str) -> str:
     """Build HCP authentication token: ``base64(user):md5(password)``."""
     user_b64 = base64.b64encode(username.encode()).decode()
-    pass_md5 = hashlib.md5(password.encode()).hexdigest()
+    pass_md5 = hashlib.md5(password.encode()).hexdigest()  # noqa: S324 — HCP protocol requires MD5
     return f"{user_b64}:{pass_md5}"
 
 
@@ -35,5 +35,5 @@ def derive_s3_keys(username: str, password: str) -> tuple[str, str]:
     - **secret_key** = md5(password)
     """
     access_key = base64.b64encode(username.encode()).decode()
-    secret_key = hashlib.md5(password.encode()).hexdigest()
+    secret_key = hashlib.md5(password.encode()).hexdigest()  # noqa: S324 — HCP protocol requires MD5
     return access_key, secret_key
