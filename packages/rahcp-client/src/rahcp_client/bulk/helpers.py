@@ -322,14 +322,18 @@ async def run_pipeline(
             finally:
                 queue.task_done()
 
+    tasks = [asyncio.create_task(_worker()) for _ in range(workers)]
     try:
-        tasks = [asyncio.create_task(_worker()) for _ in range(workers)]
         await produce_fn(queue)
+    except Exception:
+        log.exception("Producer failed")
+    finally:
         for _ in range(workers):
             await queue.put(_DONE)
-        await asyncio.gather(*tasks)
-    finally:
-        await pool.aclose()
+
+    # Wait for ALL workers to finish before closing the pool
+    await asyncio.gather(*tasks, return_exceptions=True)
+    await pool.aclose()
 
     tracker.commit()
     return build_stats(counters)
