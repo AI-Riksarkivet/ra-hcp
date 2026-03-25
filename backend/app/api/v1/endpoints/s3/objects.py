@@ -255,12 +255,19 @@ async def get_zip_download(
         )
 
     zip_path = state.get("path", "")
-    if not zip_path or not Path(zip_path).exists():
+    if not zip_path:
+        raise HTTPException(500, "ZIP file not found on disk")
+
+    # Guard against path traversal — resolved path must be inside ZIP_TEMP_DIR
+    resolved = Path(zip_path).resolve()
+    if not resolved.is_relative_to(ZIP_TEMP_DIR.resolve()):
+        raise HTTPException(400, "Invalid ZIP path")
+    if not resolved.exists():
         raise HTTPException(500, "ZIP file not found on disk")
 
     async def _cleanup() -> None:
         try:
-            Path(zip_path).unlink(missing_ok=True)
+            resolved.unlink(missing_ok=True)
         except OSError:
             pass
         _zip_tasks.pop(task_id, None)
@@ -268,7 +275,7 @@ async def get_zip_download(
             await cache.delete(f"zip_task:{task_id}")
 
     return FileResponse(
-        path=zip_path,
+        path=resolved,
         media_type="application/zip",
         filename=f"{bucket}-objects.zip",
         background=StarletteBackgroundTask(_cleanup),
