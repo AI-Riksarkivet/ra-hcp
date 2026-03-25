@@ -100,6 +100,7 @@ class HCPClient:
         self._http = httpx.AsyncClient(
             base_url=self.endpoint,
             timeout=timeout,
+            verify=verify_ssl,
         )
         self._token: str | None = None
         self._s3: S3Ops | None = None
