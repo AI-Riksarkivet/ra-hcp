@@ -12,36 +12,36 @@
         <meta name="author" content="AI-Riksarkivet">
       
       
-        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/api/reference/common/">
+        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/sdk/iiif/">
       
       
-        <link rel="prev" href="../endpoints/">
+        <link rel="prev" href="../tracker/">
       
       
-        <link rel="next" href="../s3/">
+        <link rel="next" href="../lance/">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/favicon.ico">
+      <link rel="icon" href="../../assets/favicon.ico">
       <meta name="generator" content="zensical-0.0.29">
     
     
       
-        <title>Common Schemas & Enums - ra-hcp</title>
+        <title>rahcp-iiif - ra-hcp</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../../assets/stylesheets/modern/main.6f2fbb28.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.6f2fbb28.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../../assets/stylesheets/modern/palette.dfe2e883.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
       
       
 
@@ -60,9 +60,9 @@
       
     
     
-      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#common-schemas-enums" class="md-skip">
+        <a href="#rahcp-iiif" class="md-skip">
           Skip to content
         </a>
       
@@ -103,9 +103,9 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="ra-hcp" class="md-header__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+    <a href="../.." title="ra-hcp" class="md-header__button md-logo" aria-label="ra-hcp" data-md-component="logo">
       
-  <img src="../../../assets/ra.svg" alt="ra-hcp">
+  <img src="../../assets/ra.svg" alt="ra-hcp">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Common Schemas &amp; Enums
+              rahcp-iiif
             
           </span>
         </div>
@@ -202,7 +202,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../.." class="md-tabs__link">
+        <a href="../.." class="md-tabs__link">
           
   
   ra-hcp
@@ -221,7 +221,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../getting-started/" class="md-tabs__link">
+        <a href="../../getting-started/" class="md-tabs__link">
           
   
   Getting Started
@@ -240,7 +240,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../hcp-platform/" class="md-tabs__link">
+        <a href="../../hcp-platform/" class="md-tabs__link">
           
   
   HCP Platform
@@ -259,13 +259,42 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../architecture/" class="md-tabs__link">
+        <a href="../../architecture/" class="md-tabs__link">
           
   
   Architecture
 
         </a>
       </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  API
+
+        </a>
+      </li>
+    
+  
+
     
   
 
@@ -289,36 +318,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../" class="md-tabs__link">
-          
-  
-  API
-
-        </a>
-      </li>
-    
-  
-
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../../sdk/" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
   SDK
@@ -340,7 +340,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../components/" class="md-tabs__link">
+        <a href="../../components/" class="md-tabs__link">
           
   
   Components
@@ -379,9 +379,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="ra-hcp" class="md-nav__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+    <a href="../.." title="ra-hcp" class="md-nav__button md-logo" aria-label="ra-hcp" data-md-component="logo">
       
-  <img src="../../../assets/ra.svg" alt="ra-hcp">
+  <img src="../../assets/ra.svg" alt="ra-hcp">
 
     </a>
     ra-hcp
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -547,7 +547,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/" class="md-nav__link">
+      <a href="../../getting-started/" class="md-nav__link">
         
   
   
@@ -575,7 +575,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/concepts/" class="md-nav__link">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
         
   
   
@@ -603,7 +603,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../getting-started/configuration/" class="md-nav__link">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
         
   
   
@@ -690,7 +690,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../hcp-platform/" class="md-nav__link">
+      <a href="../../hcp-platform/" class="md-nav__link">
         
   
   
@@ -718,7 +718,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../hcp-platform/data-protection/" class="md-nav__link">
+      <a href="../../hcp-platform/data-protection/" class="md-nav__link">
         
   
   
@@ -746,7 +746,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../hcp-platform/administration/" class="md-nav__link">
+      <a href="../../hcp-platform/administration/" class="md-nav__link">
         
   
   
@@ -833,7 +833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   
@@ -861,7 +861,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/backend/" class="md-nav__link">
+      <a href="../../architecture/backend/" class="md-nav__link">
         
   
   
@@ -889,7 +889,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/storage/" class="md-nav__link">
+      <a href="../../architecture/storage/" class="md-nav__link">
         
   
   
@@ -917,7 +917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/frontend/" class="md-nav__link">
+      <a href="../../architecture/frontend/" class="md-nav__link">
         
   
   
@@ -945,7 +945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../architecture/deployment/" class="md-nav__link">
+      <a href="../../architecture/deployment/" class="md-nav__link">
         
   
   
@@ -977,31 +977,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -1019,7 +1014,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1043,20 +1038,17 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_1" >
         
           
-          <label class="md-nav__link" for="__nav_5_1" id="__nav_5_1_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_1" id="__nav_5_1_label" tabindex="0">
             
   
   
@@ -1092,7 +1084,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../" class="md-nav__link">
+      <a href="../../api/" class="md-nav__link">
         
   
   
@@ -1120,7 +1112,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../authentication/" class="md-nav__link">
+      <a href="../../api/authentication/" class="md-nav__link">
         
   
   
@@ -1148,7 +1140,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../s3-buckets/" class="md-nav__link">
+      <a href="../../api/s3-buckets/" class="md-nav__link">
         
   
   
@@ -1176,7 +1168,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../s3-objects/" class="md-nav__link">
+      <a href="../../api/s3-objects/" class="md-nav__link">
         
   
   
@@ -1204,7 +1196,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tenants/" class="md-nav__link">
+      <a href="../../api/tenants/" class="md-nav__link">
         
   
   
@@ -1232,7 +1224,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../namespaces/" class="md-nav__link">
+      <a href="../../api/namespaces/" class="md-nav__link">
         
   
   
@@ -1260,7 +1252,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../system/" class="md-nav__link">
+      <a href="../../api/system/" class="md-nav__link">
         
   
   
@@ -1288,7 +1280,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../workflows/" class="md-nav__link">
+      <a href="../../api/workflows/" class="md-nav__link">
         
   
   
@@ -1316,7 +1308,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../argo/" class="md-nav__link">
+      <a href="../../api/argo/" class="md-nav__link">
         
   
   
@@ -1344,7 +1336,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../error-handling/" class="md-nav__link">
+      <a href="../../api/error-handling/" class="md-nav__link">
         
   
   
@@ -1377,31 +1369,26 @@
                 
   
   
-    
   
   
-  
     
     
     
     
       
       
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
         
           
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
             
   
   
@@ -1419,7 +1406,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1437,7 +1424,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../endpoints/" class="md-nav__link">
+      <a href="../../api/reference/endpoints/" class="md-nav__link">
         
   
   
@@ -1462,37 +1449,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Common
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../api/reference/common/" class="md-nav__link">
         
   
   
@@ -1508,243 +1468,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#app.schemas.common" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;common
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="common">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.DirectoryUsage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DirectoryUsage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.IpAddressList" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IpAddressList
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.IpSettings" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IpSettings
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="IpSettings">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.IpSettings.to_hcp_dict" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_hcp_dict
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.PermissionList" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PermissionList
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.RoleList" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;RoleList
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.TagList" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;TagList
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.NamespacePermission" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NamespacePermission
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.DataAccessPermissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DataAccessPermissions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.VersioningSettings" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VersioningSettings
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.ListQueryParams" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ListQueryParams
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ListQueryParams">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.ListQueryParams.to_query" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_query
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.ChargebackParams" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ChargebackParams
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.StatusResponse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StatusResponse
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.TokenResponse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;TokenResponse
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.PermissionsResponse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PermissionsResponse
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.dump_for_hcp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;dump_for_hcp
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1757,7 +1480,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../s3/" class="md-nav__link">
+      <a href="../../api/reference/s3/" class="md-nav__link">
         
   
   
@@ -1785,7 +1508,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tenant/" class="md-nav__link">
+      <a href="../../api/reference/tenant/" class="md-nav__link">
         
   
   
@@ -1813,7 +1536,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../namespace/" class="md-nav__link">
+      <a href="../../api/reference/namespace/" class="md-nav__link">
         
   
   
@@ -1841,7 +1564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../user-account/" class="md-nav__link">
+      <a href="../../api/reference/user-account/" class="md-nav__link">
         
   
   
@@ -1869,7 +1592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../group-account/" class="md-nav__link">
+      <a href="../../api/reference/group-account/" class="md-nav__link">
         
   
   
@@ -1897,7 +1620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../content-class/" class="md-nav__link">
+      <a href="../../api/reference/content-class/" class="md-nav__link">
         
   
   
@@ -1937,26 +1660,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -1974,7 +1702,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1989,26 +1717,31 @@
                 
   
   
+    
   
   
+  
     
     
     
     
       
       
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_1" >
         
           
-          <label class="md-nav__link" for="__nav_6_1" id="__nav_6_1_label" tabindex="0">
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6_1" id="__nav_6_1_label" tabindex="">
             
   
   
@@ -2026,7 +1759,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_1_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_1_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2044,7 +1777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../sdk/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -2072,7 +1805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../sdk/client/" class="md-nav__link">
+      <a href="../client/" class="md-nav__link">
         
   
   
@@ -2100,7 +1833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../sdk/cli/" class="md-nav__link">
+      <a href="../cli/" class="md-nav__link">
         
   
   
@@ -2128,7 +1861,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../sdk/tracker/" class="md-nav__link">
+      <a href="../tracker/" class="md-nav__link">
         
   
   
@@ -2153,10 +1886,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../sdk/iiif/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IIIF Downloader
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -2172,6 +1932,71 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manifest-parsing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manifest parsing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2184,7 +2009,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../sdk/lance/" class="md-nav__link">
+      <a href="../lance/" class="md-nav__link">
         
   
   
@@ -2212,7 +2037,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../sdk/etl/" class="md-nav__link">
+      <a href="../etl/" class="md-nav__link">
         
   
   
@@ -2240,7 +2065,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../sdk/validation/" class="md-nav__link">
+      <a href="../validation/" class="md-nav__link">
         
   
   
@@ -2282,17 +2107,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
         
           
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="">
             
   
   
@@ -2328,7 +2156,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../sdk/reference/" class="md-nav__link">
+      <a href="../reference/" class="md-nav__link">
         
   
   
@@ -2423,7 +2251,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../components/" class="md-nav__link">
+      <a href="../../components/" class="md-nav__link">
         
   
   
@@ -2479,218 +2307,46 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#app.schemas.common" class="md-nav__link">
+  <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;common
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="common">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.DirectoryUsage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DirectoryUsage
+        Quick start
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.IpAddressList" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#manifest-parsing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IpAddressList
+        Manifest parsing
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.IpSettings" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;IpSettings
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="IpSettings">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.IpSettings.to_hcp_dict" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_hcp_dict
+        Configuration
       
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.PermissionList" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#cli-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PermissionList
+        CLI commands
       
     </span>
   </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.RoleList" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;RoleList
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.TagList" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;TagList
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.NamespacePermission" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NamespacePermission
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.DataAccessPermissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DataAccessPermissions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.VersioningSettings" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VersioningSettings
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.ListQueryParams" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ListQueryParams
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ListQueryParams">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.ListQueryParams.to_query" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;to_query
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.ChargebackParams" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ChargebackParams
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.StatusResponse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StatusResponse
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.TokenResponse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;TokenResponse
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.PermissionsResponse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PermissionsResponse
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#app.schemas.common.dump_for_hcp" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;dump_for_hcp
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2719,7 +2375,7 @@
   
   
     <li class="md-path__item">
-      <a href="../../.." class="md-path__link">
+      <a href="../.." class="md-path__link">
         
   <span class="md-ellipsis">
     ra-hcp
@@ -2742,10 +2398,10 @@
     
     
       <li class="md-path__item">
-        <a href="../../" class="md-path__link">
+        <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    API
+    SDK
   </span>
 
         </a>
@@ -2763,10 +2419,10 @@
     
     
       <li class="md-path__item">
-        <a href="../endpoints/" class="md-path__link">
+        <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    Reference
+    Packages
   </span>
 
         </a>
@@ -2783,7 +2439,7 @@
                 
                   
   
-    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/api/reference/common.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/sdk/iiif.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
     </a>
@@ -2792,760 +2448,120 @@
     
       
     
-    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/api/reference/common.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/sdk/iiif.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-code-2" viewBox="0 0 24 24"><path d="M4 12.15V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-3.35"/><path d="M14 2v5a1 1 0 0 0 1 1h5M5 16l-3 3 3 3M9 22l3-3-3-3"/></svg>
     </a>
   
 
 
-<h1 id="common-schemas-enums">Common Schemas &amp; Enums<a class="headerlink" href="#common-schemas-enums" title="Permanent link">&para;</a></h1>
-<p>Auto-generated from source — always in sync with the backend.</p>
-
-
-<div class="doc doc-object doc-module">
-
-
-
-<h2 id="app.schemas.common" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <code>common</code>
-
-
-<a href="#app.schemas.common" class="headerlink" title="Permanent link">&para;</a></h2>
-
-    <div class="doc doc-contents first">
-
-        <p>Common models shared across HCP MAPI resources.</p>
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.DirectoryUsage" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>DirectoryUsage</code>
-
-
-<a href="#app.schemas.common.DirectoryUsage" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>HCP returns mixed casing (<code>Balanced</code> or <code>BALANCED</code>).</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.IpAddressList" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>IpAddressList</code>
-
-
-<a href="#app.schemas.common.IpAddressList" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>HCP wraps IP lists in {"ipAddress": [...]}.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.IpSettings" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>IpSettings</code>
-
-
-<a href="#app.schemas.common.IpSettings" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>IP address allow/deny configuration.</p>
-<p>HCP MAPI returns addresses wrapped as <code>{"ipAddress": [...]}</code>.
-We normalize to flat <code>list[str]</code> so the frontend receives plain arrays.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="app.schemas.common.IpSettings.to_hcp_dict" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">to_hcp_dict</span><span class="p">()</span></code>
-
-<a href="#app.schemas.common.IpSettings.to_hcp_dict" class="headerlink" title="Permanent link">&para;</a></h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Serialize with HCP's <code>{"ipAddress": [...]}</code> wrapper for POST.</p>
-
-
-    </div>
-
-</div>
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.PermissionList" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>PermissionList</code>
-
-
-<a href="#app.schemas.common.PermissionList" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>A list of permissions.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.RoleList" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>RoleList</code>
-
-
-<a href="#app.schemas.common.RoleList" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>A list of roles.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.TagList" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>TagList</code>
-
-
-<a href="#app.schemas.common.TagList" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>A list of tags.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.NamespacePermission" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>NamespacePermission</code>
-
-
-<a href="#app.schemas.common.NamespacePermission" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>Data access permissions for a single namespace.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.DataAccessPermissions" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>DataAccessPermissions</code>
-
-
-<a href="#app.schemas.common.DataAccessPermissions" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>Data access permissions across namespaces.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.VersioningSettings" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>VersioningSettings</code>
-
-
-<a href="#app.schemas.common.VersioningSettings" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>Versioning configuration for a namespace.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.ListQueryParams" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>ListQueryParams</code>
-
-
-<a href="#app.schemas.common.ListQueryParams" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>Combined query parameters for list operations.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="app.schemas.common.ListQueryParams.to_query" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <code class="highlight language-python"><span class="n">to_query</span><span class="p">(</span><span class="o">**</span><span class="n">extra</span><span class="p">)</span></code>
-
-<a href="#app.schemas.common.ListQueryParams.to_query" class="headerlink" title="Permanent link">&para;</a></h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Build query dict from non-None fields, plus any extra params.</p>
-
-
-    </div>
-
-</div>
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.ChargebackParams" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>ChargebackParams</code>
-
-
-<a href="#app.schemas.common.ChargebackParams" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>Query parameters for chargeback reports.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.StatusResponse" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>StatusResponse</code>
-
-
-<a href="#app.schemas.common.StatusResponse" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>Standard response for mutation operations.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.TokenResponse" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>TokenResponse</code>
-
-
-<a href="#app.schemas.common.TokenResponse" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>OAuth2 token response.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h3 id="app.schemas.common.PermissionsResponse" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <code>PermissionsResponse</code>
-
-
-<a href="#app.schemas.common.PermissionsResponse" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-
-
-        <p>Namespace or tenant permissions from MAPI.</p>
-
-
-
-
-
-
-
-
-
-
-
-<div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="app.schemas.common.dump_for_hcp" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">dump_for_hcp</span><span class="p">(</span><span class="n">model</span><span class="p">)</span></code>
-
-<a href="#app.schemas.common.dump_for_hcp" class="headerlink" title="Permanent link">&para;</a></h3>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Serialize a Pydantic model for POST to HCP MAPI.</p>
-<p>Re-wraps any <code>ipSettings</code> field into HCP's
-<code>{"ipAddress": [...]}</code> format.</p>
-
-
-    </div>
-
-</div>
-
-
-
-  </div>
-
-    </div>
-
-</div>
+<h1 id="rahcp-iiif">rahcp-iiif<a class="headerlink" href="#rahcp-iiif" title="Permanent link">&para;</a></h1>
+<p>Async IIIF image downloader with resumable tracking. Downloads images from Riksarkivet IIIF endpoints in parallel, with optional validation via <code>rahcp-validate</code>.</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>rahcp-iiif
+<span class="c1"># With validation:</span>
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;rahcp-iiif[validate]&quot;</span>
+</code></pre></div>
+<h2 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_tracker</span><span class="w"> </span><span class="kn">import</span> <span class="n">SqliteTracker</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_iiif</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_batch</span><span class="p">,</span> <span class="n">download_batches</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="n">tracker</span> <span class="o">=</span> <span class="n">SqliteTracker</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.iiif-download.db&quot;</span><span class="p">))</span>
+
+    <span class="c1"># Download a single batch</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="k">await</span> <span class="n">download_batch</span><span class="p">(</span>
+        <span class="s2">&quot;C0074667&quot;</span><span class="p">,</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./images&quot;</span><span class="p">),</span>
+        <span class="n">tracker</span><span class="p">,</span>
+        <span class="n">workers</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded </span><span class="si">{</span><span class="n">stats</span><span class="o">.</span><span class="n">ok</span><span class="si">}</span><span class="s2">, skipped </span><span class="si">{</span><span class="n">stats</span><span class="o">.</span><span class="n">skipped</span><span class="si">}</span><span class="s2">, errors </span><span class="si">{</span><span class="n">stats</span><span class="o">.</span><span class="n">errors</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Or download multiple batches</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="k">await</span> <span class="n">download_batches</span><span class="p">(</span>
+        <span class="p">[</span><span class="s2">&quot;C0074667&quot;</span><span class="p">,</span> <span class="s2">&quot;C0074865&quot;</span><span class="p">,</span> <span class="s2">&quot;A0065852&quot;</span><span class="p">],</span>
+        <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./images&quot;</span><span class="p">),</span>
+        <span class="n">tracker</span><span class="p">,</span>
+        <span class="n">workers</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">query_params</span><span class="o">=</span><span class="s2">&quot;full/,1200/0/default.jpg&quot;</span><span class="p">,</span>  <span class="c1"># custom resolution</span>
+    <span class="p">)</span>
+    <span class="n">tracker</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+<h2 id="manifest-parsing">Manifest parsing<a class="headerlink" href="#manifest-parsing" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_iiif</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_image_ids</span><span class="p">,</span> <span class="n">build_image_url</span>
+
+<span class="c1"># Get all image IDs from a IIIF manifest</span>
+<span class="n">image_ids</span> <span class="o">=</span> <span class="k">await</span> <span class="n">get_image_ids</span><span class="p">(</span><span class="s2">&quot;C0074667&quot;</span><span class="p">)</span>
+<span class="c1"># → [&quot;C0074667_00001&quot;, &quot;C0074667_00002&quot;, ...]</span>
+
+<span class="c1"># Build the download URL for a specific image</span>
+<span class="n">url</span> <span class="o">=</span> <span class="n">build_image_url</span><span class="p">(</span><span class="s2">&quot;C0074667_00001&quot;</span><span class="p">,</span> <span class="n">query_params</span><span class="o">=</span><span class="s2">&quot;full/,1200/0/default.jpg&quot;</span><span class="p">)</span>
+<span class="c1"># → &quot;https://iiifintern-ai.ra.se/arkis!C0074667_00001/full/,1200/0/default.jpg&quot;</span>
+</code></pre></div>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Env var</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>base_url</code></td>
+<td><code>IIIF_URL</code></td>
+<td><code>https://iiifintern-ai.ra.se</code></td>
+<td>IIIF server base URL</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td><code>IIIF_TIMEOUT</code></td>
+<td><code>60</code></td>
+<td>Request timeout in seconds</td>
+</tr>
+<tr>
+<td><code>query_params</code></td>
+<td><code>IIIF_QUERY_PARAMS</code></td>
+<td><code>full/max/0/default.jpg</code></td>
+<td>IIIF image API parameters</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>query_params</code> string follows the <a href="https://iiif.io/api/image/3.0/">IIIF Image API</a> format: <code>{region}/{size}/{rotation}/{quality}.{format}</code>. Common values:</p>
+<table>
+<thead>
+<tr>
+<th><code>query_params</code></th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>full/max/0/default.jpg</code></td>
+<td>Full resolution JPEG (default)</td>
+</tr>
+<tr>
+<td><code>full/,1200/0/default.jpg</code></td>
+<td>Scale to 1200px height</td>
+</tr>
+<tr>
+<td><code>full/800,/0/default.jpg</code></td>
+<td>Scale to 800px width</td>
+</tr>
+<tr>
+<td><code>full/200,200/0/default.jpg</code></td>
+<td>Fixed 200x200 thumbnail</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cli-commands">CLI commands<a class="headerlink" href="#cli-commands" title="Permanent link">&para;</a></h2>
+<p>See <a href="../cli/#rahcp-iiif">CLI — rahcp iiif</a> for command-line usage including <code>rahcp iiif download</code> and <code>rahcp iiif download-batches</code>.</p>
 
 
 
@@ -3585,7 +2601,7 @@ We normalize to flat <code>list[str]</code> so the frontend receives plain array
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../endpoints/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Endpoints">
+          <a href="../tracker/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Transfer Tracker">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -3595,20 +2611,20 @@ We normalize to flat <code>list[str]</code> so the frontend receives plain array
                 Previous
               </span>
               <div class="md-ellipsis">
-                Endpoints
+                Transfer Tracker
               </div>
             </div>
           </a>
         
         
           
-          <a href="../s3/" class="md-footer__link md-footer__link--next" aria-label="Next: S3">
+          <a href="../lance/" class="md-footer__link md-footer__link--next" aria-label="Next: LanceDB">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                S3
+                LanceDB
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -3649,10 +2665,10 @@ We normalize to flat <code>list[str]</code> so the frontend receives plain array
     
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"../../..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.sections","navigation.top","navigation.tracking","search.highlight"],"search":"../../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.sections","navigation.top","navigation.tracking","search.highlight"],"search":"../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.c2b142ea.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c2b142ea.min.js"></script>
       
     
   </body>

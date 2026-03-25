@@ -94,6 +94,27 @@
         <loc>https://ai-riksarkivet.github.io/hcp/sdk/</loc>
       </url>
       <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/client/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/cli/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/tracker/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/iiif/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/lance/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/etl/</loc>
+      </url>
+      <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/validation/</loc>
+      </url>
+      <url>
         <loc>https://ai-riksarkivet.github.io/hcp/sdk/reference/</loc>
       </url>
       <url>

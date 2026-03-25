@@ -12,13 +12,13 @@
         <meta name="author" content="AI-Riksarkivet">
       
       
-        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/getting-started/concepts/">
+        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/sdk/etl/">
       
       
-        <link rel="prev" href="../">
+        <link rel="prev" href="../lance/">
       
       
-        <link rel="next" href="../configuration/">
+        <link rel="next" href="../validation/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>HCP Concepts - ra-hcp</title>
+        <title>rahcp-etl - ra-hcp</title>
       
     
     
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#hcp-concepts" class="md-skip">
+        <a href="#rahcp-etl" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              HCP Concepts
+              rahcp-etl
             
           </span>
         </div>
@@ -217,13 +217,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../getting-started/" class="md-tabs__link">
           
   
   Getting Started
@@ -305,6 +303,8 @@
   
   
   
+    
+  
   
     
     
@@ -312,11 +312,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../sdk/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
           
   
   SDK
@@ -490,31 +492,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
             
   
   
@@ -532,7 +529,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -550,7 +547,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../getting-started/" class="md-nav__link">
         
   
   
@@ -575,37 +572,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    HCP Concepts
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
         
   
   
@@ -621,321 +591,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#how-hcp-differs-from-standard-s3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How HCP Differs from Standard S3
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="How HCP Differs from Standard S3">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hcp-specific-s3-headers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HCP-Specific S3 Headers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#s3-compatibility" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        S3 Compatibility
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#object-based-storage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Object-Based Storage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tenants" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tenants
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#namespaces-buckets" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Namespaces (Buckets)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#versioning" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Versioning
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#retention-compliance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retention &amp; Compliance
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Retention &amp; Compliance">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#retention-modes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retention Modes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#s3-object-lock" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        S3 Object Lock
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#retention-classes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retention Classes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#roles-permissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Roles &amp; Permissions
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Roles &amp; Permissions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#tenant-roles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tenant Roles
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#data-access-permissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Data Access Permissions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#protocols" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Protocols
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#replication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Replication
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#metadata-query-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metadata Query API
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Metadata Query API">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#query-syntax" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query Syntax
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#searchable-properties" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Searchable Properties
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query Examples
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Authentication
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Authentication">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#mapi-conventions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MAPI Conventions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#content-classes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Content Classes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#further-reading" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Further Reading
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -948,7 +603,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../configuration/" class="md-nav__link">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
         
   
   
@@ -2005,26 +1660,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
             
   
   
@@ -2042,7 +1702,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2057,26 +1717,31 @@
                 
   
   
+    
   
   
+  
     
     
     
     
       
       
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_1" >
         
           
-          <label class="md-nav__link" for="__nav_6_1" id="__nav_6_1_label" tabindex="0">
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6_1" id="__nav_6_1_label" tabindex="">
             
   
   
@@ -2094,7 +1759,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_1_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_6_1_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2112,7 +1777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   
@@ -2140,7 +1805,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/client/" class="md-nav__link">
+      <a href="../client/" class="md-nav__link">
         
   
   
@@ -2168,7 +1833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/cli/" class="md-nav__link">
+      <a href="../cli/" class="md-nav__link">
         
   
   
@@ -2196,7 +1861,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/tracker/" class="md-nav__link">
+      <a href="../tracker/" class="md-nav__link">
         
   
   
@@ -2224,7 +1889,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/iiif/" class="md-nav__link">
+      <a href="../iiif/" class="md-nav__link">
         
   
   
@@ -2252,7 +1917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/lance/" class="md-nav__link">
+      <a href="../lance/" class="md-nav__link">
         
   
   
@@ -2277,10 +1942,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../sdk/etl/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ETL Pipelines
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -2296,6 +1988,60 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-dag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline DAG
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jetstream-consumer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JetStream consumer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dead-letter-queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dead letter queue
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2308,7 +2054,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/validation/" class="md-nav__link">
+      <a href="../validation/" class="md-nav__link">
         
   
   
@@ -2350,17 +2096,20 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6_2" >
         
           
-          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6_2" id="__nav_6_2_label" tabindex="">
             
   
   
@@ -2396,7 +2145,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/reference/" class="md-nav__link">
+      <a href="../reference/" class="md-nav__link">
         
   
   
@@ -2547,49 +2296,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#how-hcp-differs-from-standard-s3" class="md-nav__link">
+  <a href="#pipeline-dag" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How HCP Differs from Standard S3
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="How HCP Differs from Standard S3">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hcp-specific-s3-headers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        HCP-Specific S3 Headers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#s3-compatibility" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        S3 Compatibility
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#object-based-storage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Object-Based Storage
+        Pipeline DAG
       
     </span>
   </a>
@@ -2597,10 +2307,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tenants" class="md-nav__link">
+  <a href="#jetstream-consumer" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tenants
+        JetStream consumer
       
     </span>
   </a>
@@ -2608,232 +2318,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#namespaces-buckets" class="md-nav__link">
+  <a href="#dead-letter-queue" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Namespaces (Buckets)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#versioning" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Versioning
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#retention-compliance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retention &amp; Compliance
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Retention &amp; Compliance">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#retention-modes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retention Modes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#s3-object-lock" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        S3 Object Lock
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#retention-classes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Retention Classes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#roles-permissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Roles &amp; Permissions
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Roles &amp; Permissions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#tenant-roles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tenant Roles
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#data-access-permissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Data Access Permissions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#protocols" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Protocols
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#replication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Replication
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#metadata-query-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metadata Query API
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Metadata Query API">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#query-syntax" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query Syntax
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#searchable-properties" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Searchable Properties
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query Examples
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Authentication
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Authentication">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#mapi-conventions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MAPI Conventions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#content-classes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Content Classes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#further-reading" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Further Reading
+        Dead letter queue
       
     </span>
   </a>
@@ -2882,11 +2370,37 @@
   
     
     
+      
+  
+  
+    
+    
       <li class="md-path__item">
         <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    Getting Started
+    SDK
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Packages
   </span>
 
         </a>
@@ -2903,7 +2417,7 @@
                 
                   
   
-    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/getting-started/concepts.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/sdk/etl.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
     </a>
@@ -2912,560 +2426,107 @@
     
       
     
-    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/getting-started/concepts.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/sdk/etl.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-code-2" viewBox="0 0 24 24"><path d="M4 12.15V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-3.35"/><path d="M14 2v5a1 1 0 0 0 1 1h5M5 16l-3 3 3 3M9 22l3-3-3-3"/></svg>
     </a>
   
 
 
-<h1 id="hcp-concepts">HCP Concepts<a class="headerlink" href="#hcp-concepts" title="Permanent link">&para;</a></h1>
-<p>This page explains the core concepts of Hitachi Content Platform (HCP) that you'll encounter when using the HCP App.</p>
-<h2 id="how-hcp-differs-from-standard-s3">How HCP Differs from Standard S3<a class="headerlink" href="#how-hcp-differs-from-standard-s3" title="Permanent link">&para;</a></h2>
-<p>If you're coming from AWS S3, MinIO, or Ceph, HCP will feel familiar on the data plane (it speaks S3) but very different on the management and compliance side.</p>
-<table>
-<thead>
-<tr>
-<th>Concept</th>
-<th>AWS S3 / MinIO</th>
-<th>HCP</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Hierarchy</strong></td>
-<td>Flat: just buckets</td>
-<td>Multi-tenant: System → Tenants → Namespaces (= buckets)</td>
-</tr>
-<tr>
-<td><strong>Management API</strong></td>
-<td>Same S3 API for data + config</td>
-<td>Separate MAPI (REST/XML on port 9090) for all admin operations</td>
-</tr>
-<tr>
-<td><strong>Access protocols</strong></td>
-<td>S3 only</td>
-<td>S3, REST, NFS, CIFS/SMB, SMTP, WebDAV — all accessing the same data</td>
-</tr>
-<tr>
-<td><strong>Version IDs</strong></td>
-<td>UUIDs (<code>"aBcDeFgH..."</code>)</td>
-<td>Integers (<code>0</code>, <code>1</code>, <code>2</code>, ...)</td>
-</tr>
-<tr>
-<td><strong>Authentication</strong></td>
-<td>Access key + secret key (arbitrary)</td>
-<td><code>base64(username)</code> + <code>md5(password)</code> — derived from user credentials</td>
-</tr>
-<tr>
-<td><strong>Bucket addressing</strong></td>
-<td>Virtual-hosted or path-style</td>
-<td>Path-style only</td>
-</tr>
-<tr>
-<td><strong>Retention</strong></td>
-<td>S3 Object Lock (Governance/Compliance)</td>
-<td>Built-in WORM + retention classes + S3 Object Lock</td>
-</tr>
-<tr>
-<td><strong>Search</strong></td>
-<td>External (Athena, OpenSearch)</td>
-<td>Built-in Metadata Query API with Lucene-like syntax</td>
-</tr>
-<tr>
-<td><strong>Content classes</strong></td>
-<td>No equivalent</td>
-<td>Schema-based custom metadata with typed, indexed properties</td>
-</tr>
-<tr>
-<td><strong>Replication</strong></td>
-<td>Cross-region replication rules</td>
-<td>Built-in active/active geo-replication between HCP systems</td>
-</tr>
-<tr>
-<td><strong>Bulk delete</strong></td>
-<td><code>DeleteObjects</code> with CRC32</td>
-<td>Requires <code>Content-MD5</code> — this app works around it with individual deletes</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>The HCP App abstracts most of these differences. The S3 data plane handles HCP quirks (path-style, credential derivation, bulk delete workaround) transparently, while MAPI operations are exposed through a unified REST API.</p>
-</div>
-<h3 id="hcp-specific-s3-headers">HCP-Specific S3 Headers<a class="headerlink" href="#hcp-specific-s3-headers" title="Permanent link">&para;</a></h3>
-<p>HCP extends the S3 API with custom headers for retention and compliance:</p>
-<table>
-<thead>
-<tr>
-<th>Header</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>X-HCP-RETENTION</code></td>
-<td>Set/get retention setting (<code>0</code> deletable, <code>-1</code> permanent, <code>-2</code> unspecified, or datetime).</td>
-</tr>
-<tr>
-<td><code>X-HCP-RETENTIONHOLD</code></td>
-<td>Set/get a simple hold (<code>true</code>/<code>false</code>). Prevents deletion regardless of retention.</td>
-</tr>
-<tr>
-<td><code>X-HCP-LABELRETENTIONHOLD</code></td>
-<td>Manage multiple named retention holds (up to 100 per object).</td>
-</tr>
-<tr>
-<td><code>X-HCP-PRIVILEGED</code></td>
-<td>Privileged delete — remove objects under retention. Requires <code>PRIVILEGED</code> permission.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="s3-compatibility">S3 Compatibility<a class="headerlink" href="#s3-compatibility" title="Permanent link">&para;</a></h3>
-<p>HCP supports: bucket CRUD, object CRUD, ACLs, CORS, versioning, multipart uploads, presigned URLs, server-side encryption, Object Lock, and AWS Signature V2/V4. <strong>Not supported</strong>: lifecycle, tagging, policy, website, logging, notifications, metrics, analytics, inventory, replication config, encryption config, public access block, client-side encryption.</p>
-<h2 id="object-based-storage">Object-Based Storage<a class="headerlink" href="#object-based-storage" title="Permanent link">&para;</a></h2>
-<p>HCP stores <strong>objects</strong> in a repository. Each object permanently associates data with metadata:</p>
-<pre class="mermaid"><code>graph LR
-    subgraph "Object"
-        DATA["Fixed-Content Data&lt;br/&gt;(immutable once stored)"]
-        SYS["System Metadata&lt;br/&gt;size · creation date · retention"]
-        CUSTOM["Custom Metadata&lt;br/&gt;(optional annotations)"]
-        ACL["Access Control List&lt;br/&gt;(optional permissions)"]
-    end</code></pre>
-<table>
-<thead>
-<tr>
-<th>Component</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Fixed-content data</strong></td>
-<td>The actual file content. Once stored, it cannot be modified (WORM -- write once, read many).</td>
-</tr>
-<tr>
-<td><strong>System metadata</strong></td>
-<td>Automatically managed properties: size, creation date, retention policy, hash, etc.</td>
-</tr>
-<tr>
-<td><strong>Custom metadata</strong></td>
-<td>Optional user-provided annotations (XML or key-value pairs via <code>x-amz-meta-*</code> headers).</td>
-</tr>
-<tr>
-<td><strong>ACL</strong></td>
-<td>Optional access control list defining who can read, write, or manage the object.</td>
-</tr>
-</tbody>
-</table>
-<h2 id="tenants">Tenants<a class="headerlink" href="#tenants" title="Permanent link">&para;</a></h2>
-<p>A <strong>tenant</strong> is an administrative entity that owns and manages a portion of the HCP repository. Tenants typically correspond to organizations, departments, or business units.</p>
-<pre class="mermaid"><code>graph TD
-    HCP["HCP System"] --&gt; T1["Tenant: Finance"]
-    HCP --&gt; T2["Tenant: Engineering"]
-    HCP --&gt; T3["Tenant: Compliance"]
-    T1 --&gt; NS1["Namespace: invoices"]
-    T1 --&gt; NS2["Namespace: reports"]
-    T2 --&gt; NS3["Namespace: builds"]
-    T2 --&gt; NS4["Namespace: artifacts"]
-    T3 --&gt; NS5["Namespace: audit-logs"]</code></pre>
-<p>Each tenant has:</p>
-<ul>
-<li><strong>Quotas</strong> -- hard and soft storage limits</li>
-<li><strong>User accounts</strong> -- tenant-scoped credentials with role-based access</li>
-<li><strong>Configuration</strong> -- console security, email notifications, namespace defaults</li>
-<li><strong>Statistics</strong> -- storage usage and chargeback reporting</li>
-</ul>
-<h2 id="namespaces-buckets">Namespaces (Buckets)<a class="headerlink" href="#namespaces-buckets" title="Permanent link">&para;</a></h2>
-<p>A <strong>namespace</strong> (also called a <strong>bucket</strong> in S3 terminology) is a logical container for objects within a tenant. Objects in one namespace are not visible in any other namespace.</p>
-<p>Namespaces provide:</p>
-<ul>
-<li><strong>Isolation</strong> -- separate data for different applications or purposes</li>
-<li><strong>Protocol configuration</strong> -- each namespace can enable/disable HTTP, S3, NFS, CIFS, SMTP independently</li>
-<li><strong>Compliance settings</strong> -- retention policies, versioning, and hold rules per namespace</li>
-<li><strong>Search indexing</strong> -- custom metadata indexing for the Metadata Query API</li>
-</ul>
-<div class="admonition tip">
-<p class="admonition-title">Buckets = Namespaces</p>
-<p>In the S3 API, namespaces are called "buckets." The terms are interchangeable. When you create a bucket via S3, you're creating a namespace. When you manage namespaces via MAPI, you're managing buckets.</p>
-</div>
-<h2 id="versioning">Versioning<a class="headerlink" href="#versioning" title="Permanent link">&para;</a></h2>
-<p>HCP can store <strong>multiple versions</strong> of an object, providing a history of changes over time. Each version is a separate object with its own metadata.</p>
-<table>
-<thead>
-<tr>
-<th>Concept</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Version ID</strong></td>
-<td>Integer identifier for each version (HCP uses integer IDs, not UUIDs like AWS S3).</td>
-</tr>
-<tr>
-<td><strong>Delete marker</strong></td>
-<td>When versioning is enabled, deleting an object creates a delete marker instead of removing data.</td>
-</tr>
-<tr>
-<td><strong>Pruning</strong></td>
-<td>Removing old versions of an object while keeping the current version.</td>
-</tr>
-<tr>
-<td><strong>Purging</strong></td>
-<td>Permanently removing all versions of an object, including the current version.</td>
-</tr>
-</tbody>
-</table>
-<p>Versioning is enabled per namespace and can be toggled between <code>Enabled</code> and <code>Suspended</code>.</p>
-<h2 id="retention-compliance">Retention &amp; Compliance<a class="headerlink" href="#retention-compliance" title="Permanent link">&para;</a></h2>
-<p>HCP provides WORM (Write Once, Read Many) storage with configurable retention policies to prevent premature deletion.</p>
-<h3 id="retention-modes">Retention Modes<a class="headerlink" href="#retention-modes" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Mode</th>
-<th>Value</th>
-<th>Behavior</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Deletion Allowed</strong></td>
-<td><code>0</code></td>
-<td>Object can be deleted at any time.</td>
-</tr>
-<tr>
-<td><strong>Deletion Prohibited</strong></td>
-<td><code>-1</code></td>
-<td>Object can never be deleted (permanent retention).</td>
-</tr>
-<tr>
-<td><strong>Initial Unspecified</strong></td>
-<td><code>-2</code></td>
-<td>Retention not yet set -- can be set later.</td>
-</tr>
-<tr>
-<td><strong>Fixed date</strong></td>
-<td>datetime</td>
-<td>Object cannot be deleted until the specified date.</td>
-</tr>
-<tr>
-<td><strong>Offset</strong></td>
-<td><code>A+7y</code></td>
-<td>Retention calculated relative to ingest time (e.g., 7 years after creation).</td>
-</tr>
-<tr>
-<td><strong>Retention class</strong></td>
-<td>class name</td>
-<td>Retention defined by a named class with a specific period.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="s3-object-lock">S3 Object Lock<a class="headerlink" href="#s3-object-lock" title="Permanent link">&para;</a></h3>
-<p>HCP also supports <strong>S3 Object Lock</strong> for applications using the S3 API:</p>
-<ul>
-<li><strong>Governance mode</strong> -- most users cannot delete, but users with <code>BypassGovernanceRetention</code> permission can override.</li>
-<li><strong>Compliance mode</strong> -- no one can delete until the retention period expires, not even administrators.</li>
-<li><strong>Legal holds</strong> -- prevent deletion regardless of retention settings. Up to 100 labeled holds per object.</li>
-</ul>
-<h3 id="retention-classes">Retention Classes<a class="headerlink" href="#retention-classes" title="Permanent link">&para;</a></h3>
-<p>Retention classes are named policies defined at the namespace level. They simplify management by letting you assign a class name instead of a specific date to each object. When you update a retention class, all objects using that class are updated automatically.</p>
-<h2 id="roles-permissions">Roles &amp; Permissions<a class="headerlink" href="#roles-permissions" title="Permanent link">&para;</a></h2>
-<h3 id="tenant-roles">Tenant Roles<a class="headerlink" href="#tenant-roles" title="Permanent link">&para;</a></h3>
-<p>User accounts within a tenant are assigned one or more roles:</p>
-<table>
-<thead>
-<tr>
-<th>Role</th>
-<th>Permissions</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>ADMINISTRATOR</strong></td>
-<td>Full tenant administration: namespaces, users, settings, protocols.</td>
-</tr>
-<tr>
-<td><strong>SECURITY</strong></td>
-<td>Manage console security, search security, and user accounts.</td>
-</tr>
-<tr>
-<td><strong>MONITOR</strong></td>
-<td>Read-only access to statistics, chargeback reports, and configuration.</td>
-</tr>
-<tr>
-<td><strong>COMPLIANCE</strong></td>
-<td>Manage compliance settings, retention classes, and content classes.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="data-access-permissions">Data Access Permissions<a class="headerlink" href="#data-access-permissions" title="Permanent link">&para;</a></h3>
-<p>In addition to roles, users can be granted <strong>data access permissions</strong> for individual namespaces:</p>
-<table>
-<thead>
-<tr>
-<th>Permission</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>BROWSE</td>
-<td>List namespace contents.</td>
-</tr>
-<tr>
-<td>READ</td>
-<td>View and retrieve objects and their metadata.</td>
-</tr>
-<tr>
-<td>WRITE</td>
-<td>Store, copy, and modify objects.</td>
-</tr>
-<tr>
-<td>DELETE</td>
-<td>Delete objects and versions.</td>
-</tr>
-<tr>
-<td>PURGE</td>
-<td>Permanently remove all versions.</td>
-</tr>
-<tr>
-<td>SEARCH</td>
-<td>Search objects via the Metadata Query API.</td>
-</tr>
-<tr>
-<td>READ_ACL</td>
-<td>View object and bucket ACLs.</td>
-</tr>
-<tr>
-<td>WRITE_ACL</td>
-<td>Modify object and bucket ACLs.</td>
-</tr>
-<tr>
-<td>CHANGE_OWNER</td>
-<td>Change object ownership.</td>
-</tr>
-<tr>
-<td>PRIVILEGED</td>
-<td>Delete objects under retention (privileged delete).</td>
-</tr>
-</tbody>
-</table>
-<h2 id="protocols">Protocols<a class="headerlink" href="#protocols" title="Permanent link">&para;</a></h2>
-<p>HCP supports multiple access protocols, each configured independently per namespace:</p>
-<table>
-<thead>
-<tr>
-<th>Protocol</th>
-<th>Use Case</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>S3</strong></td>
-<td>Primary API for modern applications. RESTful, compatible with AWS S3 tools.</td>
-</tr>
-<tr>
-<td><strong>REST</strong></td>
-<td>HCP-native HTTP API with additional metadata features.</td>
-</tr>
-<tr>
-<td><strong>NFS</strong></td>
-<td>Legacy file system access (mount namespaces as directories).</td>
-</tr>
-<tr>
-<td><strong>CIFS/SMB</strong></td>
-<td>Windows file sharing access.</td>
-</tr>
-<tr>
-<td><strong>SMTP</strong></td>
-<td>Email ingestion (storing email as objects).</td>
-</tr>
-<tr>
-<td><strong>WebDAV</strong></td>
-<td>Web-based file management.</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>Objects stored through any protocol are immediately accessible through all other enabled protocols. The S3 and REST protocols are automatically enabled when you create a namespace via S3.</p>
-</div>
-<h2 id="replication">Replication<a class="headerlink" href="#replication" title="Permanent link">&para;</a></h2>
-<p>HCP supports <strong>cross-system replication</strong> for data protection across geographically distributed systems.</p>
-<pre class="mermaid"><code>graph LR
-    DC1["HCP System&lt;br/&gt;Data Center 1"] &lt;--&gt;|"Replication Link"| DC2["HCP System&lt;br/&gt;Data Center 2"]
-    DC1 &lt;--&gt;|"Replication Link"| DC3["HCP System&lt;br/&gt;Data Center 3"]</code></pre>
-<p>Key concepts:</p>
-<ul>
-<li><strong>Replication link</strong> -- a connection between two HCP systems for data synchronization.</li>
-<li><strong>Active/active</strong> -- both systems accept writes; changes replicate bidirectionally.</li>
-<li><strong>Failover/failback</strong> -- redirect traffic to a surviving system during outages.</li>
-<li><strong>Geo-protection</strong> -- data is stored in multiple geographic locations for disaster recovery.</li>
-</ul>
-<h2 id="metadata-query-api">Metadata Query API<a class="headerlink" href="#metadata-query-api" title="Permanent link">&para;</a></h2>
-<p>The <strong>Metadata Query API</strong> lets you search for objects based on their metadata. It supports:</p>
-<ul>
-<li><strong>Object-based queries</strong> -- search current objects by system metadata, custom metadata, ACLs, and content properties using a Lucene-like query language.</li>
-<li><strong>Operation-based queries</strong> -- search for create, delete, purge, and dispose events for audit trails.</li>
-</ul>
-<p>The API returns metadata only (not object data). Results can be paginated and sorted.</p>
-<h3 id="query-syntax">Query Syntax<a class="headerlink" href="#query-syntax" title="Permanent link">&para;</a></h3>
-<p>Property-based criteria use a Lucene-like syntax:</p>
-<div class="highlight"><pre><span></span><code>property:value                    # exact match
-property:(value1 value2)          # match any
-property:(+value1 -value2)        # must/must-not
-property:[start TO end]           # inclusive range
-property:{start TO end}           # exclusive range
-property:[start TO *]             # open-ended range
+<h1 id="rahcp-etl">rahcp-etl<a class="headerlink" href="#rahcp-etl" title="Permanent link">&para;</a></h1>
+<p>Stateful ETL orchestration with <a href="https://docs.nats.io/nats-concepts/jetstream">NATS JetStream</a> for event-driven pipelines.</p>
+<h2 id="pipeline-dag">Pipeline DAG<a class="headerlink" href="#pipeline-dag" title="Permanent link">&para;</a></h2>
+<p>Define multi-stage pipelines with per-stage retry policies and checkpoint-based resumption:</p>
+<pre class="mermaid"><code>flowchart LR
+    subgraph Pipeline
+        E["extract&lt;br/&gt;&lt;small&gt;retries: 3&lt;/small&gt;"] --&gt; T["transform&lt;br/&gt;&lt;small&gt;retries: 3&lt;/small&gt;"]
+        T --&gt; L["load&lt;br/&gt;&lt;small&gt;retries: 3&lt;/small&gt;"]
+    end
+
+    E -.-&gt;|checkpoint| KV[("NATS KV&lt;br/&gt;&lt;small&gt;etl-checkpoints&lt;/small&gt;")]
+    T -.-&gt;|checkpoint| KV
+    L -.-&gt;|clear| KV
+
+    L --&gt; OK["Result"]
+
+    style OK fill:#d4edda,stroke:#28a745</code></pre>
+<p>Each stage saves a checkpoint after success. If the pipeline fails and is re-run with the same <code>pipeline_id</code>, it resumes from the last checkpoint.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_etl.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_etl.checkpointing</span><span class="w"> </span><span class="kn">import</span> <span class="n">CheckpointStore</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">nats</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="n">nc</span> <span class="o">=</span> <span class="k">await</span> <span class="n">nats</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;nats://localhost:4222&quot;</span><span class="p">)</span>
+    <span class="n">store</span> <span class="o">=</span> <span class="k">await</span> <span class="n">CheckpointStore</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">nc</span><span class="p">)</span>
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span><span class="n">checkpoint_store</span><span class="o">=</span><span class="n">store</span><span class="p">)</span>
+
+    <span class="nd">@pipeline</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="s2">&quot;extract&quot;</span><span class="p">,</span> <span class="n">retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">backoff</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">extract</span><span class="p">(</span><span class="n">payload</span><span class="p">):</span>
+        <span class="c1"># Download source data</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;records&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">]}</span>
+
+    <span class="nd">@pipeline</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="s2">&quot;transform&quot;</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">transform</span><span class="p">(</span><span class="n">payload</span><span class="p">):</span>
+        <span class="c1"># Process records</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;transformed&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;records&quot;</span><span class="p">]]}</span>
+
+    <span class="nd">@pipeline</span><span class="o">.</span><span class="n">stage</span><span class="p">(</span><span class="s2">&quot;load&quot;</span><span class="p">)</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="n">payload</span><span class="p">):</span>
+        <span class="c1"># Write results</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;loaded&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">[</span><span class="s2">&quot;transformed&quot;</span><span class="p">])}</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="p">{</span><span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="s2">&quot;s3://bucket/input&quot;</span><span class="p">},</span>
+        <span class="n">pipeline_id</span><span class="o">=</span><span class="s2">&quot;batch-2025-03-18&quot;</span><span class="p">,</span>  <span class="c1"># enables checkpoint resume</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </code></pre></div>
-<p>Boolean operators: <code>+criterion</code> (must match), <code>-criterion</code> (must not match), no operator (should match, affects ranking). Group with parentheses.</p>
-<p>Wildcards: <code>?</code> (single char), <code>*</code> (any chars) — valid at end/middle of terms only, never at the beginning.</p>
-<h3 id="searchable-properties">Searchable Properties<a class="headerlink" href="#searchable-properties" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Property</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>namespace</code></td>
-<td>string</td>
-<td><code>namespace-name.tenant-name</code></td>
-</tr>
-<tr>
-<td><code>objectPath</code></td>
-<td>string</td>
-<td>Full object path</td>
-</tr>
-<tr>
-<td><code>utf8Name</code></td>
-<td>string</td>
-<td>Object filename</td>
-</tr>
-<tr>
-<td><code>size</code></td>
-<td>long</td>
-<td>Object size in bytes</td>
-</tr>
-<tr>
-<td><code>contentType</code></td>
-<td>string</td>
-<td>MIME type</td>
-</tr>
-<tr>
-<td><code>ingestTimeString</code></td>
-<td>datetime</td>
-<td>Time object was stored</td>
-</tr>
-<tr>
-<td><code>changeTimeString</code></td>
-<td>datetime</td>
-<td>Time object was last modified</td>
-</tr>
-<tr>
-<td><code>retention</code></td>
-<td>string</td>
-<td>Retention setting (<code>0</code>, <code>-1</code>, <code>-2</code>, or datetime)</td>
-</tr>
-<tr>
-<td><code>retentionClass</code></td>
-<td>string</td>
-<td>Assigned retention class name</td>
-</tr>
-<tr>
-<td><code>hold</code></td>
-<td>boolean</td>
-<td>Whether object is on hold</td>
-</tr>
-<tr>
-<td><code>customMetadataContent</code></td>
-<td>text</td>
-<td>Full-text search of custom metadata XML</td>
-</tr>
-</tbody>
-</table>
-<h3 id="query-examples">Query Examples<a class="headerlink" href="#query-examples" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code># Large files (&gt;1MB) in the finance namespace
-+(namespace:&quot;finance.europe&quot;) +size:[1048576 TO *]
+<p><strong>Behavior:</strong></p>
+<ul>
+<li>Stages execute sequentially; each receives the output of the previous stage</li>
+<li>Failed stages retry with exponential backoff (<code>delay * 2^attempt</code>)</li>
+<li>After each successful stage, a checkpoint is saved to NATS KV</li>
+<li>If a pipeline fails and is re-run with the same <code>pipeline_id</code>, it resumes from the last checkpoint</li>
+<li>Checkpoints are cleared on successful completion</li>
+</ul>
+<h2 id="jetstream-consumer">JetStream consumer<a class="headerlink" href="#jetstream-consumer" title="Permanent link">&para;</a></h2>
+<p>Durable message consumer for event-driven processing:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_etl.consumer</span><span class="w"> </span><span class="kn">import</span> <span class="n">ETLConsumer</span>
 
-# PDFs ingested in 2025
-+contentType:application/pdf +ingestTimeString:[2025-01-01T00:00:00 TO 2025-12-31T23:59:59]
+<span class="n">consumer</span> <span class="o">=</span> <span class="n">ETLConsumer</span><span class="p">(</span>
+    <span class="n">nats_url</span><span class="o">=</span><span class="s2">&quot;nats://localhost:4222&quot;</span><span class="p">,</span>
+    <span class="n">stream</span><span class="o">=</span><span class="s2">&quot;INGEST&quot;</span><span class="p">,</span>
+    <span class="n">subject</span><span class="o">=</span><span class="s2">&quot;ingest.images.&gt;&quot;</span><span class="p">,</span>
+    <span class="n">durable</span><span class="o">=</span><span class="s2">&quot;image-processor&quot;</span><span class="p">,</span>
+    <span class="n">max_deliver</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">ack_wait</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span>
+<span class="p">)</span>
 
-# Objects with custom metadata containing &quot;department&quot; but not &quot;foreign&quot;
-+customMetadataContent:(+&quot;department&quot; -&quot;foreign&quot;)
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">):</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+    <span class="c1"># Process message...</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ok&quot;</span><span class="p">}</span>
 
-# Objects on hold
-+hold:true
+<span class="k">await</span> <span class="n">consumer</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
 </code></pre></div>
-<p>Pagination: use <code>count</code> (max results, 1–10,000) and <code>offset</code> (skip N, max 100,000). For &gt;100,000 results, paginate using <code>changeTimeMilliseconds</code> ranges. Response status <code>COMPLETE</code> means all results returned; <code>INCOMPLETE</code> means more pages available.</p>
-<h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
-<p>HCP uses a token-based authentication scheme:</p>
-<table>
-<thead>
-<tr>
-<th>Type</th>
-<th>Header format</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>HCP native</strong></td>
-<td><code>Authorization: HCP base64(username):md5(password)</code></td>
-<td>Username is base64-encoded, password is MD5-hashed.</td>
-</tr>
-<tr>
-<td><strong>Active Directory</strong></td>
-<td><code>Authorization: AD username@domain:password</code></td>
-<td>For AD-integrated environments. Plaintext credentials.</td>
-</tr>
-</tbody>
-</table>
-<p>The HCP App wraps this in a JWT-based flow -- see <a href="../../api/authentication/">Authentication</a> for details on how the API handles credential management.</p>
-<h3 id="mapi-conventions">MAPI Conventions<a class="headerlink" href="#mapi-conventions" title="Permanent link">&para;</a></h3>
-<p>The Management API (port 9090) accepts XML or JSON request/response bodies. Key query parameters:</p>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>verbose=true</code></td>
-<td>Return all properties (default returns only modifiable ones).</td>
-</tr>
-<tr>
-<td><code>prettyprint</code></td>
-<td>Format response for readability (testing only).</td>
-</tr>
-<tr>
-<td><code>offset</code> / <code>count</code></td>
-<td>Pagination for list endpoints.</td>
-</tr>
-</tbody>
-</table>
-<p>Response headers always include <code>X-HCP-SoftwareVersion</code>; errors include <code>X-HCP-ErrorMessage</code> with human-readable details.</p>
-<h2 id="content-classes">Content Classes<a class="headerlink" href="#content-classes" title="Permanent link">&para;</a></h2>
-<p><strong>Content classes</strong> define custom metadata schemas for object classification. They map XML elements in custom metadata to named, typed properties that can be:</p>
-<ul>
-<li>Indexed for fast search via the Metadata Query API</li>
-<li>Used as facets for aggregate analysis</li>
-<li>Typed as string, integer, date, or boolean</li>
-</ul>
-<p>Content classes are defined at the tenant level and associated with specific namespaces.</p>
-<p>For detailed coverage of content properties, indexing settings, and XPath expressions, see <a href="../../hcp-platform/administration/">Administration</a>.</p>
-<h2 id="further-reading">Further Reading<a class="headerlink" href="#further-reading" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong><a href="../../hcp-platform/data-protection/">Data Protection</a></strong> — Erasure coding, service plans, compliance modes, retention deep dive, and replication deep dive.</li>
-<li><strong><a href="../../hcp-platform/administration/">Administration</a></strong> — Namespace configuration, protocol details, CORS, chargeback reporting, and HCP quirks.</li>
-</ul>
+<h2 id="dead-letter-queue">Dead letter queue<a class="headerlink" href="#dead-letter-queue" title="Permanent link">&para;</a></h2>
+<p>Route permanently-failed messages for inspection and replay:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_etl.dlq</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeadLetterHandler</span>
+
+<span class="n">dlq</span> <span class="o">=</span> <span class="k">await</span> <span class="n">DeadLetterHandler</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">nc</span><span class="p">)</span>
+
+<span class="c1"># Send failed message to DLQ</span>
+<span class="k">await</span> <span class="n">dlq</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">&quot;ingest.images.batch-1&quot;</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="s2">&quot;corrupt TIFF&quot;</span><span class="p">)</span>
+
+<span class="c1"># Replay all DLQ messages back to original subjects</span>
+<span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">dlq</span><span class="o">.</span><span class="n">replay</span><span class="p">()</span>
+
+<span class="c1"># Purge old messages</span>
+<span class="n">count</span> <span class="o">=</span> <span class="k">await</span> <span class="n">dlq</span><span class="o">.</span><span class="n">purge</span><span class="p">(</span><span class="n">older_than</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">7</span><span class="p">))</span>
+</code></pre></div>
 
 
 
@@ -3505,7 +2566,7 @@ property:[start TO *]             # open-ended range
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Quick Start">
+          <a href="../lance/" class="md-footer__link md-footer__link--prev" aria-label="Previous: LanceDB">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -3515,20 +2576,20 @@ property:[start TO *]             # open-ended range
                 Previous
               </span>
               <div class="md-ellipsis">
-                Quick Start
+                LanceDB
               </div>
             </div>
           </a>
         
         
           
-          <a href="../configuration/" class="md-footer__link md-footer__link--next" aria-label="Next: Configuration">
+          <a href="../validation/" class="md-footer__link md-footer__link--next" aria-label="Next: Validation">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Configuration
+                Validation
               </div>
             </div>
             <div class="md-footer__button md-icon">
