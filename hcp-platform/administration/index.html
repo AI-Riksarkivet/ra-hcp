@@ -1,0 +1,3074 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Hitachi Content Platform application — unified FastAPI service for S3-compatible object storage and HCP Management API operations.">
+      
+      
+        <meta name="author" content="AI-Riksarkivet">
+      
+      
+        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/hcp-platform/administration/">
+      
+      
+        <link rel="prev" href="../data-protection/">
+      
+      
+        <link rel="next" href="../../architecture/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.ico">
+      <meta name="generator" content="zensical-0.0.29">
+    
+    
+      
+        <title>Administration - ra-hcp</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.6f2fbb28.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#administration" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ra-hcp" class="md-header__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+      
+  <img src="../../assets/ra.svg" alt="ra-hcp">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ra-hcp
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Administration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/AI-Riksarkivet/hcp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AI-Riksarkivet/hcp
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  ra-hcp
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/" class="md-tabs__link">
+          
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  HCP Platform
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  API Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/reference/endpoints/" class="md-tabs__link">
+          
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../sdk/" class="md-tabs__link">
+          
+  
+  Python SDK
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../components/" class="md-tabs__link">
+          
+  
+  Components
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ra-hcp" class="md-nav__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+      
+  <img src="../../assets/ra.svg" alt="ra-hcp">
+
+    </a>
+    ra-hcp
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AI-Riksarkivet/hcp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AI-Riksarkivet/hcp
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ra-hcp
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ra-hcp
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ra-hcp
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HCP Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HCP Platform
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HCP Platform
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-protection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Protection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Administration
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Administration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#content-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Properties
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Content Properties">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-content-indexing-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Content Indexing Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#property-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Property Definition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-metadata-indexing-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Metadata Indexing Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#namespace-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Namespace Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Namespace Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#permanent-vs-mutable-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permanent vs Mutable Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optimization-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optimization Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hash-scheme" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hash Scheme
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quotas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quotas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multipart-upload-auto-abort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multipart Upload Auto-Abort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#acl-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ACL Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protocol-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protocol Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Protocol Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cifssmb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CIFS/SMB
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NFS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMTP
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ip-based-access-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IP-Based Access Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cors-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CORS Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cors-rule-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS Rule Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chargeback-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chargeback Reporting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chargeback Reporting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#report-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hcp-quirks-and-gotchas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HCP Quirks and Gotchas
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/frontend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frontend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/s3-buckets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Buckets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/s3-objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Objects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/tenants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/namespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/argo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Argo Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/endpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Endpoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/common/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/s3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/namespace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/user-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/group-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Group Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/content-class/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Class
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python SDK
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python SDK
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Components
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Components
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#content-properties" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Content Properties
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Content Properties">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-content-indexing-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Content Indexing Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#property-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Property Definition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-metadata-indexing-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Metadata Indexing Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#namespace-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Namespace Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Namespace Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#permanent-vs-mutable-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permanent vs Mutable Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optimization-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optimization Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hash-scheme" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hash Scheme
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quotas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quotas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multipart-upload-auto-abort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multipart Upload Auto-Abort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#acl-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ACL Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protocol-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protocol Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Protocol Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cifssmb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CIFS/SMB
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NFS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#smtp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SMTP
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ip-based-access-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IP-Based Access Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cors-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CORS Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cors-rule-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CORS Rule Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chargeback-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chargeback Reporting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chargeback Reporting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#report-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hcp-quirks-and-gotchas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HCP Quirks and Gotchas
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    ra-hcp
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    HCP Platform
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/hcp-platform/administration.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/hcp-platform/administration.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-code-2" viewBox="0 0 24 24"><path d="M4 12.15V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-3.35"/><path d="M14 2v5a1 1 0 0 0 1 1h5M5 16l-3 3 3 3M9 22l3-3-3-3"/></svg>
+    </a>
+  
+
+
+<h1 id="administration">Administration<a class="headerlink" href="#administration" title="Permanent link">&para;</a></h1>
+<p>Detailed configuration reference for HCP namespaces, protocols, content metadata, and operational concerns. See <a href="../../getting-started/concepts/">HCP Concepts</a> for the introductory overview.</p>
+<h2 id="content-properties">Content Properties<a class="headerlink" href="#content-properties" title="Permanent link">&para;</a></h2>
+<p>Content classes group <strong>content properties</strong> — typed fields extracted from custom metadata XML using XPath expressions. When objects are ingested, HCP reads the custom metadata XML, evaluates the XPath expressions, and indexes the extracted values for fast search.</p>
+<h3 id="how-content-indexing-works">How Content Indexing Works<a class="headerlink" href="#how-content-indexing-works" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>graph LR
+    OBJ["Object with&lt;br/&gt;custom metadata XML"]
+    CC["Content Class&lt;br/&gt;defines properties"]
+    XPATH["XPath Extraction&lt;br/&gt;evaluate expressions"]
+    IDX["Search Index&lt;br/&gt;queryable fields"]
+
+    OBJ --&gt; XPATH
+    CC --&gt; XPATH
+    XPATH --&gt; IDX</code></pre>
+<p>For example, given this custom metadata XML on an ingested medical image:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;dicom_image&gt;</span>
+<span class="w">  </span><span class="nt">&lt;doctor&gt;</span>
+<span class="w">    </span><span class="nt">&lt;name&gt;</span>Dr.<span class="w"> </span>Lindqvist<span class="nt">&lt;/name&gt;</span>
+<span class="w">    </span><span class="nt">&lt;department&gt;</span>Radiology<span class="nt">&lt;/department&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/doctor&gt;</span>
+<span class="w">  </span><span class="nt">&lt;study_date&gt;</span>2024-03-15<span class="nt">&lt;/study_date&gt;</span>
+<span class="nt">&lt;/dicom_image&gt;</span>
+</code></pre></div>
+<p>A content class with properties like <code>doctor_name</code> (XPath: <code>/dicom_image/doctor/name</code>) and <code>study_date</code> (XPath: <code>/dicom_image/study_date</code>) would extract those values and make them searchable via the Metadata Query API.</p>
+<h3 id="property-definition">Property Definition<a class="headerlink" href="#property-definition" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>1–25 characters, alphanumeric + underscore, case-sensitive.</td>
+</tr>
+<tr>
+<td><code>expression</code></td>
+<td>XPath to extract the value (e.g., <code>/dicom_image/doctor/name</code>). Can include annotation prefixes: <code>@annot-name:xpath-expression</code>.</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>STRING</code>, <code>INTEGER</code>, <code>BOOLEAN</code>, <code>DATE</code>, <code>FLOAT</code>, <code>FULLTEXT</code>.</td>
+</tr>
+<tr>
+<td><code>multivalued</code></td>
+<td>Whether the property can have multiple values per object.</td>
+</tr>
+<tr>
+<td><code>format</code></td>
+<td>Date/number format pattern (e.g., <code>MM/dd/yyyy</code> for DATE).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="custom-metadata-indexing-settings">Custom Metadata Indexing Settings<a class="headerlink" href="#custom-metadata-indexing-settings" title="Permanent link">&para;</a></h3>
+<p>Each namespace can configure what custom metadata gets indexed:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>customMetadataIndexingEnabled</code></td>
+<td>Master switch for indexing. Must be <code>true</code> for any indexing to occur.</td>
+</tr>
+<tr>
+<td><code>fullIndexingEnabled</code></td>
+<td>Index the full text of custom metadata XML (for <code>customMetadataContent</code> searches).</td>
+</tr>
+<tr>
+<td><code>contentClasses</code></td>
+<td>List of content classes to apply when objects are ingested.</td>
+</tr>
+<tr>
+<td><code>excludedAnnotations</code></td>
+<td>Wildcard patterns for annotations to skip (e.g., <code>misc*</code>, <code>email</code>).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="namespace-configuration">Namespace Configuration<a class="headerlink" href="#namespace-configuration" title="Permanent link">&para;</a></h2>
+<p>Namespaces have several settings that are permanent — they cannot be changed after creation. Understanding these decisions upfront prevents surprises later.</p>
+<h3 id="permanent-vs-mutable-settings">Permanent vs Mutable Settings<a class="headerlink" href="#permanent-vs-mutable-settings" title="Permanent link">&para;</a></h3>
+<pre class="mermaid"><code>graph TD
+    subgraph "Set at creation — PERMANENT"
+        OPT["Optimization Mode&lt;br/&gt;CLOUD or ALL"]
+        HASH["Hash Scheme&lt;br/&gt;MD5, SHA-256, etc."]
+    end
+
+    subgraph "Can change anytime"
+        QUOTA["Quotas"]
+        ACL["ACL mode"]
+        VERS["Versioning"]
+        PROTO["Protocol settings"]
+    end
+
+    subgraph "One-way switches"
+        COMP["Enterprise → Compliance&lt;br/&gt;(cannot go back)"]
+        ACL_EN["ACLs disabled → enabled&lt;br/&gt;(cannot disable again)"]
+    end</code></pre>
+<h3 id="optimization-mode">Optimization Mode<a class="headerlink" href="#optimization-mode" title="Permanent link">&para;</a></h3>
+<p>The optimization mode affects internal storage layout and determines which access protocols are available:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud</td>
+<td><code>CLOUD</code></td>
+<td>Optimized for S3/REST protocols only. Required for erasure coding. Supports balanced or unbalanced directory usage.</td>
+</tr>
+<tr>
+<td>All protocols</td>
+<td><code>ALL</code></td>
+<td>Supports all access protocols including NFS, CIFS, SMTP, WebDAV. Cannot use erasure coding.</td>
+</tr>
+</tbody>
+</table>
+<p>Cannot be changed after namespace creation. Choose based on your access pattern requirements.</p>
+<h3 id="hash-scheme">Hash Scheme<a class="headerlink" href="#hash-scheme" title="Permanent link">&para;</a></h3>
+<p>Each namespace uses a cryptographic hash algorithm for object integrity verification. Set at creation time and <strong>cannot be changed later</strong>:</p>
+<p>MD5, SHA-1, SHA-256, SHA-384, SHA-512, RIPEMD-160</p>
+<p>Values are case-sensitive. SHA-256 is recommended for new namespaces.</p>
+<h3 id="quotas">Quotas<a class="headerlink" href="#quotas" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Quota</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hard quota</strong></td>
+<td>Maximum storage in decimal format with units (e.g., <code>50 GB</code>, <code>1.25 TB</code>). Includes data, metadata, and redundancy overhead from the service plan. Minimum 1 GB or 0.01 TB.</td>
+</tr>
+<tr>
+<td><strong>Soft quota</strong></td>
+<td>Percentage (10–95%) of the hard quota. When storage exceeds the soft quota, HCP generates a warning notification. Default: 85%.</td>
+</tr>
+</tbody>
+</table>
+<pre class="mermaid"><code>graph LR
+    subgraph "50 GB Hard Quota"
+        USED["Used: 35 GB"]
+        SOFT["Soft Quota (85%): 42.5 GB"]
+        HARD["Hard Quota: 50 GB"]
+    end
+
+    USED --&gt;|"warning at"| SOFT
+    SOFT --&gt;|"blocked at"| HARD</code></pre>
+<h3 id="multipart-upload-auto-abort">Multipart Upload Auto-Abort<a class="headerlink" href="#multipart-upload-auto-abort" title="Permanent link">&para;</a></h3>
+<p><code>multipartUploadAutoAbortDays</code> controls when incomplete multipart uploads are automatically cleaned up (0–180 days, default: 30). Setting to 0 means never auto-abort — incomplete uploads accumulate indefinitely, consuming storage.</p>
+<h3 id="acl-support">ACL Support<a class="headerlink" href="#acl-support" title="Permanent link">&para;</a></h3>
+<p><code>aclsUsage</code> has three states. The transition between them is restricted — notably, once ACLs are enabled, they can <strong>never be disabled</strong>.</p>
+<pre class="mermaid"><code>stateDiagram-v2
+    NOT_ENABLED --&gt; ENFORCED: Enable + enforce
+    NOT_ENABLED --&gt; NOT_ENFORCED: Enable without enforcing
+    ENFORCED --&gt; NOT_ENFORCED: Stop enforcing
+    NOT_ENFORCED --&gt; ENFORCED: Start enforcing
+    note right of NOT_ENABLED: Cannot return here\nonce ACLs are enabled</code></pre>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NOT_ENABLED</code></td>
+<td>ACLs disabled.</td>
+</tr>
+<tr>
+<td><code>ENFORCED</code></td>
+<td>ACLs required and checked for access decisions.</td>
+</tr>
+<tr>
+<td><code>NOT_ENFORCED</code></td>
+<td>ACLs stored but not checked for access decisions.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="protocol-details">Protocol Details<a class="headerlink" href="#protocol-details" title="Permanent link">&para;</a></h2>
+<p>HCP supports multiple access protocols, each with its own configuration. All protocols access the same underlying data — an object stored via S3 is immediately visible via NFS, CIFS, and other enabled protocols.</p>
+<h3 id="cifssmb">CIFS/SMB<a class="headerlink" href="#cifssmb" title="Permanent link">&para;</a></h3>
+<p>CIFS (Common Internet File System) provides Windows file share access to namespace data:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>caseSensitive</code></td>
+<td>HCP is natively case-sensitive; CIFS can override this (default: <code>true</code>).</td>
+</tr>
+<tr>
+<td><code>caseForcing</code></td>
+<td>Force filenames to <code>uppercase</code>, <code>lowercase</code>, or <code>disabled</code>.</td>
+</tr>
+<tr>
+<td><code>requiresAuthentication</code></td>
+<td>When <code>true</code>, requires Active Directory authentication.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="nfs">NFS<a class="headerlink" href="#nfs" title="Permanent link">&para;</a></h3>
+<p>NFS access uses POSIX-style ownership:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uid</code> / <code>gid</code></td>
+<td>Default POSIX user/group IDs for objects (default: <code>0</code> / root).</td>
+</tr>
+<tr>
+<td>IP access</td>
+<td>NFS only supports IP allow lists (no deny list).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="smtp">SMTP<a class="headerlink" href="#smtp" title="Permanent link">&para;</a></h3>
+<p>HCP can ingest email directly via SMTP — useful for email archiving:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>emailFormat</code></td>
+<td><code>.eml</code> or <code>.mbox</code> (default: <code>.eml</code>).</td>
+</tr>
+<tr>
+<td><code>emailLocation</code></td>
+<td>Directory path for email storage (default: <code>/email/</code>; HCP auto-creates it).</td>
+</tr>
+<tr>
+<td><code>separateAttachments</code></td>
+<td>Store email attachments as separate objects alongside the email.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ip-based-access-control">IP-Based Access Control<a class="headerlink" href="#ip-based-access-control" title="Permanent link">&para;</a></h3>
+<p>Each protocol has independent <code>ipSettings</code> that control network-level access:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>allowAddresses</code></td>
+<td>IPs/CIDRs allowed access (e.g., <code>192.168.100.0/24</code>). Default: <code>0.0.0.0/0</code> (all).</td>
+</tr>
+<tr>
+<td><code>denyAddresses</code></td>
+<td>IPs/CIDRs denied access. Default: empty.</td>
+</tr>
+<tr>
+<td><code>allowIfInBothLists</code></td>
+<td>When <code>true</code>, IPs appearing in both lists (or neither) are allowed. When <code>false</code>, they are denied.</td>
+</tr>
+</tbody>
+</table>
+<pre class="mermaid"><code>graph TD
+    REQ["Incoming Request&lt;br/&gt;from 10.0.1.5"]
+    ALLOW{"In allow list?"}
+    DENY{"In deny list?"}
+    BOTH{"In both lists?"}
+    FLAG{"allowIfInBothLists?"}
+
+    REQ --&gt; ALLOW
+    ALLOW --&gt;|"Yes"| DENY
+    ALLOW --&gt;|"No"| FLAG
+    DENY --&gt;|"No"| GRANT["Access Granted"]
+    DENY --&gt;|"Yes"| BOTH
+    BOTH --&gt; FLAG
+    FLAG --&gt;|"true"| GRANT
+    FLAG --&gt;|"false"| BLOCK["Access Denied"]</code></pre>
+<h2 id="cors-configuration">CORS Configuration<a class="headerlink" href="#cors-configuration" title="Permanent link">&para;</a></h2>
+<p>HCP supports <strong>Cross-Origin Resource Sharing</strong> at two levels, with a clear inheritance hierarchy:</p>
+<pre class="mermaid"><code>graph TD
+    TC["Tenant CORS Config&lt;br/&gt;(default for all namespaces)"]
+    NS1["Namespace A&lt;br/&gt;(no CORS config)"]
+    NS2["Namespace B&lt;br/&gt;(has own CORS config)"]
+
+    TC --&gt;|"inherits"| NS1
+    TC -.-x|"overridden"| NS2
+    NS2 --&gt;|"uses own config"| NS2_RULES["Namespace B rules"]</code></pre>
+<p><strong>Inheritance rules:</strong></p>
+<ol>
+<li>If a namespace has its own CORS configuration → tenant-level rules are <strong>completely ignored</strong> for that namespace</li>
+<li>If a namespace has no CORS configuration → tenant-level rules apply</li>
+<li>If neither is configured → CORS requests are rejected</li>
+</ol>
+<h3 id="cors-rule-structure">CORS Rule Structure<a class="headerlink" href="#cors-rule-structure" title="Permanent link">&para;</a></h3>
+<p>CORS rules are configured as XML:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;CORSConfiguration&gt;</span>
+<span class="w">  </span><span class="nt">&lt;CORSRule&gt;</span>
+<span class="w">    </span><span class="nt">&lt;AllowedOrigin&gt;</span>https://app.example.com<span class="nt">&lt;/AllowedOrigin&gt;</span>
+<span class="w">    </span><span class="nt">&lt;AllowedMethod&gt;</span>GET<span class="nt">&lt;/AllowedMethod&gt;</span>
+<span class="w">    </span><span class="nt">&lt;AllowedMethod&gt;</span>PUT<span class="nt">&lt;/AllowedMethod&gt;</span>
+<span class="w">    </span><span class="nt">&lt;AllowedMethod&gt;</span>POST<span class="nt">&lt;/AllowedMethod&gt;</span>
+<span class="w">    </span><span class="nt">&lt;AllowedHeader&gt;</span>*<span class="nt">&lt;/AllowedHeader&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/CORSRule&gt;</span>
+<span class="nt">&lt;/CORSConfiguration&gt;</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PUT</code> on the CORS resource</td>
+<td>Sets the configuration (replaces any existing).</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td>Retrieves the current configuration.</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td>Removes the configuration (returns 404 if none exists).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="chargeback-reporting">Chargeback Reporting<a class="headerlink" href="#chargeback-reporting" title="Permanent link">&para;</a></h2>
+<p>Chargeback reports provide detailed storage usage metrics per namespace, used for cost allocation across departments or customers.</p>
+<h3 id="report-parameters">Report Parameters<a class="headerlink" href="#report-parameters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>start</code></td>
+<td>Start time in ISO 8601 with timezone (e.g., <code>2024-01-01T00:00:00-0500</code>).</td>
+</tr>
+<tr>
+<td><code>end</code></td>
+<td>End time in ISO 8601 with timezone.</td>
+</tr>
+<tr>
+<td><code>granularity</code></td>
+<td><code>hour</code>, <code>day</code>, or <code>total</code> (aggregate for the entire period).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>objectCount</code></td>
+<td>Total objects (each version counted separately; multipart counted as one).</td>
+</tr>
+<tr>
+<td><code>ingestedVolume</code></td>
+<td>Size before compression/dedup — the "original" data size.</td>
+</tr>
+<tr>
+<td><code>storageCapacityUsed</code></td>
+<td>Bytes including data, metadata, <strong>and service plan redundancy overhead</strong>.</td>
+</tr>
+<tr>
+<td><code>bytesIn</code> / <code>bytesOut</code></td>
+<td>Data transferred in/out during the interval.</td>
+</tr>
+<tr>
+<td><code>reads</code> / <code>writes</code> / <code>deletes</code></td>
+<td>Operation counts during the interval.</td>
+</tr>
+<tr>
+<td><code>multipartObjects</code> / <code>multipartObjectParts</code> / <code>multipartObjectBytes</code></td>
+<td>Completed multipart upload statistics.</td>
+</tr>
+<tr>
+<td><code>multipartUploads</code> / <code>multipartUploadParts</code> / <code>multipartUploadBytes</code></td>
+<td>In-progress multipart upload statistics.</td>
+</tr>
+</tbody>
+</table>
+<p>The difference between <code>ingestedVolume</code> and <code>storageCapacityUsed</code> is important for billing: <code>ingestedVolume</code> is what the user uploaded, while <code>storageCapacityUsed</code> includes the overhead of keeping multiple copies or fragments for data protection.</p>
+<p>HCP retains <strong>180 days</strong> of chargeback statistics. Limit chargeback report requests to <strong>once per hour</strong> — more frequent polling can cause system instability.</p>
+<h2 id="hcp-quirks-and-gotchas">HCP Quirks and Gotchas<a class="headerlink" href="#hcp-quirks-and-gotchas" title="Permanent link">&para;</a></h2>
+<p>Behaviors that differ from standard S3 or may surprise developers:</p>
+<table>
+<thead>
+<tr>
+<th>Behavior</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bulk delete requires Content-MD5</strong></td>
+<td>HCP validates <code>Content-MD5</code> on <code>DeleteObjects</code>, but boto3 sends CRC32. The backend works around this with individual deletes.</td>
+</tr>
+<tr>
+<td><strong>302 means "not found"</strong></td>
+<td>For HEAD requests, HCP returns <code>302 Found</code> when a resource doesn't exist (or you lack permission). The backend maps this to 404.</td>
+</tr>
+<tr>
+<td><strong>Port 9090 is required for MAPI</strong></td>
+<td>Missing port 9090 in the URL returns <code>403 Forbidden</code>, not a connection error.</td>
+</tr>
+<tr>
+<td><strong>Auto-adjusted dates</strong></td>
+<td>Invalid retention dates are silently corrected (November 33 → December 3) rather than rejected.</td>
+</tr>
+<tr>
+<td><strong>Version IDs are integers</strong></td>
+<td>HCP uses sequential integers (<code>0</code>, <code>1</code>, <code>2</code>...) instead of the UUIDs that AWS S3 uses.</td>
+</tr>
+<tr>
+<td><strong>Path-style addressing only</strong></td>
+<td>HCP requires path-style S3 URLs, not virtual-hosted style.</td>
+</tr>
+<tr>
+<td><strong>Region redirector crashes boto3</strong></td>
+<td>HCP returns non-standard redirect responses that crash boto3's <code>S3RegionRedirectorv2</code>. The backend explicitly unregisters it.</td>
+</tr>
+<tr>
+<td><strong>Connection lifetime</strong></td>
+<td>HCP closes idle connections after 10 minutes.</td>
+</tr>
+<tr>
+<td><strong>Statistics polling</strong></td>
+<td>Limit GET requests for statistics to once per hour — more frequent polling can cause system instability.</td>
+</tr>
+<tr>
+<td><strong>Username in credentials</strong></td>
+<td>S3 access keys are <code>base64(username)</code>, not arbitrary strings. Knowing someone's access key reveals their username.</td>
+</tr>
+<tr>
+<td><strong>One-way compliance mode</strong></td>
+<td>Switching a namespace from enterprise to compliance mode is permanent.</td>
+</tr>
+<tr>
+<td><strong>ACLs can't be disabled</strong></td>
+<td>Once ACLs are enabled on a namespace, they can never be turned off.</td>
+</tr>
+<tr>
+<td><strong>Hash scheme is permanent</strong></td>
+<td>The hash algorithm chosen at namespace creation cannot be changed.</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../data-protection/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Data Protection">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Data Protection
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../architecture/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Overview
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 AI-Riksarkivet
+    </div>
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c2b142ea.min.js"></script>
+      
+    
+  </body>
+</html>

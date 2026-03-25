@@ -1,0 +1,3300 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Hitachi Content Platform application — unified FastAPI service for S3-compatible object storage and HCP Management API operations.">
+      
+      
+        <meta name="author" content="AI-Riksarkivet">
+      
+      
+        <link rel="canonical" href="https://ai-riksarkivet.github.io/hcp/architecture/frontend/">
+      
+      
+        <link rel="prev" href="../storage/">
+      
+      
+        <link rel="next" href="../deployment/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.ico">
+      <meta name="generator" content="zensical-0.0.29">
+    
+    
+      
+        <title>Frontend Architecture - ra-hcp</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.6f2fbb28.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#frontend-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ra-hcp" class="md-header__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+      
+  <img src="../../assets/ra.svg" alt="ra-hcp">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ra-hcp
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Frontend Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/AI-Riksarkivet/hcp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AI-Riksarkivet/hcp
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../.." class="md-tabs__link">
+          
+  
+  ra-hcp
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/" class="md-tabs__link">
+          
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../hcp-platform/" class="md-tabs__link">
+          
+  
+  HCP Platform
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  API Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/reference/endpoints/" class="md-tabs__link">
+          
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../sdk/" class="md-tabs__link">
+          
+  
+  Python SDK
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../components/" class="md-tabs__link">
+          
+  
+  Components
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ra-hcp" class="md-nav__button md-logo" aria-label="ra-hcp" data-md-component="logo">
+      
+  <img src="../../assets/ra.svg" alt="ra-hcp">
+
+    </a>
+    ra-hcp
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AI-Riksarkivet/hcp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path fill="currentColor" d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AI-Riksarkivet/hcp
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ra-hcp
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ra-hcp
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ra-hcp
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HCP Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HCP Platform
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    HCP Platform
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../hcp-platform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../hcp-platform/data-protection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Protection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../hcp-platform/administration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Administration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frontend
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frontend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#technology-choices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technology choices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authentication flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Authentication flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cookie-based-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cookie-based sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-session-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-session support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-profile-and-access-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User profile and access levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-tier-access-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three-tier access model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#route-guards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Route guards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remote-functions-the-data-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Remote functions — the data layer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Remote functions — the data layer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-are-remote-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What are remote functions?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-apifetch-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How apiFetch works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-updates-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The .updates() pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reactive-state-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reactive state patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reactive state patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#state-mutable-reactive-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        $state — mutable reactive variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#derived-computed-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        $derived — computed values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#effect-side-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        $effect — side effects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-usesave-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The useSave pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-usedelete-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The useDelete pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-useselection-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The useSelection pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#page-composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Page composition
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Page composition">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#layout-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#section-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sidebar-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidebar navigation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-tables-tanstack-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data tables (TanStack Table)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Component library
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Component library">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shadcn-svelte-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shadcn-svelte components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom components
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/authentication/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authentication
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/s3-buckets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Buckets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/s3-objects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3 Objects
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/tenants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/namespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespaces
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/argo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Argo Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/endpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Endpoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/common/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/s3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    S3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/tenant/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/namespace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Namespace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/user-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/group-account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Group Account
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/content-class/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Content Class
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python SDK
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Python SDK
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sdk/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Components
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Components
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Components
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#technology-choices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technology choices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authentication-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authentication flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Authentication flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cookie-based-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cookie-based sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-session-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-session support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-profile-and-access-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User profile and access levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#three-tier-access-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three-tier access model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#route-guards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Route guards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remote-functions-the-data-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Remote functions — the data layer
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Remote functions — the data layer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-are-remote-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What are remote functions?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-apifetch-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How apiFetch works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-updates-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The .updates() pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reactive-state-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reactive state patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reactive state patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#state-mutable-reactive-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        $state — mutable reactive variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#derived-computed-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        $derived — computed values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#effect-side-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        $effect — side effects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-usesave-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The useSave pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-usedelete-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The useDelete pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the-useselection-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The useSelection pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#page-composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Page composition
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Page composition">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#layout-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layout structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#section-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sidebar-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidebar navigation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-tables-tanstack-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data tables (TanStack Table)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Component library
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Component library">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shadcn-svelte-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shadcn-svelte components
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom components
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    ra-hcp
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Architecture
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+    <a href="https://github.com/AI-Riksarkivet/hcp/edit/master/docs/architecture/frontend.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/AI-Riksarkivet/hcp/raw/master/docs/architecture/frontend.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-code-2" viewBox="0 0 24 24"><path d="M4 12.15V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-3.35"/><path d="M14 2v5a1 1 0 0 0 1 1h5M5 16l-3 3 3 3M9 22l3-3-3-3"/></svg>
+    </a>
+  
+
+
+<h1 id="frontend-architecture">Frontend Architecture<a class="headerlink" href="#frontend-architecture" title="Permanent link">&para;</a></h1>
+<p>The SvelteKit frontend follows a reactive pattern with remote function abstractions and server-side RBAC:</p>
+<pre class="mermaid"><code>graph LR
+    subgraph Server["Server-side (SSR)"]
+        HOOK["hooks.server.ts&lt;br/&gt;extract JWT"] --&gt; LAYOUT["+layout.server.ts&lt;br/&gt;fetch profile · RBAC"]
+        LAYOUT --&gt; GUARD["+page.server.ts&lt;br/&gt;route guards"]
+    end
+
+    GUARD --&gt; PAGE["+page.svelte"]
+
+    subgraph Data["Data layer"]
+        direction TB
+        Q["query() — reads"]
+        C["command() — writes"]
+        C --&gt;|".updates()"| Q
+    end
+
+    PAGE --&gt; Data
+    Data --&gt;|"*.remote.ts"| API["FastAPI Backend"]</code></pre>
+<h2 id="technology-choices">Technology choices<a class="headerlink" href="#technology-choices" title="Permanent link">&para;</a></h2>
+<p><strong>SvelteKit 2 + Svelte 5</strong> — Svelte 5's runes (<code>$state</code>, <code>$derived</code>, <code>$effect</code>) provide fine-grained reactivity without a virtual DOM. SvelteKit adds server-side rendering, file-based routing, and remote functions (server-side RPC). The combination means the frontend can fetch data on the server, enforce access control before any HTML reaches the browser, and still have a reactive client-side experience.</p>
+<p><strong>Deno</strong> — TypeScript-first runtime with built-in formatting and linting. The security model (explicit permissions) and modern tooling (<code>deno fmt</code>, <code>deno lint</code>) reduce configuration overhead compared to Node.js + ESLint + Prettier.</p>
+<p><strong>shadcn-svelte</strong> — copy-paste UI components built on Bits UI accessibility primitives and Tailwind CSS. The project owns every component file, so customization doesn't fight upstream. Bits UI handles keyboard navigation, focus management, and ARIA attributes.</p>
+<h2 id="authentication-flow">Authentication flow<a class="headerlink" href="#authentication-flow" title="Permanent link">&para;</a></h2>
+<h3 id="cookie-based-sessions">Cookie-based sessions<a class="headerlink" href="#cookie-based-sessions" title="Permanent link">&para;</a></h3>
+<p><code>src/hooks.server.ts</code> intercepts every request and extracts the active session:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">handle</span><span class="o">:</span><span class="w"> </span><span class="kt">Handle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">event</span><span class="p">,</span><span class="w"> </span><span class="nx">resolve</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">cookies</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">&quot;hcp_token&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">token</span><span class="p">)</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">locals</span><span class="p">.</span><span class="nx">token</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">token</span><span class="p">;</span>
+<span class="w">  </span><span class="nx">event</span><span class="p">.</span><span class="nx">locals</span><span class="p">.</span><span class="nx">sessions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">enumerateSessions</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">cookies</span><span class="p">,</span><span class="w"> </span><span class="nx">token</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">resolve</span><span class="p">(</span><span class="nx">event</span><span class="p">);</span>
+<span class="p">};</span>
+</code></pre></div>
+<p>The JWT is stored in an httpOnly cookie (<code>hcp_token</code>), inaccessible to client JavaScript. <code>event.locals.token</code> is available to all server-side load functions and remote function handlers.</p>
+<h3 id="multi-session-support">Multi-session support<a class="headerlink" href="#multi-session-support" title="Permanent link">&para;</a></h3>
+<p>Users can log in to multiple tenants simultaneously. Each session gets its own cookie named <code>hcp_token__{tenant}__{username}</code> (with a <code>__sysadmin</code> slug for system-level sessions). The active session is copied to <code>hcp_token</code>.</p>
+<p><code>src/lib/server/sessions.ts</code> manages the cookie lifecycle:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enumerateSessions()</code></td>
+<td>Iterates all <code>hcp_token__*</code> cookies, parses JWT claims, returns a <code>TenantSession[]</code> with <code>isActive</code> flag</td>
+</tr>
+<tr>
+<td><code>setSessionCookies()</code></td>
+<td>Sets both the per-session cookie and the active <code>hcp_token</code> cookie</td>
+</tr>
+<tr>
+<td><code>switchSession()</code></td>
+<td>Copies a stored session token to <code>hcp_token</code></td>
+</tr>
+<tr>
+<td><code>deleteActiveSession()</code></td>
+<td>Removes the active session, falls back to the next remaining session</td>
+</tr>
+<tr>
+<td><code>deleteAllSessions()</code></td>
+<td>Removes all session cookies</td>
+</tr>
+</tbody>
+</table>
+<p>All cookies use <code>{ httpOnly: true, sameSite: "lax", maxAge: 28800 }</code> (8 hours, matching the JWT expiry).</p>
+<h3 id="user-profile-and-access-levels">User profile and access levels<a class="headerlink" href="#user-profile-and-access-levels" title="Permanent link">&para;</a></h3>
+<p><code>src/routes/(app)/+layout.server.ts</code> runs on every authenticated page load:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">load</span><span class="o">:</span><span class="w"> </span><span class="kt">LayoutServerLoad</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">locals</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">locals</span><span class="p">.</span><span class="nx">token</span><span class="p">)</span><span class="w"> </span><span class="nx">redirect</span><span class="p">(</span><span class="mf">302</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/login&quot;</span><span class="p">);</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">claims</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">parseJwtPayload</span><span class="p">(</span><span class="nx">locals</span><span class="p">.</span><span class="nx">token</span><span class="p">);</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">username</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">claims</span><span class="p">.</span><span class="nx">sub</span><span class="w"> </span><span class="kr">as</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">tenant</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">claims</span><span class="p">.</span><span class="nx">tenant</span><span class="w"> </span><span class="kr">as</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">undefined</span><span class="p">;</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">tenant</span>
+<span class="w">    </span><span class="o">?</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetchUserProfile</span><span class="p">(</span><span class="nx">locals</span><span class="p">.</span><span class="nx">token</span><span class="p">,</span><span class="w"> </span><span class="nx">tenant</span><span class="p">,</span><span class="w"> </span><span class="nx">username</span><span class="p">)</span>
+<span class="w">    </span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">userGUID</span><span class="o">:</span><span class="w"> </span><span class="kt">undefined</span><span class="p">,</span><span class="w"> </span><span class="nx">roles</span><span class="o">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">};</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">accessLevel</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">getAccessLevel</span><span class="p">(</span><span class="nx">tenant</span><span class="p">,</span><span class="w"> </span><span class="nx">profile</span><span class="p">.</span><span class="nx">roles</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">authenticated</span><span class="o">:</span><span class="w"> </span><span class="kt">true</span><span class="p">,</span><span class="w"> </span><span class="nx">username</span><span class="p">,</span><span class="w"> </span><span class="nx">tenant</span><span class="p">,</span><span class="w"> </span><span class="nx">userGUID</span><span class="o">:</span><span class="w"> </span><span class="kt">profile.userGUID</span><span class="p">,</span>
+<span class="w">           </span><span class="nx">roles</span><span class="o">:</span><span class="w"> </span><span class="kt">profile.roles</span><span class="p">,</span><span class="w"> </span><span class="nx">accessLevel</span><span class="p">,</span><span class="w"> </span><span class="nx">sessions</span><span class="o">:</span><span class="w"> </span><span class="kt">locals.sessions</span><span class="w"> </span><span class="p">};</span>
+<span class="p">};</span>
+</code></pre></div>
+<p><code>parseJwtPayload()</code> base64-decodes the JWT payload without verifying the signature — the backend already validated it. <code>fetchUserProfile()</code> calls the backend's MAPI endpoint to get the user's roles and GUID, degrading gracefully on failure (empty roles, no GUID).</p>
+<h3 id="three-tier-access-model">Three-tier access model<a class="headerlink" href="#three-tier-access-model" title="Permanent link">&para;</a></h3>
+<p><code>getAccessLevel()</code> in <code>src/lib/constants.ts</code> computes the access level:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">getAccessLevel</span><span class="p">(</span>
+<span class="w">  </span><span class="nx">tenant</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="kc">undefined</span><span class="p">,</span><span class="w"> </span><span class="nx">roles</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">[]</span>
+<span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nx">AccessLevel</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">tenant</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s2">&quot;sys-admin&quot;</span><span class="p">;</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">roles</span><span class="p">.</span><span class="nx">includes</span><span class="p">(</span><span class="s2">&quot;ADMINISTRATOR&quot;</span><span class="p">))</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s2">&quot;tenant-admin&quot;</span><span class="p">;</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="s2">&quot;namespace-user&quot;</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The access level is computed server-side and passed to every page via layout data. Client components read it but cannot modify it.</p>
+<h3 id="route-guards">Route guards<a class="headerlink" href="#route-guards" title="Permanent link">&para;</a></h3>
+<p>Protected pages call <code>requireAdmin()</code> in their <code>+page.server.ts</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">load</span><span class="o">:</span><span class="w"> </span><span class="kt">PageServerLoad</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">parent</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">accessLevel</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">parent</span><span class="p">();</span>
+<span class="w">  </span><span class="nx">requireAdmin</span><span class="p">(</span><span class="nx">accessLevel</span><span class="p">);</span>
+<span class="p">};</span>
+</code></pre></div>
+<p><code>requireAdmin()</code> (<code>src/lib/server/guards.ts</code>) redirects <code>namespace-user</code> to <code>/buckets</code>. The guard runs on the server before any page HTML is generated — there's no flash of protected content.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant B as Browser
+    participant H as hooks.server.ts
+    participant L as +layout.server.ts
+    participant G as +page.server.ts
+    participant A as FastAPI Backend
+
+    B-&gt;&gt;H: Request /tenant-settings
+    H-&gt;&gt;H: Extract hcp_token cookie
+    H-&gt;&gt;L: event.locals.token
+
+    alt No token
+        L--&gt;&gt;B: Redirect → /login
+    else Has token
+        L-&gt;&gt;L: Parse JWT (username, tenant)
+        L-&gt;&gt;A: GET /userAccounts/{username}?verbose=true
+        A--&gt;&gt;L: { roles: [ADMINISTRATOR, ...], userGUID }
+        L-&gt;&gt;L: getAccessLevel(tenant, roles)
+
+        alt sys-admin (no tenant)
+            L--&gt;&gt;G: accessLevel = "sys-admin"
+        else tenant-admin (has ADMINISTRATOR role)
+            L--&gt;&gt;G: accessLevel = "tenant-admin"
+        else namespace-user (other roles)
+            L--&gt;&gt;G: accessLevel = "namespace-user"
+        end
+
+        G-&gt;&gt;G: requireAdmin(accessLevel)
+
+        alt namespace-user on admin route
+            G--&gt;&gt;B: Redirect → /buckets
+        else admin or sys-admin
+            G--&gt;&gt;B: Render page
+        end
+    end</code></pre>
+<h3 id="access-levels">Access levels<a class="headerlink" href="#access-levels" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Condition</th>
+<th>Visible sidebar sections</th>
+<th>Protected routes (redirects to <code>/buckets</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>sys-admin</strong></td>
+<td>No tenant in JWT</td>
+<td>All sections</td>
+<td>None — full access</td>
+</tr>
+<tr>
+<td><strong>tenant-admin</strong></td>
+<td>Has <code>ADMINISTRATOR</code> role</td>
+<td>All sections</td>
+<td>None — full access to tenant</td>
+</tr>
+<tr>
+<td><strong>namespace-user</strong></td>
+<td>Any other role set</td>
+<td>Storage, Analytics</td>
+<td><code>/namespaces</code>, <code>/users</code>, <code>/tenant-settings</code>, <code>/search</code>, <code>/content-classes</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="remote-functions-the-data-layer">Remote functions — the data layer<a class="headerlink" href="#remote-functions-the-data-layer" title="Permanent link">&para;</a></h2>
+<h3 id="what-are-remote-functions">What are remote functions?<a class="headerlink" href="#what-are-remote-functions" title="Permanent link">&para;</a></h3>
+<p>SvelteKit remote functions are server-side RPC endpoints defined in <code>*.remote.ts</code> files. They execute on the server, have access to <code>event.locals</code>, and return reactive data to Svelte components. The framework handles serialization, caching, and re-fetching transparently.</p>
+<p>Two primitives:</p>
+<ul>
+<li><code>query()</code> — for reads. Returns a reactive object with a <code>.current</code> property that updates when the query is re-fetched.</li>
+<li><code>command()</code> — for writes. Returns a promise that resolves on success or throws on failure.</li>
+</ul>
+<p>All remote files live in <code>src/lib/remote/</code>:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>users.remote.ts</code></td>
+<td>User/group CRUD, permissions, passwords</td>
+</tr>
+<tr>
+<td><code>namespaces.remote.ts</code></td>
+<td>Namespace CRUD, protocols, compliance, retention, CORS</td>
+</tr>
+<tr>
+<td><code>content-classes.remote.ts</code></td>
+<td>Content class CRUD</td>
+</tr>
+<tr>
+<td><code>tenant-info.remote.ts</code></td>
+<td>Tenant info, statistics, chargeback, settings</td>
+</tr>
+<tr>
+<td><code>buckets.remote.ts</code></td>
+<td>S3 bucket/object CRUD, ACL, versioning, presign, multipart, ZIP download</td>
+</tr>
+<tr>
+<td><code>search.remote.ts</code></td>
+<td>Object and operation search</td>
+</tr>
+<tr>
+<td><code>lance.remote.ts</code></td>
+<td>LanceDB table discovery, schema, rows, search</td>
+</tr>
+<tr>
+<td><code>system.remote.ts</code></td>
+<td>System-level admin operations</td>
+</tr>
+<tr>
+<td><code>replication.remote.ts</code></td>
+<td>Replication link management</td>
+</tr>
+</tbody>
+</table>
+<h3 id="how-apifetch-works">How apiFetch works<a class="headerlink" href="#how-apifetch-works" title="Permanent link">&para;</a></h3>
+<p><code>apiFetch()</code> in <code>src/lib/server/api.ts</code> is the bridge between remote functions and the backend:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">apiFetch</span><span class="p">(</span><span class="nx">path</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">init?</span><span class="o">:</span><span class="w"> </span><span class="kt">RequestInit</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">Response</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">event</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">getRequestEvent</span><span class="p">();</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">event</span><span class="p">.</span><span class="nx">locals</span><span class="p">.</span><span class="nx">token</span><span class="p">;</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">headers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">Headers</span><span class="p">(</span><span class="nx">init</span><span class="o">?</span><span class="p">.</span><span class="nx">headers</span><span class="p">);</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">token</span><span class="p">)</span><span class="w"> </span><span class="nx">headers</span><span class="p">.</span><span class="nx">set</span><span class="p">(</span><span class="s2">&quot;Authorization&quot;</span><span class="p">,</span><span class="w"> </span><span class="sb">`Bearer </span><span class="si">${</span><span class="nx">token</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="nx">fetch</span><span class="p">(</span><span class="sb">`</span><span class="si">${</span><span class="nx">BACKEND_URL</span><span class="si">}${</span><span class="nx">path</span><span class="si">}</span><span class="sb">`</span><span class="p">,</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="nx">init</span><span class="p">,</span><span class="w"> </span><span class="nx">headers</span><span class="w"> </span><span class="p">});</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>It uses <code>getRequestEvent()</code> to access the current request's <code>locals.token</code> and injects the <code>Authorization</code> header automatically. <code>BACKEND_URL</code> defaults to <code>http://127.0.0.1:8000</code>. This function is server-only — it can't run in the browser because <code>getRequestEvent()</code> requires a SvelteKit server context.</p>
+<h3 id="query-pattern">Query pattern<a class="headerlink" href="#query-pattern" title="Permanent link">&para;</a></h3>
+<p>Queries validate parameters with Zod and return sensible defaults on failure:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">get_users</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">query</span><span class="p">(</span>
+<span class="w">  </span><span class="nx">z</span><span class="p">.</span><span class="nx">object</span><span class="p">({</span><span class="w"> </span><span class="nx">tenant</span><span class="o">:</span><span class="w"> </span><span class="kt">z.string</span><span class="p">()</span><span class="w"> </span><span class="p">}),</span>
+<span class="w">  </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">tenant</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">res</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">apiFetch</span><span class="p">(</span>
+<span class="w">      </span><span class="sb">`/api/v1/mapi/tenants/</span><span class="si">${</span><span class="nx">tenant</span><span class="si">}</span><span class="sb">/userAccounts?verbose=true`</span>
+<span class="w">    </span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">ok</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">();</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="nx">data</span><span class="p">.</span><span class="nx">userAccounts</span><span class="w"> </span><span class="o">??</span><span class="w"> </span><span class="p">[];</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">[];</span><span class="w"> </span><span class="c1">// graceful degradation</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="p">);</span>
+</code></pre></div>
+<p>Queries without parameters omit the Zod schema:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">get_buckets</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">query</span><span class="p">(</span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">});</span>
+</code></pre></div>
+<p>The empty-array fallback is deliberate: partial data is better than a crashed page. Errors are logged to the console, not thrown to the UI.</p>
+<h3 id="command-pattern">Command pattern<a class="headerlink" href="#command-pattern" title="Permanent link">&para;</a></h3>
+<p>Commands throw errors so the calling component can show feedback:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="nx">create_user</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">command</span><span class="p">(</span>
+<span class="w">  </span><span class="nx">z</span><span class="p">.</span><span class="nx">object</span><span class="p">({</span><span class="w"> </span><span class="nx">tenant</span><span class="o">:</span><span class="w"> </span><span class="kt">z.string</span><span class="p">(),</span><span class="w"> </span><span class="nx">username</span><span class="o">:</span><span class="w"> </span><span class="kt">z.string</span><span class="p">(),</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">}),</span>
+<span class="w">  </span><span class="k">async</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">tenant</span><span class="p">,</span><span class="w"> </span><span class="p">...</span><span class="nx">body</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">res</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">apiFetch</span><span class="p">(</span><span class="sb">`/api/v1/mapi/tenants/</span><span class="si">${</span><span class="nx">tenant</span><span class="si">}</span><span class="sb">/userAccounts`</span><span class="p">,</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">method</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;PUT&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nx">headers</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">&quot;Content-Type&quot;</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;application/json&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">      </span><span class="nx">body</span><span class="o">:</span><span class="w"> </span><span class="kt">JSON.stringify</span><span class="p">(</span><span class="nx">body</span><span class="p">),</span>
+<span class="w">    </span><span class="p">});</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="nx">res</span><span class="p">.</span><span class="nx">ok</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">const</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">res</span><span class="p">.</span><span class="nx">json</span><span class="p">().</span><span class="k">catch</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">({</span><span class="w"> </span><span class="nx">detail</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;Failed&quot;</span><span class="w"> </span><span class="p">}));</span>
+<span class="w">      </span><span class="k">throw</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="ne">Error</span><span class="p">(</span><span class="nx">err</span><span class="p">.</span><span class="nx">detail</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="p">);</span>
+</code></pre></div>
+<h3 id="the-updates-pattern">The .updates() pattern<a class="headerlink" href="#the-updates-pattern" title="Permanent link">&para;</a></h3>
+<p>After a command succeeds, related queries need to reflect the change. The <code>.updates()</code> method triggers a re-fetch:</p>
+<div class="highlight"><pre><span></span><code><span class="k">await</span><span class="w"> </span><span class="nx">create_namespace</span><span class="p">({</span><span class="w"> </span><span class="nx">tenant</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="p">,</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}).</span><span class="nx">updates</span><span class="p">(</span><span class="nx">get_namespaces</span><span class="p">);</span>
+</code></pre></div>
+<p>This replaces manual <code>invalidate()</code> calls. The component doesn't need to know which queries to refresh — the remote function call declares its dependencies explicitly.</p>
+<h2 id="reactive-state-patterns">Reactive state patterns<a class="headerlink" href="#reactive-state-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="state-mutable-reactive-variables">$state — mutable reactive variables<a class="headerlink" href="#state-mutable-reactive-variables" title="Permanent link">&para;</a></h3>
+<p><code>$state</code> is used for local UI state that changes in response to user interaction:</p>
+<div class="highlight"><pre><span></span><code>let activeTab = $state(&#39;users&#39;);
+let createUserOpen = $state(false);
+let userSearch = $state(&#39;&#39;);
+let sorting = $state&lt;SortingState&gt;([]);
+</code></pre></div>
+<h3 id="derived-computed-values">$derived — computed values<a class="headerlink" href="#derived-computed-values" title="Permanent link">&para;</a></h3>
+<p><code>$derived</code> creates read-only values that update automatically when their dependencies change:</p>
+<div class="highlight"><pre><span></span><code>let tenant = $derived(page.data.tenant as string | undefined);
+let usersData = $derived(tenant ? get_users({ tenant }) : undefined);
+let users = $derived((usersData?.current ?? []) as User[]);
+let filteredUsers = $derived(
+  users.filter((u) =&gt; u.username.toLowerCase().includes(userSearch.toLowerCase()))
+);
+</code></pre></div>
+<p>This creates a reactive chain: <code>tenant</code> → <code>usersData</code> → <code>users</code> → <code>filteredUsers</code>. When the tenant changes, the entire chain re-evaluates. When the search filter changes, only <code>filteredUsers</code> re-evaluates.</p>
+<p>For complex derivations that need intermediate variables, <code>$derived.by()</code> accepts a function:</p>
+<div class="highlight"><pre><span></span><code>let userPermsMap = $derived.by(() =&gt; {
+  const map = new SvelteMap&lt;string, ...&gt;();
+  for (const u of users) {
+    map.set(u.username, get_user_permissions({ tenant, username: u.username }));
+  }
+  return map;
+});
+</code></pre></div>
+<p><code>$derived</code> is preferred over <code>$effect</code> for data transformations because it's synchronous, predictable, and has no side effects. It cannot trigger infinite loops or race conditions.</p>
+<h3 id="effect-side-effects">$effect — side effects<a class="headerlink" href="#effect-side-effects" title="Permanent link">&para;</a></h3>
+<p><code>$effect</code> runs a callback whenever its reactive dependencies change. It's used sparingly, primarily for two patterns:</p>
+<p><strong>Async work with cancellation:</strong></p>
+<div class="highlight"><pre><span></span><code>$effect(() =&gt; {
+  const currentUrl = url;
+  let cancelled = false;
+  if (open &amp;&amp; category === &#39;text&#39; &amp;&amp; currentUrl) {
+    (async () =&gt; {
+      loading = true;
+      try {
+        const res = await fetch(currentUrl);
+        if (cancelled) return;
+        textContent = await res.text();
+      } finally {
+        if (!cancelled) loading = false;
+      }
+    })();
+  }
+  return () =&gt; { cancelled = true; };
+});
+</code></pre></div>
+<p>The <code>cancelled</code> flag prevents stale async results from overwriting newer state. The cleanup function runs when the effect re-runs or the component is destroyed.</p>
+<p><strong>Syncing remote data to local state after save:</strong></p>
+<div class="highlight"><pre><span></span><code>$effect(() =&gt; {
+  const current = (permsData?.current as DataAccessPermissions) ?? {};
+  void saver.syncVersion; // re-run when save completes
+  localPerms = current.namespacePermission ?? [];
+});
+</code></pre></div>
+<h3 id="the-usesave-pattern">The useSave pattern<a class="headerlink" href="#the-usesave-pattern" title="Permanent link">&para;</a></h3>
+<p><code>useSave()</code> (<code>src/lib/utils/use-save.svelte.ts</code>) encapsulates save logic with loading state and toast feedback:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">useSave</span><span class="p">(</span><span class="nx">opts</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">successMsg</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="p">;</span><span class="w"> </span><span class="nx">errorMsg</span><span class="o">:</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="p">})</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="nx">saving</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$state</span><span class="p">(</span><span class="kc">false</span><span class="p">);</span>
+<span class="w">  </span><span class="kd">let</span><span class="w"> </span><span class="nx">syncVersion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$state</span><span class="p">(</span><span class="mf">0</span><span class="p">);</span>
+
+<span class="w">  </span><span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">run</span><span class="p">(</span><span class="nx">fn</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">unknown</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">saving</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span>
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">await</span><span class="w"> </span><span class="nx">fn</span><span class="p">();</span>
+<span class="w">      </span><span class="nx">syncVersion</span><span class="o">++</span><span class="p">;</span>
+<span class="w">      </span><span class="nx">toast</span><span class="p">.</span><span class="nx">success</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">successMsg</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">toast</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="nx">opts</span><span class="p">.</span><span class="nx">errorMsg</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">finally</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">saving</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">get</span><span class="w"> </span><span class="nx">saving</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">saving</span><span class="p">;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">get</span><span class="w"> </span><span class="nx">syncVersion</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">syncVersion</span><span class="p">;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">run</span><span class="w"> </span><span class="p">};</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The key insight is <code>syncVersion</code>. Components reference it inside <code>$effect</code> blocks to trigger re-sync of local state from server data. When <code>saver.run()</code> succeeds, it increments <code>syncVersion</code>, which causes any <code>$effect</code> reading it to re-run — pulling fresh data from the query's <code>.current</code> property into local <code>$state</code>.</p>
+<p>Usage in a component:</p>
+<div class="highlight"><pre><span></span><code>const saver = useSave({ successMsg: &#39;Saved&#39;, errorMsg: &#39;Failed to save&#39; });
+
+$effect(() =&gt; {
+  const current = (remoteData?.current as Settings) ?? {};
+  void saver.syncVersion; // dependency trigger
+  localSettings = structuredClone(current);
+});
+
+&lt;SaveButton dirty={dirty} saving={saver.saving}
+  onclick={() =&gt; saver.run(async () =&gt; await update_settings(localSettings).updates(get_settings))} /&gt;
+</code></pre></div>
+<h3 id="the-usedelete-pattern">The useDelete pattern<a class="headerlink" href="#the-usedelete-pattern" title="Permanent link">&para;</a></h3>
+<p><code>useDelete()</code> (<code>src/lib/utils/use-delete.svelte.ts</code>) manages delete confirmation state:</p>
+<ul>
+<li><code>requestDelete(name)</code> opens a confirmation dialog for a single item</li>
+<li><code>requestBulkDelete()</code> opens a confirmation dialog for selected items</li>
+<li><code>confirmDelete(deleteFn)</code> executes the delete and shows toast feedback</li>
+<li><code>confirmBulkDelete(names, deleteFn, onDone?)</code> deletes items sequentially with per-item error tracking</li>
+</ul>
+<h3 id="the-useselection-pattern">The useSelection pattern<a class="headerlink" href="#the-useselection-pattern" title="Permanent link">&para;</a></h3>
+<p><code>useSelection()</code> (<code>src/lib/utils/use-selection.svelte.ts</code>) manages row selection for data tables:</p>
+<div class="highlight"><pre><span></span><code><span class="k">export</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">useSelection</span><span class="o">&lt;</span><span class="nx">T</span><span class="o">&gt;</span><span class="p">(</span><span class="nx">items</span><span class="o">:</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">T</span><span class="p">[],</span><span class="w"> </span><span class="nx">key</span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="nx">item</span><span class="o">:</span><span class="w"> </span><span class="kt">T</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">selected</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">SvelteSet</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">allSelected</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">$derived</span><span class="p">(</span>
+<span class="w">    </span><span class="nx">items</span><span class="p">().</span><span class="nx">length</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">items</span><span class="p">().</span><span class="nx">every</span><span class="p">((</span><span class="nx">i</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">selected</span><span class="p">.</span><span class="nx">has</span><span class="p">(</span><span class="nx">key</span><span class="p">(</span><span class="nx">i</span><span class="p">)))</span>
+<span class="w">  </span><span class="p">);</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">selected</span><span class="p">,</span><span class="w"> </span><span class="nx">get</span><span class="w"> </span><span class="nx">allSelected</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="nx">allSelected</span><span class="p">;</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nx">toggleAll</span><span class="p">,</span><span class="w"> </span><span class="nx">toggleOne</span><span class="w"> </span><span class="p">};</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Uses <code>SvelteSet</code> for reactive set operations — adding or removing a key automatically triggers any <code>$derived</code> that reads the set.</p>
+<h2 id="page-composition">Page composition<a class="headerlink" href="#page-composition" title="Permanent link">&para;</a></h2>
+<h3 id="layout-structure">Layout structure<a class="headerlink" href="#layout-structure" title="Permanent link">&para;</a></h3>
+<p>The layout nests three levels:</p>
+<div class="highlight"><pre><span></span><code>Root layout (+layout.svelte)
+├── app.css (global styles)
+├── ModeWatcher (dark/light mode)
+├── Toaster (toast notifications)
+└── View Transition API (login transitions)
+    └── App layout ((app)/+layout.svelte)
+        ├── NavigationProgress (top loading bar)
+        ├── AppSidebar (navigation)
+        └── Sidebar.Inset
+            ├── AppHeader (user menu, tenant switcher)
+            └── Page content (+page.svelte)
+</code></pre></div>
+<p>The root layout applies global CSS, initializes theme watching, and mounts the toast container. View transitions are only used for login/logout navigations.</p>
+<p>The app layout sets up the sidebar shell. It passes <code>accessLevel</code> from layout data to the sidebar, and <code>username</code>, <code>tenant</code>, <code>userGUID</code>, and <code>sessions</code> to the header.</p>
+<h3 id="section-components">Section components<a class="headerlink" href="#section-components" title="Permanent link">&para;</a></h3>
+<p>Pages are composed of self-contained section components, each rendering as a card:</p>
+<div class="highlight"><pre><span></span><code>&lt;div class=&quot;grid gap-6 lg:grid-cols-2&quot;&gt;
+  &lt;NamespaceSettingsSection {tenant} {namespaceName} /&gt;
+  &lt;NamespaceQuotaSection {tenant} {namespaceName} {chargeback} /&gt;
+  &lt;NamespaceComplianceSection {tenant} {namespaceName} /&gt;
+  &lt;NamespacePermissionsSection {tenant} {namespaceName} /&gt;
+&lt;/div&gt;
+</code></pre></div>
+<p>Each section fetches its own data via <code>query()</code>, manages its own edit state via <code>$state</code>, and handles saves independently via <code>useSave()</code>. The structure is <code>Card.Root</code> &gt; <code>Card.Header</code> &gt; <code>Card.Content</code> &gt; <code>Card.Footer</code> (with <code>SaveButton</code>). This pattern means sections can be rearranged, added, or removed without affecting siblings.</p>
+<h3 id="sidebar-navigation">Sidebar navigation<a class="headerlink" href="#sidebar-navigation" title="Permanent link">&para;</a></h3>
+<p><code>AppSidebar.svelte</code> filters navigation items by access level:</p>
+<div class="highlight"><pre><span></span><code>let { accessLevel }: { accessLevel: AccessLevel } = $props();
+const isAdmin = $derived(accessLevel !== &#39;namespace-user&#39;);
+</code></pre></div>
+<p>Admin-only groups (Tenant, Search &amp; Indexing) are wrapped in <code>{#if isAdmin}</code>. Storage and Analytics are visible to all users. Active state is detected by matching <code>page.url.pathname</code> against each item's <code>href</code> using <code>startsWith()</code>.</p>
+<p>The sidebar uses <code>collapsible="icon"</code> — it collapses to an icon-only rail on smaller screens or when toggled.</p>
+<h3 id="data-tables-tanstack-table">Data tables (TanStack Table)<a class="headerlink" href="#data-tables-tanstack-table" title="Permanent link">&para;</a></h3>
+<p><code>createSvelteTable()</code> (<code>src/lib/components/ui/data-table/data-table.svelte.ts</code>) wraps <code>@tanstack/table-core</code> with Svelte 5 reactivity. Table state is stored in <code>$state</code>, and the table instance is created via <code>$derived</code>.</p>
+<p>Usage pattern:</p>
+<div class="highlight"><pre><span></span><code>let sorting = $state&lt;SortingState&gt;([]);
+let pagination = $state&lt;PaginationState&gt;({ pageIndex: 0, pageSize: 25 });
+
+let columns = $derived.by((): ColumnDef&lt;User&gt;[] =&gt; [
+  {
+    accessorKey: &#39;username&#39;,
+    header: ({ column }) =&gt;
+      renderComponent(DataTableHeaderButton, {
+        label: &#39;Username&#39;,
+        onclick: column.getToggleSortingHandler(),
+      }),
+    cell: ({ row }) =&gt; renderSnippet(usernameCell, row.original),
+  },
+  // ...
+]);
+
+let table = $derived(
+  createSvelteTable({
+    get data() { return filteredUsers; },
+    get columns() { return columns; },
+    state: { get sorting() { return sorting; }, get pagination() { return pagination; } },
+    onSortingChange: (updater) =&gt; {
+      sorting = typeof updater === &#39;function&#39; ? updater(sorting) : updater;
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  })
+);
+</code></pre></div>
+<p>Column cells use two rendering helpers: <code>renderComponent()</code> for mounting a Svelte component inside a cell, and <code>renderSnippet()</code> for inline markup via Svelte 5 snippets.</p>
+<p>The <code>DataTable</code> component renders the table with sortable headers, clickable rows, pagination controls (auto-shown when &gt;25 rows), and an empty state message. Over 11 pages use this pattern for tables.</p>
+<h2 id="component-library">Component library<a class="headerlink" href="#component-library" title="Permanent link">&para;</a></h2>
+<h3 id="shadcn-svelte-components">shadcn-svelte components<a class="headerlink" href="#shadcn-svelte-components" title="Permanent link">&para;</a></h3>
+<p>The project owns all shadcn-svelte component files in <code>src/lib/components/ui/</code>. These are copy-paste components built on Bits UI accessibility primitives. Key components: Button, Card, Dialog, AlertDialog, Table, Badge, Input, Select, Tabs, DropdownMenu, Sidebar, Sonner (toasts), Checkbox, Label, Separator, Tooltip, Progress.</p>
+<h3 id="custom-components">Custom components<a class="headerlink" href="#custom-components" title="Permanent link">&para;</a></h3>
+<p>Project-specific components live in <code>src/lib/components/custom/</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PageHeader</code></td>
+<td>Page title + description + optional action buttons slot</td>
+</tr>
+<tr>
+<td><code>SaveButton</code></td>
+<td>Save button with dirty/saving states, spinner, "Unsaved changes" indicator</td>
+</tr>
+<tr>
+<td><code>FormDialog</code></td>
+<td>Reusable dialog with form, error banner, submit/cancel buttons</td>
+</tr>
+<tr>
+<td><code>DeleteConfirmDialog</code></td>
+<td>Alert dialog for delete confirmation with optional force-delete checkbox</td>
+</tr>
+<tr>
+<td><code>ErrorBanner</code></td>
+<td>Conditional red error message banner</td>
+</tr>
+<tr>
+<td><code>CopyableInput</code></td>
+<td>Read-only input with copy-to-clipboard, optional secret masking</td>
+</tr>
+<tr>
+<td><code>TagInput</code></td>
+<td>Add/remove tags as badge list with text input</td>
+</tr>
+<tr>
+<td><code>IpListEditor</code></td>
+<td>Add/remove IP addresses or CIDRs as badge list</td>
+</tr>
+<tr>
+<td><code>CorsEditor</code></td>
+<td>XML textarea for CORS rules with save/delete and dirty tracking</td>
+</tr>
+<tr>
+<td><code>NamespacePermissionsEditor</code></td>
+<td>Permission editor with toggleable permission badges per namespace</td>
+</tr>
+<tr>
+<td><code>StatCard</code></td>
+<td>Dashboard stat card with icon, value, and entry animation</td>
+</tr>
+<tr>
+<td><code>StorageProgressBar</code></td>
+<td>Color-coded progress bar (green → yellow → red)</td>
+</tr>
+<tr>
+<td><code>BackButton</code></td>
+<td>Arrow-left navigation link with tooltip</td>
+</tr>
+<tr>
+<td><code>FileViewer</code></td>
+<td>Full modal file previewer (images, video, audio, PDF, text/code) with prev/next navigation</td>
+</tr>
+<tr>
+<td><code>ServiceTagBadge</code></td>
+<td>Colored badge for service tags (lakefs, nfs, cifs, hdfs, s3, smtp)</td>
+</tr>
+<tr>
+<td><code>StepProgress</code></td>
+<td>Vertical step list with pending/running/done/failed status icons</td>
+</tr>
+<tr>
+<td><code>NoTenantPlaceholder</code></td>
+<td>Placeholder shown when no tenant is selected</td>
+</tr>
+<tr>
+<td><code>NavigationProgress</code></td>
+<td>Animated top bar shown during SvelteKit navigations</td>
+</tr>
+<tr>
+<td><code>AppSidebar</code></td>
+<td>Main navigation sidebar with access-level filtering</td>
+</tr>
+<tr>
+<td><code>AppHeader</code></td>
+<td>Header with user menu, tenant switcher, theme toggle</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../storage/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Storage Layer">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Storage Layer
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../deployment/" class="md-footer__link md-footer__link--next" aria-label="Next: Deployment">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Deployment
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 AI-Riksarkivet
+    </div>
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["announce.dismiss","content.action.edit","content.action.view","content.code.annotate","content.code.copy","content.code.select","content.tabs.link","content.tooltips","content.footnote.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.tabs","navigation.tabs.sticky","navigation.top","navigation.tracking","search.highlight"],"search":"../../assets/javascripts/workers/search.e2d2d235.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c2b142ea.min.js"></script>
+      
+    
+  </body>
+</html>
