@@ -5,6 +5,20 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
+from pydantic import BaseModel
+
+
+class TransferSettings(BaseModel, frozen=True):
+    """Client settings needed by the bulk transfer engine.
+
+    Exposed via ``BulkClient.transfer_settings`` so the engine never
+    reaches into private client attributes.
+    """
+
+    verify_ssl: bool = True
+    timeout: float = 60.0
+    multipart_threshold: int = 100 * 1024 * 1024
+
 
 class S3Client(Protocol):
     """Minimal S3 interface required by the bulk transfer engine."""
@@ -37,7 +51,10 @@ class S3Client(Protocol):
 
 
 class BulkClient(Protocol):
-    """Client that exposes an ``s3`` property satisfying :class:`S3Client`."""
+    """Client that exposes ``s3`` and ``transfer_settings``."""
 
     @property
     def s3(self) -> S3Client: ...
+
+    @property
+    def transfer_settings(self) -> TransferSettings: ...

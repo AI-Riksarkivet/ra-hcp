@@ -19,6 +19,7 @@ from rahcp_client.errors import (
 from rahcp_client.tracing import tracer
 
 if TYPE_CHECKING:
+    from rahcp_client.bulk.protocol import TransferSettings
     from rahcp_client.mapi import MapiOps
     from rahcp_client.s3 import S3Ops
 
@@ -167,6 +168,17 @@ class HCPClient:
 
             self._mapi = MapiOps(self)
         return self._mapi
+
+    @property
+    def transfer_settings(self) -> TransferSettings:
+        """Settings needed by the bulk transfer engine."""
+        from rahcp_client.bulk.protocol import TransferSettings
+
+        return TransferSettings(
+            verify_ssl=self.verify_ssl,
+            timeout=self.timeout,
+            multipart_threshold=self.multipart_threshold,
+        )
 
     async def _login(self) -> None:
         """Authenticate and store the bearer token."""

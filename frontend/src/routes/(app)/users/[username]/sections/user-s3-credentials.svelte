@@ -32,7 +32,11 @@
 	{#if !isOwnAccount}
 		<div class="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
 			<Info class="mt-0.5 h-4 w-4 shrink-0" />
-			<p>S3 credentials can only be viewed for your own account. You are viewing <strong>{username}</strong>.</p>
+			<p>
+				S3 credentials can only be viewed for your own account. You are viewing <strong
+					>{username}</strong
+				>.
+			</p>
 		</div>
 	{:else}
 		{#await credsData}

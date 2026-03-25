@@ -6,8 +6,9 @@ import asyncio
 import fnmatch
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from pathlib import Path
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,11 +16,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from rahcp_tracker import TrackerProtocol, TransferStatus
 
 from rahcp_client.bulk.config import DEFAULT_STREAM_THRESHOLD, TransferStats
-from rahcp_client.bulk.protocol import BulkClient
+from rahcp_client.bulk.protocol import BulkClient, S3Client
 
 log = logging.getLogger(__name__)
 
 _DONE = object()
+
+
+# ── Models ────────────────────────────────────────────────────────
 
 
 class Counters(BaseModel):
@@ -32,8 +36,11 @@ class Counters(BaseModel):
     errors: int = 0
     total_bytes: int = 0
     done_keys: set[str] = Field(default_factory=set)
-    t0: float = Field(default_factory=time.monotonic)
+    start_time: float = Field(default_factory=time.monotonic)
     last_report: float = Field(default_factory=time.monotonic)
+
+
+# ── Filters ───────────────────────────────────────────────────────
 
 
 def matches_filters(name: str, include: list[str], exclude: list[str]) -> bool:
@@ -43,6 +50,9 @@ def matches_filters(name: str, include: list[str], exclude: list[str]) -> bool:
     if include and not any(fnmatch.fnmatch(name, pat) for pat in include):
         return False
     return True
+
+
+# ── Tracker helpers ───────────────────────────────────────────────
 
 
 def record_result(counters: Counters, result: str, byte_count: int = 0) -> None:
@@ -92,6 +102,46 @@ def mark_error(
         on_error(key, exc)
 
 
+# ── Validation ────────────────────────────────────────────────────
+
+
+async def run_validation(
+    validate_fn: Callable[[Path], None] | None,
+    tracker: TrackerProtocol,
+    key: str,
+    path: Path,
+    size: int,
+    on_error: Callable[[str, Exception], None] | None,
+    *,
+    phase: str = "validation",
+) -> bool:
+    """Run a file validation callback.
+
+    Returns True if valid (or no validator configured).
+    On failure, marks the error in the tracker and fires the callback.
+    """
+    if not validate_fn:
+        return True
+    try:
+        await asyncio.to_thread(validate_fn, path)
+        return True
+    except Exception as exc:
+        tracker.mark(
+            key,
+            size,
+            TransferStatus.error,
+            f"{phase}: {exc!s:.200}",
+            validated=False,
+        )
+        log.warning("%s failed: %s — %s", phase.capitalize(), key, exc)
+        if on_error:
+            on_error(key, exc)
+        return False
+
+
+# ── Stats ─────────────────────────────────────────────────────────
+
+
 def maybe_report(
     on_progress: Callable[[TransferStats], None] | None,
     progress_interval: float,
@@ -111,25 +161,21 @@ def build_stats(counters: Counters) -> TransferStats:
         skipped=counters.skipped,
         errors=counters.errors,
         total_bytes=counters.total_bytes,
-        elapsed=time.monotonic() - counters.t0,
+        elapsed=time.monotonic() - counters.start_time,
     )
 
 
-def extract_client_settings(client: BulkClient) -> tuple[bool, float, int]:
-    """Extract verify_ssl, timeout, and multipart_threshold from client.
+# ── Client settings ──────────────────────────────────────────────
 
-    Returns safe defaults if the client doesn't expose internals (e.g. mocks).
+
+def pool_settings(client: BulkClient) -> tuple[bool, float, int]:
+    """Derive connection pool settings from client transfer settings.
+
+    Returns ``(verify_ssl, pool_timeout, multipart_threshold)``.
     """
-    verify = getattr(getattr(client.s3, "_client", None), "verify_ssl", True)
-    raw_timeout = getattr(getattr(client.s3, "_client", None), "timeout", 60.0)
-    raw_mp = getattr(getattr(client.s3, "_client", None), "multipart_threshold", None)
-
-    timeout = (
-        max(120.0, raw_timeout * 2) if isinstance(raw_timeout, (int, float)) else 120.0
-    )
-    multipart_threshold = raw_mp if isinstance(raw_mp, int) else 100 * 1024 * 1024
-
-    return bool(verify), timeout, multipart_threshold
+    settings = client.transfer_settings
+    pool_timeout = max(120.0, settings.timeout * 2)
+    return settings.verify_ssl, pool_timeout, settings.multipart_threshold
 
 
 def make_pool(
@@ -153,14 +199,14 @@ def make_pool(
     )
 
 
-# ── Shared I/O ─────────────────────────────────────────────────────
+# ── Shared I/O ────────────────────────────────────────────────────
 
 
 def _raise_for_presigned(resp: httpx.Response, bucket: str, key: str) -> None:
     """Raise a clean error for presigned URL failures."""
     if resp.status_code >= 400:
         raise httpx.HTTPStatusError(
-            f"{resp.status_code} for {bucket}/{key}",
+            f"{resp.status_code} {resp.reason_phrase} for {bucket}/{key}",
             request=resp.request,
             response=resp,
         )
@@ -173,10 +219,7 @@ async def pool_upload(
     bucket: str,
     key: str,
 ) -> str:
-    """Upload a file using a pre-fetched presigned URL and shared pool.
-
-    Returns the ETag from the response.
-    """
+    """Upload a file using a presigned URL and shared pool. Returns the ETag."""
     content = await asyncio.to_thread(file_path.read_bytes)
     resp = await pool.put(presigned_url, content=content)
     _raise_for_presigned(resp, bucket, key)
@@ -194,11 +237,10 @@ async def pool_download(
     chunk_size: int = 256 * 1024,
     stream_threshold: int = DEFAULT_STREAM_THRESHOLD,
 ) -> int:
-    """Download a file using a pre-fetched presigned URL and shared pool.
+    """Download a file using a presigned URL and shared pool.
 
-    Small files (< stream_threshold) are read in one shot to avoid
-    per-chunk thread dispatch overhead. Large files are streamed.
-
+    Small files (< stream_threshold) are read in one shot.
+    Large files are streamed chunk-by-chunk.
     Returns the number of bytes downloaded.
     """
     if 0 < size <= stream_threshold:
@@ -210,11 +252,84 @@ async def pool_download(
     async with pool.stream("GET", presigned_url) as resp:
         _raise_for_presigned(resp, bucket, key)
         total = 0
-        f = await asyncio.to_thread(dest.open, "wb")
+        file_handle = await asyncio.to_thread(dest.open, "wb")
         try:
             async for chunk in resp.aiter_bytes(chunk_size=chunk_size):
-                await asyncio.to_thread(f.write, chunk)
+                await asyncio.to_thread(file_handle.write, chunk)
                 total += len(chunk)
         finally:
-            await asyncio.to_thread(f.close)
+            await asyncio.to_thread(file_handle.close)
     return total
+
+
+# ── Pagination ────────────────────────────────────────────────────
+
+
+async def paginate_objects(
+    s3: S3Client,
+    bucket: str,
+    prefix: str,
+    *,
+    max_keys: int = 1000,
+) -> AsyncIterator[dict[str, Any]]:
+    """Async iterator over all objects in a bucket prefix."""
+    token: str | None = None
+    while True:
+        data = await s3.list_objects(
+            bucket, prefix, max_keys=max_keys, continuation_token=token
+        )
+        for obj in data.get("objects", []):
+            yield obj
+        if not data.get("is_truncated"):
+            return
+        token = data.get("next_continuation_token")
+
+
+# ── Pipeline ──────────────────────────────────────────────────────
+
+
+async def run_pipeline(
+    *,
+    workers: int,
+    queue_depth: int,
+    pool: httpx.AsyncClient,
+    counters: Counters,
+    tracker: TrackerProtocol,
+    on_progress: Callable[[TransferStats], None] | None,
+    progress_interval: float,
+    transfer_fn: Callable[..., Awaitable[tuple[str, int]]],
+    produce_fn: Callable[[asyncio.Queue], Awaitable[None]],
+) -> TransferStats:
+    """Run a producer-consumer transfer pipeline.
+
+    ``produce_fn`` pushes work items onto the queue.
+    ``transfer_fn`` processes each item (unpacked from the tuple) and
+    returns ``(result_label, byte_count)``.
+    Worker lifecycle and sentinel values are managed here.
+    """
+    queue: asyncio.Queue = asyncio.Queue(maxsize=workers * queue_depth)
+
+    async def _worker() -> None:
+        while True:
+            item = await queue.get()
+            if item is _DONE:
+                queue.task_done()
+                break
+            try:
+                result, byte_count = await transfer_fn(*item)
+                record_result(counters, result, byte_count)
+                maybe_report(on_progress, progress_interval, counters)
+            finally:
+                queue.task_done()
+
+    try:
+        tasks = [asyncio.create_task(_worker()) for _ in range(workers)]
+        await produce_fn(queue)
+        for _ in range(workers):
+            await queue.put(_DONE)
+        await asyncio.gather(*tasks)
+    finally:
+        await pool.aclose()
+
+    tracker.commit()
+    return build_stats(counters)
