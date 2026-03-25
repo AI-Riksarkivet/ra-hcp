@@ -55,7 +55,7 @@ def load_dotenv(path: Path) -> None:
 def derive_s3_keys(username: str, password: str) -> tuple[str, str]:
     """Derive HCP S3 credentials: base64(user), md5(password)."""
     access_key = base64.b64encode(username.encode()).decode()
-    secret_key = hashlib.md5(password.encode()).hexdigest()
+    secret_key = hashlib.md5(password.encode()).hexdigest()  # noqa: S324 — HCP protocol requires MD5
     return access_key, secret_key
 
 

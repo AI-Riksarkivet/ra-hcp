@@ -21,8 +21,10 @@ graph TD
     ROOT -.->|optional| VAL
     CLIENT --> TRACKER
     IIIF --> TRACKER
+    IIIF -.->|optional| VAL
     CLI --> CLIENT
     CLI --> IIIF
+    CLI -.->|optional| VAL
     LANCE --> CLIENT
     ETL --> CLIENT
 ```
@@ -163,6 +165,7 @@ Reads from `HCP_ENDPOINT`, `HCP_USERNAME`, `HCP_PASSWORD`, `HCP_TENANT`, `HCP_TI
 | `client.s3` | `S3Ops` | S3 data-plane operations (lazy-loaded) |
 | `client.mapi` | `MapiOps` | MAPI namespace administration (lazy-loaded) |
 | `client.token` | `str \| None` | Current JWT bearer token (set after login) |
+| `client.transfer_settings` | `TransferSettings` | Bulk transfer settings (verify_ssl, timeout, multipart_threshold) — used internally by the bulk engine |
 
 ### S3 operations
 
@@ -321,10 +324,12 @@ asyncio.run(main())
 | `client` | `HCPClient` | required | Authenticated client instance |
 | `bucket` | `str` | required | Target S3 bucket |
 | `source_dir` | `Path` | required | Local directory to upload |
-| `tracker` | `TrackerProtocol` | required | Progress tracker (default: `SqliteTracker`) |
+| `tracker` | `TrackerProtocol` | required | Progress tracker (e.g. `SqliteTracker`) |
 | `prefix` | `str` | `""` | Key prefix prepended to all keys |
 | `workers` | `int` | `10` | Number of concurrent upload workers |
 | `queue_depth` | `int` | `8` | Queue size multiplier (queue = workers × depth) |
+| `presign_batch_size` | `int` | `200` | URLs presigned per API call (higher = fewer round-trips) |
+| `chunk_size` | `int` | `1048576` | Chunk size in bytes for streaming uploads (1 MB) |
 | `skip_existing` | `bool` | `True` | Skip files already on remote with matching size |
 | `retry_errors` | `bool` | `False` | Only process files marked as error in tracker |
 | `include` | `list[str]` | `[]` | Glob patterns — only matching filenames are transferred |
@@ -337,7 +342,28 @@ asyncio.run(main())
 
 #### BulkDownloadConfig
 
-Same fields as upload, except `source_dir` is replaced by `dest_dir: Path`, `verify_upload` becomes `verify_download`, and there is no `skip_existing` (downloads always skip files with matching size on disk).
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `client` | `HCPClient` | required | Authenticated client instance |
+| `bucket` | `str` | required | Source S3 bucket |
+| `dest_dir` | `Path` | required | Local destination directory |
+| `tracker` | `TrackerProtocol` | required | Progress tracker (e.g. `SqliteTracker`) |
+| `prefix` | `str` | `""` | Only download keys under this prefix |
+| `workers` | `int` | `10` | Number of concurrent download workers |
+| `queue_depth` | `int` | `8` | Queue size multiplier (queue = workers × depth) |
+| `presign_batch_size` | `int` | `200` | URLs presigned per API call (higher = fewer round-trips) |
+| `chunk_size` | `int` | `1048576` | Chunk size in bytes for streaming large files (1 MB) |
+| `stream_threshold` | `int` | `104857600` | Files below this (100 MB) are downloaded in one shot |
+| `retry_errors` | `bool` | `False` | Only process files marked as error in tracker |
+| `include` | `list[str]` | `[]` | Glob patterns — only matching keys are downloaded |
+| `exclude` | `list[str]` | `[]` | Glob patterns — matching keys are skipped |
+| `validate_file` | `Callable` | `None` | Post-download validation callback `fn(Path)` — raises on failure |
+| `verify_download` | `bool` | `False` | Verify each download by checking file size after transfer |
+| `on_progress` | callback | `None` | Called periodically with `TransferStats` |
+| `on_error` | callback | `None` | Called on each file failure with `(key, exception)` |
+| `progress_interval` | `float` | `5.0` | Minimum seconds between progress callbacks |
+
+Downloads always skip files that already exist on disk with matching size (no `skip_existing` flag — this behavior is always on).
 
 #### Transfer tracking (rahcp-tracker)
 
@@ -351,13 +377,17 @@ from rahcp_tracker import SqliteTracker, TransferStatus
 tracker = SqliteTracker(Path("my-job.db"), flush_every=200)
 
 # Mark files
-tracker.mark("folder/file.jpg", 12345, TransferStatus.done, etag='"abc"')
+tracker.mark("folder/file.jpg", 12345, TransferStatus.done, etag='"abc"', validated=True)
 tracker.mark("folder/bad.jpg", 0, TransferStatus.error, "SSL timeout")
 
 # Query state
 done = tracker.done_keys()           # set[str] — instant skip lookups
 errors = tracker.error_entries()     # list[(key, size)] — for retry
 summary = tracker.summary()          # {"pending": 0, "done": 500, "error": 3}
+
+# Audit — find files needing post-transfer verification or validation
+unverified = tracker.unverified_keys()    # list[(key, size, etag)]
+unvalidated = tracker.unvalidated_keys()  # list[(key, size)]
 
 # Lifecycle
 tracker.commit()  # flush buffered marks to DB
@@ -873,29 +903,244 @@ flowchart TD
 
 Bulk transfer throughput depends on network bandwidth, HCP endpoint capacity, file sizes, and local I/O. The default settings are conservative — here's how to tune them for your hardware.
 
-**Key settings:**
+###### The full request path
 
-| Setting | config.yaml | CLI | Default | What it controls |
-|---------|------------|-----|---------|-----------------|
-| `bulk_workers` | Yes | `--workers` | 10 | Concurrent upload/download coroutines |
-| `bulk_presign_batch_size` | Yes | `--presign-batch-size` | 200 | URLs presigned per API call (higher = fewer round-trips) |
-| `bulk_chunk_size` | Yes | — | 1 MB | Chunk size for streaming large files |
-| `bulk_stream_threshold` | Yes | — | 100 MB | Files below this are downloaded in one shot (faster) |
-| `bulk_queue_depth` | Yes | — | 8 | Queue size = workers × depth. Higher = more files buffered ahead |
-| `bulk_progress_interval` | Yes | — | 5.0 | Seconds between progress reports |
-| `bulk_tracker_flush_every` | Yes | — | 200 | Marks buffered before writing to SQLite |
-| `bulk_tracker_dir` | Yes | `--tracker-db` | same dir as config.yaml | Where the tracker DB lives |
-| `bulk_tracker_prefix` | Yes | `--tracker-prefix` | none | Prefix tracker DB name per dataset |
-| `multipart_threshold` | Yes | — | 100 MB | Files above this use multipart upload |
-| `multipart_chunk` | Yes | — | 64 MB | Part size for multipart uploads |
-| `multipart_concurrency` | Yes | — | 6 | Parallel parts per multipart upload |
-| `verify_ssl` | Yes | — | true | Set `false` for self-signed HCP certs |
+A bulk transfer has two phases: **presigning** (get URLs from the API server) and **transferring** (send/receive bytes directly to/from HCP S3). The API server is only involved in presigning — actual file data never flows through it.
 
-**Tuning by scenario:**
+```mermaid
+sequenceDiagram
+    box rgb(230,245,255) Your machine (rahcp CLI)
+        participant W as 60 SDK workers
+    end
+    box rgb(255,243,224) API server (dev-hcp.ra.se)
+        participant API as gunicorn<br/>(2 worker processes)
+    end
+    box rgb(232,245,233) HCP S3 storage
+        participant S3 as S3 endpoint
+    end
+
+    Note over W,API: Phase 1: Presign (batched)
+    W->>API: POST /presign — batch of 500 keys
+    API-->>W: 500 signed URLs (~10ms)
+    W->>API: POST /presign — next batch of 500
+    API-->>W: 500 signed URLs
+
+    Note over W,S3: Phase 2: Transfer (parallel, bypasses API)
+    par 60 workers in parallel
+        W->>S3: PUT signed-url (file bytes)
+        S3-->>W: 200 OK + ETag
+    and
+        W->>S3: PUT signed-url (file bytes)
+        S3-->>W: 200 OK + ETag
+    and
+        W->>S3: ...
+    end
+
+    Note over W: Mark done in tracker DB
+```
+
+The SDK workers batch presign requests (default 200 keys per call, configurable up to 1000+), then use the returned URLs to transfer files directly to HCP S3. The API server's only job is signing URLs — it never touches file data.
+
+###### `bulk_workers` vs API server workers
+
+These have the same name but are completely different things:
+
+```mermaid
+flowchart LR
+    subgraph YM["Your machine"]
+        direction TB
+        W1["SDK Worker 1"]
+        W2["SDK Worker 2"]
+        W60["SDK Worker 60"]
+    end
+
+    subgraph API["API server (Kubernetes)"]
+        direction TB
+        G1["gunicorn process 1"]
+        G2["gunicorn process 2"]
+    end
+
+    subgraph HCP["HCP S3"]
+        S3["Storage"]
+    end
+
+    W1 & W2 & W60 -->|"POST /presign<br/>(batch 500 keys)"| G1 & G2
+    W1 & W2 & W60 -->|"PUT/GET signed-url<br/>(file bytes, direct)"| S3
+
+    style YM fill:#e3f2fd,stroke:#1565c0
+    style API fill:#fff3e0,stroke:#e65100
+    style HCP fill:#e8f5e9,stroke:#2e7d32
+```
+
+| | `bulk_workers` (SDK/CLI) | API server workers (gunicorn/replicas) |
+|--|--------------------------|---------------------------------------|
+| **Where it runs** | Your machine | The API server (`dev-hcp.ra.se`) |
+| **What it does** | Controls how many files are transferred in parallel | Controls how many presign requests are handled in parallel |
+| **Default** | 10 | 2 (gunicorn with 2 uvicorn workers) |
+| **Configured via** | `config.yaml` or `--workers` flag | Helm `backend.workers` / `replicaCount` — see [Scaling](../architecture/deployment.md#scaling) |
+| **When to increase** | Throughput increases with more workers | Presign requests are slow or cause transport errors |
+
+**Why 60 SDK workers but only 2 backend workers?** Because they do fundamentally different work. The SDK workers spend 99% of their time transferring file bytes directly to HCP S3 — the backend is not involved. The backend is only called for batch presigning: ~1 request every 30 seconds (500 URLs per batch). A single backend worker can handle hundreds of requests per second, so 2 workers is massive overkill for presigning — the extra worker is for resilience (if one crashes, the other keeps serving).
+
+The real bottleneck is your **network pipe**, not the backend. Adding more backend workers makes presign go from 50ms to 25ms — saving 25ms every 30 seconds (0.08% improvement, unmeasurable). Adding more SDK workers keeps more file transfers in flight, which keeps the pipe full.
+
+Batch presigning (`bulk_presign_batch_size`) reduces the number of backend round-trips by requesting many URLs in a single call instead of one at a time.
+
+###### Why more SDK workers help (up to a point)
+
+Each worker is idle while waiting for network I/O (bytes arriving or departing). More workers means more files in flight simultaneously, which keeps the network pipe full:
+
+```mermaid
+gantt
+    title Network utilization with different worker counts
+    dateFormat X
+    axisFormat %s
+
+    section 3 workers
+    Transfer file A     :a1, 0, 3
+    Transfer file B     :a2, 3, 6
+    Transfer file C     :a3, 6, 9
+    idle (pipe empty)   :crit, a4, 9, 12
+
+    section 10 workers
+    Worker 1 :b1, 0, 3
+    Worker 2 :b2, 1, 4
+    Worker 3 :b3, 2, 5
+    Worker 4 :b4, 3, 6
+    Worker 5 :b5, 4, 7
+    Worker 6-10 :b6, 5, 10
+```
+
+With few workers, the network pipe has gaps. With enough workers, transfers overlap and the pipe stays full. But beyond ~60 workers on a 1 Gbps link with typical 5 MB files, adding more just adds overhead (more open connections, more memory) without increasing throughput — the pipe is already saturated.
+
+###### Bottleneck: download vs upload
+
+The bottleneck depends on where your files are.
+
+**Download** — single network hop, network-bound:
+
+```mermaid
+flowchart LR
+    S3["HCP S3"] -->|"1 Gbps"| NIC["Your NIC"] --> DISK["Local disk<br/>(NVMe/SSD)"]
+
+    style S3 fill:#e8f5e9,stroke:#2e7d32
+    style DISK fill:#e3f2fd,stroke:#1565c0
+```
+
+- Theoretical max: 125 MB/s (1 Gbps)
+- TCP/TLS overhead: ~8-10%
+- Practical max: ~113 MB/s
+- Typical result: 70-90 MB/s (presign latency and connection setup consume the rest)
+
+**Upload from local disk** — single network hop, same as download:
+
+```mermaid
+flowchart LR
+    DISK["Local disk<br/>(NVMe/SSD)"] --> NIC["Your NIC"] -->|"1 Gbps"| S3["HCP S3"]
+
+    style S3 fill:#e8f5e9,stroke:#2e7d32
+    style DISK fill:#e3f2fd,stroke:#1565c0
+```
+
+Expected: ~90+ MB/s — similar to download since only one direction of network traffic.
+
+**Upload from NFS** — double network hop, **shared pipe**:
+
+```mermaid
+flowchart LR
+    NFS["NFS server"] -->|"~50 MB/s inbound"| NIC["Your NIC<br/>(1 Gbps shared)"] -->|"~50 MB/s outbound"| S3["HCP S3"]
+
+    style NFS fill:#fff3e0,stroke:#e65100
+    style NIC fill:#fce4ec,stroke:#c62828
+    style S3 fill:#e8f5e9,stroke:#2e7d32
+```
+
+Your NIC does double duty — reading from NFS **and** writing to HCP simultaneously. Both directions share the same 1 Gbps link. If NFS reads consume ~50 MB/s inbound, that leaves ~65 MB/s outbound for HCP — and contention reduces it further. Typical result: ~46 MB/s effective upload.
+
+The single biggest win for upload is **getting files off NFS onto local disk first**.
+
+###### What actually affects speed
+
+| Change | Expected gain | Priority |
+|--------|--------------|----------|
+| Upload from local disk (not NFS) | 46 → 90+ MB/s (doubles upload speed) | Highest — eliminates NFS bandwidth sharing |
+| Faster network (10 Gbps) | 90 → 900+ MB/s | If budget allows |
+| Increase `bulk_workers` to 80-100 | +5-10 MB/s if pipe not yet saturated | Low — diminishing returns past ~60 |
+| Increase `bulk_presign_batch_size` to 500-1000 | Fewer API round-trips, ~2-3 less calls/sec | Low — marginal improvement |
+
+!!! note "Gunicorn workers and replicas don't increase speed"
+    The backend handles ~2 presign requests/second during bulk transfers. A single worker can handle hundreds of req/sec. Adding more backend workers or pods makes presign go from 50ms to 25ms — saving 25ms every 30 seconds (unmeasurable).
+
+    Gunicorn is about **reliability**, not speed:
+
+    | What gunicorn adds | Speed impact | Why it matters |
+    |---|---|---|
+    | Worker restart on crash | 0 MB/s | Transfer doesn't fail if a backend process dies |
+    | Memory leak protection (`--max-requests`) | 0 MB/s | Backend stays healthy over weeks/months |
+    | Graceful reload | 0 MB/s | Deploy new code without dropping requests |
+
+    Increase `backend.workers` or `replicaCount` when you have **multiple concurrent users** (not for single-user speed). See [Scaling](../architecture/deployment.md#scaling) for details.
+
+###### Key settings
+
+| Setting | config.yaml | CLI | Default | What it controls | Effect on speed |
+|---------|------------|-----|---------|-----------------|-----------------|
+| `bulk_workers` | Yes | `--workers` | 10 | Concurrent coroutines doing transfers simultaneously | More workers = more parallel transfers. Beyond a point, adding workers just adds queue contention since they share the same network pipe. |
+| `bulk_presign_batch_size` | Yes | `--presign-batch-size` | 200 | How many URLs are presigned in one API call | Reduces presign round-trips. 500 keys = 1 API call instead of 500. Saves ~5-10ms per file. |
+| `bulk_queue_depth` | Yes | — | 8 | Queue size = workers × depth. How many items are buffered ahead of workers | Keeps workers from starving when the producer is doing a presign batch call. Higher = workers always have work. |
+| `bulk_chunk_size` | Yes | — | 1 MB | Chunk size for streaming large files | Only matters for files above `stream_threshold`. For typical ~5 MB images: irrelevant (single-shot path). |
+| `bulk_stream_threshold` | Yes | — | 100 MB | Files below this are read into memory in one shot | Small files hit the fast single-shot path. No effect unless you have files above this threshold. |
+| `bulk_tracker_flush_every` | Yes | — | 200 | How often SQLite writes buffered marks | Lower = more disk I/O. Higher = risk losing state on crash. |
+| `bulk_progress_interval` | Yes | — | 5.0 | Seconds between progress reports | |
+| `bulk_tracker_dir` | Yes | `--tracker-db` | same dir as config.yaml | Where the tracker DB lives | |
+| `bulk_tracker_prefix` | Yes | `--tracker-prefix` | none | Prefix tracker DB name per dataset | |
+| `multipart_threshold` | Yes | — | 100 MB | Files above this use multipart upload | |
+| `multipart_chunk` | Yes | — | 64 MB | Part size for multipart uploads | |
+| `multipart_concurrency` | Yes | — | 6 | Parallel parts per multipart upload | |
+| `verify_ssl` | Yes | — | true | Set `false` for self-signed HCP certs | |
+
+###### Recommended config by direction
+
+=== "Download (HCP → local disk)"
+
+    Network-bound. Maximize parallelism to keep the pipe full:
+
+    ```yaml
+    bulk_workers: 60
+    bulk_presign_batch_size: 500
+    bulk_queue_depth: 16
+    bulk_tracker_flush_every: 500
+    ```
+
+=== "Upload from local disk"
+
+    Same as download — single network hop, maximize parallelism:
+
+    ```yaml
+    bulk_workers: 60
+    bulk_presign_batch_size: 500
+    bulk_queue_depth: 16
+    bulk_tracker_flush_every: 500
+    ```
+
+=== "Upload from NFS mount"
+
+    Shared bandwidth — be less aggressive to avoid NFS contention:
+
+    ```yaml
+    bulk_workers: 40              # NFS reads compete for bandwidth
+    bulk_presign_batch_size: 500
+    bulk_queue_depth: 8
+    bulk_tracker_flush_every: 500
+    ```
+
+    Better: copy files to local disk first, then upload with 60 workers.
+
+###### Tuning by file size
 
 === "Many small files (< 5 MB each)"
 
-    The bottleneck is request overhead — each file needs a presigned URL request + a PUT. Increase workers aggressively:
+    The bottleneck is request overhead — each file needs a presigned URL + a PUT. Increase workers aggressively:
 
     ```yaml
     bulk_workers: 60        # more concurrent requests
@@ -947,7 +1192,7 @@ Bulk transfer throughput depends on network bandwidth, HCP endpoint capacity, fi
     bulk_tracker_flush_every: 1000
     ```
 
-**How to diagnose bottlenecks:**
+###### How to diagnose bottlenecks
 
 | Symptom | Likely bottleneck | Fix |
 |---------|------------------|-----|
@@ -957,6 +1202,7 @@ Bulk transfer throughput depends on network bandwidth, HCP endpoint capacity, fi
 | MB/s is low and CPU is low | Network latency | Increase `bulk_workers` to overlap round-trips |
 | High memory usage (>10 GB) | Large file list in memory | Normal for millions of files — `done_keys` set + file list |
 | Errors appearing | SSL, timeout, or HCP rate limit | Check `verify_ssl`, increase `timeout`, reduce workers |
+| Transport errors at high worker count | API server can't keep up with presign | Add gunicorn workers — see [Scaling](../architecture/deployment.md#scaling) |
 
 **Monitoring a running transfer:**
 
@@ -1435,7 +1681,7 @@ Pre-upload file validation with format-specific checks and composable rules.
 
 ```python
 from pathlib import Path
-from rahcp_validate.images import validate_tiff, validate_jpg, ValidationError
+from rahcp_validate import validate_tiff, validate_jpg, validate_png, ValidationError
 
 try:
     validate_tiff(Path("scan.tiff"))
@@ -1449,9 +1695,25 @@ except ValidationError as e:
     print(f"Invalid: {e.reason}")
 ```
 
+Or use `validate_by_extension()` to auto-detect format from the file extension:
+
+```python
+from rahcp_validate import validate_by_extension
+
+# Automatically picks validate_jpg, validate_tiff, or validate_png based on extension
+validate_by_extension(Path("scan.tiff"))  # runs TIFF checks
+validate_by_extension(Path("photo.jpg"))  # runs JPEG checks
+validate_by_extension(Path("image.png"))  # runs PNG checks
+validate_by_extension(Path("data.csv"))   # skipped (no validator for .csv)
+```
+
+This is what the `--validate` flag in the CLI uses internally.
+
 **TIFF checks:** magic bytes (II/MM), version == 42, full Pillow load.
 
 **JPEG checks:** SOI marker (0xFFD8), EOI marker (0xFFD9), full Pillow decode.
+
+**PNG checks:** PNG signature bytes, full Pillow decode.
 
 ### Composable rules
 

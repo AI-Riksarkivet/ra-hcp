@@ -252,13 +252,13 @@ async def pool_download(
     async with pool.stream("GET", presigned_url) as resp:
         _raise_for_presigned(resp, bucket, key)
         total = 0
-        file_handle = await asyncio.to_thread(dest.open, "wb")
+        fh = await asyncio.to_thread(open, dest, "wb")
         try:
             async for chunk in resp.aiter_bytes(chunk_size=chunk_size):
-                await asyncio.to_thread(file_handle.write, chunk)
+                await asyncio.to_thread(fh.write, chunk)
                 total += len(chunk)
         finally:
-            await asyncio.to_thread(file_handle.close)
+            await asyncio.to_thread(fh.close)
     return total
 
 
@@ -322,14 +322,18 @@ async def run_pipeline(
             finally:
                 queue.task_done()
 
+    tasks = [asyncio.create_task(_worker()) for _ in range(workers)]
     try:
-        tasks = [asyncio.create_task(_worker()) for _ in range(workers)]
         await produce_fn(queue)
+    except Exception:
+        log.exception("Producer failed")
+    finally:
         for _ in range(workers):
             await queue.put(_DONE)
-        await asyncio.gather(*tasks)
-    finally:
-        await pool.aclose()
+
+    # Wait for ALL workers to finish before closing the pool
+    await asyncio.gather(*tasks, return_exceptions=True)
+    await pool.aclose()
 
     tracker.commit()
     return build_stats(counters)

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM denoland/deno:2.7.1 AS builder
+FROM denoland/deno:2.7.1@sha256:ee49ef20aec2e0c2967e5563161d32f8a54a282aa08112c8e6e719e02d216abc AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN deno task build && \
     chmod -R a+rX node_modules
 
 # ── Production stage ─────────────────────────────────────────────────
-FROM denoland/deno:2.7.1
+FROM denoland/deno:2.7.1@sha256:ee49ef20aec2e0c2967e5563161d32f8a54a282aa08112c8e6e719e02d216abc
 
 RUN groupadd -g 1000 app 2>/dev/null || true && \
     useradd -u 1000 -g 1000 -s /bin/sh app 2>/dev/null || true

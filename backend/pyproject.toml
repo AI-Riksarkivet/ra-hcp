@@ -24,6 +24,7 @@ dependencies = [
 [project.optional-dependencies]
 serve = [
     "uvicorn[standard]>=0.41.0",
+    "gunicorn>=23.0",
 ]
 lance = [
     "lancedb>=0.29",
