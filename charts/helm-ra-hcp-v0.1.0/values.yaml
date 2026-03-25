@@ -1,5 +1,8 @@
 replicaCount: 1
 
+backend:
+  workers: 2  # gunicorn workers per pod (scale pods with replicaCount)
+
 imagePullSecrets: []
   # - name: regcred
 
