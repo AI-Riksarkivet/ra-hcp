@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.ico">
-      <meta name="generator" content="zensical-0.0.28">
+      <meta name="generator" content="zensical-0.0.29">
     
     
       
@@ -1064,6 +1064,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Scaling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vertical-scaling-gunicorn-workers-processes-per-pod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vertical scaling — gunicorn workers (processes per pod)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#horizontal-scaling-replica-count-pods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Horizontal scaling — replica count (pods)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#which-scaling-approach-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which scaling approach to use?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2078,6 +2117,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Scaling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vertical-scaling-gunicorn-workers-processes-per-pod" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vertical scaling — gunicorn workers (processes per pod)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#horizontal-scaling-replica-count-pods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Horizontal scaling — replica count (pods)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#which-scaling-approach-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which scaling approach to use?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2340,6 +2418,16 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
 <td>Image tag</td>
 </tr>
 <tr>
+<td><code>backend.workers</code></td>
+<td><code>2</code></td>
+<td>Gunicorn worker processes per pod</td>
+</tr>
+<tr>
+<td><code>replicaCount</code></td>
+<td><code>1</code></td>
+<td>Number of backend pods</td>
+</tr>
+<tr>
 <td><code>service.type</code></td>
 <td><code>NodePort</code></td>
 <td>Backend service type</td>
@@ -2396,9 +2484,9 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
         end
 
         subgraph "Backend Pods"
-            BE1["Backend #1&lt;br/&gt;FastAPI + uvicorn"]
-            BE2["Backend #2&lt;br/&gt;FastAPI + uvicorn"]
-            BE3["Backend #3&lt;br/&gt;FastAPI + uvicorn"]
+            BE1["Backend #1&lt;br/&gt;FastAPI + gunicorn"]
+            BE2["Backend #2&lt;br/&gt;FastAPI + gunicorn"]
+            BE3["Backend #3&lt;br/&gt;FastAPI + gunicorn"]
         end
 
         REDIS["Redis&lt;br/&gt;Shared cache"]
@@ -2458,10 +2546,95 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
 </tbody>
 </table>
 <h3 id="scaling">Scaling<a class="headerlink" href="#scaling" title="Permanent link">&para;</a></h3>
-<p>Both frontend and backend are <strong>stateless</strong> and can be horizontally scaled by adding replicas:</p>
+<p>There are two ways to scale the backend. They are independent and can be combined.</p>
+<h4 id="vertical-scaling-gunicorn-workers-processes-per-pod">Vertical scaling — gunicorn workers (processes per pod)<a class="headerlink" href="#vertical-scaling-gunicorn-workers-processes-per-pod" title="Permanent link">&para;</a></h4>
+<p>Each backend pod runs gunicorn with uvicorn worker processes. Gunicorn's primary benefit is <strong>reliability</strong> — automatic worker restarts, memory leak protection, and graceful reloads — not speed. A single async uvicorn worker already handles hundreds of requests/second. The default of 2 workers provides resilience (if one crashes, the other keeps serving):</p>
+<div class="highlight"><pre><span></span><code>Pod (1 replica, 2 workers):
+┌──────────────────────────────────────────────┐
+│  gunicorn (master)                           │
+│    ├─ uvicorn worker 1  ─→ handles requests  │
+│    └─ uvicorn worker 2  ─→ handles requests  │
+└──────────────────────────────────────────────┘
+</code></pre></div>
+<p>Gunicorn manages the worker processes (restarts crashed workers, graceful reloads, pre-fork model). Uvicorn handles the async requests inside each worker. This is the <a href="https://www.uvicorn.org/deployment/#gunicorn">recommended production setup</a> from both FastAPI and uvicorn.</p>
+<p>The Dockerfile runs:</p>
+<div class="highlight"><pre><span></span><code><span class="k">CMD</span><span class="w"> </span><span class="o">[</span><span class="s2">&quot;gunicorn&quot;</span>,<span class="w"> </span><span class="s2">&quot;app.main:app&quot;</span>,<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span><span class="s2">&quot;--worker-class&quot;</span>,<span class="w"> </span><span class="s2">&quot;uvicorn.workers.UvicornWorker&quot;</span>,<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span><span class="s2">&quot;--bind&quot;</span>,<span class="w"> </span><span class="s2">&quot;0.0.0.0:8000&quot;</span>,<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span><span class="s2">&quot;--workers&quot;</span>,<span class="w"> </span><span class="s2">&quot;2&quot;</span>,<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span><span class="s2">&quot;--max-requests&quot;</span>,<span class="w"> </span><span class="s2">&quot;10000&quot;</span>,<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span><span class="s2">&quot;--max-requests-jitter&quot;</span>,<span class="w"> </span><span class="s2">&quot;1000&quot;</span>,<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span><span class="s2">&quot;--timeout&quot;</span>,<span class="w"> </span><span class="s2">&quot;120&quot;</span>,<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span><span class="s2">&quot;--keep-alive&quot;</span>,<span class="w"> </span><span class="s2">&quot;5&quot;</span>,<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span><span class="s2">&quot;--access-logfile&quot;</span>,<span class="w"> </span><span class="s2">&quot;-&quot;</span><span class="o">]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Value</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--workers</code></td>
+<td>2</td>
+<td>Number of worker processes (configurable via Helm)</td>
+</tr>
+<tr>
+<td><code>--max-requests</code></td>
+<td>10000</td>
+<td>Recycle workers after 10K requests to prevent memory leaks</td>
+</tr>
+<tr>
+<td><code>--max-requests-jitter</code></td>
+<td>1000</td>
+<td>Randomize recycling so workers don't restart simultaneously</td>
+</tr>
+<tr>
+<td><code>--timeout</code></td>
+<td>120</td>
+<td>Kill workers that hang for 2 minutes (covers slow HCP responses)</td>
+</tr>
+<tr>
+<td><code>--keep-alive</code></td>
+<td>5</td>
+<td>Keep idle HTTP connections open for 5 seconds (reduces handshake overhead)</td>
+</tr>
+<tr>
+<td><code>--access-logfile</code></td>
+<td><code>-</code></td>
+<td>Log access requests to stdout (picked up by Kubernetes logging)</td>
+</tr>
+</tbody>
+</table>
+<p>The number of workers is configurable via the Helm chart:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># values.yaml</span>
+<span class="nt">backend</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w">  </span><span class="c1"># gunicorn worker processes per pod</span>
+</code></pre></div>
+<p>The Helm deployment template passes this value to gunicorn's <code>--workers</code> flag.</p>
+<div class="admonition tip">
+<p class="admonition-title">How many workers?</p>
+<p>A good starting point is <code>2 × CPU cores + 1</code>. For presign-heavy workloads (bulk SDK transfers), 2-4 workers is usually enough — presigning is CPU-light (~1ms CPU per URL). Each worker uses ~50-100 MB RAM. Monitor with <code>kubectl top pod</code> and increase if CPU is saturated.</p>
+</div>
+<h4 id="horizontal-scaling-replica-count-pods">Horizontal scaling — replica count (pods)<a class="headerlink" href="#horizontal-scaling-replica-count-pods" title="Permanent link">&para;</a></h4>
+<p>Adding replicas creates multiple independent pods, each running their own set of workers. Kubernetes load-balances requests across them:</p>
+<div class="highlight"><pre><span></span><code>Default (1 replica × 2 workers):              Combined (2 replicas × 4 workers):
+┌──────────────────────────┐                  ┌──────────────────────────────┐
+│ Pod 1                    │                  │ Pod 1                        │
+│  gunicorn → 2 workers    │                  │  gunicorn → 4 worker procs  │
+└──────────────────────────┘                  ├──────────────────────────────┤
+= 2 processes total                           │ Pod 2                        │
+                                              │  gunicorn → 4 worker procs  │
+                                              └──────────────────────────────┘
+                                              = 8 processes total
+</code></pre></div>
+<p>Both frontend and backend are <strong>stateless</strong> and can be horizontally scaled:</p>
 <ul>
 <li><strong>Frontend</strong>: Each replica runs SvelteKit with SSR. No shared state — any request can go to any replica. Scale when you have many concurrent browser sessions.</li>
-<li><strong>Backend</strong>: Each replica runs FastAPI with uvicorn. All replicas connect to the same Redis and HCP system. Scale when API throughput needs increase or HCP response times are high.</li>
+<li><strong>Backend</strong>: Each replica runs FastAPI. All replicas connect to the same Redis and HCP system. Scale when API throughput needs increase or HCP response times are high.</li>
 <li><strong>Redis</strong>: Runs as a single instance. All backend replicas share it, so a cache fill from one replica is available to all others. For most deployments, a single Redis instance is sufficient.</li>
 </ul>
 <div class="highlight"><pre><span></span><code><span class="c1"># Scale backend to 5 replicas</span>
@@ -2470,6 +2643,48 @@ kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span clas
 <span class="c1"># Scale frontend to 3 replicas</span>
 kubectl<span class="w"> </span>scale<span class="w"> </span>deployment<span class="w"> </span>ra-hcp-frontend<span class="w"> </span>--replicas<span class="o">=</span><span class="m">3</span>
 </code></pre></div>
+<p>Or via the Helm chart:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># values.yaml</span>
+<span class="nt">replicaCount</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span><span class="w">           </span><span class="c1"># 3 pods</span>
+<span class="nt">backend</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">              </span><span class="c1"># 4 gunicorn processes per pod = 12 total</span>
+</code></pre></div>
+<p>Autoscaling is also supported — set <code>autoscaling.enabled: true</code> to let Kubernetes scale replicas based on CPU utilization (see <code>values.yaml</code> for thresholds).</p>
+<h4 id="which-scaling-approach-to-use">Which scaling approach to use?<a class="headerlink" href="#which-scaling-approach-to-use" title="Permanent link">&para;</a></h4>
+<div class="admonition info">
+<p class="admonition-title">The default (1 pod, 2 workers) is enough for most use cases</p>
+<p>A single async uvicorn worker handles hundreds of requests/second. The SDK sends ~2 presign requests/second during bulk transfers. More workers and replicas help with <strong>multi-user concurrency</strong> and <strong>fault tolerance</strong>, not single-user transfer speed. Transfer speed is limited by network bandwidth, not the API server.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-2 users doing bulk transfers</td>
+<td>Default (<code>1 pod, 2 workers</code>) — more than enough</td>
+</tr>
+<tr>
+<td>Multiple concurrent users or API clients</td>
+<td>Vertical (<code>backend.workers: 4</code>) — handle more presign requests in parallel</td>
+</tr>
+<tr>
+<td>High availability requirement</td>
+<td>Horizontal (<code>replicaCount: 2+</code> with <code>podDisruptionBudget</code>) — survives node failures</td>
+</tr>
+<tr>
+<td>Many concurrent users + HA</td>
+<td>Both — <code>replicaCount: 2, backend.workers: 4</code> gives 8 processes across 2 nodes</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">SDK <code>bulk_workers</code> vs server workers</p>
+<p>The SDK's <code>bulk_workers</code> setting controls how many files are transferred in parallel on <strong>your machine</strong>. Server workers (gunicorn/replicas) control how many API requests the <strong>backend</strong> handles in parallel. These are completely different — SDK workers talk directly to HCP S3 for file data. The backend is only involved for presigning URLs (~2 requests/second during bulk transfers). See <a href="../../sdk/#performance-tuning">Performance tuning</a> in the SDK docs for details.</p>
+</div>
 <h3 id="health-probes">Health Probes<a class="headerlink" href="#health-probes" title="Permanent link">&para;</a></h3>
 <p>The backend exposes health endpoints for Kubernetes liveness and readiness probes:</p>
 <table>
@@ -2592,6 +2807,9 @@ helm<span class="w"> </span>install<span class="w"> </span>hcp-prod<span class="
 <h3 id="example-production-values-file">Example: Production values file<a class="headerlink" href="#example-production-values-file" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># values-prod.yaml</span>
 <span class="nt">replicaCount</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+
+<span class="nt">backend</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">  </span><span class="c1"># 5 pods × 4 workers = 20 processes</span>
 
 <span class="nt">frontend</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
