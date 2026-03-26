@@ -10,7 +10,12 @@ const handler: RequestHandler = async ({ params, request, locals }) => {
   if (contentType) {
     headers.set("content-type", contentType);
   }
-  if (locals.token) {
+  // Forward explicit Authorization header (REST clients, Swagger "Try it out"),
+  // or inject Bearer token from the httpOnly session cookie (browser requests).
+  const clientAuth = request.headers.get("authorization");
+  if (clientAuth) {
+    headers.set("authorization", clientAuth);
+  } else if (locals.token) {
     headers.set("authorization", `Bearer ${locals.token}`);
   }
 

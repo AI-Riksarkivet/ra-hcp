@@ -54,6 +54,8 @@
 	let textContent = $state<string | null>(null);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
+	let imageError = $state(false);
+	let imageLoading = $state(true);
 	let showMeta = $state(true);
 
 	const ext = $derived(filename.split('.').pop()?.toLowerCase() ?? '');
@@ -149,6 +151,8 @@
 		const currentUrl = url;
 		textContent = null;
 		error = null;
+		imageError = false;
+		imageLoading = true;
 		let cancelled = false;
 
 		if (open && category === 'text' && currentUrl) {
@@ -280,7 +284,36 @@
 
 				{#if category === 'image'}
 					<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">
-						<img src={url} alt={filename} class="max-h-full max-w-full rounded object-contain" />
+						{#if imageError}
+							<div class="flex flex-col items-center gap-3">
+								<AlertCircle class="h-8 w-8 text-destructive" />
+								<p class="text-sm text-destructive">Failed to load image</p>
+								<Button
+									variant="secondary"
+									size="sm"
+									onclick={() => {
+										imageError = false;
+										imageLoading = true;
+									}}>Retry</Button
+								>
+							</div>
+						{:else}
+							{#if imageLoading}
+								<div class="absolute inset-0 flex items-center justify-center">
+									<Loader2 class="h-5 w-5 animate-spin text-muted-foreground" />
+								</div>
+							{/if}
+							<img
+								src={url}
+								alt={filename}
+								class="max-h-full max-w-full rounded object-contain"
+								onload={() => (imageLoading = false)}
+								onerror={() => {
+									imageLoading = false;
+									imageError = true;
+								}}
+							/>
+						{/if}
 					</div>
 				{:else if category === 'video'}
 					<div class="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-4">

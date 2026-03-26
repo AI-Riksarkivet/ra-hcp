@@ -23,8 +23,11 @@ export async function apiFetch(
     return res;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "unknown error";
-    console.error(`[apiFetch] ${init?.method ?? "GET"} ${url} failed: ${msg}`);
-    throw err;
+    console.error(
+      `[apiFetch] ${init?.method ?? "GET"} ${url} failed: ${msg}`,
+      `(BACKEND_URL=${BACKEND_URL})`,
+    );
+    error(502, `Backend unreachable: ${msg}`);
   }
 }
 
@@ -33,10 +36,25 @@ export async function throwIfNotOk(
   fallback: string,
 ): Promise<void> {
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: fallback }));
-    const detail = typeof err.detail === "string"
-      ? err.detail
-      : JSON.stringify(err.detail);
+    // Read body as text first (body can only be consumed once)
+    const text = await res.text().catch(() => "");
+    let detail: string;
+    try {
+      const err = JSON.parse(text);
+      detail = typeof err.detail === "string"
+        ? err.detail
+        : typeof err.message === "string"
+          ? err.message
+          : JSON.stringify(err.detail ?? err);
+    } catch {
+      detail = text
+        ? `${fallback} (HTTP ${res.status}: ${text.slice(0, 200)})`
+        : `${fallback} (HTTP ${res.status})`;
+      console.error(
+        `[throwIfNotOk] Non-JSON error response: ${res.status} ${res.statusText}`,
+        text.slice(0, 500),
+      );
+    }
     error(res.status, detail);
   }
 }

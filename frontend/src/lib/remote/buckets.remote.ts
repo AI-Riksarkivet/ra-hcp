@@ -31,11 +31,12 @@ export const get_objects = query(
     prefix: z.string(),
     continuation_token: z.string().optional(),
     flat: z.boolean().optional(),
+    max_keys: z.number().optional(),
   }),
-  async ({ bucket, prefix, continuation_token, flat }) => {
+  async ({ bucket, prefix, continuation_token, flat, max_keys }) => {
     try {
       const params = new URLSearchParams({
-        max_keys: flat ? "1000" : "200",
+        max_keys: String(max_keys ?? 1000),
       });
       if (!flat) params.set("delimiter", "/");
       if (prefix) params.set("prefix", prefix);

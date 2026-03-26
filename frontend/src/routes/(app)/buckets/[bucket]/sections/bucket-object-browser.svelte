@@ -15,8 +15,10 @@
 		ListTree,
 		FolderTree,
 		Archive,
+		ChevronLeft,
+		ChevronRight,
 	} from 'lucide-svelte';
-	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
+	import type { ColumnDef, SortingState } from '@tanstack/table-core';
 	import FileViewer from '$lib/components/custom/file-viewer/FileViewer.svelte';
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
@@ -37,7 +39,6 @@
 		createSvelteTable,
 		getCoreRowModel,
 		getSortedRowModel,
-		getPaginationRowModel,
 		renderSnippet,
 		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
@@ -66,12 +67,22 @@
 	// --- Flat mode (recursive listing for search across all objects) ---
 	let flat = $state(false);
 
+	// --- Page size controls how many objects we fetch from S3 per batch ---
+	const PAGE_SIZES = [50, 100, 200, 500, 1000];
+	let pageSize = $state(200);
+
 	// --- Server-side pagination with continuation tokens ---
 	let continuationToken = $state<string | undefined>(undefined);
 	let tokenHistory = $state<string[]>([]);
 
 	let objectData = $derived(
-		get_objects({ bucket, prefix, continuation_token: continuationToken, flat })
+		get_objects({
+			bucket,
+			prefix,
+			continuation_token: continuationToken,
+			flat,
+			max_keys: pageSize,
+		})
 	);
 
 	let isTruncated = $derived(objectData.current?.isTruncated ?? false);
@@ -88,6 +99,12 @@
 		const prev = tokenHistory[tokenHistory.length - 1];
 		tokenHistory = tokenHistory.slice(0, -1);
 		continuationToken = prev || undefined;
+	}
+
+	function changePageSize(newSize: number) {
+		pageSize = newSize;
+		continuationToken = undefined;
+		tokenHistory = [];
 	}
 
 	// Reset server pagination when prefix or flat mode changes
@@ -271,9 +288,8 @@
 		dateFilter = '';
 	}
 
-	// --- TanStack Table with sorting + client pagination ---
+	// --- TanStack Table with sorting ---
 	let sorting = $state<SortingState>([]);
-	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 50 });
 
 	let selectableObjects = $derived(filteredObjects.filter((obj) => !isObjFolder(obj)));
 
@@ -287,7 +303,7 @@
 				const row = objTable.getCoreRowModel().rows[Number(idx)];
 				return row?.original.key;
 			})
-			.filter((k): k is string => !!k && !k.endsWith('/'))
+			.filter((k): k is string => !!k)
 	);
 
 	let objColumns = $derived.by((): ColumnDef<S3Object>[] => [
@@ -301,13 +317,11 @@
 					'aria-label': 'Select all rows',
 				}),
 			cell: ({ row }) =>
-				isObjFolder(row.original)
-					? ('' as string)
-					: renderComponent(DataTableCheckbox, {
-							checked: row.getIsSelected(),
-							onCheckedChange: (value: boolean) => row.toggleSelected(!!value),
-							'aria-label': `Select ${getDisplayName(row.original.key)}`,
-						}),
+				renderComponent(DataTableCheckbox, {
+					checked: row.getIsSelected(),
+					onCheckedChange: (value: boolean) => row.toggleSelected(!!value),
+					'aria-label': `Select ${getDisplayName(row.original.key)}`,
+				}),
 			enableSorting: false,
 			enableHiding: false,
 			meta: { headerClass: 'w-10 px-4 py-3', cellClass: 'px-4 py-3' },
@@ -375,9 +389,6 @@
 				get sorting() {
 					return sorting;
 				},
-				get pagination() {
-					return pagination;
-				},
 				get rowSelection() {
 					return rowSelection;
 				},
@@ -385,16 +396,12 @@
 			onSortingChange: (updater) => {
 				sorting = typeof updater === 'function' ? updater(sorting) : updater;
 			},
-			onPaginationChange: (updater) => {
-				pagination = typeof updater === 'function' ? updater(pagination) : updater;
-			},
 			onRowSelectionChange: (updater) => {
 				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
 			},
 			getCoreRowModel: getCoreRowModel(),
 			getSortedRowModel: getSortedRowModel(),
-			getPaginationRowModel: getPaginationRowModel(),
-			enableRowSelection: (row) => !isObjFolder(row.original),
+			enableRowSelection: true,
 		})
 	);
 
@@ -440,6 +447,24 @@
 		}
 	}
 
+	// --- Presign + download a single file ---
+	async function presignAndDownload(key: string) {
+		try {
+			const result = await bulk_presign({ bucket, keys: [key], expires_in: 3600 });
+			if (result.urls.length > 0) {
+				const a = document.createElement('a');
+				a.href = result.urls[0].url;
+				a.download = key.split('/').pop() ?? key;
+				a.style.display = 'none';
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+			}
+		} catch (err) {
+			toast.error(getErrorMessage(err, 'Failed to download file'));
+		}
+	}
+
 	// --- Dialogs ---
 	let shareTarget = $state<string | null>(null);
 	let copyTarget = $state<string | null>(null);
@@ -448,6 +473,17 @@
 	async function bulkDownload() {
 		const keys = selectedKeys;
 		if (keys.length === 0) return;
+
+		const hasFolders = keys.some((k) => k.endsWith('/'));
+
+		// Folders require ZIP download (can't presign a prefix)
+		if (hasFolders) {
+			const folderPrefixes = keys.filter((k) => k.endsWith('/'));
+			await startZipForPrefix(folderPrefixes[0]);
+			return;
+		}
+
+		// Files only — use presigned URL download
 		downloading = true;
 		try {
 			const result = await bulk_presign({ bucket, keys, expires_in: 3600 });
@@ -479,11 +515,11 @@
 
 	onDestroy(() => clearInterval(zipPollInterval));
 
-	async function startZipDownload() {
+	async function startZipForPrefix(zipPrefix: string) {
 		zipDownloading = true;
 		zipProgress = { total: 0, completed: 0, failed: 0 };
 		try {
-			const result = await start_zip_download({ bucket, prefix: prefix || '' });
+			const result = await start_zip_download({ bucket, prefix: zipPrefix });
 			zipTaskId = result.task_id;
 			zipProgress.total = result.total;
 			toast.info(`Preparing ZIP... 0/${result.total} files`);
@@ -492,6 +528,10 @@
 			toast.error(getErrorMessage(err, 'Failed to start ZIP download'));
 			zipDownloading = false;
 		}
+	}
+
+	async function startZipDownload() {
+		await startZipForPrefix(prefix || '');
 	}
 
 	function pollZipStatus() {
@@ -567,13 +607,36 @@
 	// --- File Viewer ---
 	let viewerOpen = $state(false);
 	let viewerIndex = $state(-1);
+	let viewerPresignedUrl = $state('');
 
 	let viewerObject = $derived(viewerIndex >= 0 ? selectableObjects[viewerIndex] : undefined);
-	let viewerUrl = $derived(viewerObject ? downloadUrl(viewerObject.key) : '');
 	let viewerFilename = $derived(viewerObject ? getDisplayName(viewerObject.key) : '');
 	let viewerSize = $derived(viewerObject?.size ?? 0);
 	let viewerHasPrev = $derived(viewerIndex > 0);
 	let viewerHasNext = $derived(viewerIndex < selectableObjects.length - 1);
+
+	// Generate a presigned URL whenever the viewed object changes
+	$effect(() => {
+		const obj = viewerObject;
+		if (!obj || !viewerOpen) {
+			viewerPresignedUrl = '';
+			return;
+		}
+		let cancelled = false;
+		viewerPresignedUrl = '';
+		bulk_presign({ bucket, keys: [obj.key], expires_in: 3600 })
+			.then((result) => {
+				if (!cancelled && result.urls.length > 0) {
+					viewerPresignedUrl = result.urls[0].url;
+				}
+			})
+			.catch(() => {
+				if (!cancelled) viewerPresignedUrl = downloadUrl(obj.key);
+			});
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	function openViewer(obj: { key: string; size: number }) {
 		viewerIndex = selectableObjects.findIndex((o) => o.key === obj.key);
@@ -610,7 +673,7 @@
 		{#if !isObjFolder(obj)}
 			<DataTableActions
 				objectKey={obj.key}
-				downloadUrl={downloadUrl(obj.key)}
+				ondownload={() => presignAndDownload(obj.key)}
 				ondelete={() => requestDelete(obj.key)}
 				onshare={() => (shareTarget = obj.key)}
 				onview={() => openViewer(obj)}
@@ -774,38 +837,53 @@
 			: objects.length === 0
 				? 'No objects in this bucket'
 				: `No results matching "${search}"`}
-	>
-		{#snippet footer()}
+	/>
+
+	<!-- Pagination: rows per page + server-side batch navigation -->
+	<div class="flex items-center justify-between py-2">
+		<div class="text-sm text-muted-foreground">
 			{#if selectedKeys.length > 0}
 				{selectedKeys.length} of {filteredObjects.length} row(s) selected.
 			{/if}
-		{/snippet}
-	</DataTable>
-
-	<!-- Server-side batch pagination (load more from S3) -->
-	{#if isTruncated || tokenHistory.length > 0}
-		<div class="flex items-center justify-end gap-2">
-			<span class="text-xs text-muted-foreground">Page {serverPage}</span>
-			<Button
-				variant="outline"
-				size="sm"
-				class="h-8"
-				onclick={loadPrevPage}
-				disabled={tokenHistory.length === 0}
-			>
-				Previous
-			</Button>
-			<Button
-				variant="outline"
-				size="sm"
-				class="h-8"
-				onclick={loadNextPage}
-				disabled={!isTruncated}
-			>
-				Next
-			</Button>
 		</div>
-	{/if}
+		<div class="flex items-center gap-3">
+			<div class="flex items-center gap-1.5">
+				<span class="text-xs text-muted-foreground">Rows per page</span>
+				<select
+					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-7 w-auto min-w-[60px] items-center rounded-md border px-2 py-0.5 text-xs shadow-sm focus:outline-none focus:ring-1"
+					value={String(pageSize)}
+					onchange={(e) => changePageSize(Number(e.currentTarget.value))}
+				>
+					{#each PAGE_SIZES as size (size)}
+						<option value={String(size)}>{size}</option>
+					{/each}
+				</select>
+			</div>
+			{#if isTruncated || tokenHistory.length > 0}
+				<span class="text-xs text-muted-foreground">
+					Batch {serverPage}{isTruncated ? '+' : ''}
+				</span>
+				<Button
+					variant="outline"
+					size="icon"
+					class="h-8 w-8"
+					onclick={loadPrevPage}
+					disabled={tokenHistory.length === 0}
+				>
+					<ChevronLeft class="h-4 w-4" />
+				</Button>
+				<Button
+					variant="outline"
+					size="icon"
+					class="h-8 w-8"
+					onclick={loadNextPage}
+					disabled={!isTruncated}
+				>
+					<ChevronRight class="h-4 w-4" />
+				</Button>
+			{/if}
+		</div>
+	</div>
 {/await}
 
 <!-- Dialogs -->
@@ -822,7 +900,7 @@
 
 {#if viewerOpen}<FileViewer
 		bind:open={viewerOpen}
-		url={viewerUrl}
+		url={viewerPresignedUrl}
 		filename={viewerFilename}
 		size={viewerSize}
 		objectKey={viewerObject?.key}

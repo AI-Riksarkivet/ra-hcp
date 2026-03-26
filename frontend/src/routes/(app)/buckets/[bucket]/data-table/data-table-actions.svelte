@@ -5,30 +5,19 @@
 
 	let {
 		objectKey,
-		downloadUrl,
+		ondownload,
 		ondelete,
 		onshare,
 		onview,
 		oncopy,
 	}: {
 		objectKey: string;
-		downloadUrl: string;
+		ondownload: () => void;
 		ondelete: () => void;
 		onshare: () => void;
 		onview: () => void;
 		oncopy: () => void;
 	} = $props();
-
-	function handleDownload(e: MouseEvent) {
-		e.preventDefault();
-		const a = document.createElement('a');
-		a.href = downloadUrl;
-		a.download = objectKey.split('/').pop() ?? objectKey;
-		a.style.display = 'none';
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-	}
 </script>
 
 <DropdownMenu.Root>
@@ -49,7 +38,7 @@
 		</DropdownMenu.Group>
 		<DropdownMenu.Separator />
 		<DropdownMenu.Item onclick={onview}>View details</DropdownMenu.Item>
-		<DropdownMenu.Item onclick={handleDownload}>Download</DropdownMenu.Item>
+		<DropdownMenu.Item onclick={ondownload}>Download</DropdownMenu.Item>
 		<DropdownMenu.Item onclick={onshare}>Generate share link</DropdownMenu.Item>
 		<DropdownMenu.Item onclick={oncopy}>Copy to...</DropdownMenu.Item>
 		<DropdownMenu.Separator />

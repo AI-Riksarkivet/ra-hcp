@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import logging
+import mimetypes
 from datetime import datetime, timezone
 from typing import IO, Any, Dict, List, Optional
 from urllib.parse import quote, urlencode
@@ -226,7 +227,8 @@ class MockS3Service:
         self._logger.info("put_object bucket=%s key=%s", bucket, key)
         self._require_bucket(bucket)
         data = body.read()
-        self._objects[bucket][key] = _StoredObject(data)
+        content_type = mimetypes.guess_type(key)[0] or "application/octet-stream"
+        self._objects[bucket][key] = _StoredObject(data, content_type)
 
     async def get_object(
         self, bucket: str, key: str, version_id: Optional[str] = None

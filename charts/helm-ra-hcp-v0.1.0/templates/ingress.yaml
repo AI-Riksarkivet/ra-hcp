@@ -29,13 +29,7 @@ spec:
       http:
         paths:
           {{- if $.Values.frontend.enabled }}
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "ra-hcp.fullname" $ }}
-                port:
-                  number: {{ $.Values.service.port }}
+          {{- /* Swagger UI & OpenAPI spec — direct to backend (public, no auth) */}}
           - path: /docs
             pathType: Prefix
             backend:
@@ -50,6 +44,11 @@ spec:
                 name: {{ include "ra-hcp.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
+          {{- /* Everything else — including /api — goes to the SvelteKit frontend. */}}
+          {{- /* The frontend proxies /api to the backend, injecting the Bearer */}}
+          {{- /* token from the httpOnly session cookie. This is required because */}}
+          {{- /* browser requests (img tags, XHR uploads, downloads) cannot add */}}
+          {{- /* auth headers themselves. */}}
           - path: /
             pathType: Prefix
             backend:
