@@ -1989,6 +1989,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#creating-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating tables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#querying" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2307,6 +2318,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#creating-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating tables
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#querying" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2466,8 +2488,24 @@
 
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </code></pre></div>
+<h2 id="creating-tables">Creating tables<a class="headerlink" href="#creating-tables" title="Permanent link">&para;</a></h2>
+<p><code>create()</code> requires either <code>schema</code> or <code>data</code> (or both):</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pa</span>
+
+<span class="c1"># From data (schema inferred)</span>
+<span class="n">table</span> <span class="o">=</span> <span class="k">await</span> <span class="n">ds</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s2">&quot;embeddings&quot;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">[</span>
+    <span class="p">{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;hello&quot;</span><span class="p">,</span> <span class="s2">&quot;vector&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">]},</span>
+<span class="p">])</span>
+
+<span class="c1"># From schema (empty table)</span>
+<span class="n">schema</span> <span class="o">=</span> <span class="n">pa</span><span class="o">.</span><span class="n">schema</span><span class="p">([</span>
+    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">utf8</span><span class="p">()),</span>
+    <span class="n">pa</span><span class="o">.</span><span class="n">field</span><span class="p">(</span><span class="s2">&quot;vector&quot;</span><span class="p">,</span> <span class="n">pa</span><span class="o">.</span><span class="n">list_</span><span class="p">(</span><span class="n">pa</span><span class="o">.</span><span class="n">float32</span><span class="p">(),</span> <span class="mi">3</span><span class="p">)),</span>
+<span class="p">])</span>
+<span class="n">table</span> <span class="o">=</span> <span class="k">await</span> <span class="n">ds</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s2">&quot;embeddings&quot;</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">)</span>
+</code></pre></div>
 <h2 id="querying">Querying<a class="headerlink" href="#querying" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_lance.query</span><span class="w"> </span><span class="kn">import</span> <span class="n">scan</span><span class="p">,</span> <span class="n">vector_search</span>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_lance.query</span><span class="w"> </span><span class="kn">import</span> <span class="n">scan</span><span class="p">,</span> <span class="n">take</span><span class="p">,</span> <span class="n">vector_search</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_lance.schemas</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScanParams</span><span class="p">,</span> <span class="n">VectorSearchParams</span>
 
 <span class="c1"># Scan with filtering and pagination</span>
@@ -2479,7 +2517,10 @@
     <span class="n">offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
 <span class="p">))</span>
 
-<span class="c1"># Vector similarity search</span>
+<span class="c1"># Take specific rows by index</span>
+<span class="n">rows</span> <span class="o">=</span> <span class="k">await</span> <span class="n">take</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">])</span>
+
+<span class="c1"># Vector similarity search (k defaults to 10)</span>
 <span class="n">results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">vector_search</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">VectorSearchParams</span><span class="p">(</span>
     <span class="n">vector</span><span class="o">=</span><span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">],</span>
     <span class="n">column</span><span class="o">=</span><span class="s2">&quot;vector&quot;</span><span class="p">,</span>
@@ -2515,7 +2556,7 @@
 </tr>
 <tr>
 <td><code>VectorSearchParams</code></td>
-<td><code>vector</code>, <code>column</code>, <code>k</code>, <code>filter</code>, <code>columns</code></td>
+<td><code>vector</code>, <code>column</code>, <code>k</code> (default 10), <code>filter</code>, <code>columns</code></td>
 </tr>
 <tr>
 <td><code>SearchResult</code></td>

@@ -1,0 +1,13 @@
+import{n as P,q as u,p as h,f as I,d as e,a as v,o as S,k as _,s as $,m as g}from"./iframe-DFtYtFsL.js";import{i as K}from"./legacy-D7OnDY3G.js";import{c as D,d as M}from"./create-runtime-stories-CO2bfBCH.js";import{C as a}from"./copyable-input-2CYlDEcJ.js";import"./preload-helper-PPVm8Dsz.js";import"./button-BbjatG8g.js";import"./index-KRrpyZZM.js";import"./this-Dypaan2Q.js";import"./input-Btbn_eAX.js";import"./input-BYhCp0Wp.js";import"./label-mrAA5l7e.js";import"./use-copy-feedback.svelte-BIkLQfhP.js";import"./Icon-CYtk7mac.js";import"./each-BlWt3Neu.js";import"./check-rNiRaSFp.js";const A=(o,l=P)=>{u(o,{children:(t,p)=>{a(t,$(l))},$$slots:{default:!0}})},x={title:"UI/CopyableInput",component:a,render:A,args:{value:"urn:hcp:namespace:my-namespace",label:"Canonical ID",secret:!1}},{Story:r}=M();var L=_('<div class="space-y-3 max-w-md"><!> <!> <!></div>'),w=_("<!> <!> <!> <!>",1);function f(o,l){h(l,!1),K();var t=w(),p=I(t);r(p,{name:"Default",args:{value:"urn:hcp:namespace:my-namespace",label:"Canonical ID"},parameters:{__svelteCsf:{rawCode:`<Tooltip.Provider>
+	<CopyableInput {...args} />
+</Tooltip.Provider>`}}});var n=e(p,2);r(n,{name:"Without Label",args:{value:"https://hcp.example.com/rest/namespaces",label:""},parameters:{__svelteCsf:{rawCode:`<Tooltip.Provider>
+	<CopyableInput {...args} />
+</Tooltip.Provider>`}}});var i=e(n,2);r(i,{name:"Secret",args:{value:"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",label:"Secret Key",secret:!0},parameters:{__svelteCsf:{rawCode:`<Tooltip.Provider>
+	<CopyableInput {...args} />
+</Tooltip.Provider>`}}});var b=e(i,2);r(b,{name:"S3 Credentials",template:C=>{u(C,{children:(E,X)=>{var c=L(),m=g(c);a(m,{value:"AKIAIOSFODNN7EXAMPLE",label:"Access Key"});var d=e(m,2);a(d,{value:"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",label:"Secret Key",secret:!0});var y=e(d,2);a(y,{value:"https://s3.example.com",label:"Endpoint"}),v(E,c)},$$slots:{default:!0}})},$$slots:{template:!0},parameters:{__svelteCsf:{rawCode:`<Tooltip.Provider>
+	<div class="space-y-3 max-w-md">
+		<CopyableInput value="AKIAIOSFODNN7EXAMPLE" label="Access Key" />
+		<CopyableInput value="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" label="Secret Key" secret />
+		<CopyableInput value="https://s3.example.com" label="Endpoint" />
+	</div>
+</Tooltip.Provider>`}}}),v(o,t),S()}f.__docgen={data:[],name:"copyable-input.stories.svelte"};const s=D(f,x),Q=["Default","WithoutLabel","Secret","S3Credentials"],V={...s.Default,tags:["svelte-csf-v5"]},Z={...s.WithoutLabel,tags:["svelte-csf-v5"]},ee={...s.Secret,tags:["svelte-csf-v5"]},ae={...s.S3Credentials,tags:["svelte-csf-v5"]};export{V as Default,ae as S3Credentials,ee as Secret,Z as WithoutLabel,Q as __namedExportsOrder,x as default};

@@ -3296,6 +3296,12 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>ls<span class="w"> </span
 <td>Only retry files that failed in a previous run</td>
 </tr>
 <tr>
+<td><code>--presign-batch-size</code></td>
+<td>--</td>
+<td><code>200</code></td>
+<td>Number of URLs presigned per API call</td>
+</tr>
+<tr>
 <td><code>--tracker-db</code></td>
 <td>--</td>
 <td>same dir as config.yaml</td>
@@ -3393,6 +3399,12 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>download-all<span class="
 <td>--</td>
 <td>off</td>
 <td>Only retry files that failed in a previous run</td>
+</tr>
+<tr>
+<td><code>--presign-batch-size</code></td>
+<td>--</td>
+<td><code>200</code></td>
+<td>Number of URLs presigned per API call</td>
 </tr>
 <tr>
 <td><code>--tracker-db</code></td>
@@ -3523,7 +3535,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
         participant W as 60 SDK workers
     end
     box rgb(255,243,224) API server (dev-hcp.ra.se)
-        participant API as gunicorn&lt;br/&gt;(2 worker processes)
+        participant API as gunicorn&lt;br/&gt;(1 worker per pod, 2 replicas)
     end
     box rgb(232,245,233) HCP S3 storage
         participant S3 as S3 endpoint
@@ -3558,10 +3570,10 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
         W60["SDK Worker 60"]
     end
 
-    subgraph API["API server (Kubernetes)"]
+    subgraph API["API server (Kubernetes, 2 replicas)"]
         direction TB
-        G1["gunicorn process 1"]
-        G2["gunicorn process 2"]
+        G1["Pod 1: gunicorn (1 worker)"]
+        G2["Pod 2: gunicorn (1 worker)"]
     end
 
     subgraph HCP["HCP S3"]
@@ -3596,7 +3608,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 <tr>
 <td><strong>Default</strong></td>
 <td>10</td>
-<td>2 (gunicorn with 2 uvicorn workers)</td>
+<td>1 worker × 2 replicas (Kubernetes); scale with <code>replicaCount</code></td>
 </tr>
 <tr>
 <td><strong>Configured via</strong></td>
@@ -3610,8 +3622,10 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 </tr>
 </tbody>
 </table>
-<p><strong>Why 60 SDK workers but only 2 backend workers?</strong> Because they do fundamentally different work. The SDK workers spend 99% of their time transferring file bytes directly to HCP S3 — the backend is not involved. The backend is only called for batch presigning: ~1 request every 30 seconds (500 URLs per batch). A single backend worker can handle hundreds of requests per second, so 2 workers is massive overkill for presigning — the extra worker is for resilience (if one crashes, the other keeps serving).</p>
-<p>The real bottleneck is your <strong>network pipe</strong>, not the backend. Adding more backend workers makes presign go from 50ms to 25ms — saving 25ms every 30 seconds (0.08% improvement, unmeasurable). Adding more SDK workers keeps more file transfers in flight, which keeps the pipe full.</p>
+<p><strong>Why 60 SDK workers but only 1 backend worker per pod?</strong> Because they do fundamentally different work. The SDK workers spend 99% of their time transferring file bytes directly to HCP S3 — the backend is not involved. The backend is only called for batch presigning: ~1 request every 30 seconds (500 URLs per batch). A single async uvicorn worker handles hundreds of requests per second, which is massive overkill for presigning.</p>
+<p>In Kubernetes, scale with <strong>replicas</strong> (multiple pods) rather than workers per pod. Each replica gets its own liveness and readiness probes — if one pod loses connectivity to HCP, Kubernetes removes it from the load balancer while the other keeps serving. With multiple workers inside a single pod, an unhealthy worker is invisible to Kubernetes probes. The default is 2 replicas with 1 worker each.</p>
+<p>If you run the server outside Kubernetes (e.g. bare-metal gunicorn), you can increase <code>--workers</code> directly to handle more concurrent requests — there are no probes to leverage, so in-process scaling makes sense.</p>
+<p>The real bottleneck is your <strong>network pipe</strong>, not the backend. Adding more backend capacity makes presign go from 50ms to 25ms — saving 25ms every 30 seconds (0.08% improvement, unmeasurable). Adding more SDK workers keeps more file transfers in flight, which keeps the pipe full.</p>
 <p>Batch presigning (<code>bulk_presign_batch_size</code>) reduces the number of backend round-trips by requesting many URLs in a single call instead of one at a time.</p>
 <h5 id="why-more-sdk-workers-help-up-to-a-point">Why more SDK workers help (up to a point)<a class="headerlink" href="#why-more-sdk-workers-help-up-to-a-point" title="Permanent link">&para;</a></h5>
 <p>Each worker is idle while waiting for network I/O (bytes arriving or departing). More workers means more files in flight simultaneously, which keeps the network pipe full:</p>
@@ -3726,7 +3740,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 </tr>
 </tbody>
 </table>
-<p>Increase <code>backend.workers</code> or <code>replicaCount</code> when you have <strong>multiple concurrent users</strong> (not for single-user speed). See <a href="../../architecture/deployment/#scaling">Scaling</a> for details.</p>
+<p>In Kubernetes, increase <code>replicaCount</code> (not <code>backend.workers</code>) for concurrent users — each replica gets independent health probes. Outside Kubernetes, increase <code>--workers</code> directly. See <a href="../../architecture/deployment/#scaling">Scaling</a> for details.</p>
 </div>
 <h5 id="key-settings">Key settings<a class="headerlink" href="#key-settings" title="Permanent link">&para;</a></h5>
 <table>
@@ -3963,7 +3977,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 <tr>
 <td>Transport errors at high worker count</td>
 <td>API server can't keep up with presign</td>
-<td>Add gunicorn workers — see <a href="../../architecture/deployment/#scaling">Scaling</a></td>
+<td>Add replicas (<code>replicaCount</code>) — see <a href="../../architecture/deployment/#scaling">Scaling</a></td>
 </tr>
 </tbody>
 </table>
@@ -4125,7 +4139,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
 <td><code>--iiif-url</code></td>
 <td>--</td>
 <td><code>https://iiifintern-ai.ra.se</code></td>
-<td>IIIF server base URL</td>
+<td>IIIF server base URL (env: <code>IIIF_URL</code>)</td>
 </tr>
 <tr>
 <td><code>--max-images</code></td>

@@ -2484,10 +2484,10 @@
 
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </code></pre></div>
-<p><strong>Behavior:</strong></p>
+<p><strong><code>Stage</code> dataclass</strong> (<code>name</code>, <code>handler</code>, <code>retries=3</code>, <code>backoff=2.0</code>):</p>
 <ul>
 <li>Stages execute sequentially; each receives the output of the previous stage</li>
-<li>Failed stages retry with exponential backoff (<code>delay * 2^attempt</code>)</li>
+<li>Failed stages retry with exponential backoff (<code>delay * backoff^attempt</code>)</li>
 <li>After each successful stage, a checkpoint is saved to NATS KV</li>
 <li>If a pipeline fails and is re-run with the same <code>pipeline_id</code>, it resumes from the last checkpoint</li>
 <li>Checkpoints are cleared on successful completion</li>
