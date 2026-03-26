@@ -615,32 +615,22 @@
 	let viewerHasPrev = $derived(viewerIndex > 0);
 	let viewerHasNext = $derived(viewerIndex < selectableObjects.length - 1);
 
-	// Generate a presigned URL whenever the viewed object changes
-	$effect(() => {
-		const obj = viewerObject;
-		if (!obj || !viewerOpen) {
-			viewerPresignedUrl = '';
-			return;
-		}
-		let cancelled = false;
+	async function presignViewerUrl(key: string) {
 		viewerPresignedUrl = '';
-		bulk_presign({ bucket, keys: [obj.key], expires_in: 3600 })
-			.then((result) => {
-				if (!cancelled && result.urls.length > 0) {
-					viewerPresignedUrl = result.urls[0].url;
-				}
-			})
-			.catch(() => {
-				if (!cancelled) viewerPresignedUrl = downloadUrl(obj.key);
-			});
-		return () => {
-			cancelled = true;
-		};
-	});
+		try {
+			const result = await bulk_presign({ bucket, keys: [key], expires_in: 3600 });
+			if (result.urls.length > 0) {
+				viewerPresignedUrl = result.urls[0].url;
+			}
+		} catch {
+			viewerPresignedUrl = downloadUrl(key);
+		}
+	}
 
 	function openViewer(obj: { key: string; size: number }) {
 		viewerIndex = selectableObjects.findIndex((o) => o.key === obj.key);
 		viewerOpen = true;
+		presignViewerUrl(obj.key);
 	}
 
 	function handleRowClick(obj: S3Object) {
@@ -910,10 +900,18 @@
 		hasPrev={viewerHasPrev}
 		hasNext={viewerHasNext}
 		onprev={() => {
-			if (viewerHasPrev) viewerIndex--;
+			if (viewerHasPrev) {
+				viewerIndex--;
+				const obj = selectableObjects[viewerIndex];
+				if (obj) presignViewerUrl(obj.key);
+			}
 		}}
 		onnext={() => {
-			if (viewerHasNext) viewerIndex++;
+			if (viewerHasNext) {
+				viewerIndex++;
+				const obj = selectableObjects[viewerIndex];
+				if (obj) presignViewerUrl(obj.key);
+			}
 		}}
 		currentIndex={viewerIndex}
 		totalCount={selectableObjects.length}
