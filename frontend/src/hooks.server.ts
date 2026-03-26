@@ -5,6 +5,16 @@ import { BACKEND_URL } from "$lib/server/env.js";
 console.info(`[frontend] started — BACKEND_URL=${BACKEND_URL}`);
 
 export const handle: Handle = ({ event, resolve }) => {
+  // Fix URL protocol for TLS-terminating proxies (nginx ingress).
+  // Deno sees http:// but browser sends Origin: https://.
+  // Override event.url so SvelteKit's CSRF check sees the correct origin.
+  const proto = event.request.headers.get("x-forwarded-proto");
+  if (proto === "https" && event.url.protocol === "http:") {
+    const fixed = new URL(event.url.href);
+    fixed.protocol = "https:";
+    Object.defineProperty(event, "url", { value: fixed, configurable: true });
+  }
+
   const token = event.cookies.get("hcp_token");
   if (token) {
     event.locals.token = token;
