@@ -19,6 +19,6 @@ export const handleError: HandleServerError = ({ error, event, status }) => {
     `[frontend] ${event.request.method} ${event.url.pathname} → ${status}: ${msg}`,
   );
   return {
-    message: "Internal error",
+    message: msg,
   };
 };
