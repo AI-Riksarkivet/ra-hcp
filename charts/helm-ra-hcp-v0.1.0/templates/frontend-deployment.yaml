@@ -38,6 +38,10 @@ spec:
             - name: ORIGIN
               value: {{ .Values.frontend.env.ORIGIN | quote }}
             {{- end }}
+            - name: PROTOCOL_HEADER
+              value: "x-forwarded-proto"
+            - name: HOST_HEADER
+              value: "x-forwarded-host"
           livenessProbe:
             httpGet:
               path: /
