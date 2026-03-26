@@ -14,10 +14,12 @@ export const handle: Handle = ({ event, resolve }) => {
 };
 
 export const handleError: HandleServerError = ({ error, event, status }) => {
-  const msg = error instanceof Error ? error.message : "unknown error";
+  const msg = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
   console.error(
     `[frontend] ${event.request.method} ${event.url.pathname} → ${status}: ${msg}`,
   );
+  if (stack) console.error(stack);
   return {
     message: msg,
   };
