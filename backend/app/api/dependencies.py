@@ -17,6 +17,7 @@ from app.core.security import (
 )
 from app.core.tenant_routing import mapi_host_for_tenant, s3_endpoint_for_tenant
 from app.services.kv import KVCache
+from app.services.cached_iiif import CachedIiifService
 from app.services.mapi_service import AuthenticatedMapiService
 from app.services.query_service import AuthenticatedQueryService
 from app.schemas.lance import LanceDatasetParams
@@ -58,6 +59,11 @@ def get_storage_settings() -> StorageSettings:
 def get_cache_service(request: Request) -> KVCache | None:
     """Return the shared KVCache from app.state (or None)."""
     return getattr(request.app.state, "cache", None)
+
+
+def get_iiif_service(request: Request) -> CachedIiifService:
+    """Return the shared CachedIiifService from app.state."""
+    return request.app.state.iiif
 
 
 async def get_mapi_service(

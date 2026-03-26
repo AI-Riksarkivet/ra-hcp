@@ -43,7 +43,7 @@ def _resolve_iiif_tracker(
             db_path = tracker_dir / default_name
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    flush_every = ctx.obj.get("bulk_tracker_flush_every", 200)
+    flush_every = ctx.obj.get("bulk_tracker_flush_every", 500)
     return TransferTracker(db_path, flush_every=flush_every), db_path
 
 

@@ -265,7 +265,7 @@ def _resolve_tracker(
         else:
             db_path = tracker_dir / default_name
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    flush_every = ctx.obj.get("bulk_tracker_flush_every", 200)
+    flush_every = ctx.obj.get("bulk_tracker_flush_every", 500)
     return TransferTracker(db_path, flush_every=flush_every), db_path
 
 
@@ -393,7 +393,7 @@ def upload_all(
                     verify_upload=verify,
                     presign_batch_size=presign_batch_size
                     or ctx.obj.get("bulk_presign_batch_size", 200),
-                    chunk_size=ctx.obj.get("bulk_chunk_size", 1024 * 1024),
+                    chunk_size=ctx.obj.get("bulk_chunk_size", 4 * 1024 * 1024),
                     progress_interval=ctx.obj.get("bulk_progress_interval", 5.0),
                     on_progress=_print_progress,
                     on_error=_print_error,
@@ -502,7 +502,7 @@ def download_all(
                     verify_download=verify,
                     presign_batch_size=presign_batch_size
                     or ctx.obj.get("bulk_presign_batch_size", 200),
-                    chunk_size=ctx.obj.get("bulk_chunk_size", 1024 * 1024),
+                    chunk_size=ctx.obj.get("bulk_chunk_size", 4 * 1024 * 1024),
                     stream_threshold=ctx.obj.get(
                         "bulk_stream_threshold", 100 * 1024 * 1024
                     ),

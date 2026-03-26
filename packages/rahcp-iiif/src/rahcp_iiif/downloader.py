@@ -98,7 +98,7 @@ async def download_batch(
         workers,
     )
 
-    async def download_one(image_id: str) -> None:
+    async def download_one(client: httpx.AsyncClient, image_id: str) -> None:
         """Download and optionally validate a single image."""
         key = f"{batch_id}/{image_id}{ext}"
 
@@ -110,9 +110,8 @@ async def download_batch(
         url = build_image_url(image_id, base_url=base_url, query_params=query_params)
 
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                resp = await client.get(url)
-                resp.raise_for_status()
+            resp = await client.get(url)
+            resp.raise_for_status()
 
             data = resp.content
             await asyncio.to_thread(dest.write_bytes, data)
@@ -154,14 +153,14 @@ async def download_batch(
                 on_error(key, exc)
             stats.errors += 1
 
-    async def worker() -> None:
+    async def worker(client: httpx.AsyncClient) -> None:
         while True:
             item = await queue.get()
             if item is _DONE:
                 queue.task_done()
                 break
             try:
-                await download_one(item)  # type: ignore[arg-type]
+                await download_one(client, item)  # type: ignore[arg-type]
                 nonlocal last_report
                 now = time.monotonic()
                 if on_progress and now - last_report >= progress_interval:
@@ -176,9 +175,10 @@ async def download_batch(
         for _ in range(workers):
             await queue.put(_DONE)
 
-    worker_tasks = [asyncio.create_task(worker()) for _ in range(workers)]
-    await asyncio.create_task(produce())
-    await asyncio.gather(*worker_tasks)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        worker_tasks = [asyncio.create_task(worker(client)) for _ in range(workers)]
+        await asyncio.create_task(produce())
+        await asyncio.gather(*worker_tasks)
 
     tracker.commit()
     return stats

@@ -54,11 +54,11 @@ class Profile(BaseModel):
     bulk_workers: int = 10
     bulk_progress_interval: float = 5.0
     bulk_queue_depth: int = 8
-    bulk_tracker_flush_every: int = 200
+    bulk_tracker_flush_every: int = 500
     bulk_tracker_dir: str = ""
     bulk_tracker_prefix: str = ""
     bulk_presign_batch_size: int = 200
-    bulk_chunk_size: int = 1024 * 1024  # 1 MB
+    bulk_chunk_size: int = 4 * 1024 * 1024  # 4 MB
     bulk_stream_threshold: int = 100 * 1024 * 1024  # 100 MB
 
     # IIIF

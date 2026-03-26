@@ -184,6 +184,7 @@ Download all objects from a bucket (or prefix) to a local directory with concurr
 | `--validate` | -- | off | Validate each file after download (auto-detects format by extension) |
 | `--verify` | -- | off | Verify each download by checking file size after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
+| `--presign-batch-size` | -- | `200` | Number of URLs presigned per API call |
 | `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `backup` → `backup.download-tracker.db`) |
 
@@ -229,6 +230,7 @@ Upload an entire local directory to a bucket, preserving the directory structure
 | `--validate` | -- | off | Validate each file before upload (auto-detects format by extension) |
 | `--verify` | -- | off | Verify each upload by checking remote size (HEAD) after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
+| `--presign-batch-size` | -- | `200` | Number of URLs presigned per API call |
 | `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `andraarkiv` → `andraarkiv.upload-tracker.db`) |
 
@@ -359,7 +361,7 @@ sequenceDiagram
         participant W as 60 SDK workers
     end
     box rgb(255,243,224) API server (dev-hcp.ra.se)
-        participant API as gunicorn<br/>(2 worker processes)
+        participant API as gunicorn<br/>(1 worker per pod, 2 replicas)
     end
     box rgb(232,245,233) HCP S3 storage
         participant S3 as S3 endpoint
@@ -400,10 +402,10 @@ flowchart LR
         W60["SDK Worker 60"]
     end
 
-    subgraph API["API server (Kubernetes)"]
+    subgraph API["API server (Kubernetes, 2 replicas)"]
         direction TB
-        G1["gunicorn process 1"]
-        G2["gunicorn process 2"]
+        G1["Pod 1: gunicorn (1 worker)"]
+        G2["Pod 2: gunicorn (1 worker)"]
     end
 
     subgraph HCP["HCP S3"]
@@ -422,13 +424,17 @@ flowchart LR
 |--|--------------------------|---------------------------------------|
 | **Where it runs** | Your machine | The API server (`dev-hcp.ra.se`) |
 | **What it does** | Controls how many files are transferred in parallel | Controls how many presign requests are handled in parallel |
-| **Default** | 10 | 2 (gunicorn with 2 uvicorn workers) |
+| **Default** | 10 | 1 worker × 2 replicas (Kubernetes); scale with `replicaCount` |
 | **Configured via** | `config.yaml` or `--workers` flag | Helm `backend.workers` / `replicaCount` — see [Scaling](../architecture/deployment.md#scaling) |
 | **When to increase** | Throughput increases with more workers | Presign requests are slow or cause transport errors |
 
-**Why 60 SDK workers but only 2 backend workers?** Because they do fundamentally different work. The SDK workers spend 99% of their time transferring file bytes directly to HCP S3 — the backend is not involved. The backend is only called for batch presigning: ~1 request every 30 seconds (500 URLs per batch). A single backend worker can handle hundreds of requests per second, so 2 workers is massive overkill for presigning — the extra worker is for resilience (if one crashes, the other keeps serving).
+**Why 60 SDK workers but only 1 backend worker per pod?** Because they do fundamentally different work. The SDK workers spend 99% of their time transferring file bytes directly to HCP S3 — the backend is not involved. The backend is only called for batch presigning: ~1 request every 30 seconds (500 URLs per batch). A single async uvicorn worker handles hundreds of requests per second, which is massive overkill for presigning.
 
-The real bottleneck is your **network pipe**, not the backend. Adding more backend workers makes presign go from 50ms to 25ms — saving 25ms every 30 seconds (0.08% improvement, unmeasurable). Adding more SDK workers keeps more file transfers in flight, which keeps the pipe full.
+In Kubernetes, scale with **replicas** (multiple pods) rather than workers per pod. Each replica gets its own liveness and readiness probes — if one pod loses connectivity to HCP, Kubernetes removes it from the load balancer while the other keeps serving. With multiple workers inside a single pod, an unhealthy worker is invisible to Kubernetes probes. The default is 2 replicas with 1 worker each.
+
+If you run the server outside Kubernetes (e.g. bare-metal gunicorn), you can increase `--workers` directly to handle more concurrent requests — there are no probes to leverage, so in-process scaling makes sense.
+
+The real bottleneck is your **network pipe**, not the backend. Adding more backend capacity makes presign go from 50ms to 25ms — saving 25ms every 30 seconds (0.08% improvement, unmeasurable). Adding more SDK workers keeps more file transfers in flight, which keeps the pipe full.
 
 Batch presigning (`bulk_presign_batch_size`) reduces the number of backend round-trips by requesting many URLs in a single call instead of one at a time.
 
@@ -525,7 +531,7 @@ The single biggest win for upload is **getting files off NFS onto local disk fir
     | Memory leak protection (`--max-requests`) | 0 MB/s | Backend stays healthy over weeks/months |
     | Graceful reload | 0 MB/s | Deploy new code without dropping requests |
 
-    Increase `backend.workers` or `replicaCount` when you have **multiple concurrent users** (not for single-user speed). See [Scaling](../architecture/deployment.md#scaling) for details.
+    In Kubernetes, increase `replicaCount` (not `backend.workers`) for concurrent users — each replica gets independent health probes. Outside Kubernetes, increase `--workers` directly. See [Scaling](../architecture/deployment.md#scaling) for details.
 
 ##### Key settings
 
@@ -648,7 +654,7 @@ The single biggest win for upload is **getting files off NFS onto local disk fir
 | MB/s is low and CPU is low | Network latency | Increase `bulk_workers` to overlap round-trips |
 | High memory usage (>10 GB) | Large file list in memory | Normal for millions of files — `done_keys` set + file list |
 | Errors appearing | SSL, timeout, or HCP rate limit | Check `verify_ssl`, increase `timeout`, reduce workers |
-| Transport errors at high worker count | API server can't keep up with presign | Add gunicorn workers — see [Scaling](../architecture/deployment.md#scaling) |
+| Transport errors at high worker count | API server can't keep up with presign | Add replicas (`replicaCount`) — see [Scaling](../architecture/deployment.md#scaling) |
 
 **Monitoring a running transfer:**
 
@@ -776,7 +782,7 @@ Download images from [IIIF](https://iiif.io/) endpoints (e.g. Riksarkivet's inte
 | `--output` | `-o` | `.` | Output directory |
 | `--workers` | `-w` | `4` | Concurrent downloads |
 | `--query-params` | `-q` | `full/max/0/default.jpg` | IIIF image API parameters |
-| `--iiif-url` | -- | `https://iiifintern-ai.ra.se` | IIIF server base URL |
+| `--iiif-url` | -- | `https://iiifintern-ai.ra.se` | IIIF server base URL (env: `IIIF_URL`) |
 | `--max-images` | `-n` | all | Limit images per batch |
 | `--validate` | -- | off | Validate each image after download |
 | `--tracker-db` | -- | `.rahcp/.iiif-download.db` | Tracker DB path |

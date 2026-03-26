@@ -50,7 +50,7 @@ spec:
             - "--bind"
             - "0.0.0.0:8000"
             - "--workers"
-            - "{{ .Values.backend.workers | default 2 }}"
+            - "{{ .Values.backend.workers | default 1 }}"
             - "--max-requests"
             - "10000"
             - "--max-requests-jitter"

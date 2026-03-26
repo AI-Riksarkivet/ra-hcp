@@ -72,8 +72,8 @@ Key configuration values (see `charts/helm-ra-hcp-v0.1.0/values.yaml` for the fu
 |-------|---------|-------------|
 | `image.repository` | `riksarkivet/ra-hcp` | Backend image |
 | `image.tag` | `""` (uses `appVersion`) | Image tag |
-| `backend.workers` | `2` | Gunicorn worker processes per pod |
-| `replicaCount` | `1` | Number of backend pods |
+| `backend.workers` | `1` | Gunicorn worker processes per pod |
+| `replicaCount` | `2` | Number of backend pods |
 | `service.type` | `NodePort` | Backend service type |
 | `service.port` | `8000` | Backend service port |
 | `service.nodePort` | `30081` | Backend NodePort |
@@ -145,14 +145,13 @@ There are two ways to scale the backend. They are independent and can be combine
 
 #### Vertical scaling — gunicorn workers (processes per pod)
 
-Each backend pod runs gunicorn with uvicorn worker processes. Gunicorn's primary benefit is **reliability** — automatic worker restarts, memory leak protection, and graceful reloads — not speed. A single async uvicorn worker already handles hundreds of requests/second. The default of 2 workers provides resilience (if one crashes, the other keeps serving):
+Each backend pod runs gunicorn with uvicorn worker processes. Gunicorn's primary benefit is **reliability** — automatic worker restarts, memory leak protection, and graceful reloads — not speed. A single async uvicorn worker already handles hundreds of requests/second. The default is 1 worker per pod with 2 replicas — scaling is done via pod replicas so each gets independent liveness/readiness probes:
 
 ```
-Pod (1 replica, 2 workers):
+Pod (1 replica, 1 worker):
 ┌──────────────────────────────────────────────┐
 │  gunicorn (master)                           │
-│    ├─ uvicorn worker 1  ─→ handles requests  │
-│    └─ uvicorn worker 2  ─→ handles requests  │
+│    └─ uvicorn worker 1  ─→ handles requests  │
 └──────────────────────────────────────────────┘
 ```
 
@@ -164,7 +163,7 @@ The Dockerfile runs:
 CMD ["gunicorn", "app.main:app", \
      "--worker-class", "uvicorn.workers.UvicornWorker", \
      "--bind", "0.0.0.0:8000", \
-     "--workers", "2", \
+     "--workers", "1", \
      "--max-requests", "10000", \
      "--max-requests-jitter", "1000", \
      "--timeout", "120", \
@@ -174,7 +173,7 @@ CMD ["gunicorn", "app.main:app", \
 
 | Flag | Value | Why |
 |------|-------|-----|
-| `--workers` | 2 | Number of worker processes (configurable via Helm) |
+| `--workers` | 1 | One worker per pod — scale with replicas in Kubernetes (configurable via Helm) |
 | `--max-requests` | 10000 | Recycle workers after 10K requests to prevent memory leaks |
 | `--max-requests-jitter` | 1000 | Randomize recycling so workers don't restart simultaneously |
 | `--timeout` | 120 | Kill workers that hang for 2 minutes (covers slow HCP responses) |
@@ -186,28 +185,36 @@ The number of workers is configurable via the Helm chart:
 ```yaml
 # values.yaml
 backend:
-  workers: 2  # gunicorn worker processes per pod
+  workers: 1  # 1 worker per pod — scale with replicaCount instead
 ```
 
 The Helm deployment template passes this value to gunicorn's `--workers` flag.
 
-!!! tip "How many workers?"
-    A good starting point is `2 × CPU cores + 1`. For presign-heavy workloads (bulk SDK transfers), 2-4 workers is usually enough — presigning is CPU-light (~1ms CPU per URL). Each worker uses ~50-100 MB RAM. Monitor with `kubectl top pod` and increase if CPU is saturated.
+!!! tip "Why 1 worker per pod?"
+    In Kubernetes, each pod has independent liveness and readiness probes. If a pod loses HCP connectivity, Kubernetes removes it from the load balancer while healthy pods keep serving. With multiple workers inside one pod, an unhealthy worker is invisible to probes — the pod stays in rotation even if half its capacity is broken. One worker per pod gives Kubernetes full visibility.
+
+    If you run the server **outside Kubernetes** (bare-metal, Docker Compose), increase `--workers` to `2 × CPU cores + 1` — there are no probes to leverage, so in-process scaling makes sense. Each worker uses ~50-100 MB RAM.
 
 #### Horizontal scaling — replica count (pods)
 
 Adding replicas creates multiple independent pods, each running their own set of workers. Kubernetes load-balances requests across them:
 
 ```
-Default (1 replica × 2 workers):              Combined (2 replicas × 4 workers):
+Default (2 replicas × 1 worker):              Scaled (4 replicas × 1 worker):
 ┌──────────────────────────┐                  ┌──────────────────────────────┐
 │ Pod 1                    │                  │ Pod 1                        │
-│  gunicorn → 2 workers    │                  │  gunicorn → 4 worker procs  │
+│  gunicorn → 1 worker     │                  │  gunicorn → 1 worker         │
+├──────────────────────────┤                  ├──────────────────────────────┤
+│ Pod 2                    │                  │ Pod 2                        │
+│  gunicorn → 1 worker     │                  │  gunicorn → 1 worker         │
 └──────────────────────────┘                  ├──────────────────────────────┤
-= 2 processes total                           │ Pod 2                        │
-                                              │  gunicorn → 4 worker procs  │
+= 2 processes total, each with                │ Pod 3                        │
+  independent health probes                   │  gunicorn → 1 worker         │
+                                              ├──────────────────────────────┤
+                                              │ Pod 4                        │
+                                              │  gunicorn → 1 worker         │
                                               └──────────────────────────────┘
-                                              = 8 processes total
+                                              = 4 processes total
 ```
 
 Both frontend and backend are **stateless** and can be horizontally scaled:
@@ -228,24 +235,24 @@ Or via the Helm chart:
 
 ```yaml
 # values.yaml
-replicaCount: 3           # 3 pods
+replicaCount: 4           # 4 pods, each with independent probes
 backend:
-  workers: 4              # 4 gunicorn processes per pod = 12 total
+  workers: 1              # 1 worker per pod (default)
 ```
 
 Autoscaling is also supported — set `autoscaling.enabled: true` to let Kubernetes scale replicas based on CPU utilization (see `values.yaml` for thresholds).
 
 #### Which scaling approach to use?
 
-!!! info "The default (1 pod, 2 workers) is enough for most use cases"
-    A single async uvicorn worker handles hundreds of requests/second. The SDK sends ~2 presign requests/second during bulk transfers. More workers and replicas help with **multi-user concurrency** and **fault tolerance**, not single-user transfer speed. Transfer speed is limited by network bandwidth, not the API server.
+!!! info "The default (2 replicas, 1 worker each) is enough for most use cases"
+    A single async uvicorn worker handles hundreds of requests/second. The SDK sends ~2 presign requests/second during bulk transfers. More replicas help with **multi-user concurrency** and **fault tolerance**, not single-user transfer speed. Transfer speed is limited by network bandwidth, not the API server.
 
 | Scenario | Recommendation |
 |----------|---------------|
-| 1-2 users doing bulk transfers | Default (`1 pod, 2 workers`) — more than enough |
-| Multiple concurrent users or API clients | Vertical (`backend.workers: 4`) — handle more presign requests in parallel |
-| High availability requirement | Horizontal (`replicaCount: 2+` with `podDisruptionBudget`) — survives node failures |
-| Many concurrent users + HA | Both — `replicaCount: 2, backend.workers: 4` gives 8 processes across 2 nodes |
+| 1-2 users doing bulk transfers | Default (`2 replicas, 1 worker`) — more than enough |
+| Multiple concurrent users or API clients | Horizontal (`replicaCount: 4`) — each pod gets independent probes |
+| High availability requirement | Horizontal (`replicaCount: 3+` with `podDisruptionBudget`) — survives node failures |
+| Running outside Kubernetes | Increase `--workers` to `2 × CPU cores + 1` — no probes, so scale in-process |
 
 !!! note "SDK `bulk_workers` vs server workers"
     The SDK's `bulk_workers` setting controls how many files are transferred in parallel on **your machine**. Server workers (gunicorn/replicas) control how many API requests the **backend** handles in parallel. These are completely different — SDK workers talk directly to HCP S3 for file data. The backend is only involved for presigning URLs (~2 requests/second during bulk transfers). See [Performance tuning](../sdk/cli.md#performance-tuning) in the SDK docs for details.
@@ -348,7 +355,7 @@ helm install hcp-prod charts/helm-ra-hcp-v0.1.0 \
 replicaCount: 5
 
 backend:
-  workers: 4  # 5 pods × 4 workers = 20 processes
+  workers: 1  # 5 pods × 1 worker = 5 processes, each with independent probes
 
 frontend:
   enabled: true

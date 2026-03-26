@@ -141,8 +141,11 @@ All data transfers use presigned URLs internally. You can also generate them dir
 url = await client.s3.presign_get("bucket", "key", expires=3600)
 url = await client.s3.presign_put("bucket", "key", expires=3600)
 
-# Bulk presigned download URLs
+# Bulk presigned download URLs (default method="get_object")
 urls = await client.s3.presign_bulk("bucket", ["key1", "key2"], expires=3600)
+
+# Bulk presigned upload URLs
+urls = await client.s3.presign_bulk("bucket", ["key1", "key2"], method="put_object", expires=3600)
 ```
 
 ### Listing and metadata
@@ -151,8 +154,8 @@ urls = await client.s3.presign_bulk("bucket", ["key1", "key2"], expires=3600)
 # List buckets
 result = await client.s3.list_buckets()
 
-# List objects (with prefix filtering)
-result = await client.s3.list_objects("bucket", prefix="data/", max_keys=1000)
+# List objects (with prefix filtering and optional delimiter)
+result = await client.s3.list_objects("bucket", prefix="data/", max_keys=1000, delimiter="/")
 # Returns: {'objects': [...], 'common_prefixes': [...], 'is_truncated': bool, ...}
 
 # Object metadata (HEAD)

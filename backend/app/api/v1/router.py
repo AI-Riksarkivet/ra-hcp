@@ -30,6 +30,7 @@ from app.api.v1.endpoints.mapi.namespace import (
     templates as ns_templates,
 )
 from app.api.v1.endpoints.query import search as query_search
+from app.api.v1.endpoints import iiif as iiif_explorer
 from app.api.v1.endpoints import lance as lance_explorer
 
 api_router = APIRouter()
@@ -79,6 +80,9 @@ api_router.include_router(ns_statistics.router, prefix="/mapi", dependencies=_au
 
 # ── Metadata Query API ──────────────────────────────────────────────
 api_router.include_router(query_search.router, prefix="/query", dependencies=_auth)
+
+# ── IIIF ──────────────────────────────────────────────────────────────
+api_router.include_router(iiif_explorer.router, dependencies=_auth)
 
 # ── Lance Data Explorer ───────────────────────────────────────────────
 api_router.include_router(lance_explorer.router, dependencies=_auth)

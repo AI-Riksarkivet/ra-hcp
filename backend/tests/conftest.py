@@ -228,13 +228,26 @@ async def client(
     app.state.mapi = mapi_svc
     app.state.query = query_svc
     app.state.s3_cache = {}
+    app.state.lance_cache = {}
     app.state.storage_probe = None
+
+    # IIIF singleton (uncached, for endpoint tests)
+    from app.services.cached_iiif import CachedIiifService
+    from app.services.iiif_service import IiifService
+    from app.services.kv import KVCache
+    from key_value.aio.stores.null import NullStore
+
+    iiif_inner = IiifService()
+    app.state.iiif = CachedIiifService(
+        iiif_inner, KVCache(NullStore(), enabled=False), CacheSettings()
+    )
 
     with patch("app.core.security._get_auth_settings", return_value=auth_settings):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
 
+    await app.state.iiif.close()
     await query_svc.close()
     await mapi_svc.close()
     app.dependency_overrides.clear()

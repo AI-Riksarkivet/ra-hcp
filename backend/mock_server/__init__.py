@@ -99,6 +99,18 @@ async def _mock_lifespan(app_instance):
     app_instance.dependency_overrides[get_mapi_settings] = _override_mapi_settings
     app_instance.state.mock_s3 = mock_s3
 
+    # IIIF singleton (uses real IIIF server — respx passes unmatched through)
+    from app.core.config import CacheSettings
+    from app.services.cached_iiif import CachedIiifService
+    from app.services.iiif_service import IiifService
+    from app.services.kv import KVCache
+    from key_value.aio.stores.null import NullStore
+
+    iiif_inner = IiifService()
+    app_instance.state.iiif = CachedIiifService(
+        iiif_inner, KVCache(NullStore(), enabled=False), CacheSettings()
+    )
+
     with (
         respx.mock(assert_all_mocked=False, assert_all_called=False) as mock,
         patch("app.core.security._get_auth_settings", return_value=MOCK_AUTH_SETTINGS),
@@ -109,6 +121,7 @@ async def _mock_lifespan(app_instance):
         logger.info("Login with username=admin password=password")
         yield
 
+    await app_instance.state.iiif.close()
     await query_svc.close()
     await mapi_svc.close()
     app_instance.dependency_overrides.clear()

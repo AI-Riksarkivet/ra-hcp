@@ -33,7 +33,7 @@ EXPOSE 8000
 CMD ["gunicorn", "app.main:app", \
      "--worker-class", "uvicorn.workers.UvicornWorker", \
      "--bind", "0.0.0.0:8000", \
-     "--workers", "2", \
+     "--workers", "1", \
      "--max-requests", "10000", \
      "--max-requests-jitter", "1000", \
      "--timeout", "120", \

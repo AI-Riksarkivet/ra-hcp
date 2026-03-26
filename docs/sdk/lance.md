@@ -36,10 +36,30 @@ async def main():
 asyncio.run(main())
 ```
 
+## Creating tables
+
+`create()` requires either `schema` or `data` (or both):
+
+```python
+import pyarrow as pa
+
+# From data (schema inferred)
+table = await ds.create("embeddings", data=[
+    {"text": "hello", "vector": [0.1, 0.2, 0.3]},
+])
+
+# From schema (empty table)
+schema = pa.schema([
+    pa.field("text", pa.utf8()),
+    pa.field("vector", pa.list_(pa.float32(), 3)),
+])
+table = await ds.create("embeddings", schema=schema)
+```
+
 ## Querying
 
 ```python
-from rahcp_lance.query import scan, vector_search
+from rahcp_lance.query import scan, take, vector_search
 from rahcp_lance.schemas import ScanParams, VectorSearchParams
 
 # Scan with filtering and pagination
@@ -51,7 +71,10 @@ result = await scan(table, ScanParams(
     offset=0,
 ))
 
-# Vector similarity search
+# Take specific rows by index
+rows = await take(table, [0, 2, 5])
+
+# Vector similarity search (k defaults to 10)
 results = await vector_search(table, VectorSearchParams(
     vector=[0.1, 0.2, 0.3],
     column="vector",
@@ -69,5 +92,5 @@ for r in results:
 | `FieldInfo` | `name`, `dtype`, `nullable` |
 | `IngestResult` | `table`, `rows_added`, `total_rows` |
 | `ScanParams` | `columns`, `filter`, `limit`, `offset` |
-| `VectorSearchParams` | `vector`, `column`, `k`, `filter`, `columns` |
+| `VectorSearchParams` | `vector`, `column`, `k` (default 10), `filter`, `columns` |
 | `SearchResult` | `data`, `distance` |

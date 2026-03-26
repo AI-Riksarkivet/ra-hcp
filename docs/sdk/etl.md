@@ -59,10 +59,10 @@ async def main():
 asyncio.run(main())
 ```
 
-**Behavior:**
+**`Stage` dataclass** (`name`, `handler`, `retries=3`, `backoff=2.0`):
 
 - Stages execute sequentially; each receives the output of the previous stage
-- Failed stages retry with exponential backoff (`delay * 2^attempt`)
+- Failed stages retry with exponential backoff (`delay * backoff^attempt`)
 - After each successful stage, a checkpoint is saved to NATS KV
 - If a pipeline fails and is re-run with the same `pipeline_id`, it resumes from the last checkpoint
 - Checkpoints are cleared on successful completion

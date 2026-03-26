@@ -48,6 +48,25 @@ async def lifespan(app: FastAPI):
     app.state.s3_cache = {}
     app.state.lance_cache = {}
 
+    # ── IIIF service (singleton, shared httpx client) ────────────────
+    from app.services.iiif_service import IiifService
+
+    iiif_inner = IiifService()
+    if cache.enabled:
+        from app.services.cached_iiif import CachedIiifService
+
+        logger.info("Creating CachedIiifService singleton")
+        app.state.iiif = CachedIiifService(iiif_inner, cache, cache_settings)
+    else:
+        from app.services.cached_iiif import CachedIiifService
+        from key_value.aio.stores.null import NullStore
+
+        app.state.iiif = CachedIiifService(
+            iiif_inner,
+            KVCache(NullStore(), enabled=False),
+            cache_settings,
+        )
+
     query = QueryService(mapi_settings)
     if cache.enabled:
         from app.services.cached_query import CachedQueryService
@@ -93,6 +112,7 @@ async def lifespan(app: FastAPI):
         except Exception:
             logger.warning("Failed to close S3 storage adapter", exc_info=True)
 
+    await app.state.iiif.close()
     await app.state.query.close()
     await app.state.mapi.close()
     await cache.close()
@@ -226,6 +246,10 @@ OPENAPI_TAGS = [
         "name": "Metadata Query",
         "description": "Search objects by metadata and audit create/delete/purge events "
         "via the HCP Metadata Query API.",
+    },
+    {
+        "name": "IIIF",
+        "description": "Fetch and cache IIIF manifests, resolve image URLs.",
     },
     {
         "name": "Lance Explorer",

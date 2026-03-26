@@ -8,7 +8,7 @@ uv pip install rahcp-tracker
 
 | Class | Description |
 |-------|-------------|
-| `TrackerProtocol` | Interface (Protocol) — 8 methods any backend must implement |
+| `TrackerProtocol` | Interface — 8 methods: `mark()`, `commit()`, `close()`, `summary()`, `done_keys()`, `error_entries()`, `unverified_keys()`, `unvalidated_keys()` |
 | `SqliteTracker` | Default SQLite implementation with WAL mode and buffered writes |
 | `TransferTracker` | Backwards-compatible alias for `SqliteTracker` |
 | `Transfer` | SQLModel table definition — shared across SQLite and Postgres |
