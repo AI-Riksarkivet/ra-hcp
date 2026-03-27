@@ -1681,10 +1681,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#app.api.v1.endpoints.s3.objects.count_objects" class="md-nav__link">
+  <a href="#app.api.v1.endpoints.s3.objects.s3_stats" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;count_objects
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;s3_stats
       
     </span>
   </a>
@@ -2767,10 +2767,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#app.api.v1.endpoints.s3.objects.count_objects" class="md-nav__link">
+  <a href="#app.api.v1.endpoints.s3.objects.s3_stats" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;count_objects
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;s3_stats
       
     </span>
   </a>
@@ -3682,14 +3682,14 @@ empty + delete (no MAPI involved).</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="app.api.v1.endpoints.s3.objects.count_objects" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">count_objects</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="n">s3</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">))</span></code>
+<h3 id="app.api.v1.endpoints.s3.objects.s3_stats" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">s3_stats</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="n">s3</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">))</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-async"><code>async</code></small>
   </span>
 
-<a href="#app.api.v1.endpoints.s3.objects.count_objects" class="headerlink" title="Permanent link">&para;</a></h3>
+<a href="#app.api.v1.endpoints.s3.objects.s3_stats" class="headerlink" title="Permanent link">&para;</a></h3>
 
 
     <div class="doc doc-contents ">
@@ -3726,8 +3726,8 @@ not limited by max_keys.</p>
 <span class="normal">105</span>
 <span class="normal">106</span>
 <span class="normal">107</span>
-<span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/count&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">CountObjectsResponse</span><span class="p">)</span>
-<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">count_objects</span><span class="p">(</span>
+<span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/s3_stats&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">CountObjectsResponse</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">s3_stats</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span>
     <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span>
