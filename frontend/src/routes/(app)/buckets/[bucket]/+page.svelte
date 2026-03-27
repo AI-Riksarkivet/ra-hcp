@@ -24,7 +24,12 @@
 	import BackButton from '$lib/components/custom/back-button/back-button.svelte';
 	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
 	import { get_tenant_chargeback } from '$lib/remote/tenant-info.remote.js';
-	import { get_namespaces, type Namespace } from '$lib/remote/namespaces.remote.js';
+	import {
+		get_namespaces,
+		get_ns_statistics,
+		type Namespace,
+		type NsStatistics,
+	} from '$lib/remote/namespaces.remote.js';
 	import { get_bucket_versioning, type BucketVersioning } from '$lib/remote/buckets.remote.js';
 	import BucketVersioningControl from './sections/bucket-versioning.svelte';
 	import BucketAcl from './sections/bucket-acl.svelte';
@@ -52,6 +57,10 @@
 	});
 	let bucketQuotaBytes = $derived(bucketQuotaStr ? parseQuotaBytes(bucketQuotaStr) : null);
 	let bucketQuotaPercent = $derived(calcQuotaPercent(bucketStorageUsed, bucketQuotaStr));
+
+	// --- Namespace statistics (total object count) — may be null if user lacks MONITOR permission ---
+	let statsData = $derived(tenant ? get_ns_statistics({ tenant, name: bucket }) : undefined);
+	let totalObjects = $derived((statsData?.current as NsStatistics | null)?.objectCount ?? null);
 
 	// --- Versioning status (used to conditionally show Versions tab) ---
 	let versioningData = $derived(get_bucket_versioning({ bucket }));
@@ -96,6 +105,11 @@
 			<div>
 				<h2 class="text-2xl font-bold">{bucket}</h2>
 			</div>
+			{#if totalObjects !== null}
+				<span class="text-xs text-muted-foreground">
+					{totalObjects.toLocaleString()} object{totalObjects !== 1 ? 's' : ''}
+				</span>
+			{/if}
 			{#if tenant && (bucketStorageUsed > 0 || bucketQuotaBytes)}
 				<Tooltip.Root>
 					<Tooltip.Trigger>
