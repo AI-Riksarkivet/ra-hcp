@@ -763,9 +763,9 @@
 					Clear filters
 				</Button>
 			{/if}
-			<span class="ml-auto text-xs text-muted-foreground"
-				>{filteredObjects.length} items{isTruncated ? ' (more available)' : ''}</span
-			>
+			<span class="ml-auto text-xs text-muted-foreground">
+				{rawObjects.length} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}{isTruncated ? ' (limit reached — switch to flat view for all)' : ''}
+			</span>
 		</div>
 	</div>
 
@@ -801,8 +801,8 @@
 	</DataTable>
 
 	{#if isTruncated}
-		<p class="py-1 text-center text-xs text-muted-foreground">
-			Showing first {filteredObjects.length} objects. Use search or flat view to find more.
+		<p class="py-1 text-center text-xs text-amber-600">
+			Only showing the first 1,000 objects in this folder. Switch to flat view or use search to find all objects.
 		</p>
 	{/if}
 {/await}
