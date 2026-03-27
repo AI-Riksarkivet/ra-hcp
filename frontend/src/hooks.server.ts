@@ -7,12 +7,27 @@ console.info(`[frontend] started — BACKEND_URL=${BACKEND_URL}`);
 export const handle: Handle = ({ event, resolve }) => {
   // Fix URL protocol for TLS-terminating proxies (nginx ingress).
   // Deno sees http:// but browser sends Origin: https://.
-  // Override event.url so SvelteKit's CSRF check sees the correct origin.
+  // SvelteKit's CSRF check compares request Origin header against event.url.origin.
+  // We must make them match.
   const proto = event.request.headers.get("x-forwarded-proto");
+  const origin = event.request.headers.get("origin");
   if (proto === "https" && event.url.protocol === "http:") {
-    const fixed = new URL(event.url.href);
-    fixed.protocol = "https:";
-    Object.defineProperty(event, "url", { value: fixed, configurable: true });
+    // Try multiple approaches since Deno may restrict some
+    try {
+      const fixed = new URL(event.url.href);
+      fixed.protocol = "https:";
+      Object.defineProperty(event, "url", { value: fixed, configurable: true, writable: true });
+    } catch {
+      // Object.defineProperty failed — frozen object
+    }
+
+    // If url is still http, the CSRF check will fail on POST.
+    // Log it so we can see what's happening.
+    if (event.url.protocol === "http:" && event.request.method === "POST") {
+      console.warn(
+        `[CSRF] Origin mismatch: request=${origin} url=${event.url.origin} proto=${proto} method=${event.request.method} path=${event.url.pathname}`,
+      );
+    }
   }
 
   const token = event.cookies.get("hcp_token");
