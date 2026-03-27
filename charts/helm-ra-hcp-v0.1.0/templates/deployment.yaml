@@ -59,6 +59,8 @@ spec:
             - "120"
             - "--keep-alive"
             - "5"
+            - "--worker-tmp-dir"
+            - "/tmp"
             - "--access-logfile"
             - "-"
           ports:
