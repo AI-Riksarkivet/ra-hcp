@@ -6008,12 +6008,7 @@
 
                   <details class="mkdocstrings-source">
                     <summary>Source code in <code>packages/rahcp-client/src/rahcp_client/client.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 59</span>
-<span class="normal"> 60</span>
-<span class="normal"> 61</span>
-<span class="normal"> 62</span>
-<span class="normal"> 63</span>
-<span class="normal"> 64</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 64</span>
 <span class="normal"> 65</span>
 <span class="normal"> 66</span>
 <span class="normal"> 67</span>
@@ -6056,7 +6051,12 @@
 <span class="normal">104</span>
 <span class="normal">105</span>
 <span class="normal">106</span>
-<span class="normal">107</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;http://localhost:8000/api/v1&quot;</span><span class="p">,</span>
     <span class="n">username</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
@@ -6229,12 +6229,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-client/src/rahcp_client/client.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">125</span>
 <span class="normal">126</span>
 <span class="normal">127</span>
 <span class="normal">128</span>
@@ -6245,7 +6240,12 @@
 <span class="normal">133</span>
 <span class="normal">134</span>
 <span class="normal">135</span>
-<span class="normal">136</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">from_env</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HCPClient</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a client configured from ``HCP_*`` environment variables.&quot;&quot;&quot;</span>
     <span class="n">settings</span> <span class="o">=</span> <span class="n">HCPSettings</span><span class="p">()</span>
@@ -6288,12 +6288,7 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-client/src/rahcp_client/client.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">207</span>
-<span class="normal">208</span>
-<span class="normal">209</span>
-<span class="normal">210</span>
-<span class="normal">211</span>
-<span class="normal">212</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">212</span>
 <span class="normal">213</span>
 <span class="normal">214</span>
 <span class="normal">215</span>
@@ -6383,7 +6378,8 @@
 <span class="normal">299</span>
 <span class="normal">300</span>
 <span class="normal">301</span>
-<span class="normal">302</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">request</span><span class="p">(</span>
+<span class="normal">302</span>
+<span class="normal">303</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">request</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -6396,88 +6392,84 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">httpx</span><span class="o">.</span><span class="n">Response</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Send an HTTP request with retry, tracing, and automatic 401 refresh.&quot;&quot;&quot;</span>
     <span class="n">merged_headers</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_headers</span><span class="p">(),</span> <span class="o">**</span><span class="p">(</span><span class="n">headers</span> <span class="ow">or</span> <span class="p">{})}</span>
-    <span class="n">last_error</span><span class="p">:</span> <span class="ne">Exception</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">refreshed</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">with</span> <span class="n">tracer</span><span class="o">.</span><span class="n">start_as_current_span</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">span</span><span class="p">:</span>
         <span class="n">span</span><span class="o">.</span><span class="n">set_attribute</span><span class="p">(</span><span class="s2">&quot;http.method&quot;</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
         <span class="n">span</span><span class="o">.</span><span class="n">set_attribute</span><span class="p">(</span><span class="s2">&quot;http.path&quot;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_retries</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
-            <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span>
-                    <span class="n">method</span><span class="p">,</span>
-                    <span class="n">path</span><span class="p">,</span>
-                    <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
-                    <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="p">,</span>
-                    <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
-                    <span class="n">content</span><span class="o">=</span><span class="n">content</span><span class="p">,</span>
-                    <span class="n">headers</span><span class="o">=</span><span class="n">merged_headers</span><span class="p">,</span>
-                <span class="p">)</span>
-            <span class="k">except</span> <span class="n">httpx</span><span class="o">.</span><span class="n">TransportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">async</span> <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="n">AsyncRetrying</span><span class="p">(</span>
+            <span class="n">stop</span><span class="o">=</span><span class="n">stop_after_attempt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_retries</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+            <span class="n">wait</span><span class="o">=</span><span class="n">wait_exponential_jitter</span><span class="p">(</span>
+                <span class="n">initial</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">retry_base_delay</span><span class="p">,</span>
+                <span class="nb">max</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+                <span class="n">jitter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">retry_base_delay</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">retry</span><span class="o">=</span><span class="n">retry_if_exception_type</span><span class="p">(</span><span class="n">RetryableError</span><span class="p">),</span>
+            <span class="n">reraise</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">):</span>
+            <span class="k">with</span> <span class="n">attempt</span><span class="p">:</span>
+                <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_http</span><span class="o">.</span><span class="n">request</span><span class="p">(</span>
+                        <span class="n">method</span><span class="p">,</span>
+                        <span class="n">path</span><span class="p">,</span>
+                        <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+                        <span class="n">json</span><span class="o">=</span><span class="n">json</span><span class="p">,</span>
+                        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                        <span class="n">content</span><span class="o">=</span><span class="n">content</span><span class="p">,</span>
+                        <span class="n">headers</span><span class="o">=</span><span class="n">merged_headers</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="k">except</span> <span class="n">httpx</span><span class="o">.</span><span class="n">TransportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="n">duration</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> — transport error after </span><span class="si">%.0f</span><span class="s2">ms: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">method</span><span class="p">,</span>
+                        <span class="n">path</span><span class="p">,</span>
+                        <span class="n">duration</span><span class="p">,</span>
+                        <span class="n">exc</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">RetryableError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
                 <span class="n">duration</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
-                <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                    <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> — transport error after </span><span class="si">%.0f</span><span class="s2">ms (attempt </span><span class="si">%d</span><span class="s2">): </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
-                    <span class="n">method</span><span class="p">,</span>
-                    <span class="n">path</span><span class="p">,</span>
-                    <span class="n">duration</span><span class="p">,</span>
-                    <span class="n">attempt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
-                    <span class="n">exc</span><span class="p">,</span>
-                <span class="p">)</span>
-                <span class="n">last_error</span> <span class="o">=</span> <span class="n">RetryableError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
-                <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backoff</span><span class="p">(</span><span class="n">attempt</span><span class="p">)</span>
-                <span class="k">continue</span>
+                <span class="n">span</span><span class="o">.</span><span class="n">set_attribute</span><span class="p">(</span><span class="s2">&quot;http.status_code&quot;</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
 
-            <span class="n">duration</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
-            <span class="n">span</span><span class="o">.</span><span class="n">set_attribute</span><span class="p">(</span><span class="s2">&quot;http.status_code&quot;</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
-
-            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> → </span><span class="si">%d</span><span class="s2"> (</span><span class="si">%.0f</span><span class="s2">ms)&quot;</span><span class="p">,</span>
-                <span class="n">method</span><span class="p">,</span>
-                <span class="n">path</span><span class="p">,</span>
-                <span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
-                <span class="n">duration</span><span class="p">,</span>
-            <span class="p">)</span>
-
-            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">401</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="ow">and</span> <span class="n">attempt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Token expired, refreshing...&quot;</span><span class="p">)</span>
-                <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_login</span><span class="p">()</span>
-                <span class="n">merged_headers</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_headers</span><span class="p">(),</span> <span class="o">**</span><span class="p">(</span><span class="n">headers</span> <span class="ow">or</span> <span class="p">{})}</span>
-                <span class="k">continue</span>
-
-            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="ow">in</span> <span class="n">_RETRYABLE_STATUSES</span><span class="p">:</span>
-                <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                    <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> → </span><span class="si">%d</span><span class="s2"> (attempt </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2">, retrying)&quot;</span><span class="p">,</span>
-                    <span class="n">method</span><span class="p">,</span>
-                    <span class="n">path</span><span class="p">,</span>
-                    <span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
-                    <span class="n">attempt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">max_retries</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
-                <span class="p">)</span>
-                <span class="n">last_error</span> <span class="o">=</span> <span class="n">error_for_status</span><span class="p">(</span>
-                    <span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">_redact</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-                <span class="p">)</span>
-                <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_retries</span><span class="p">:</span>
-                    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backoff</span><span class="p">(</span><span class="n">attempt</span><span class="p">)</span>
-                    <span class="k">continue</span>
-
-            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">400</span><span class="p">:</span>
-                <span class="n">safe_body</span> <span class="o">=</span> <span class="n">_redact</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
-                <span class="n">log_fn</span> <span class="o">=</span> <span class="n">log</span><span class="o">.</span><span class="n">debug</span> <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">404</span> <span class="k">else</span> <span class="n">log</span><span class="o">.</span><span class="n">error</span>
-                <span class="n">log_fn</span><span class="p">(</span>
-                    <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> → </span><span class="si">%d</span><span class="s2"> (</span><span class="si">%.0f</span><span class="s2">ms): </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> → </span><span class="si">%d</span><span class="s2"> (</span><span class="si">%.0f</span><span class="s2">ms)&quot;</span><span class="p">,</span>
                     <span class="n">method</span><span class="p">,</span>
                     <span class="n">path</span><span class="p">,</span>
                     <span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
                     <span class="n">duration</span><span class="p">,</span>
-                    <span class="n">safe_body</span><span class="p">,</span>
                 <span class="p">)</span>
-                <span class="k">raise</span> <span class="n">error_for_status</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">safe_body</span><span class="p">)</span>
 
-            <span class="k">return</span> <span class="n">response</span>
+                <span class="c1"># One-time token refresh on 401</span>
+                <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">401</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">refreshed</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Token expired, refreshing...&quot;</span><span class="p">)</span>
+                    <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_login</span><span class="p">()</span>
+                    <span class="n">merged_headers</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_auth_headers</span><span class="p">(),</span> <span class="o">**</span><span class="p">(</span><span class="n">headers</span> <span class="ow">or</span> <span class="p">{})}</span>
+                    <span class="n">refreshed</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">raise</span> <span class="n">RetryableError</span><span class="p">(</span><span class="s2">&quot;token refresh&quot;</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">last_error</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="n">last_error</span>
+                <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="ow">in</span> <span class="n">_RETRYABLE_STATUSES</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">error_for_status</span><span class="p">(</span>
+                        <span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">_redact</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                    <span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">400</span><span class="p">:</span>
+                    <span class="n">safe_body</span> <span class="o">=</span> <span class="n">_redact</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                    <span class="n">log_fn</span> <span class="o">=</span> <span class="n">log</span><span class="o">.</span><span class="n">debug</span> <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">404</span> <span class="k">else</span> <span class="n">log</span><span class="o">.</span><span class="n">error</span>
+                    <span class="n">log_fn</span><span class="p">(</span>
+                        <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> → </span><span class="si">%d</span><span class="s2"> (</span><span class="si">%.0f</span><span class="s2">ms): </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">method</span><span class="p">,</span>
+                        <span class="n">path</span><span class="p">,</span>
+                        <span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
+                        <span class="n">duration</span><span class="p">,</span>
+                        <span class="n">safe_body</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">error_for_status</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">safe_body</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="n">response</span>
+
     <span class="k">raise</span> <span class="n">RetryableError</span><span class="p">(</span><span class="s2">&quot;All retries exhausted&quot;</span><span class="p">)</span>  <span class="c1"># pragma: no cover</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -11439,9 +11431,9 @@ result = await pipeline.run({&quot;source&quot;: &quot;s3://...&quot;})
 
                   <details class="mkdocstrings-source">
                     <summary>Source code in <code>packages/rahcp-etl/src/rahcp_etl/pipeline.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">51</span>
-<span class="normal">52</span>
-<span class="normal">53</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_store</span><span class="p">:</span> <span class="n">CheckpointStore</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_store</span><span class="p">:</span> <span class="n">CheckpointStore</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_stages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Stage</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_checkpoint_store</span> <span class="o">=</span> <span class="n">checkpoint_store</span>
 </code></pre></div></td></tr></table></div>
@@ -11476,8 +11468,7 @@ result = await pipeline.run({&quot;source&quot;: &quot;s3://...&quot;})
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-etl/src/rahcp_etl/pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">55</span>
-<span class="normal">56</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">56</span>
 <span class="normal">57</span>
 <span class="normal">58</span>
 <span class="normal">59</span>
@@ -11493,7 +11484,8 @@ result = await pipeline.run({&quot;source&quot;: &quot;s3://...&quot;})
 <span class="normal">69</span>
 <span class="normal">70</span>
 <span class="normal">71</span>
-<span class="normal">72</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">stage</span><span class="p">(</span>
+<span class="normal">72</span>
+<span class="normal">73</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">stage</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
@@ -11537,8 +11529,7 @@ result = await pipeline.run({&quot;source&quot;: &quot;s3://...&quot;})
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-etl/src/rahcp_etl/pipeline.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 74</span>
-<span class="normal"> 75</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 75</span>
 <span class="normal"> 76</span>
 <span class="normal"> 77</span>
 <span class="normal"> 78</span>
@@ -11573,7 +11564,8 @@ result = await pipeline.run({&quot;source&quot;: &quot;s3://...&quot;})
 <span class="normal">107</span>
 <span class="normal">108</span>
 <span class="normal">109</span>
-<span class="normal">110</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
+<span class="normal">110</span>
+<span class="normal">111</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
     <span class="o">*</span><span class="p">,</span>
