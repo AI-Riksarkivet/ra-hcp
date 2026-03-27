@@ -511,50 +511,52 @@
 		const keys = selectedKeys;
 		if (keys.length === 0) return;
 
-		const hasFolders = keys.some((k) => k.endsWith('/'));
+		const fileKeys = keys.filter((k) => !k.endsWith('/'));
+		const folderKeys = keys.filter((k) => k.endsWith('/'));
 
-		// Folders require ZIP download (can't presign a prefix)
-		if (hasFolders) {
-			const folderPrefixes = keys.filter((k) => k.endsWith('/'));
-			await startZipForPrefix(folderPrefixes[0]);
+		// Single file — direct download
+		if (fileKeys.length === 1 && folderKeys.length === 0) {
+			if (usePresigned) {
+				try {
+					const result = await bulk_presign({ bucket, keys: fileKeys, expires_in: 3600 });
+					if (result.urls.length > 0) {
+						const a = document.createElement('a');
+						a.href = result.urls[0].url;
+						a.download = fileKeys[0].split('/').pop() ?? fileKeys[0];
+						a.style.display = 'none';
+						document.body.appendChild(a);
+						a.click();
+						document.body.removeChild(a);
+					}
+				} catch (err) {
+					toast.error(getErrorMessage(err, 'Failed to download file'));
+				}
+			} else {
+				handleDownload(fileKeys[0]);
+			}
 			return;
 		}
 
-		downloading = true;
+		// Multiple files and/or folders — ZIP download
+		zipDownloading = true;
+		zipProgress = { total: 0, completed: 0, failed: 0 };
 		try {
-			if (usePresigned) {
-				// Presigned URLs — direct from HCP S3 (fast, but requires network access to HCP)
-				const result = await bulk_presign({ bucket, keys, expires_in: 3600 });
-				for (const item of result.urls) {
-					const a = document.createElement('a');
-					a.href = item.url;
-					a.download = item.key.split('/').pop() ?? item.key;
-					a.style.display = 'none';
-					document.body.appendChild(a);
-					a.click();
-					document.body.removeChild(a);
-					await new Promise((r) => setTimeout(r, 150));
-				}
+			const body: { bucket: string; prefix?: string; keys?: string[] } = { bucket };
+			if (folderKeys.length === 1 && fileKeys.length === 0) {
+				body.prefix = folderKeys[0];
+			} else if (folderKeys.length > 0) {
+				body.prefix = folderKeys[0];
 			} else {
-				// Proxy URLs — through SvelteKit (slower, but always works)
-				for (const key of keys) {
-					const a = document.createElement('a');
-					a.href = downloadUrl(key);
-					a.download = key.split('/').pop() ?? key;
-					a.style.display = 'none';
-					document.body.appendChild(a);
-					a.click();
-					document.body.removeChild(a);
-					await new Promise((r) => setTimeout(r, 150));
-				}
+				body.keys = fileKeys;
 			}
-			toast.success(
-				`Started downloading ${keys.length} file${keys.length !== 1 ? 's' : ''}`
-			);
+			const result = await start_zip_download(body);
+			zipTaskId = result.task_id;
+			zipProgress.total = result.total;
+			toast.info(`Preparing ZIP... ${fileKeys.length + folderKeys.length} items`);
+			pollZipStatus();
 		} catch (err) {
-			toast.error(getErrorMessage(err, 'Failed to download objects'));
-		} finally {
-			downloading = false;
+			toast.error(getErrorMessage(err, 'Failed to start ZIP download'));
+			zipDownloading = false;
 		}
 	}
 
