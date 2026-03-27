@@ -66,44 +66,16 @@
 	// --- Flat mode (recursive listing for search across all objects) ---
 	let flat = $state(false);
 
-	// --- Server-side pagination with continuation tokens ---
-	let continuationToken = $state<string | undefined>(undefined);
-	let tokenHistory = $state<string[]>([]);
-
-	let objectData = $derived(
-		get_objects({
-			bucket,
-			prefix,
-			continuation_token: continuationToken,
-			flat,
-		})
-	);
-
+	let objectData = $derived(get_objects({ bucket, prefix, flat }));
 	let isTruncated = $derived(objectData.current?.isTruncated ?? false);
-	let nextToken = $derived(objectData.current?.nextToken ?? null);
-
-	function loadNextPage() {
-		if (!nextToken) return;
-		tokenHistory = [...tokenHistory, continuationToken ?? ''];
-		continuationToken = nextToken;
-	}
-
-	function loadPrevPage() {
-		if (tokenHistory.length === 0) return;
-		const prev = tokenHistory[tokenHistory.length - 1];
-		tokenHistory = tokenHistory.slice(0, -1);
-		continuationToken = prev || undefined;
-	}
 
 	// When navigating into a selected folder, select all items in the new view
 	let selectAllOnLoad = $state(false);
 
-	// Reset server pagination when prefix or flat mode changes
+	// Reset row selection when prefix or flat mode changes
 	$effect(() => {
 		void prefix;
 		void flat;
-		continuationToken = undefined;
-		tokenHistory = [];
 		if (!selectAllOnLoad) {
 			rowSelection = {};
 		}
@@ -418,8 +390,6 @@
 			enableRowSelection: true,
 		})
 	);
-
-	let serverPage = $derived(tokenHistory.length + 1);
 
 	// --- Delete ---
 	let deleteDialogOpen = $state(false);
@@ -830,19 +800,10 @@
 		{/snippet}
 	</DataTable>
 
-	<!-- Server-side batch navigation (only when S3 has more results) -->
-	{#if isTruncated || tokenHistory.length > 0}
-		<div class="flex items-center justify-end gap-2 py-1">
-			<span class="text-xs text-muted-foreground">
-				Batch {serverPage}{isTruncated ? ' (more available)' : ''}
-			</span>
-			<Button variant="outline" size="sm" class="h-7" onclick={loadPrevPage} disabled={tokenHistory.length === 0}>
-				Previous batch
-			</Button>
-			<Button variant="outline" size="sm" class="h-7" onclick={loadNextPage} disabled={!isTruncated}>
-				Next batch
-			</Button>
-		</div>
+	{#if isTruncated}
+		<p class="py-1 text-center text-xs text-muted-foreground">
+			Showing first {filteredObjects.length} objects. Use search or flat view to find more.
+		</p>
 	{/if}
 {/await}
 
