@@ -923,6 +923,7 @@ dependencies = [
     { name = "httpx" },
     { name = "pydantic-settings" },
     { name = "rahcp-tracker" },
+    { name = "tenacity" },
 ]
 
 [package.optional-dependencies]
@@ -947,6 +948,7 @@ requires-dist = [
     { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.29" },
     { name = "pydantic-settings", specifier = ">=2.13" },
     { name = "rahcp-tracker", editable = "packages/rahcp-tracker" },
+    { name = "tenacity", specifier = ">=8.1" },
 ]
 provides-extras = ["otel"]
 
@@ -964,12 +966,14 @@ source = { editable = "packages/rahcp-etl" }
 dependencies = [
     { name = "nats-py" },
     { name = "rahcp-client" },
+    { name = "tenacity" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nats-py", specifier = ">=2.9" },
     { name = "rahcp-client", editable = "packages/rahcp-client" },
+    { name = "tenacity", specifier = ">=8.1" },
 ]
 
 [[package]]
@@ -1165,6 +1169,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fb/26/1d2faa0fd5a765267f49751de533adac6b9ff9366c7c6e7692df4f32230f/sqlmodel-0.0.37.tar.gz", hash = "sha256:d2c19327175794faf50b1ee31cc966764f55b1dedefc046450bc5741a3d68352", size = 85527, upload-time = "2026-02-21T16:39:47.038Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b1/e1/7c8d18e737433f3b5bbe27b56a9072a9fcb36342b48f1bef34b6da1d61f2/sqlmodel-0.0.37-py3-none-any.whl", hash = "sha256:2137a4045ef3fd66a917a7717ada959a1ceb3630d95e1f6aaab39dd2c0aef278", size = 27224, upload-time = "2026-02-21T16:39:47.781Z" },
+]
+
+[[package]]
+name = "tenacity"
+version = "9.1.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55", size = 28926, upload-time = "2026-02-07T10:45:32.24Z" },
 ]
 
 [[package]]

@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from types import TracebackType
 from typing import TYPE_CHECKING, Any
 
 import httpx
+from tenacity import (
+    AsyncRetrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 
 from rahcp_client.config import HCPSettings
 from rahcp_client.errors import (
@@ -217,92 +222,82 @@ class HCPClient:
     ) -> httpx.Response:
         """Send an HTTP request with retry, tracing, and automatic 401 refresh."""
         merged_headers = {**self._auth_headers(), **(headers or {})}
-        last_error: Exception | None = None
+        refreshed = False
 
         with tracer.start_as_current_span(f"{method} {path}") as span:
             span.set_attribute("http.method", method)
             span.set_attribute("http.path", path)
 
-            for attempt in range(self.max_retries + 1):
-                t0 = time.monotonic()
-                try:
-                    response = await self._http.request(
-                        method,
-                        path,
-                        params=params,
-                        json=json,
-                        data=data,
-                        content=content,
-                        headers=merged_headers,
-                    )
-                except httpx.TransportError as exc:
+            async for attempt in AsyncRetrying(
+                stop=stop_after_attempt(self.max_retries + 1),
+                wait=wait_exponential_jitter(
+                    initial=self.retry_base_delay,
+                    max=60,
+                    jitter=self.retry_base_delay,
+                ),
+                retry=retry_if_exception_type(RetryableError),
+                reraise=True,
+            ):
+                with attempt:
+                    t0 = time.monotonic()
+                    try:
+                        response = await self._http.request(
+                            method,
+                            path,
+                            params=params,
+                            json=json,
+                            data=data,
+                            content=content,
+                            headers=merged_headers,
+                        )
+                    except httpx.TransportError as exc:
+                        duration = (time.monotonic() - t0) * 1000
+                        log.warning(
+                            "%s %s — transport error after %.0fms: %s",
+                            method,
+                            path,
+                            duration,
+                            exc,
+                        )
+                        raise RetryableError(str(exc)) from exc
+
                     duration = (time.monotonic() - t0) * 1000
-                    log.warning(
-                        "%s %s — transport error after %.0fms (attempt %d): %s",
-                        method,
-                        path,
-                        duration,
-                        attempt + 1,
-                        exc,
-                    )
-                    last_error = RetryableError(str(exc))
-                    await self._backoff(attempt)
-                    continue
+                    span.set_attribute("http.status_code", response.status_code)
 
-                duration = (time.monotonic() - t0) * 1000
-                span.set_attribute("http.status_code", response.status_code)
-
-                log.debug(
-                    "%s %s → %d (%.0fms)",
-                    method,
-                    path,
-                    response.status_code,
-                    duration,
-                )
-
-                if response.status_code == 401 and self.username and attempt == 0:
-                    log.info("Token expired, refreshing...")
-                    await self._login()
-                    merged_headers = {**self._auth_headers(), **(headers or {})}
-                    continue
-
-                if response.status_code in _RETRYABLE_STATUSES:
-                    log.warning(
-                        "%s %s → %d (attempt %d/%d, retrying)",
-                        method,
-                        path,
-                        response.status_code,
-                        attempt + 1,
-                        self.max_retries + 1,
-                    )
-                    last_error = error_for_status(
-                        response.status_code, _redact(response.text)
-                    )
-                    if attempt < self.max_retries:
-                        await self._backoff(attempt)
-                        continue
-
-                if response.status_code >= 400:
-                    safe_body = _redact(response.text)
-                    log_fn = log.debug if response.status_code == 404 else log.error
-                    log_fn(
-                        "%s %s → %d (%.0fms): %s",
+                    log.debug(
+                        "%s %s → %d (%.0fms)",
                         method,
                         path,
                         response.status_code,
                         duration,
-                        safe_body,
                     )
-                    raise error_for_status(response.status_code, safe_body)
 
-                return response
+                    # One-time token refresh on 401
+                    if response.status_code == 401 and self.username and not refreshed:
+                        log.info("Token expired, refreshing...")
+                        await self._login()
+                        merged_headers = {**self._auth_headers(), **(headers or {})}
+                        refreshed = True
+                        raise RetryableError("token refresh")
 
-        if last_error:
-            raise last_error
+                    if response.status_code in _RETRYABLE_STATUSES:
+                        raise error_for_status(
+                            response.status_code, _redact(response.text)
+                        )
+
+                    if response.status_code >= 400:
+                        safe_body = _redact(response.text)
+                        log_fn = log.debug if response.status_code == 404 else log.error
+                        log_fn(
+                            "%s %s → %d (%.0fms): %s",
+                            method,
+                            path,
+                            response.status_code,
+                            duration,
+                            safe_body,
+                        )
+                        raise error_for_status(response.status_code, safe_body)
+
+                    return response
+
         raise RetryableError("All retries exhausted")  # pragma: no cover
-
-    async def _backoff(self, attempt: int) -> None:
-        """Exponential backoff: base * 2^attempt."""
-        delay = self.retry_base_delay * (2**attempt)
-        log.debug("Retry attempt %d, backing off %.1fs", attempt + 1, delay)
-        await asyncio.sleep(delay)

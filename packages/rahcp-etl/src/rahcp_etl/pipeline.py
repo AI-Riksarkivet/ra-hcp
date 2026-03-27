@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from typing import Any
+
+from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential_jitter
 
 from rahcp_etl.checkpointing import CheckpointStore
 
@@ -111,25 +112,33 @@ class Pipeline:
 
     async def _run_stage(self, stage: Stage, state: dict[str, Any]) -> dict[str, Any]:
         """Run a single stage with retry."""
-        last_error: Exception | None = None
-        for attempt in range(stage.retries + 1):
-            try:
-                result = await stage.handler(state)
-                log.info("Stage '%s' completed", stage.name)
-                return result
-            except Exception as exc:
-                last_error = exc
-                if attempt < stage.retries:
-                    delay = stage.backoff * (2**attempt)
-                    log.warning(
-                        "Stage '%s' failed (attempt %d/%d), retrying in %.1fs: %s",
-                        stage.name,
-                        attempt + 1,
-                        stage.retries + 1,
-                        delay,
-                        exc,
-                    )
-                    await asyncio.sleep(delay)
 
-        log.error("Stage '%s' failed after %d attempts", stage.name, stage.retries + 1)
-        raise last_error  # type: ignore[misc]
+        def _log_retry(retry_state: Any) -> None:
+            log.warning(
+                "Stage '%s' failed (attempt %d/%d), retrying: %s",
+                stage.name,
+                retry_state.attempt_number,
+                stage.retries + 1,
+                retry_state.outcome.exception(),
+            )
+
+        try:
+            async for attempt in AsyncRetrying(
+                stop=stop_after_attempt(stage.retries + 1),
+                wait=wait_exponential_jitter(
+                    initial=stage.backoff, max=300, jitter=stage.backoff,
+                ),
+                reraise=True,
+                before_sleep=_log_retry,
+            ):
+                with attempt:
+                    result = await stage.handler(state)
+                    log.info("Stage '%s' completed", stage.name)
+                    return result
+        except Exception:
+            log.error(
+                "Stage '%s' failed after %d attempts", stage.name, stage.retries + 1
+            )
+            raise
+
+        raise RuntimeError("unreachable")  # pragma: no cover
