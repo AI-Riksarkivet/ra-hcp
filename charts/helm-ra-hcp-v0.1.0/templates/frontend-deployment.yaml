@@ -25,7 +25,7 @@ spec:
       {{- end }}
       containers:
         - name: frontend
-          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.frontend.image.repository }}{{- if .Values.frontend.image.digest }}@{{ .Values.frontend.image.digest }}{{- else }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}{{- end }}"
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
           ports:
             - name: http
