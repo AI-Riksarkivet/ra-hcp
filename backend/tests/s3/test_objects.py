@@ -431,10 +431,10 @@ async def test_create_folder_nested(
     assert body["key"] == "parent/child/"
 
 
-# ── Count objects ──────────────────────────────────────────────────────
+# ── S3 stats ──────────────────────────────────────────────────────────
 
 
-async def test_count_objects_paginates_and_accumulates(
+async def test_s3_stats_paginates_and_accumulates(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
     """The count endpoint must paginate through all S3 pages and sum totals."""
@@ -454,7 +454,7 @@ async def test_count_objects_paginates_and_accumulates(
         },
     ]
     resp = await client.get(
-        "/api/v1/buckets/my-bucket/objects/count?prefix=data/&delimiter=/",
+        "/api/v1/buckets/my-bucket/objects/s3_stats?prefix=data/&delimiter=/",
         headers=auth_headers,
     )
     assert resp.status_code == 200

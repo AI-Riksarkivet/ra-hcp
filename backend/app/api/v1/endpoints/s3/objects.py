@@ -77,11 +77,11 @@ async def list_objects(
     )
 
 
-# ── Count objects at prefix (must be before {key:path} catch-all) ─────
+# ── S3 stats at prefix (must be before {key:path} catch-all) ──────────
 
 
-@router.get("/count", response_model=CountObjectsResponse)
-async def count_objects(
+@router.get("/s3_stats", response_model=CountObjectsResponse)
+async def s3_stats(
     bucket: str,
     prefix: str | None = Query(None),
     delimiter: str | None = Query(None),

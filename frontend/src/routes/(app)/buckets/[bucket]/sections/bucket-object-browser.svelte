@@ -25,7 +25,7 @@
 	import BulkDeleteDialog from '$lib/components/custom/bulk-delete-dialog/bulk-delete-dialog.svelte';
 	import {
 		get_objects,
-		count_objects,
+		get_s3_stats,
 		delete_object,
 		bulk_delete_objects,
 		bulk_presign,
@@ -72,12 +72,13 @@
 	let objectData = $derived(get_objects({ bucket, prefix, flat }));
 	let isTruncated = $derived(objectData.current?.isTruncated ?? false);
 
-	// Full count at this prefix level (paginated server-side).
-	// Only used in folder view — in flat view with millions of objects,
-	// counting via S3 list is too slow. The bucket header shows the
-	// total from namespace statistics instead.
+	// Full count at this prefix level (paginated server-side)
 	let countData = $derived(
-		flat ? null : count_objects({ bucket, prefix: prefix || undefined, delimiter: '/' })
+		get_s3_stats({
+			bucket,
+			prefix: prefix || undefined,
+			delimiter: flat ? undefined : '/',
+		})
 	);
 	let prefixCount = $derived(countData?.current ?? null);
 
@@ -776,9 +777,7 @@
 				</Button>
 			{/if}
 			<span class="ml-auto text-xs text-muted-foreground">
-				{#if flat && totalObjects !== null}
-					Showing {rawObjects.length.toLocaleString()} of {totalObjects.toLocaleString()} objects
-				{:else if prefixCount}
+				{#if prefixCount}
 					{prefixCount.files.toLocaleString()} file{prefixCount.files !== 1 ? 's' : ''}{prefixCount.folders > 0 ? `, ${prefixCount.folders.toLocaleString()} folder${prefixCount.folders !== 1 ? 's' : ''}` : ''}
 				{:else}
 					{rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
@@ -820,12 +819,10 @@
 
 	{#if isTruncated}
 		<p class="py-1 text-center text-xs text-amber-600">
-			{#if flat && totalObjects !== null}
-				Showing {filteredObjects.length.toLocaleString()} of {totalObjects.toLocaleString()} total objects. Use search to narrow results.
-			{:else if prefixCount}
-				Showing {filteredObjects.length.toLocaleString()} of {(prefixCount.files + prefixCount.folders).toLocaleString()} total at this level. Switch to flat view or use search to find all objects.
+			{#if prefixCount}
+				Showing {filteredObjects.length.toLocaleString()} of {(prefixCount.files + prefixCount.folders).toLocaleString()} total. Use search to narrow results.
 			{:else}
-				Showing first {filteredObjects.length.toLocaleString()} objects. Switch to flat view or use search to find more.
+				Showing first {filteredObjects.length.toLocaleString()} objects. Use search to narrow results.
 			{/if}
 		</p>
 	{/if}

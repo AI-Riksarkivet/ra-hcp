@@ -99,7 +99,7 @@ export const get_objects = query(
   },
 );
 
-export const count_objects = query(
+export const get_s3_stats = query(
   z.object({
     bucket: z.string(),
     prefix: z.string().optional(),
@@ -112,14 +112,14 @@ export const count_objects = query(
       if (delimiter) params.set("delimiter", delimiter);
       const qs = params.toString();
       const res = await apiFetch(
-        `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/count${qs ? `?${qs}` : ""}`,
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/s3_stats${qs ? `?${qs}` : ""}`,
       );
       if (res.ok) {
         const data = await res.json();
         return { files: data.files as number, folders: data.folders as number };
       }
     } catch (err) {
-      console.error("[buckets.remote] count_objects", err);
+      console.error("[buckets.remote] get_s3_stats", err);
     }
     return null;
   },
