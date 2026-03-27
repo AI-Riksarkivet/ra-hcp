@@ -95,13 +95,30 @@
 		continuationToken = prev || undefined;
 	}
 
-	// Reset server pagination and row selection when prefix or flat mode changes
+	// When navigating into a selected folder, select all items in the new view
+	let selectAllOnLoad = $state(false);
+
+	// Reset server pagination when prefix or flat mode changes
 	$effect(() => {
 		void prefix;
 		void flat;
 		continuationToken = undefined;
 		tokenHistory = [];
-		rowSelection = {};
+		if (!selectAllOnLoad) {
+			rowSelection = {};
+		}
+	});
+
+	// Select all rows after data loads (when navigating into a selected folder)
+	$effect(() => {
+		if (selectAllOnLoad && filteredObjects.length > 0) {
+			const allSelected: Record<string, boolean> = {};
+			for (let i = 0; i < filteredObjects.length; i++) {
+				allSelected[String(i)] = true;
+			}
+			rowSelection = allSelected;
+			selectAllOnLoad = false;
+		}
 	});
 
 	// --- S3 Object type ---
@@ -632,6 +649,7 @@
 
 	function handleRowClick(obj: S3Object) {
 		if (isObjFolder(obj)) {
+			selectAllOnLoad = selectedKeys.includes(obj.key);
 			onnavigate(obj.key);
 		} else {
 			openViewer(obj);
