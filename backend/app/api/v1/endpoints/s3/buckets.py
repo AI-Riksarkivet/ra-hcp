@@ -17,11 +17,11 @@ Endpoints:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception
 
 from app.api.dependencies import get_mapi_service, get_s3_service, get_storage_settings
 from app.api.errors import run_storage
@@ -134,36 +134,53 @@ async def _force_delete_hcp(
     ns_path = f"/tenants/{creds.tenant}/namespaces/{bucket}"
     await _prepare_namespace_for_delete(hcp, ns_path)
 
-    # Retry: S3 delete first, then MAPI namespace delete.
-    for attempt in range(3):
-        if attempt > 0:
-            await asyncio.sleep(2)
-        try:
-            await run_storage(s3.delete_bucket(bucket), f"bucket '{bucket}'")
-            return {"status": "deleted", "bucket": bucket}
-        except HTTPException as exc:
-            if exc.status_code != 409:
-                raise
-        try:
-            await hcp.send("DELETE", ns_path, resource=f"bucket '{bucket}'")
-            return {"status": "deleted", "bucket": bucket}
-        except HTTPException:
-            logger.info(
-                "force-delete: attempt %d for '%s' — waiting for "
-                "HCP to prune deletion records",
-                attempt + 1,
-                bucket,
+    try:
+        return await _retry_delete_bucket(s3, hcp, bucket, ns_path)
+    except HTTPException:
+        reason = f"bucket '{bucket}': Could not delete bucket."
+        if object_errors:
+            reason += " Some objects failed to delete: " + "; ".join(object_errors)
+        else:
+            reason += (
+                " HCP is still cleaning up internal deletion records."
+                " Please try again in a few minutes."
             )
+        raise HTTPException(status_code=409, detail=reason)
 
-    reason = f"bucket '{bucket}': Could not delete bucket."
-    if object_errors:
-        reason += " Some objects failed to delete: " + "; ".join(object_errors)
-    else:
-        reason += (
-            " HCP is still cleaning up internal deletion records."
-            " Please try again in a few minutes."
+
+def _is_conflict(exc: BaseException) -> bool:
+    """Only retry on 409 Conflict (BucketNotEmpty)."""
+    return isinstance(exc, HTTPException) and exc.status_code == 409
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(2),
+    retry=retry_if_exception(_is_conflict),
+    reraise=True,
+)
+async def _retry_delete_bucket(
+    s3: StorageProtocol,
+    hcp: AuthenticatedMapiService,
+    bucket: str,
+    ns_path: str,
+) -> dict:
+    """Try S3 delete, then MAPI namespace delete. Retries on 409."""
+    try:
+        await run_storage(s3.delete_bucket(bucket), f"bucket '{bucket}'")
+        return {"status": "deleted", "bucket": bucket}
+    except HTTPException as exc:
+        if exc.status_code != 409:
+            raise
+    try:
+        await hcp.send("DELETE", ns_path, resource=f"bucket '{bucket}'")
+        return {"status": "deleted", "bucket": bucket}
+    except HTTPException as exc:
+        logger.info(
+            "force-delete: '%s' — waiting for HCP to prune deletion records",
+            bucket,
         )
-    raise HTTPException(status_code=409, detail=reason)
+        raise
 
 
 async def _prepare_namespace_for_delete(

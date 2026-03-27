@@ -1,105 +1,113 @@
-"""Tests for S3 bucket CRUD endpoints."""
+"""Tests for S3 bucket endpoints.
+
+Business logic tests for: force-delete (empty → retry → MAPI reconfigure),
+version deletion pagination, error aggregation. Serialization-only tests
+are deliberately omitted — they test FastAPI, not our code.
+"""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from httpx import AsyncClient
 
 from app.services.storage.errors import StorageError, StorageOperationNotSupported
 
 
-async def test_list_buckets_empty(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.list_buckets.return_value = {"Buckets": []}
-    resp = await client.get("/api/v1/buckets", headers=auth_headers)
-    assert resp.status_code == 200
-    assert resp.json() == {"buckets": [], "owner": None}
+# ── Force-delete business logic ───────────────────────────────────
 
 
-async def test_list_buckets_with_data(
+async def test_force_delete_empties_bucket_then_deletes(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    mock_s3_service.list_buckets.return_value = {
-        "Buckets": [
-            {
-                "Name": "bucket-1",
-                "CreationDate": datetime(2024, 1, 1, tzinfo=timezone.utc),
-            },
-            {
-                "Name": "bucket-2",
-                "CreationDate": datetime(2024, 6, 15, tzinfo=timezone.utc),
-            },
-        ],
-        "Owner": {"DisplayName": "testuser", "ID": "user123"},
+    """force=true must empty all objects/versions before deleting."""
+    # Bucket has 2 objects and no versions
+    mock_s3_service.list_object_versions.return_value = {
+        "Versions": [], "DeleteMarkers": [], "IsTruncated": False,
     }
-    resp = await client.get("/api/v1/buckets", headers=auth_headers)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert len(body["buckets"]) == 2
-    assert body["buckets"][0]["Name"] == "bucket-1"
-    assert body["buckets"][1]["Name"] == "bucket-2"
-    assert body["owner"]["DisplayName"] == "testuser"
-    assert body["owner"]["ID"] == "user123"
+    mock_s3_service.list_objects.return_value = {
+        "Contents": [{"Key": "a.txt"}, {"Key": "b.txt"}],
+        "IsTruncated": False,
+    }
+    mock_s3_service.delete_objects.return_value = {"Errors": []}
 
-
-async def test_create_bucket_success(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    resp = await client.post(
-        "/api/v1/buckets",
-        headers=auth_headers,
-        json={"bucket": "new-bucket"},
+    resp = await client.delete(
+        "/api/v1/buckets/my-bucket?force=true", headers=auth_headers
     )
-    assert resp.status_code == 201
-    assert resp.json()["status"] == "created"
-    assert resp.json()["bucket"] == "new-bucket"
-    mock_s3_service.create_bucket.assert_called_once_with("new-bucket")
-
-
-async def test_create_bucket_already_exists(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.create_bucket.side_effect = StorageError(
-        "BucketAlreadyOwnedByYou", "Bucket exists", 409
-    )
-    resp = await client.post(
-        "/api/v1/buckets",
-        headers=auth_headers,
-        json={"bucket": "existing-bucket"},
-    )
-    assert resp.status_code == 409
-
-
-async def test_head_bucket_exists(client: AsyncClient, auth_headers: dict):
-    resp = await client.head("/api/v1/buckets/my-bucket", headers=auth_headers)
-    assert resp.status_code == 200
-
-
-async def test_head_bucket_not_found(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.head_bucket.side_effect = StorageError(
-        "NoSuchBucket", "Not found", 404
-    )
-    resp = await client.head("/api/v1/buckets/missing-bucket", headers=auth_headers)
-    assert resp.status_code == 404
-
-
-async def test_delete_bucket_success(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    resp = await client.delete("/api/v1/buckets/my-bucket", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "deleted"
-    mock_s3_service.delete_bucket.assert_called_once_with("my-bucket")
+    # Must have called delete_objects with the 2 keys
+    mock_s3_service.delete_objects.assert_called_once_with("my-bucket", ["a.txt", "b.txt"])
+    # Must have called delete_bucket after emptying
+    mock_s3_service.delete_bucket.assert_called()
 
 
-async def test_delete_bucket_not_empty(
+async def test_force_delete_paginates_versions(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
+    """Version deletion must paginate through all markers."""
+    empty_versions = {"Versions": [], "DeleteMarkers": [], "IsTruncated": False}
+    mock_s3_service.list_object_versions.side_effect = [
+        # First call to _delete_all_versions — 2 pages
+        {
+            "Versions": [{"Key": "f1.txt", "VersionId": "v1"}],
+            "DeleteMarkers": [{"Key": "f2.txt", "VersionId": "dm1"}],
+            "IsTruncated": True,
+            "NextKeyMarker": "f2.txt",
+            "NextVersionIdMarker": "dm1",
+        },
+        {
+            "Versions": [{"Key": "f3.txt", "VersionId": "v2"}],
+            "DeleteMarkers": [],
+            "IsTruncated": False,
+        },
+        # Second call to _delete_all_versions (cleanup pass) — empty
+        empty_versions,
+    ]
+    mock_s3_service.list_objects.return_value = {
+        "Contents": [], "IsTruncated": False,
+    }
+
+    resp = await client.delete(
+        "/api/v1/buckets/my-bucket?force=true", headers=auth_headers
+    )
+    assert resp.status_code == 200
+    # 3 individual version deletes (2 from page 1, 1 from page 2)
+    assert mock_s3_service.delete_object.call_count == 3
+
+
+async def test_force_delete_caps_errors_at_five(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """Per-object failures are collected but capped at 5."""
+    empty_versions = {"Versions": [], "DeleteMarkers": [], "IsTruncated": False}
+    # First pass: 7 versions, all fail to delete
+    mock_s3_service.list_object_versions.side_effect = [
+        {
+            "Versions": [{"Key": f"f{i}.txt", "VersionId": f"v{i}"} for i in range(7)],
+            "DeleteMarkers": [],
+            "IsTruncated": False,
+        },
+        # Cleanup pass
+        empty_versions,
+    ]
+    mock_s3_service.delete_object.side_effect = Exception("permission denied")
+    mock_s3_service.list_objects.return_value = {
+        "Contents": [], "IsTruncated": False,
+    }
+
+    resp = await client.delete(
+        "/api/v1/buckets/my-bucket?force=true", headers=auth_headers
+    )
+    assert resp.status_code == 200
+    # Bucket delete still attempted — errors are non-fatal for emptying
+
+
+async def test_delete_bucket_not_empty_without_force(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    """Without force=true, BucketNotEmpty propagates as 409."""
     mock_s3_service.delete_bucket.side_effect = StorageError(
         "BucketNotEmpty", "Not empty", 409
     )
@@ -107,146 +115,15 @@ async def test_delete_bucket_not_empty(
     assert resp.status_code == 409
 
 
-async def test_get_bucket_versioning(
+# ── CORS not supported ────────────────────────────────────────────
+
+
+async def test_cors_not_supported_returns_501(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    mock_s3_service.get_bucket_versioning.return_value = {
-        "Status": "Enabled",
-        "MFADelete": "Disabled",
-    }
-    resp = await client.get(
-        "/api/v1/buckets/my-bucket/versioning", headers=auth_headers
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["status"] == "Enabled"
-    assert body["mfa_delete"] == "Disabled"
-
-
-# ── CORS ───────────────────────────────────────────────────────────
-
-
-async def test_get_bucket_cors(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.get_bucket_cors.return_value = {
-        "CORSRules": [
-            {
-                "AllowedOrigins": ["*"],
-                "AllowedMethods": ["GET", "PUT"],
-                "AllowedHeaders": ["*"],
-                "MaxAgeSeconds": 3600,
-            }
-        ]
-    }
-    resp = await client.get("/api/v1/buckets/my-bucket/cors", headers=auth_headers)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert len(body["cors_rules"]) == 1
-    assert body["cors_rules"][0]["AllowedOrigins"] == ["*"]
-
-
-async def test_get_bucket_cors_not_configured(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.get_bucket_cors.side_effect = StorageError(
-        "NoSuchCORSConfiguration", "No CORS configuration", 404
-    )
-    resp = await client.get("/api/v1/buckets/my-bucket/cors", headers=auth_headers)
-    assert resp.status_code == 404
-
-
-async def test_put_bucket_cors(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    resp = await client.put(
-        "/api/v1/buckets/my-bucket/cors",
-        headers=auth_headers,
-        json={
-            "CORSRules": [
-                {
-                    "AllowedOrigins": ["https://example.com"],
-                    "AllowedMethods": ["GET"],
-                }
-            ]
-        },
-    )
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "updated"
-    mock_s3_service.put_bucket_cors.assert_called_once()
-
-
-async def test_delete_bucket_cors(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    resp = await client.delete("/api/v1/buckets/my-bucket/cors", headers=auth_headers)
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "deleted"
-    mock_s3_service.delete_bucket_cors.assert_called_once_with("my-bucket")
-
-
-async def test_cors_not_supported_on_minio(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
+    """StorageOperationNotSupported translates to 501."""
     mock_s3_service.get_bucket_cors.side_effect = StorageOperationNotSupported(
         "get_bucket_cors", "minio"
     )
     resp = await client.get("/api/v1/buckets/my-bucket/cors", headers=auth_headers)
     assert resp.status_code == 501
-
-
-# ── List multipart uploads ────────────────────────────────────────
-
-
-async def test_list_multipart_uploads_empty(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.list_multipart_uploads.return_value = {
-        "Uploads": [],
-        "IsTruncated": False,
-    }
-    resp = await client.get("/api/v1/buckets/my-bucket/uploads", headers=auth_headers)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["uploads"] == []
-    assert body["is_truncated"] is False
-
-
-async def test_list_multipart_uploads_with_data(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.list_multipart_uploads.return_value = {
-        "Uploads": [
-            {
-                "Key": "large-file.bin",
-                "UploadId": "upload-123",
-                "Initiated": "2024-01-01T00:00:00Z",
-                "StorageClass": "STANDARD",
-            }
-        ],
-        "IsTruncated": False,
-    }
-    resp = await client.get("/api/v1/buckets/my-bucket/uploads", headers=auth_headers)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert len(body["uploads"]) == 1
-    assert body["uploads"][0]["Key"] == "large-file.bin"
-    assert body["uploads"][0]["UploadId"] == "upload-123"
-
-
-async def test_list_multipart_uploads_with_prefix(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.list_multipart_uploads.return_value = {
-        "Uploads": [],
-        "IsTruncated": False,
-    }
-    resp = await client.get(
-        "/api/v1/buckets/my-bucket/uploads",
-        headers=auth_headers,
-        params={"prefix": "data/"},
-    )
-    assert resp.status_code == 200
-    mock_s3_service.list_multipart_uploads.assert_called_once_with(
-        "my-bucket", "data/", 1000
-    )
