@@ -23,6 +23,7 @@ from app.schemas.s3 import (
     BulkPresignRequest,
     BulkPresignResponse,
     CopyObjectRequest,
+    CountObjectsResponse,
     CreateFolderRequest,
     CreateFolderResponse,
     DeleteObjectsRequest,
@@ -74,6 +75,37 @@ async def list_objects(
         next_continuation_token=result.get("NextContinuationToken"),
         key_count=result.get("KeyCount", 0),
     )
+
+
+# ── Count objects at prefix (must be before {key:path} catch-all) ─────
+
+
+@router.get("/count", response_model=CountObjectsResponse)
+async def count_objects(
+    bucket: str,
+    prefix: str | None = Query(None),
+    delimiter: str | None = Query(None),
+    s3: StorageProtocol = Depends(get_s3_service),
+):
+    """Count all objects and common prefixes (folders) at a given prefix.
+
+    Paginates through S3 server-side to return the full count,
+    not limited by max_keys.
+    """
+    file_count = 0
+    folder_count = 0
+    token: str | None = None
+    while True:
+        result = await run_storage(
+            s3.list_objects(bucket, prefix, 1000, token, delimiter),
+            f"bucket '{bucket}'",
+        )
+        file_count += len(result.get("Contents", []))
+        folder_count += len(result.get("CommonPrefixes", []))
+        if not result.get("IsTruncated", False):
+            break
+        token = result.get("NextContinuationToken")
+    return {"files": file_count, "folders": folder_count}
 
 
 # ── Bulk delete (must be before {key:path} catch-all) ────────────────

@@ -99,6 +99,32 @@ export const get_objects = query(
   },
 );
 
+export const count_objects = query(
+  z.object({
+    bucket: z.string(),
+    prefix: z.string().optional(),
+    delimiter: z.string().optional(),
+  }),
+  async ({ bucket, prefix, delimiter }) => {
+    try {
+      const params = new URLSearchParams();
+      if (prefix) params.set("prefix", prefix);
+      if (delimiter) params.set("delimiter", delimiter);
+      const qs = params.toString();
+      const res = await apiFetch(
+        `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/count${qs ? `?${qs}` : ""}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return { files: data.files as number, folders: data.folders as number };
+      }
+    } catch (err) {
+      console.error("[buckets.remote] count_objects", err);
+    }
+    return null;
+  },
+);
+
 export const create_bucket = command(
   z.object({ bucket: z.string() }),
   async ({ bucket }) => {

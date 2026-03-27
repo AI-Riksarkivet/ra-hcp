@@ -25,6 +25,7 @@
 	import BulkDeleteDialog from '$lib/components/custom/bulk-delete-dialog/bulk-delete-dialog.svelte';
 	import {
 		get_objects,
+		count_objects,
 		delete_object,
 		bulk_delete_objects,
 		bulk_presign,
@@ -68,6 +69,12 @@
 
 	let objectData = $derived(get_objects({ bucket, prefix, flat }));
 	let isTruncated = $derived(objectData.current?.isTruncated ?? false);
+
+	// Full count at this prefix level (paginated server-side)
+	let countData = $derived(
+		flat ? null : count_objects({ bucket, prefix: prefix || undefined, delimiter: '/' })
+	);
+	let prefixCount = $derived(countData?.current ?? null);
 
 	// When navigating into a selected folder, select all items in the new view
 	let selectAllOnLoad = $state(false);
@@ -764,7 +771,11 @@
 				</Button>
 			{/if}
 			<span class="ml-auto text-xs text-muted-foreground">
-				{isTruncated ? `${rawObjects.length.toLocaleString()}+` : rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${isTruncated ? `${commonPrefixes.length}+` : String(commonPrefixes.length)} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
+				{#if prefixCount}
+					{prefixCount.files.toLocaleString()} file{prefixCount.files !== 1 ? 's' : ''}{prefixCount.folders > 0 ? `, ${prefixCount.folders.toLocaleString()} folder${prefixCount.folders !== 1 ? 's' : ''}` : ''}
+				{:else}
+					{rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
+				{/if}
 			</span>
 		</div>
 	</div>
@@ -802,7 +813,7 @@
 
 	{#if isTruncated}
 		<p class="py-1 text-center text-xs text-amber-600">
-			Only showing the first 1,000 objects in this folder. Switch to flat view or use search to find all objects.
+			Showing {filteredObjects.length.toLocaleString()} of {prefixCount ? `${(prefixCount.files + prefixCount.folders).toLocaleString()} total` : 'more'} at this level. Switch to flat view or use search to find all objects.
 		</p>
 	{/if}
 {/await}

@@ -74,6 +74,13 @@ class ListObjectsResponse(BaseModel):
     key_count: int = Field(0, description="Number of keys returned")
 
 
+class CountObjectsResponse(BaseModel):
+    """Response for counting objects at a prefix."""
+
+    files: int = Field(description="Total number of object keys")
+    folders: int = Field(description="Total number of common prefixes (folders)")
+
+
 class UploadObjectResponse(BaseModel):
     """Response for uploading an object."""
 
