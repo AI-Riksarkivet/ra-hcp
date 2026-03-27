@@ -1,14 +1,13 @@
 /**
- * Custom Deno server entry point that fixes the URL protocol for
- * TLS-terminating reverse proxies (nginx ingress).
+ * Custom Deno server entry point.
  *
- * Problem: nginx terminates HTTPS and forwards HTTP to Deno. SvelteKit's
- * CSRF check compares the browser's Origin (https://) against the request
- * URL (http://) and rejects POST requests as cross-site.
+ * Wraps the @deno/svelte-adapter handler to fix the request URL protocol
+ * for TLS-terminating reverse proxies (e.g. nginx ingress).
  *
- * Fix: read X-Forwarded-Proto and construct a new Request with the correct
- * protocol before passing it to SvelteKit. This is what adapter-node does
- * internally via PROTOCOL_HEADER, but the Deno adapter doesn't support it.
+ * The Deno adapter does not support adapter-node's PROTOCOL_HEADER env var,
+ * so SvelteKit sees http:// while browsers send Origin: https://, causing
+ * CSRF rejection on all POST requests. This wrapper reads X-Forwarded-Proto
+ * and constructs a corrected Request before SvelteKit processes it.
  */
 import rawDeployConfig from "./.deno-deploy/deploy.json" with { type: "json" };
 import rawSvelteData from "./.deno-deploy/svelte.json" with { type: "json" };
@@ -16,20 +15,21 @@ import { prepareServer } from "./.deno-deploy/handler.ts";
 
 const innerHandler = prepareServer(rawSvelteData, rawDeployConfig, Deno.cwd());
 
-const handler: Deno.ServeHandler = async (req, info) => {
+function fixProxyProtocol(req: Request): Request {
   const proto = req.headers.get("x-forwarded-proto");
-  if (proto === "https" && new URL(req.url).protocol === "http:") {
-    const url = new URL(req.url);
-    url.protocol = "https:";
-    req = new Request(url.toString(), {
-      method: req.method,
-      headers: req.headers,
-      body: req.body,
-      // @ts-ignore — duplex required for streaming request bodies
-      duplex: "half",
-    });
-  }
-  return innerHandler(req, info);
-};
+  if (proto !== "https") return req;
 
-Deno.serve(handler);
+  const url = new URL(req.url);
+  if (url.protocol === "https:") return req;
+
+  url.protocol = "https:";
+  return new Request(url, {
+    method: req.method,
+    headers: req.headers,
+    body: req.body,
+    // @ts-ignore — required for streaming request bodies in Deno
+    duplex: "half",
+  });
+}
+
+Deno.serve((req, info) => innerHandler(fixProxyProtocol(req), info));
