@@ -241,7 +241,7 @@
 						<Tooltip.Content>{showMeta ? 'Hide' : 'Show'} metadata</Tooltip.Content>
 					</Tooltip.Root>
 				{/if}
-				<Button variant="ghost" size="icon" href={url} download>
+				<Button variant="ghost" size="icon" href={url} download={filename}>
 					<Download class="h-4 w-4" />
 					<span class="sr-only">Download</span>
 				</Button>
@@ -371,7 +371,7 @@
 							Preview not available for .{ext} files
 						</p>
 						<p class="text-xs text-muted-foreground">Download the file to view it locally</p>
-						<Button href={url} download class="mt-2">
+						<Button href={url} download={filename} class="mt-2">
 							<Download class="h-4 w-4" />
 							Download
 						</Button>
