@@ -1681,6 +1681,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#app.api.v1.endpoints.s3.objects.count_objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;count_objects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#app.api.v1.endpoints.s3.objects.start_zip_download" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2756,6 +2767,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#app.api.v1.endpoints.s3.objects.count_objects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;count_objects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#app.api.v1.endpoints.s3.objects.start_zip_download" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3660,6 +3682,85 @@ empty + delete (no MAPI involved).</p>
 <div class="doc doc-object doc-function">
 
 
+<h3 id="app.api.v1.endpoints.s3.objects.count_objects" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">count_objects</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="n">s3</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">))</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-async"><code>async</code></small>
+  </span>
+
+<a href="#app.api.v1.endpoints.s3.objects.count_objects" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Count all objects and common prefixes (folders) at a given prefix.</p>
+<p>Paginates through S3 server-side to return the full count,
+not limited by max_keys.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>backend/app/api/v1/endpoints/s3/objects.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/count&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">CountObjectsResponse</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">count_objects</span><span class="p">(</span>
+    <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span>
+    <span class="n">delimiter</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span>
+    <span class="n">s3</span><span class="p">:</span> <span class="n">StorageProtocol</span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">),</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Count all objects and common prefixes (folders) at a given prefix.</span>
+
+<span class="sd">    Paginates through S3 server-side to return the full count,</span>
+<span class="sd">    not limited by max_keys.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">file_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">folder_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">token</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">run_storage</span><span class="p">(</span>
+            <span class="n">s3</span><span class="o">.</span><span class="n">list_objects</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">delimiter</span><span class="p">),</span>
+            <span class="sa">f</span><span class="s2">&quot;bucket &#39;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">file_count</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Contents&quot;</span><span class="p">,</span> <span class="p">[]))</span>
+        <span class="n">folder_count</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;CommonPrefixes&quot;</span><span class="p">,</span> <span class="p">[]))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;IsTruncated&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="k">break</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;NextContinuationToken&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;files&quot;</span><span class="p">:</span> <span class="n">file_count</span><span class="p">,</span> <span class="s2">&quot;folders&quot;</span><span class="p">:</span> <span class="n">folder_count</span><span class="p">}</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="app.api.v1.endpoints.s3.objects.start_zip_download" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">start_zip_download</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">s3</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_s3_service</span><span class="p">),</span> <span class="n">cache</span><span class="o">=</span><span class="n">Depends</span><span class="p">(</span><span class="n">get_cache_service</span><span class="p">))</span></code>
 
@@ -3679,44 +3780,44 @@ Returns 202 with task_id for polling.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/objects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span>
-<span class="normal">208</span>
-<span class="normal">209</span>
-<span class="normal">210</span>
-<span class="normal">211</span>
-<span class="normal">212</span>
-<span class="normal">213</span>
-<span class="normal">214</span>
-<span class="normal">215</span>
-<span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">219</span>
 <span class="normal">220</span>
 <span class="normal">221</span>
 <span class="normal">222</span>
 <span class="normal">223</span>
-<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/download&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ZipTaskResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">202</span><span class="p">)</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/download&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">ZipTaskResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">202</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">start_zip_download</span><span class="p">(</span>
     <span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -3780,39 +3881,7 @@ Returns 202 with task_id for polling.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/objects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">227</span>
-<span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
-<span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
-<span class="normal">250</span>
-<span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">259</span>
 <span class="normal">260</span>
 <span class="normal">261</span>
 <span class="normal">262</span>
@@ -3839,7 +3908,39 @@ Returns 202 with task_id for polling.</p>
 <span class="normal">283</span>
 <span class="normal">284</span>
 <span class="normal">285</span>
-<span class="normal">286</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/download/</span><span class="si">{task_id}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/download/</span><span class="si">{task_id}</span><span class="s2">&quot;</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_zip_download</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">task_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -3925,16 +4026,16 @@ Returns 202 with task_id for polling.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>backend/app/api/v1/endpoints/s3/objects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">360</span>
-<span class="normal">361</span>
-<span class="normal">362</span>
-<span class="normal">363</span>
-<span class="normal">364</span>
-<span class="normal">365</span>
-<span class="normal">366</span>
-<span class="normal">367</span>
-<span class="normal">368</span>
-<span class="normal">369</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/folder&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">CreateFolderResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">201</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/folder&quot;</span><span class="p">,</span> <span class="n">response_model</span><span class="o">=</span><span class="n">CreateFolderResponse</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">201</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">create_folder</span><span class="p">(</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">body</span><span class="p">:</span> <span class="n">CreateFolderRequest</span><span class="p">,</span>
