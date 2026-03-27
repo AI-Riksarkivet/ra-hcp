@@ -53,12 +53,14 @@
 	let {
 		bucket,
 		prefix,
+		totalObjects = null,
 		uploadOpen = $bindable(false),
 		createFolderOpen = $bindable(false),
 		onnavigate,
 	}: {
 		bucket: string;
 		prefix: string;
+		totalObjects?: number | null;
 		uploadOpen: boolean;
 		createFolderOpen: boolean;
 		onnavigate: (prefix: string) => void;
@@ -70,7 +72,10 @@
 	let objectData = $derived(get_objects({ bucket, prefix, flat }));
 	let isTruncated = $derived(objectData.current?.isTruncated ?? false);
 
-	// Full count at this prefix level (paginated server-side)
+	// Full count at this prefix level (paginated server-side).
+	// Only used in folder view — in flat view with millions of objects,
+	// counting via S3 list is too slow. The bucket header shows the
+	// total from namespace statistics instead.
 	let countData = $derived(
 		flat ? null : count_objects({ bucket, prefix: prefix || undefined, delimiter: '/' })
 	);
@@ -771,7 +776,9 @@
 				</Button>
 			{/if}
 			<span class="ml-auto text-xs text-muted-foreground">
-				{#if prefixCount}
+				{#if flat && totalObjects !== null}
+					Showing {rawObjects.length.toLocaleString()} of {totalObjects.toLocaleString()} objects
+				{:else if prefixCount}
 					{prefixCount.files.toLocaleString()} file{prefixCount.files !== 1 ? 's' : ''}{prefixCount.folders > 0 ? `, ${prefixCount.folders.toLocaleString()} folder${prefixCount.folders !== 1 ? 's' : ''}` : ''}
 				{:else}
 					{rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
@@ -813,7 +820,13 @@
 
 	{#if isTruncated}
 		<p class="py-1 text-center text-xs text-amber-600">
-			Showing {filteredObjects.length.toLocaleString()} of {prefixCount ? `${(prefixCount.files + prefixCount.folders).toLocaleString()} total` : 'more'} at this level. Switch to flat view or use search to find all objects.
+			{#if flat && totalObjects !== null}
+				Showing {filteredObjects.length.toLocaleString()} of {totalObjects.toLocaleString()} total objects. Use search to narrow results.
+			{:else if prefixCount}
+				Showing {filteredObjects.length.toLocaleString()} of {(prefixCount.files + prefixCount.folders).toLocaleString()} total at this level. Switch to flat view or use search to find all objects.
+			{:else}
+				Showing first {filteredObjects.length.toLocaleString()} objects. Switch to flat view or use search to find more.
+			{/if}
 		</p>
 	{/if}
 {/await}

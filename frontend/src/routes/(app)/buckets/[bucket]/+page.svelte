@@ -193,6 +193,7 @@
 			<BucketObjectBrowser
 				{bucket}
 				{prefix}
+				{totalObjects}
 				bind:uploadOpen
 				bind:createFolderOpen
 				onnavigate={navigatePrefix}
