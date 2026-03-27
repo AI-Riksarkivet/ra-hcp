@@ -15,10 +15,8 @@
 		ListTree,
 		FolderTree,
 		Archive,
-		ChevronLeft,
-		ChevronRight,
 	} from 'lucide-svelte';
-	import type { ColumnDef, SortingState } from '@tanstack/table-core';
+	import type { ColumnDef, SortingState, PaginationState } from '@tanstack/table-core';
 	import FileViewer from '$lib/components/custom/file-viewer/FileViewer.svelte';
 	import { formatBytes, formatDate } from '$lib/utils/format.js';
 	import { toast } from 'svelte-sonner';
@@ -39,6 +37,7 @@
 		createSvelteTable,
 		getCoreRowModel,
 		getSortedRowModel,
+		getPaginationRowModel,
 		renderSnippet,
 		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
@@ -67,10 +66,6 @@
 	// --- Flat mode (recursive listing for search across all objects) ---
 	let flat = $state(false);
 
-	// --- Page size controls how many objects we fetch from S3 per batch ---
-	const PAGE_SIZES = [50, 100, 200, 500, 1000];
-	let pageSize = $state(200);
-
 	// --- Server-side pagination with continuation tokens ---
 	let continuationToken = $state<string | undefined>(undefined);
 	let tokenHistory = $state<string[]>([]);
@@ -81,7 +76,6 @@
 			prefix,
 			continuation_token: continuationToken,
 			flat,
-			max_keys: pageSize,
 		})
 	);
 
@@ -101,18 +95,13 @@
 		continuationToken = prev || undefined;
 	}
 
-	function changePageSize(newSize: number) {
-		pageSize = newSize;
-		continuationToken = undefined;
-		tokenHistory = [];
-	}
-
-	// Reset server pagination when prefix or flat mode changes
+	// Reset server pagination and row selection when prefix or flat mode changes
 	$effect(() => {
 		void prefix;
 		void flat;
 		continuationToken = undefined;
 		tokenHistory = [];
+		rowSelection = {};
 	});
 
 	// --- S3 Object type ---
@@ -288,8 +277,9 @@
 		dateFilter = '';
 	}
 
-	// --- TanStack Table with sorting ---
+	// --- TanStack Table with sorting + pagination (standard pattern) ---
 	let sorting = $state<SortingState>([]);
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 50 });
 
 	let selectableObjects = $derived(filteredObjects.filter((obj) => !isObjFolder(obj)));
 
@@ -389,6 +379,9 @@
 				get sorting() {
 					return sorting;
 				},
+				get pagination() {
+					return pagination;
+				},
 				get rowSelection() {
 					return rowSelection;
 				},
@@ -396,11 +389,15 @@
 			onSortingChange: (updater) => {
 				sorting = typeof updater === 'function' ? updater(sorting) : updater;
 			},
+			onPaginationChange: (updater) => {
+				pagination = typeof updater === 'function' ? updater(pagination) : updater;
+			},
 			onRowSelectionChange: (updater) => {
 				rowSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
 			},
 			getCoreRowModel: getCoreRowModel(),
 			getSortedRowModel: getSortedRowModel(),
+			getPaginationRowModel: getPaginationRowModel(),
 			enableRowSelection: true,
 		})
 	);
@@ -827,53 +824,28 @@
 			: objects.length === 0
 				? 'No objects in this bucket'
 				: `No results matching "${search}"`}
-	/>
-
-	<!-- Pagination: rows per page + server-side batch navigation -->
-	<div class="flex items-center justify-between py-2">
-		<div class="text-sm text-muted-foreground">
+	>
+		{#snippet footer()}
 			{#if selectedKeys.length > 0}
 				{selectedKeys.length} of {filteredObjects.length} row(s) selected.
 			{/if}
+		{/snippet}
+	</DataTable>
+
+	<!-- Server-side batch navigation (only when S3 has more results) -->
+	{#if isTruncated || tokenHistory.length > 0}
+		<div class="flex items-center justify-end gap-2 py-1">
+			<span class="text-xs text-muted-foreground">
+				Batch {serverPage}{isTruncated ? ' (more available)' : ''}
+			</span>
+			<Button variant="outline" size="sm" class="h-7" onclick={loadPrevPage} disabled={tokenHistory.length === 0}>
+				Previous batch
+			</Button>
+			<Button variant="outline" size="sm" class="h-7" onclick={loadNextPage} disabled={!isTruncated}>
+				Next batch
+			</Button>
 		</div>
-		<div class="flex items-center gap-3">
-			<div class="flex items-center gap-1.5">
-				<span class="text-xs text-muted-foreground">Rows per page</span>
-				<select
-					class="border-input bg-background text-foreground ring-offset-background focus:ring-ring flex h-7 w-auto min-w-[60px] items-center rounded-md border px-2 py-0.5 text-xs shadow-sm focus:outline-none focus:ring-1"
-					value={String(pageSize)}
-					onchange={(e) => changePageSize(Number(e.currentTarget.value))}
-				>
-					{#each PAGE_SIZES as size (size)}
-						<option value={String(size)}>{size}</option>
-					{/each}
-				</select>
-			</div>
-			{#if isTruncated || tokenHistory.length > 0}
-				<span class="text-xs text-muted-foreground">
-					Batch {serverPage}{isTruncated ? '+' : ''}
-				</span>
-				<Button
-					variant="outline"
-					size="icon"
-					class="h-8 w-8"
-					onclick={loadPrevPage}
-					disabled={tokenHistory.length === 0}
-				>
-					<ChevronLeft class="h-4 w-4" />
-				</Button>
-				<Button
-					variant="outline"
-					size="icon"
-					class="h-8 w-8"
-					onclick={loadNextPage}
-					disabled={!isTruncated}
-				>
-					<ChevronRight class="h-4 w-4" />
-				</Button>
-			{/if}
-		</div>
-	</div>
+	{/if}
 {/await}
 
 <!-- Dialogs -->
