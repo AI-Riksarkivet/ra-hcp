@@ -461,22 +461,15 @@
 		}
 	}
 
-	// --- Presign + download a single file ---
-	async function presignAndDownload(key: string) {
-		try {
-			const result = await bulk_presign({ bucket, keys: [key], expires_in: 3600 });
-			if (result.urls.length > 0) {
-				const a = document.createElement('a');
-				a.href = result.urls[0].url;
-				a.download = key.split('/').pop() ?? key;
-				a.style.display = 'none';
-				document.body.appendChild(a);
-				a.click();
-				document.body.removeChild(a);
-			}
-		} catch (err) {
-			toast.error(getErrorMessage(err, 'Failed to download file'));
-		}
+	// --- Download a single file via proxy ---
+	function handleDownload(key: string) {
+		const a = document.createElement('a');
+		a.href = downloadUrl(key);
+		a.download = key.split('/').pop() ?? key;
+		a.style.display = 'none';
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
 	}
 
 	// --- Dialogs ---
@@ -621,30 +614,17 @@
 	// --- File Viewer ---
 	let viewerOpen = $state(false);
 	let viewerIndex = $state(-1);
-	let viewerPresignedUrl = $state('');
 
 	let viewerObject = $derived(viewerIndex >= 0 ? selectableObjects[viewerIndex] : undefined);
+	let viewerUrl = $derived(viewerObject ? downloadUrl(viewerObject.key) : '');
 	let viewerFilename = $derived(viewerObject ? getDisplayName(viewerObject.key) : '');
 	let viewerSize = $derived(viewerObject?.size ?? 0);
 	let viewerHasPrev = $derived(viewerIndex > 0);
 	let viewerHasNext = $derived(viewerIndex < selectableObjects.length - 1);
 
-	async function presignViewerUrl(key: string) {
-		viewerPresignedUrl = '';
-		try {
-			const result = await bulk_presign({ bucket, keys: [key], expires_in: 3600 });
-			if (result.urls.length > 0) {
-				viewerPresignedUrl = result.urls[0].url;
-			}
-		} catch {
-			viewerPresignedUrl = downloadUrl(key);
-		}
-	}
-
 	function openViewer(obj: { key: string; size: number }) {
 		viewerIndex = selectableObjects.findIndex((o) => o.key === obj.key);
 		viewerOpen = true;
-		presignViewerUrl(obj.key);
 	}
 
 	function handleRowClick(obj: S3Object) {
@@ -678,7 +658,7 @@
 		{#if !isObjFolder(obj)}
 			<DataTableActions
 				objectKey={obj.key}
-				ondownload={() => presignAndDownload(obj.key)}
+				ondownload={() => handleDownload(obj.key)}
 				ondelete={() => requestDelete(obj.key)}
 				onshare={() => (shareTarget = obj.key)}
 				onview={() => openViewer(obj)}
@@ -880,7 +860,7 @@
 
 {#if viewerOpen}<FileViewer
 		bind:open={viewerOpen}
-		url={viewerPresignedUrl}
+		url={viewerUrl}
 		filename={viewerFilename}
 		size={viewerSize}
 		objectKey={viewerObject?.key}
@@ -890,18 +870,10 @@
 		hasPrev={viewerHasPrev}
 		hasNext={viewerHasNext}
 		onprev={() => {
-			if (viewerHasPrev) {
-				viewerIndex--;
-				const obj = selectableObjects[viewerIndex];
-				if (obj) presignViewerUrl(obj.key);
-			}
+			if (viewerHasPrev) viewerIndex--;
 		}}
 		onnext={() => {
-			if (viewerHasNext) {
-				viewerIndex++;
-				const obj = selectableObjects[viewerIndex];
-				if (obj) presignViewerUrl(obj.key);
-			}
+			if (viewerHasNext) viewerIndex++;
 		}}
 		currentIndex={viewerIndex}
 		totalCount={selectableObjects.length}
