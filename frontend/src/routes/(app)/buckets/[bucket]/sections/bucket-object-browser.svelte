@@ -505,6 +505,7 @@
 	let shareTarget = $state<string | null>(null);
 	let copyTarget = $state<string | null>(null);
 	let downloading = $state(false);
+	let usePresigned = $state(false);
 
 	async function bulkDownload() {
 		const keys = selectedKeys;
@@ -519,22 +520,36 @@
 			return;
 		}
 
-		// Files only — use presigned URL download
 		downloading = true;
 		try {
-			const result = await bulk_presign({ bucket, keys, expires_in: 3600 });
-			for (const item of result.urls) {
-				const a = document.createElement('a');
-				a.href = item.url;
-				a.download = item.key.split('/').pop() ?? item.key;
-				a.style.display = 'none';
-				document.body.appendChild(a);
-				a.click();
-				document.body.removeChild(a);
-				await new Promise((r) => setTimeout(r, 150));
+			if (usePresigned) {
+				// Presigned URLs — direct from HCP S3 (fast, but requires network access to HCP)
+				const result = await bulk_presign({ bucket, keys, expires_in: 3600 });
+				for (const item of result.urls) {
+					const a = document.createElement('a');
+					a.href = item.url;
+					a.download = item.key.split('/').pop() ?? item.key;
+					a.style.display = 'none';
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					await new Promise((r) => setTimeout(r, 150));
+				}
+			} else {
+				// Proxy URLs — through SvelteKit (slower, but always works)
+				for (const key of keys) {
+					const a = document.createElement('a');
+					a.href = downloadUrl(key);
+					a.download = key.split('/').pop() ?? key;
+					a.style.display = 'none';
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					await new Promise((r) => setTimeout(r, 150));
+				}
 			}
 			toast.success(
-				`Started downloading ${result.urls.length} file${result.urls.length !== 1 ? 's' : ''}`
+				`Started downloading ${keys.length} file${keys.length !== 1 ? 's' : ''}`
 			);
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to download objects'));
@@ -886,6 +901,19 @@
 						class="h-3.5 w-3.5"
 					/>{/if}Download Selected</Button
 			>
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props })}
+						<label class="flex items-center gap-1.5 text-xs text-muted-foreground" {...props}>
+							<input type="checkbox" bind:checked={usePresigned} class="h-3.5 w-3.5 rounded border-muted-foreground" />
+							Presigned
+						</label>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content side="bottom" class="max-w-xs">
+					<strong>Presigned URLs</strong> download directly from HCP S3 — faster, but requires network access to the internal HCP endpoint. Disable if downloads are blocked by VPN/firewall.
+				</Tooltip.Content>
+			</Tooltip.Root>
 			<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}
 				><Trash2 class="h-3.5 w-3.5" />Delete Selected</Button
 			>
