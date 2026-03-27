@@ -824,7 +824,18 @@
 			{/if}
 			<span class="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
 				{#if prefixCount && !counting}
-					{prefixCount.files.toLocaleString()} file{prefixCount.files !== 1 ? 's' : ''}{prefixCount.folders > 0 ? `, ${prefixCount.folders.toLocaleString()} folder${prefixCount.folders !== 1 ? 's' : ''}` : ''}
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<span {...props}>
+									{prefixCount.files.toLocaleString()} file{prefixCount.files !== 1 ? 's' : ''}{prefixCount.folders > 0 ? `, ${prefixCount.folders.toLocaleString()} folder${prefixCount.folders !== 1 ? 's' : ''}` : ''}
+								</span>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content side="bottom" class="max-w-xs">
+							Exact count from S3. {flat ? 'Flat view counts all objects recursively.' : 'Folder view counts files and folders at this level.'}
+						</Tooltip.Content>
+					</Tooltip.Root>
 				{:else if counting && prefixCount}
 					<Loader2 class="h-3 w-3 animate-spin" />
 					{prefixCount.files.toLocaleString()} file{prefixCount.files !== 1 ? 's' : ''} counted...
@@ -833,12 +844,34 @@
 					Counting...
 				{:else}
 					{#if isTruncated}
-						{rawObjects.length.toLocaleString()}+ file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length}+ folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
+						<Tooltip.Root>
+							<Tooltip.Trigger>
+								{#snippet child({ props })}
+									<span {...props}>
+										{rawObjects.length.toLocaleString()}+ file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length}+ folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
+									</span>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content side="bottom" class="max-w-xs">
+								S3 returns up to 1,000 items per request. Click "Count all" to get the exact total — this runs in the background and may take a while for large {flat ? 'buckets' : 'folders'}.
+							</Tooltip.Content>
+						</Tooltip.Root>
 						<Button variant="ghost" size="sm" class="h-6 px-2 text-xs" onclick={countObjects}>
 							Count all
 						</Button>
 					{:else}
-						{rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
+						<Tooltip.Root>
+							<Tooltip.Trigger>
+								{#snippet child({ props })}
+									<span {...props}>
+										{rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
+									</span>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content side="bottom" class="max-w-xs">
+								Exact count. {flat ? 'All objects in this bucket.' : 'Files and folders at this level.'}
+							</Tooltip.Content>
+						</Tooltip.Root>
 					{/if}
 				{/if}
 			</span>
