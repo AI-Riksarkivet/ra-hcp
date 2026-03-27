@@ -61,7 +61,7 @@ spec:
             - "5"
             - "--worker-tmp-dir"
             - "/tmp"
-            - "--control-socket-disable"
+            - "--no-control-socket"
             - "--access-logfile"
             - "-"
           ports:
