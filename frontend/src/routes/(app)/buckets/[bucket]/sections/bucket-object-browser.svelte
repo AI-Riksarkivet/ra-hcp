@@ -642,7 +642,9 @@
 					}
 				}
 
-				if (!res.ok && res.status !== 200) {
+				if (!res.ok) {
+					// 404 after successful download is expected (task cleaned up)
+					if (res.status === 404 && !zipDownloading) return;
 					clearInterval(zipPollInterval);
 					toast.error('ZIP download failed');
 					zipDownloading = false;
