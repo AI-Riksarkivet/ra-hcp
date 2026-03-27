@@ -434,10 +434,10 @@ async def test_create_folder_nested(
 # ── S3 stats ──────────────────────────────────────────────────────────
 
 
-async def test_s3_stats_paginates_and_accumulates(
+async def test_s3_stats_starts_background_task_and_poll_returns_result(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    """The count endpoint must paginate through all S3 pages and sum totals."""
+    """POST starts counting in background, GET polls until ready."""
     mock_s3_service.list_objects.side_effect = [
         {
             "Contents": [{"Key": f"file{i}.txt"} for i in range(1000)],
@@ -453,16 +453,27 @@ async def test_s3_stats_paginates_and_accumulates(
             "KeyCount": 500,
         },
     ]
-    resp = await client.get(
+
+    # Start the count task
+    resp = await client.post(
         "/api/v1/buckets/my-bucket/objects/s3_stats?prefix=data/&delimiter=/",
         headers=auth_headers,
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 202
     body = resp.json()
-    assert body["files"] == 1500
-    assert body["folders"] == 3
-    # Must have paginated: two calls, second with continuation token
-    assert mock_s3_service.list_objects.call_count == 2
-    calls = mock_s3_service.list_objects.call_args_list
-    assert calls[0].args == ("my-bucket", "data/", 1000, None, "/")
-    assert calls[1].args[3] == "token-2"
+    assert body["status"] == "counting"
+    task_id = body["task_id"]
+
+    # Let background task complete
+    await asyncio.sleep(0.2)
+
+    # Poll for result
+    resp2 = await client.get(
+        f"/api/v1/buckets/my-bucket/objects/s3_stats/{task_id}",
+        headers=auth_headers,
+    )
+    assert resp2.status_code == 200
+    body2 = resp2.json()
+    assert body2["status"] == "ready"
+    assert body2["files"] == 1500
+    assert body2["folders"] == 3

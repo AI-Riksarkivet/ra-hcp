@@ -25,7 +25,7 @@
 	import BulkDeleteDialog from '$lib/components/custom/bulk-delete-dialog/bulk-delete-dialog.svelte';
 	import {
 		get_objects,
-		get_s3_stats,
+		start_s3_stats,
 		delete_object,
 		bulk_delete_objects,
 		bulk_presign,
@@ -72,15 +72,61 @@
 	let objectData = $derived(get_objects({ bucket, prefix, flat }));
 	let isTruncated = $derived(objectData.current?.isTruncated ?? false);
 
-	// Full count at this prefix level (paginated server-side)
-	let countData = $derived(
-		get_s3_stats({
-			bucket,
-			prefix: prefix || undefined,
-			delimiter: flat ? undefined : '/',
-		})
-	);
-	let prefixCount = $derived(countData?.current ?? null);
+	// On-demand count — user triggers via button, polls for result
+	let prefixCount = $state<{ files: number; folders: number } | null>(null);
+	let counting = $state(false);
+	let countPollInterval: ReturnType<typeof setInterval> | undefined;
+
+	onDestroy(() => clearInterval(countPollInterval));
+
+	async function countObjects() {
+		counting = true;
+		prefixCount = null;
+		clearInterval(countPollInterval);
+		try {
+			const result = await start_s3_stats({
+				bucket,
+				prefix: prefix || undefined,
+				delimiter: flat ? undefined : '/',
+			});
+			pollStatsTask(result.task_id);
+		} catch {
+			counting = false;
+		}
+	}
+
+	function pollStatsTask(taskId: string) {
+		countPollInterval = setInterval(async () => {
+			try {
+				const res = await fetch(
+					`/api/v1/buckets/${encodeURIComponent(bucket)}/objects/s3_stats/${encodeURIComponent(taskId)}`
+				);
+				if (!res.ok) {
+					clearInterval(countPollInterval);
+					counting = false;
+					return;
+				}
+				const data = await res.json();
+				prefixCount = { files: data.files, folders: data.folders };
+				if (data.status === 'ready' || data.status === 'failed') {
+					clearInterval(countPollInterval);
+					counting = false;
+				}
+			} catch {
+				clearInterval(countPollInterval);
+				counting = false;
+			}
+		}, 2000);
+	}
+
+	// Reset count when navigating
+	$effect(() => {
+		void prefix;
+		void flat;
+		prefixCount = null;
+		counting = false;
+		clearInterval(countPollInterval);
+	});
 
 	// When navigating into a selected folder, select all items in the new view
 	let selectAllOnLoad = $state(false);
@@ -776,11 +822,22 @@
 					Clear filters
 				</Button>
 			{/if}
-			<span class="ml-auto text-xs text-muted-foreground">
-				{#if prefixCount}
+			<span class="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+				{#if prefixCount && !counting}
 					{prefixCount.files.toLocaleString()} file{prefixCount.files !== 1 ? 's' : ''}{prefixCount.folders > 0 ? `, ${prefixCount.folders.toLocaleString()} folder${prefixCount.folders !== 1 ? 's' : ''}` : ''}
+				{:else if counting && prefixCount}
+					<Loader2 class="h-3 w-3 animate-spin" />
+					{prefixCount.files.toLocaleString()} file{prefixCount.files !== 1 ? 's' : ''} counted...
+				{:else if counting}
+					<Loader2 class="h-3 w-3 animate-spin" />
+					Counting...
 				{:else}
 					{rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
+					{#if isTruncated}
+						<Button variant="ghost" size="sm" class="h-6 px-2 text-xs" onclick={countObjects}>
+							Count all
+						</Button>
+					{/if}
 				{/if}
 			</span>
 		</div>

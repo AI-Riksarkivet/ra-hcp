@@ -99,29 +99,27 @@ export const get_objects = query(
   },
 );
 
-export const get_s3_stats = query(
+export const start_s3_stats = command(
   z.object({
     bucket: z.string(),
     prefix: z.string().optional(),
     delimiter: z.string().optional(),
   }),
   async ({ bucket, prefix, delimiter }) => {
-    try {
-      const params = new URLSearchParams();
-      if (prefix) params.set("prefix", prefix);
-      if (delimiter) params.set("delimiter", delimiter);
-      const qs = params.toString();
-      const res = await apiFetch(
-        `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/s3_stats${qs ? `?${qs}` : ""}`,
-      );
-      if (res.ok) {
-        const data = await res.json();
-        return { files: data.files as number, folders: data.folders as number };
-      }
-    } catch (err) {
-      console.error("[buckets.remote] get_s3_stats", err);
-    }
-    return null;
+    const params = new URLSearchParams();
+    if (prefix) params.set("prefix", prefix);
+    if (delimiter) params.set("delimiter", delimiter);
+    const qs = params.toString();
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/s3_stats${qs ? `?${qs}` : ""}`,
+      { method: "POST" },
+    );
+    await throwIfNotOk(res, "Failed to start object count");
+    const data = await res.json();
+    return {
+      task_id: data.task_id as string,
+      status: data.status as string,
+    };
   },
 );
 

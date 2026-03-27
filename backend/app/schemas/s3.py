@@ -81,6 +81,15 @@ class CountObjectsResponse(BaseModel):
     folders: int = Field(description="Total number of common prefixes (folders)")
 
 
+class StatsTaskResponse(BaseModel):
+    """Response for a stats counting task."""
+
+    task_id: str = Field(description="Task identifier for polling")
+    status: str = Field(description="counting | ready | failed")
+    files: int = Field(default=0, description="Current file count")
+    folders: int = Field(default=0, description="Current folder count")
+
+
 class UploadObjectResponse(BaseModel):
     """Response for uploading an object."""
 

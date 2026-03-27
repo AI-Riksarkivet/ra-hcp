@@ -24,6 +24,7 @@ from app.schemas.s3 import (
     BulkPresignResponse,
     CopyObjectRequest,
     CountObjectsResponse,
+    StatsTaskResponse,
     CreateFolderRequest,
     CreateFolderResponse,
     DeleteObjectsRequest,
@@ -79,33 +80,80 @@ async def list_objects(
 
 # ── S3 stats at prefix (must be before {key:path} catch-all) ──────────
 
+_stats_tasks: dict[str, dict] = {}
 
-@router.get("/s3_stats", response_model=CountObjectsResponse)
-async def s3_stats(
+
+async def _count_objects_task(
+    task_id: str,
+    s3: StorageProtocol,
+    bucket: str,
+    prefix: str | None,
+    delimiter: str | None,
+    cache: KVCache | None,
+) -> None:
+    """Background coroutine: paginate S3 and count objects."""
+    state = _stats_tasks[task_id]
+    try:
+        token: str | None = None
+        while True:
+            result = await s3.list_objects(bucket, prefix, 1000, token, delimiter)
+            state["files"] += len(result.get("Contents", []))
+            state["folders"] += len(result.get("CommonPrefixes", []))
+            if not result.get("IsTruncated", False):
+                break
+            token = result.get("NextContinuationToken")
+        state["status"] = "ready"
+    except Exception as exc:
+        logger.warning("s3_stats task %s failed: %s", task_id, exc)
+        state["status"] = "failed"
+    if cache and cache.enabled:
+        await cache.set(f"s3_stats:{task_id}", state, ttl=300)
+
+
+@router.post("/s3_stats", response_model=StatsTaskResponse, status_code=202)
+async def start_s3_stats(
     bucket: str,
     prefix: str | None = Query(None),
     delimiter: str | None = Query(None),
     s3: StorageProtocol = Depends(get_s3_service),
+    cache: KVCache | None = Depends(get_cache_service),
 ):
-    """Count all objects and common prefixes (folders) at a given prefix.
+    """Start counting objects at a prefix in the background.
 
-    Paginates through S3 server-side to return the full count,
-    not limited by max_keys.
+    Returns 202 with a task_id. Poll GET /s3_stats/{task_id} for results.
     """
-    file_count = 0
-    folder_count = 0
-    token: str | None = None
-    while True:
-        result = await run_storage(
-            s3.list_objects(bucket, prefix, 1000, token, delimiter),
-            f"bucket '{bucket}'",
-        )
-        file_count += len(result.get("Contents", []))
-        folder_count += len(result.get("CommonPrefixes", []))
-        if not result.get("IsTruncated", False):
-            break
-        token = result.get("NextContinuationToken")
-    return {"files": file_count, "folders": folder_count}
+    task_id = str(uuid.uuid4())
+    _stats_tasks[task_id] = {
+        "status": "counting",
+        "files": 0,
+        "folders": 0,
+        "bucket": bucket,
+        "prefix": prefix,
+    }
+    asyncio.ensure_future(
+        _count_objects_task(task_id, s3, bucket, prefix, delimiter, cache)
+    )
+    return {"task_id": task_id, "status": "counting"}
+
+
+@router.get("/s3_stats/{task_id}", response_model=StatsTaskResponse)
+async def get_s3_stats(
+    bucket: str,
+    task_id: str,
+    cache: KVCache | None = Depends(get_cache_service),
+):
+    """Poll a counting task. Returns current progress and status."""
+    state = _stats_tasks.get(task_id)
+    if not state and cache and cache.enabled:
+        state = await cache.get(f"s3_stats:{task_id}")
+    if not state:
+        raise HTTPException(404, "Task not found")
+    return {
+        "task_id": task_id,
+        "status": state["status"],
+        "files": state["files"],
+        "folders": state["folders"],
+    }
 
 
 # ── Bulk delete (must be before {key:path} catch-all) ────────────────
