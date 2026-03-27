@@ -22,6 +22,7 @@ WORKDIR /app
 COPY --from=builder --chown=1000:1000 /app/.deno-deploy /app/.deno-deploy
 COPY --from=builder --chown=1000:1000 /app/node_modules /app/node_modules
 COPY --from=builder --chown=1000:1000 /app/deno.json /app/deno.lock /app/package.json /app/
+COPY --from=builder --chown=1000:1000 /app/server.ts /app/server.ts
 
 ENV DENO_DIR=/deno-dir
 
@@ -29,4 +30,4 @@ USER 1000
 
 EXPOSE 8000
 
-CMD ["deno", "run", "-A", ".deno-deploy/server.ts"]
+CMD ["deno", "run", "-A", "server.ts"]
