@@ -832,11 +832,13 @@
 					<Loader2 class="h-3 w-3 animate-spin" />
 					Counting...
 				{:else}
-					{rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
 					{#if isTruncated}
+						{rawObjects.length.toLocaleString()}+ file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length}+ folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
 						<Button variant="ghost" size="sm" class="h-6 px-2 text-xs" onclick={countObjects}>
 							Count all
 						</Button>
+					{:else}
+						{rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
 					{/if}
 				{/if}
 			</span>
