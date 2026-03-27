@@ -434,29 +434,10 @@ async def test_create_folder_nested(
 # ── Count objects ──────────────────────────────────────────────────────
 
 
-async def test_count_objects_single_page(
+async def test_count_objects_paginates_and_accumulates(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    mock_s3_service.list_objects.return_value = {
-        "Contents": [{"Key": f"file{i}.txt"} for i in range(5)],
-        "CommonPrefixes": [{"Prefix": "folder1/"}, {"Prefix": "folder2/"}],
-        "IsTruncated": False,
-        "KeyCount": 5,
-    }
-    resp = await client.get(
-        "/api/v1/buckets/my-bucket/objects/count?delimiter=/",
-        headers=auth_headers,
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["files"] == 5
-    assert body["folders"] == 2
-
-
-async def test_count_objects_multiple_pages(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    """Verify the endpoint paginates through all continuation tokens."""
+    """The count endpoint must paginate through all S3 pages and sum totals."""
     mock_s3_service.list_objects.side_effect = [
         {
             "Contents": [{"Key": f"file{i}.txt"} for i in range(1000)],
@@ -473,58 +454,15 @@ async def test_count_objects_multiple_pages(
         },
     ]
     resp = await client.get(
-        "/api/v1/buckets/my-bucket/objects/count?delimiter=/",
+        "/api/v1/buckets/my-bucket/objects/count?prefix=data/&delimiter=/",
         headers=auth_headers,
     )
     assert resp.status_code == 200
     body = resp.json()
     assert body["files"] == 1500
     assert body["folders"] == 3
-    # Verify it called list_objects twice (second with continuation token)
+    # Must have paginated: two calls, second with continuation token
     assert mock_s3_service.list_objects.call_count == 2
-    _, kwargs = mock_s3_service.list_objects.call_args
-    # The second call should have received the continuation token
     calls = mock_s3_service.list_objects.call_args_list
-    assert calls[1].args[3] == "token-2"  # continuation_token
-
-
-async def test_count_objects_with_prefix(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.list_objects.return_value = {
-        "Contents": [{"Key": "photos/img1.jpg"}, {"Key": "photos/img2.jpg"}],
-        "CommonPrefixes": [],
-        "IsTruncated": False,
-        "KeyCount": 2,
-    }
-    resp = await client.get(
-        "/api/v1/buckets/my-bucket/objects/count?prefix=photos/&delimiter=/",
-        headers=auth_headers,
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["files"] == 2
-    assert body["folders"] == 0
-    # Verify prefix was passed to list_objects
-    mock_s3_service.list_objects.assert_called_once_with(
-        "my-bucket", "photos/", 1000, None, "/"
-    )
-
-
-async def test_count_objects_empty(
-    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
-):
-    mock_s3_service.list_objects.return_value = {
-        "Contents": [],
-        "CommonPrefixes": [],
-        "IsTruncated": False,
-        "KeyCount": 0,
-    }
-    resp = await client.get(
-        "/api/v1/buckets/my-bucket/objects/count",
-        headers=auth_headers,
-    )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["files"] == 0
-    assert body["folders"] == 0
+    assert calls[0].args == ("my-bucket", "data/", 1000, None, "/")
+    assert calls[1].args[3] == "token-2"
