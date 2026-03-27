@@ -764,7 +764,7 @@
 				</Button>
 			{/if}
 			<span class="ml-auto text-xs text-muted-foreground">
-				{rawObjects.length} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${commonPrefixes.length} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}{isTruncated ? ' (limit reached — switch to flat view for all)' : ''}
+				{isTruncated ? `${rawObjects.length.toLocaleString()}+` : rawObjects.length.toLocaleString()} file{rawObjects.length !== 1 ? 's' : ''}{commonPrefixes.length > 0 ? `, ${isTruncated ? `${commonPrefixes.length}+` : String(commonPrefixes.length)} folder${commonPrefixes.length !== 1 ? 's' : ''}` : ''}
 			</span>
 		</div>
 	</div>
