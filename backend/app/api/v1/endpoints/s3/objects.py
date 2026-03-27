@@ -427,7 +427,7 @@ async def download_object(
     )
     body = result["Body"]
     return StreamingResponse(
-        content=body.iter_chunks(),
+        content=body.iter_chunks(chunk_size=4 * 1024 * 1024),  # 4 MB
         media_type=result.get("ContentType", "application/octet-stream"),
         headers={
             "Content-Length": str(result.get("ContentLength", "")),

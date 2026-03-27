@@ -107,7 +107,7 @@ def mock_s3_service() -> AsyncMock:
     }
     mock.put_object.return_value = None
     mock.get_object.return_value = {
-        "Body": MagicMock(iter_chunks=lambda: iter([b"data"])),
+        "Body": MagicMock(iter_chunks=lambda chunk_size=1024: iter([b"data"])),
         "ContentType": "application/octet-stream",
         "ContentLength": 4,
         "ETag": '"abc123"',

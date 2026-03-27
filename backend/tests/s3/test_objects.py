@@ -109,7 +109,7 @@ async def test_download_object(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
     mock_s3_service.get_object.return_value = {
-        "Body": MagicMock(iter_chunks=lambda: iter([b"file content"])),
+        "Body": MagicMock(iter_chunks=lambda chunk_size=1024: iter([b"file content"])),
         "ContentType": "text/plain",
         "ContentLength": 12,
         "ETag": '"etag123"',
@@ -198,7 +198,7 @@ async def test_download_objects_bulk(
         data = f"content of {key}".encode()
         body = AsyncMock()
         body.read = AsyncMock(return_value=data)
-        body.iter_chunks = lambda: iter([data])
+        body.iter_chunks = lambda chunk_size=1024: iter([data])
         return {
             "Body": body,
             "ContentType": "text/plain",
@@ -253,7 +253,7 @@ async def test_download_objects_bulk_skips_missing(
             )
         body = AsyncMock()
         body.read = AsyncMock(return_value=b"data")
-        body.iter_chunks = lambda: iter([b"data"])
+        body.iter_chunks = lambda chunk_size=1024: iter([b"data"])
         return {
             "Body": body,
             "ContentType": "text/plain",
