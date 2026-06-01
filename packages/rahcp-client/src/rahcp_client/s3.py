@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from rahcp_client._transfer import raise_if_transient, transfer_with_retry
 from rahcp_client.tracing import tracer
 
 if TYPE_CHECKING:
@@ -129,11 +130,21 @@ class S3Ops:
                 span.set_attribute("s3.size", len(content))
 
             url = await self.presign_put(bucket, key)
-            async with self._make_http_client() as http:
-                resp = await http.put(url, content=content)
+
+            async def _put() -> str:
+                async with self._make_http_client() as http:
+                    resp = await http.put(url, content=content)
+                raise_if_transient(resp, bucket, key)
                 _raise_for_presigned(resp, bucket, key)
+                return resp.headers.get("etag", "")
+
+            etag = await transfer_with_retry(
+                _put,
+                max_attempts=self._client.max_retries + 1,
+                base_delay=self._client.retry_base_delay,
+            )
             log.debug("Uploaded %s/%s (%s bytes)", bucket, key, len(content))
-            return resp.headers.get("etag", "")
+            return etag
 
     async def download(self, bucket: str, key: str, dest: Path) -> int:
         """Download an object via presigned GET. Returns byte count."""
@@ -141,17 +152,29 @@ class S3Ops:
             span.set_attribute("s3.bucket", bucket)
             span.set_attribute("s3.key", key)
             url = await self.presign_get(bucket, key)
-            async with self._make_http_client() as http:
-                async with http.stream("GET", url) as resp:
-                    _raise_for_presigned(resp, bucket, key)
-                    total = 0
-                    file_handle = await asyncio.to_thread(dest.open, "wb")
-                    try:
-                        async for chunk in resp.aiter_bytes(chunk_size=8192):
-                            await asyncio.to_thread(file_handle.write, chunk)
-                            total += len(chunk)
-                    finally:
-                        await asyncio.to_thread(file_handle.close)
+
+            async def _get() -> int:
+                # Each attempt re-opens dest in "wb", discarding any partial
+                # bytes written before a mid-stream transport error.
+                total = 0
+                async with self._make_http_client() as http:
+                    async with http.stream("GET", url) as resp:
+                        raise_if_transient(resp, bucket, key)
+                        _raise_for_presigned(resp, bucket, key)
+                        file_handle = await asyncio.to_thread(lambda: dest.open("wb"))
+                        try:
+                            async for chunk in resp.aiter_bytes(chunk_size=8192):
+                                await asyncio.to_thread(file_handle.write, chunk)
+                                total += len(chunk)
+                        finally:
+                            await asyncio.to_thread(file_handle.close)
+                return total
+
+            total = await transfer_with_retry(
+                _get,
+                max_attempts=self._client.max_retries + 1,
+                base_delay=self._client.retry_base_delay,
+            )
             span.set_attribute("s3.bytes", total)
             log.debug("Downloaded %s/%s (%d bytes)", bucket, key, total)
             return total
@@ -159,10 +182,19 @@ class S3Ops:
     async def download_bytes(self, bucket: str, key: str) -> bytes:
         """Download an object as bytes via presigned GET."""
         url = await self.presign_get(bucket, key)
-        async with self._make_http_client() as http:
-            resp = await http.get(url)
+
+        async def _get() -> bytes:
+            async with self._make_http_client() as http:
+                resp = await http.get(url)
+            raise_if_transient(resp, bucket, key)
             _raise_for_presigned(resp, bucket, key)
-        return resp.content
+            return resp.content
+
+        return await transfer_with_retry(
+            _get,
+            max_attempts=self._client.max_retries + 1,
+            base_delay=self._client.retry_base_delay,
+        )
 
     # ── Multipart upload ──────────────────────────────────────────
 
@@ -221,29 +253,31 @@ class S3Ops:
                         return f.read(read_size)
 
                 part_data = await asyncio.to_thread(_read_chunk)
-                async with sem:
+                label = f"{key} (part {part_num + 1})"
+
+                async def _put_part() -> dict[str, Any]:
                     async with httpx.AsyncClient(
                         verify=self._client.verify_ssl, timeout=part_timeout
                     ) as http:
-                        log.debug(
-                            "Uploading part %d/%d (%d bytes) for %s/%s",
-                            part_num + 1,
-                            len(part_urls),
-                            len(part_data),
-                            bucket,
-                            key,
-                        )
                         resp = await http.put(url, content=part_data)
-                        _raise_for_presigned(
-                            resp, bucket, f"{key} (part {part_num + 1})"
-                        )
-                        log.debug(
-                            "Part %d/%d uploaded (etag: %s)",
-                            part_num + 1,
-                            len(part_urls),
-                            resp.headers.get("etag", "?"),
-                        )
-                        return {"part_number": part_num + 1, "etag": resp.headers["etag"]}
+                    raise_if_transient(resp, bucket, label)
+                    _raise_for_presigned(resp, bucket, label)
+                    return {"part_number": part_num + 1, "etag": resp.headers["etag"]}
+
+                async with sem:
+                    log.debug(
+                        "Uploading part %d/%d (%d bytes) for %s/%s",
+                        part_num + 1,
+                        len(part_urls),
+                        len(part_data),
+                        bucket,
+                        key,
+                    )
+                    return await transfer_with_retry(
+                        _put_part,
+                        max_attempts=self._client.max_retries + 1,
+                        base_delay=self._client.retry_base_delay,
+                    )
 
             parts = await asyncio.gather(
                 *[_upload_part(i, url) for i, url in enumerate(part_urls)]

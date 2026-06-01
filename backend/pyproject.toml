@@ -34,7 +34,7 @@ lance = [
 
 [dependency-groups]
 dev = [
-    "moto[s3]>=5.0",
+    "moto[s3,server]>=5.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.25",
     "pytest-cov>=6.0",

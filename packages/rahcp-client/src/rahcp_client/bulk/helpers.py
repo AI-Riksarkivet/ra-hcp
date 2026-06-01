@@ -15,8 +15,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from rahcp_tracker import TrackerProtocol, TransferStatus
 
+from rahcp_client._transfer import raise_if_transient, transfer_with_retry
 from rahcp_client.bulk.config import DEFAULT_STREAM_THRESHOLD, TransferStats
 from rahcp_client.bulk.protocol import BulkClient, S3Client
+
+# Default transfer-retry budget for pooled presigned PUT/GET (mirrors the
+# HCPClient defaults: max_retries=4 → 5 attempts).
+_POOL_MAX_ATTEMPTS = 5
+_POOL_BASE_DELAY = 1.0
 
 log = logging.getLogger(__name__)
 
@@ -219,11 +225,21 @@ async def pool_upload(
     bucket: str,
     key: str,
 ) -> str:
-    """Upload a file using a presigned URL and shared pool. Returns the ETag."""
+    """Upload a file using a presigned URL and shared pool. Returns the ETag.
+
+    Transient failures (transport errors, 408/429/5xx) are retried with backoff.
+    """
     content = await asyncio.to_thread(file_path.read_bytes)
-    resp = await pool.put(presigned_url, content=content)
-    _raise_for_presigned(resp, bucket, key)
-    return resp.headers.get("etag", "")
+
+    async def _put() -> str:
+        resp = await pool.put(presigned_url, content=content)
+        raise_if_transient(resp, bucket, key)
+        _raise_for_presigned(resp, bucket, key)
+        return resp.headers.get("etag", "")
+
+    return await transfer_with_retry(
+        _put, max_attempts=_POOL_MAX_ATTEMPTS, base_delay=_POOL_BASE_DELAY
+    )
 
 
 async def pool_download(
@@ -243,23 +259,33 @@ async def pool_download(
     Large files are streamed chunk-by-chunk.
     Returns the number of bytes downloaded.
     """
-    if 0 < size <= stream_threshold:
-        resp = await pool.get(presigned_url)
-        _raise_for_presigned(resp, bucket, key)
-        await asyncio.to_thread(dest.write_bytes, resp.content)
-        return len(resp.content)
 
-    async with pool.stream("GET", presigned_url) as resp:
-        _raise_for_presigned(resp, bucket, key)
-        total = 0
-        fh = await asyncio.to_thread(open, dest, "wb")
-        try:
-            async for chunk in resp.aiter_bytes(chunk_size=chunk_size):
-                await asyncio.to_thread(fh.write, chunk)
-                total += len(chunk)
-        finally:
-            await asyncio.to_thread(fh.close)
-    return total
+    async def _download() -> int:
+        # Each attempt re-opens dest in "wb", discarding any partial bytes from
+        # a prior attempt that failed mid-stream.
+        if 0 < size <= stream_threshold:
+            resp = await pool.get(presigned_url)
+            raise_if_transient(resp, bucket, key)
+            _raise_for_presigned(resp, bucket, key)
+            await asyncio.to_thread(dest.write_bytes, resp.content)
+            return len(resp.content)
+
+        async with pool.stream("GET", presigned_url) as resp:
+            raise_if_transient(resp, bucket, key)
+            _raise_for_presigned(resp, bucket, key)
+            total = 0
+            fh = await asyncio.to_thread(lambda: dest.open("wb"))
+            try:
+                async for chunk in resp.aiter_bytes(chunk_size=chunk_size):
+                    await asyncio.to_thread(fh.write, chunk)
+                    total += len(chunk)
+            finally:
+                await asyncio.to_thread(fh.close)
+        return total
+
+    return await transfer_with_retry(
+        _download, max_attempts=_POOL_MAX_ATTEMPTS, base_delay=_POOL_BASE_DELAY
+    )
 
 
 # ── Pagination ────────────────────────────────────────────────────

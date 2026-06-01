@@ -5,10 +5,58 @@ from __future__ import annotations
 import logging
 
 import httpx
+from tenacity import (
+    AsyncRetrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 
 from rahcp_iiif.config import IIIF_TIMEOUT, IIIF_URL
 
 log = logging.getLogger(__name__)
+
+# Transient HTTP statuses worth retrying. Other 4xx (e.g. 404) are terminal.
+_RETRYABLE_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
+
+
+class _TransientStatus(Exception):
+    """Internal marker: a retryable HTTP status code was returned."""
+
+
+async def fetch_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    attempts: int = 4,
+    base_delay: float = 0.5,
+) -> httpx.Response:
+    """GET ``url``, retrying transient failures with exponential backoff + jitter.
+
+    Retries connection/timeout errors and 408/425/429/5xx responses. Any other
+    4xx (e.g. 404) is treated as terminal and raised immediately — retrying it
+    would only waste time.
+
+    Args:
+        client: An open ``httpx.AsyncClient``.
+        url: The URL to GET.
+        attempts: Maximum number of attempts (1 disables retrying).
+        base_delay: Base backoff delay in seconds; also bounds the jitter, so
+            ``0.0`` retries with no wait (useful in tests).
+    """
+    async for attempt in AsyncRetrying(
+        stop=stop_after_attempt(max(1, attempts)),
+        wait=wait_exponential_jitter(initial=base_delay, max=30.0, jitter=base_delay),
+        retry=retry_if_exception_type((httpx.TransportError, _TransientStatus)),
+        reraise=True,
+    ):
+        with attempt:
+            resp = await client.get(url)
+            if resp.status_code in _RETRYABLE_STATUS:
+                raise _TransientStatus(f"HTTP {resp.status_code} for {url}")
+            resp.raise_for_status()
+            return resp
+    raise RuntimeError("unreachable")  # pragma: no cover
 
 
 async def get_image_ids(
@@ -16,6 +64,8 @@ async def get_image_ids(
     *,
     base_url: str = IIIF_URL,
     timeout: float = IIIF_TIMEOUT,
+    attempts: int = 4,
+    base_delay: float = 0.5,
 ) -> list[str]:
     """Fetch a IIIF manifest and extract image IDs.
 
@@ -23,6 +73,8 @@ async def get_image_ids(
         batch_id: Volume/batch identifier (e.g. "C0074667").
         base_url: IIIF server base URL.
         timeout: HTTP request timeout in seconds.
+        attempts: Maximum manifest-fetch attempts (transient failures retried).
+        base_delay: Base backoff delay in seconds between retries.
 
     Returns:
         Sorted list of image IDs (e.g. ["C0074667_00001", "C0074667_00002", ...]).
@@ -31,8 +83,9 @@ async def get_image_ids(
     log.info("Fetching manifest: %s", manifest_url)
 
     async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.get(manifest_url)
-        resp.raise_for_status()
+        resp = await fetch_with_retry(
+            client, manifest_url, attempts=attempts, base_delay=base_delay
+        )
         data = resp.json()
 
     image_ids = []

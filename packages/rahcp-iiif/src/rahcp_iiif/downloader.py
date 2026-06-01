@@ -5,14 +5,19 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 import httpx
 
 from rahcp_tracker import TrackerProtocol, TransferStatus
 
-from rahcp_iiif.manifest import build_image_url, file_extension, get_image_ids
+from rahcp_iiif.manifest import (
+    build_image_url,
+    fetch_with_retry,
+    file_extension,
+    get_image_ids,
+)
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +50,7 @@ class DownloadStats:
 
 async def download_batch(
     batch_id: str,
-    output_dir: Path,
+    output_dir: Path | None,
     tracker: TrackerProtocol,
     *,
     base_url: str = "https://iiifintern-ai.ra.se",
@@ -54,22 +59,38 @@ async def download_batch(
     workers: int = 4,
     max_images: int | None = None,
     validate_file: Callable[[Path], None] | None = None,
+    sink: Callable[[str, bytes], Awaitable[None]] | None = None,
+    max_attempts: int = 4,
+    retry_base_delay: float = 0.5,
     on_progress: Callable[[DownloadStats], None] | None = None,
     on_error: Callable[[str, Exception], None] | None = None,
     progress_interval: float = 5.0,
 ) -> DownloadStats:
     """Download all images from a IIIF batch with parallel workers.
 
+    By default images are written to ``output_dir``. Pass a ``sink`` to stream
+    each image's bytes somewhere else (e.g. straight to S3) without touching
+    local disk — every downloaded image is handed to ``await sink(key, data)``.
+
     Args:
         batch_id: Volume/batch identifier (e.g. "C0074667").
-        output_dir: Local directory to save images into.
+        output_dir: Local directory to save images into. Ignored (and may be
+            ``None``) when ``sink`` is provided.
         tracker: Transfer tracker for resumability.
         base_url: IIIF server base URL.
         query_params: IIIF image API parameters (region/size/rotation/quality.format).
         timeout: HTTP request timeout per image.
         workers: Number of concurrent download workers.
         max_images: Limit number of images to download (None = all).
-        validate_file: Optional callback to validate downloaded files.
+        validate_file: Optional callback to validate downloaded files. Only
+            applied in disk mode (ignored when ``sink`` is set).
+        sink: Optional async callback ``(key, data) -> None`` that consumes each
+            image's bytes in memory instead of writing to disk. ``key`` is
+            ``"{batch_id}/{image_id}{ext}"``.
+        max_attempts: Max attempts per network fetch (manifest and each image).
+            Transient failures (connection/timeout, 408/429/5xx) are retried;
+            terminal ones (e.g. 404) are not. 1 disables retrying.
+        retry_base_delay: Base backoff delay in seconds between retries.
         on_progress: Optional callback for periodic progress updates.
         on_error: Optional callback for per-file errors.
         progress_interval: Minimum seconds between progress callbacks.
@@ -77,13 +98,24 @@ async def download_batch(
     Returns:
         Download statistics.
     """
-    image_ids = await get_image_ids(batch_id, base_url=base_url, timeout=timeout)
+    batch_dir: Path | None = None
+    if sink is None:
+        if output_dir is None:
+            raise ValueError("output_dir is required when no sink is provided")
+        batch_dir = output_dir / batch_id
+        batch_dir.mkdir(parents=True, exist_ok=True)
+
+    image_ids = await get_image_ids(
+        batch_id,
+        base_url=base_url,
+        timeout=timeout,
+        attempts=max_attempts,
+        base_delay=retry_base_delay,
+    )
     if max_images:
         image_ids = image_ids[:max_images]
 
     ext = file_extension(query_params)
-    batch_dir = output_dir / batch_id
-    batch_dir.mkdir(parents=True, exist_ok=True)
 
     done_keys = tracker.done_keys()
     stats = DownloadStats()
@@ -106,36 +138,48 @@ async def download_batch(
             stats.skipped += 1
             return
 
-        dest = batch_dir / f"{image_id}{ext}"
         url = build_image_url(image_id, base_url=base_url, query_params=query_params)
 
         try:
-            resp = await client.get(url)
-            resp.raise_for_status()
+            resp = await fetch_with_retry(
+                client, url, attempts=max_attempts, base_delay=retry_base_delay
+            )
 
             data = resp.content
-            await asyncio.to_thread(dest.write_bytes, data)
             file_size = len(data)
-
-            # Post-download validation
             validated = False
-            if validate_file:
-                try:
-                    await asyncio.to_thread(validate_file, dest)
-                    validated = True
-                except Exception as exc:
-                    await asyncio.to_thread(dest.unlink, True)
-                    tracker.mark(
-                        key,
-                        file_size,
-                        TransferStatus.error,
-                        f"validation: {exc!s}"[:200],
+
+            if sink is not None:
+                # Stream straight to the sink (e.g. S3 upload) — no local disk.
+                await sink(key, data)
+            else:
+                # batch_dir is always set when sink is None (guarded above).
+                target_dir = batch_dir
+                if target_dir is None:
+                    raise RuntimeError(
+                        "output_dir is required when no sink is provided"
                     )
-                    log.warning("Validation failed: %s — %s", key, exc)
-                    if on_error:
-                        on_error(key, exc)
-                    stats.errors += 1
-                    return
+                dest = target_dir / f"{image_id}{ext}"
+                await asyncio.to_thread(dest.write_bytes, data)
+
+                # Post-download validation (disk mode only)
+                if validate_file:
+                    try:
+                        await asyncio.to_thread(validate_file, dest)
+                        validated = True
+                    except Exception as exc:
+                        await asyncio.to_thread(dest.unlink, True)
+                        tracker.mark(
+                            key,
+                            file_size,
+                            TransferStatus.error,
+                            f"validation: {exc!s}"[:200],
+                        )
+                        log.warning("Validation failed: %s — %s", key, exc)
+                        if on_error:
+                            on_error(key, exc)
+                        stats.errors += 1
+                        return
 
             tracker.mark(
                 key,
@@ -186,7 +230,7 @@ async def download_batch(
 
 async def download_batches(
     batch_ids: list[str],
-    output_dir: Path,
+    output_dir: Path | None,
     tracker: TrackerProtocol,
     **kwargs,
 ) -> DownloadStats:
@@ -194,9 +238,10 @@ async def download_batches(
 
     Args:
         batch_ids: List of batch identifiers.
-        output_dir: Root output directory.
+        output_dir: Root output directory. May be ``None`` when a ``sink`` is
+            passed via ``**kwargs`` (streaming mode).
         tracker: Shared transfer tracker.
-        **kwargs: Forwarded to :func:`download_batch`.
+        **kwargs: Forwarded to :func:`download_batch` (e.g. ``sink=...``).
 
     Returns:
         Aggregated download statistics.

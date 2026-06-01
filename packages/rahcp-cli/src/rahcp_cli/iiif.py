@@ -6,6 +6,7 @@ from pathlib import Path
 
 import typer
 
+from rahcp_cli._client import make_client
 from rahcp_cli._output import console
 from rahcp_cli._run import run
 from rahcp_tracker import TrackerProtocol
@@ -74,9 +75,9 @@ def _print_error(key: str, exc: Exception) -> None:
     console.print(f"  [red]{key}[/red] — {str(exc)[:120]}")
 
 
-def _print_summary(stats, db_path: Path) -> None:
-    """Display final download summary."""
-    parts = [f"Downloaded {stats.ok} images"]
+def _print_summary(stats, db_path: Path, *, verb: str = "Downloaded") -> None:
+    """Display final transfer summary."""
+    parts = [f"{verb} {stats.ok} images"]
     if stats.skipped:
         parts.append(f"skipped {stats.skipped} existing")
     if stats.errors:
@@ -257,5 +258,106 @@ def download_batches(
 
         tracker.close()
         _print_summary(stats, db_path)
+
+    run(_run())
+
+
+@app.command("upload")
+def upload(
+    ctx: typer.Context,
+    bucket: str = typer.Argument(..., help="Target S3 bucket"),
+    batch_ids: list[str] | None = typer.Argument(
+        None, help="Batch IDs to stream (e.g. C0074667). Omit when using --job-file."
+    ),
+    prefix: str = typer.Option(
+        "", "--prefix", "-p", help="Key prefix prepended to '<batch>/<image>'"
+    ),
+    job_file: str | None = typer.Option(
+        None, "--job-file", "-f", help="Text file with batch IDs (one per line)"
+    ),
+    workers: int = typer.Option(
+        0, "--workers", "-w", help="Concurrent download+upload workers"
+    ),
+    query_params: str = typer.Option(
+        None,
+        "--query-params",
+        "-q",
+        help="IIIF params (e.g. 'full/,1200/0/default.jpg')",
+    ),
+    iiif_url: str = typer.Option(
+        None, "--iiif-url", envvar="IIIF_URL", help="IIIF server base URL"
+    ),
+    max_images: int = typer.Option(
+        None, "--max-images", "-n", help="Limit images per batch"
+    ),
+    tracker_db: str = typer.Option(None, "--tracker-db", help="Tracker DB path"),
+    tracker_prefix: str | None = typer.Option(
+        None,
+        "--tracker-prefix",
+        help="Prefix for tracker DB name (e.g. 'familysearch' → familysearch.iiif-download.db)",
+    ),
+) -> None:
+    """Stream IIIF images straight to S3 — download and upload in one pass (no local disk)."""
+
+    async def _run() -> None:
+        from rahcp_iiif import download_batches as _download_batches
+
+        ids: list[str] = list(batch_ids or [])
+        if job_file:
+            job_path = Path(job_file)
+            if not job_path.exists():
+                console.print(f"[red]File not found: {job_path}[/red]")
+                raise SystemExit(1)
+            ids += [
+                line.strip()
+                for line in job_path.read_text().splitlines()
+                if line.strip() and not line.startswith("#")
+            ]
+        if not ids:
+            console.print(
+                "[red]No batch IDs given — pass batch IDs as arguments or use --job-file[/red]"
+            )
+            raise SystemExit(1)
+
+        effective_url = iiif_url or ctx.obj.get(
+            "iiif_url", "https://iiifintern-ai.ra.se"
+        )
+        effective_params = query_params or ctx.obj.get(
+            "iiif_query_params", "full/max/0/default.jpg"
+        )
+        effective_timeout = ctx.obj.get("iiif_timeout", 60.0)
+        effective_workers = workers or ctx.obj.get("iiif_workers", 4)
+
+        tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
+
+        console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
+        console.print(
+            f"Streaming {len(ids)} batch(es) → s3://{bucket}/{prefix}"
+            f" ({effective_workers} workers)"
+        )
+        console.print(f"  IIIF: {effective_url}  params: {effective_params}")
+
+        async with make_client(ctx) as client:
+
+            async def sink(key: str, data: bytes) -> None:
+                await client.s3.upload(bucket, f"{prefix}{key}", data)
+
+            stats = await _download_batches(
+                ids,
+                None,
+                tracker,
+                base_url=effective_url,
+                query_params=effective_params,
+                timeout=effective_timeout,
+                workers=effective_workers,
+                max_images=max_images,
+                sink=sink,
+                on_progress=_print_progress,
+                on_error=_print_error,
+                progress_interval=ctx.obj.get("bulk_progress_interval", 5.0),
+            )
+
+        tracker.close()
+        _print_summary(stats, db_path, verb="Uploaded")
 
     run(_run())

@@ -6,7 +6,7 @@ import httpx
 import pytest
 import respx
 
-from rahcp_iiif.downloader import DownloadStats, download_batch
+from rahcp_iiif.downloader import download_batch
 from rahcp_tracker import SqliteTracker, TransferStatus
 
 pytestmark = pytest.mark.asyncio
@@ -27,9 +27,9 @@ def _mock_manifest_and_images():
         return_value=httpx.Response(200, json=MANIFEST)
     )
     for i in range(1, 4):
-        respx.get(
-            f"{BASE}/arkis!BATCH001_0000{i}/full/max/0/default.jpg"
-        ).mock(return_value=httpx.Response(200, content=b"\xff\xd8fake-jpg-data\xff\xd9"))
+        respx.get(f"{BASE}/arkis!BATCH001_0000{i}/full/max/0/default.jpg").mock(
+            return_value=httpx.Response(200, content=b"\xff\xd8fake-jpg-data\xff\xd9")
+        )
 
 
 @respx.mock
@@ -80,9 +80,9 @@ async def test_download_batch_records_errors(tmp_path: Path):
         return_value=httpx.Response(200, json=MANIFEST)
     )
     for i in range(1, 4):
-        respx.get(
-            f"{BASE}/arkis!BATCH001_0000{i}/full/max/0/default.jpg"
-        ).mock(return_value=httpx.Response(500))
+        respx.get(f"{BASE}/arkis!BATCH001_0000{i}/full/max/0/default.jpg").mock(
+            return_value=httpx.Response(500)
+        )
 
     tracker = SqliteTracker(tmp_path / "tracker.db")
     errors_seen = []
@@ -93,12 +93,71 @@ async def test_download_batch_records_errors(tmp_path: Path):
         tracker,
         base_url=BASE,
         workers=1,
+        retry_base_delay=0.0,  # keep the test fast (5xx is retried)
         on_error=lambda key, exc: errors_seen.append(key),
     )
 
     assert stats.errors == 3
     assert stats.ok == 0
     assert len(errors_seen) == 3
+    tracker.close()
+
+
+@respx.mock
+async def test_download_batch_retries_transient_5xx(tmp_path: Path):
+    """A transient 503 is retried and the image ultimately succeeds."""
+    respx.get(f"{BASE}/arkis!BATCH001/manifest").mock(
+        return_value=httpx.Response(
+            200, json={"items": [{"id": "https://x/arkis!BATCH001_00001/canvas"}]}
+        )
+    )
+    route = respx.get(f"{BASE}/arkis!BATCH001_00001/full/max/0/default.jpg").mock(
+        side_effect=[
+            httpx.Response(503),
+            httpx.Response(200, content=b"\xff\xd8ok\xff\xd9"),
+        ]
+    )
+    tracker = SqliteTracker(tmp_path / "tracker.db")
+
+    stats = await download_batch(
+        "BATCH001",
+        tmp_path / "output",
+        tracker,
+        base_url=BASE,
+        workers=1,
+        retry_base_delay=0.0,
+    )
+
+    assert stats.ok == 1
+    assert stats.errors == 0
+    assert route.call_count == 2  # 503 then 200
+
+
+@respx.mock
+async def test_download_batch_does_not_retry_404(tmp_path: Path):
+    """A terminal 404 is not retried — it fails on the first attempt."""
+    respx.get(f"{BASE}/arkis!BATCH001/manifest").mock(
+        return_value=httpx.Response(
+            200, json={"items": [{"id": "https://x/arkis!BATCH001_00001/canvas"}]}
+        )
+    )
+    route = respx.get(f"{BASE}/arkis!BATCH001_00001/full/max/0/default.jpg").mock(
+        return_value=httpx.Response(404)
+    )
+    tracker = SqliteTracker(tmp_path / "tracker.db")
+
+    stats = await download_batch(
+        "BATCH001",
+        tmp_path / "output",
+        tracker,
+        base_url=BASE,
+        workers=1,
+        retry_base_delay=0.0,
+    )
+
+    assert stats.errors == 1
+    assert stats.ok == 0
+    assert route.call_count == 1  # terminal, no retry
     tracker.close()
 
 
@@ -142,6 +201,94 @@ async def test_download_batch_with_validation(tmp_path: Path):
     assert stats.errors == 1
     # Failed file should be cleaned up
     assert not (tmp_path / "output" / "BATCH001" / "BATCH001_00002.jpg").exists()
+    tracker.close()
+
+
+@respx.mock
+async def test_download_batch_streams_to_sink_without_disk(tmp_path: Path):
+    _mock_manifest_and_images()
+    tracker = SqliteTracker(tmp_path / "tracker.db")
+    received: dict[str, bytes] = {}
+
+    async def sink(key: str, data: bytes) -> None:
+        received[key] = data
+
+    stats = await download_batch(
+        "BATCH001",
+        None,
+        tracker,
+        base_url=BASE,
+        workers=2,
+        sink=sink,
+    )
+
+    assert stats.ok == 3
+    assert set(received) == {
+        "BATCH001/BATCH001_00001.jpg",
+        "BATCH001/BATCH001_00002.jpg",
+        "BATCH001/BATCH001_00003.jpg",
+    }
+    assert received["BATCH001/BATCH001_00001.jpg"] == b"\xff\xd8fake-jpg-data\xff\xd9"
+    # Streaming mode must never touch local disk.
+    assert not (tmp_path / "BATCH001").exists()
+    assert not (tmp_path / "output").exists()
+    tracker.close()
+
+
+@respx.mock
+async def test_download_batch_sink_skips_done(tmp_path: Path):
+    _mock_manifest_and_images()
+    tracker = SqliteTracker(tmp_path / "tracker.db")
+    tracker.mark("BATCH001/BATCH001_00001.jpg", 100, TransferStatus.done)
+    tracker.flush()
+    received: list[str] = []
+
+    async def sink(key: str, data: bytes) -> None:
+        received.append(key)
+
+    stats = await download_batch(
+        "BATCH001",
+        None,
+        tracker,
+        base_url=BASE,
+        workers=1,
+        sink=sink,
+    )
+
+    assert stats.ok == 2
+    assert stats.skipped == 1
+    assert "BATCH001/BATCH001_00001.jpg" not in received
+    tracker.close()
+
+
+@respx.mock
+async def test_download_batch_sink_error_is_recorded(tmp_path: Path):
+    _mock_manifest_and_images()
+    tracker = SqliteTracker(tmp_path / "tracker.db")
+
+    async def sink(key: str, data: bytes) -> None:
+        if "00002" in key:
+            raise RuntimeError("upload failed")
+
+    stats = await download_batch(
+        "BATCH001",
+        None,
+        tracker,
+        base_url=BASE,
+        workers=1,
+        sink=sink,
+    )
+
+    assert stats.ok == 2
+    assert stats.errors == 1
+    assert ("BATCH001/BATCH001_00002.jpg", 0) in tracker.error_entries()
+    tracker.close()
+
+
+async def test_download_batch_requires_output_dir_without_sink(tmp_path: Path):
+    tracker = SqliteTracker(tmp_path / "tracker.db")
+    with pytest.raises(ValueError, match="output_dir is required"):
+        await download_batch("BATCH001", None, tracker, base_url=BASE)
     tracker.close()
 
 

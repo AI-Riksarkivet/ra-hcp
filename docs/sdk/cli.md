@@ -774,8 +774,13 @@ Download images from [IIIF](https://iiif.io/) endpoints (e.g. Riksarkivet's inte
 
 | Command | Description |
 |---------|-------------|
-| `download BATCH_ID` | Download all images from a single IIIF batch |
-| `download-batches JOB_FILE` | Download images from multiple batches listed in a text file |
+| `download BATCH_ID` | Download all images from a single IIIF batch to disk |
+| `download-batches JOB_FILE` | Download images from multiple batches (listed in a text file) to disk |
+| `upload BUCKET [BATCH_IDS...]` | Stream IIIF images straight to S3 in one pass — no local disk |
+
+All three retry transient network failures automatically (connection/timeout, `408`/`429`/`5xx`) with exponential backoff; terminal responses like `404` are not retried. State is tracked in a single resumable `.iiif-download.db` (keys include the batch ID), so a re-run skips images already completed.
+
+**`download` / `download-batches` flags:**
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
@@ -787,6 +792,24 @@ Download images from [IIIF](https://iiif.io/) endpoints (e.g. Riksarkivet's inte
 | `--validate` | -- | off | Validate each image after download |
 | `--tracker-db` | -- | `.rahcp/.iiif-download.db` | Tracker DB path |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `familysearch` → `familysearch.iiif-download.db`) |
+
+**`upload` flags** — downloads each image and uploads it to S3 in memory (no disk). Pass batch IDs as arguments and/or via `--job-file`:
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--job-file` | `-f` | none | Text file with batch IDs (one per line) |
+| `--prefix` | `-p` | `""` | Key prefix prepended to `<batch>/<image>` |
+| `--workers` | `-w` | `4` | Concurrent download+upload workers |
+| `--query-params` | `-q` | `full/max/0/default.jpg` | IIIF image API parameters |
+| `--iiif-url` | -- | `https://iiifintern-ai.ra.se` | IIIF server base URL (env: `IIIF_URL`) |
+| `--max-images` | `-n` | all | Limit images per batch |
+| `--tracker-db` | -- | `.rahcp/.iiif-download.db` | Tracker DB path |
+| `--tracker-prefix` | -- | none | Prefix for tracker DB name |
+
+!!! note "`upload` needs HCP credentials"
+    Unlike `download`, `upload` talks to the HCP API (to presign each PUT), so it
+    needs a configured endpoint/credentials — pass `--config` if your config
+    isn't at the default `~/.rahcp/config.yaml`.
 
 **Examples:**
 
@@ -806,8 +829,13 @@ A0065852
 EOF
 rahcp iiif download-batches batches.txt -o ./images/ --workers 10
 
-# Then upload to HCP (reuses existing upload-all)
+# Two-step: download to disk, then upload (reuses existing upload-all)
 rahcp s3 upload-all images-batch ./images/ --validate --workers 20
+
+# One-command: stream IIIF straight to S3 (no local disk)
+rahcp iiif upload my-bucket C0074667 C0074865 --workers 10
+# ...or from the same job file:
+rahcp iiif upload my-bucket --job-file batches.txt --workers 10
 
 # Use --tracker-prefix to keep separate tracker DBs per dataset
 rahcp iiif download-batches batches.txt -o ./images/ --tracker-prefix familysearch

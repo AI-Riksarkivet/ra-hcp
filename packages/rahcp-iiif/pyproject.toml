@@ -3,7 +3,7 @@ name = "rahcp-iiif"
 version = "0.1.0"
 description = "Async IIIF image downloader with resumable tracking"
 requires-python = ">=3.13"
-dependencies = ["rahcp-tracker", "httpx>=0.28"]
+dependencies = ["rahcp-tracker", "httpx>=0.28", "tenacity>=9.0"]
 
 [project.optional-dependencies]
 validate = ["rahcp-validate"]

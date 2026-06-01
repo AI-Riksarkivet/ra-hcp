@@ -122,3 +122,40 @@ async def test_head():
         meta = await client.s3.head("b", "file.txt")
     assert meta["content-length"] == "1234"
     assert meta["etag"] == '"abc"'
+
+
+@respx.mock
+async def test_upload_retries_transient_5xx():
+    """A 503 on the presigned PUT is retried; the upload ultimately succeeds."""
+    respx.post(f"{BASE}/presign").mock(
+        return_value=httpx.Response(200, json={"url": "https://signed/put-key"})
+    )
+    put = respx.put("https://signed/put-key").mock(
+        side_effect=[
+            httpx.Response(503),
+            httpx.Response(200, headers={"etag": '"final"'}),
+        ]
+    )
+    client = HCPClient(endpoint=BASE, retry_base_delay=0.0)
+    client._token = "t"
+    async with client:
+        etag = await client.s3.upload("b", "key", b"payload")
+
+    assert etag == '"final"'
+    assert put.call_count == 2  # 503 then 200
+
+
+@respx.mock
+async def test_upload_does_not_retry_terminal_4xx():
+    """A 403 on the presigned PUT is terminal — no retry, raises immediately."""
+    respx.post(f"{BASE}/presign").mock(
+        return_value=httpx.Response(200, json={"url": "https://signed/put-key"})
+    )
+    put = respx.put("https://signed/put-key").mock(return_value=httpx.Response(403))
+    client = HCPClient(endpoint=BASE, retry_base_delay=0.0)
+    client._token = "t"
+    with pytest.raises(httpx.HTTPStatusError):
+        async with client:
+            await client.s3.upload("b", "key", b"payload")
+
+    assert put.call_count == 1  # terminal, no retry
