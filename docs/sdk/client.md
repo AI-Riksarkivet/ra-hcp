@@ -409,8 +409,8 @@ All errors inherit from `HCPError`:
 | `AuthenticationError` | 401, 403 | Invalid credentials or insufficient permissions |
 | `NotFoundError` | 404 | Resource does not exist |
 | `ConflictError` | 409 | Resource already exists |
-| `RetryableError` | 408, 429, 500, 503, 504 | Transient failure (raised after retries exhausted) |
-| `UpstreamError` | 502 | HCP system unreachable |
+| `RetryableError` | 408, 429, 500, 502, 503, 504 | Transient failure (retried with backoff; raised after retries exhausted) |
+| `UpstreamError` | 502 | Backend gateway/upstream error — a `RetryableError` subclass, so it is retried then raised |
 
 ```python
 from rahcp_client.errors import HCPError, NotFoundError
@@ -496,11 +496,10 @@ flowchart TD
     STATUS2 -->|"200-399"| OK
     STATUS2 -->|"401"| FAIL["Raise AuthenticationError"]
 
-    STATUS -->|"408, 429, 500,<br/>503, 504"| BACKOFF["Wait: base * 2^attempt"]
-    STATUS -->|"502"| UPSTREAM["Raise UpstreamError<br/>(no retry)"]
+    STATUS -->|"408, 429, 500,<br/>502, 503, 504"| BACKOFF["Wait: base * 2^attempt"]
     BACKOFF --> RETRY2["Retry (up to max_retries)"]
     RETRY2 --> STATUS
-    RETRY2 -->|"retries exhausted"| RETRIABLE["Raise RetryableError"]
+    RETRY2 -->|"retries exhausted"| RETRIABLE["Raise RetryableError<br/>(UpstreamError for 502)"]
 
     STATUS -->|"404"| NOT_FOUND["Raise NotFoundError"]
     STATUS -->|"409"| CONFLICT["Raise ConflictError"]
@@ -508,5 +507,4 @@ flowchart TD
     style OK fill:#d4edda,stroke:#28a745
     style FAIL fill:#f8d7da,stroke:#dc3545
     style RETRIABLE fill:#f8d7da,stroke:#dc3545
-    style UPSTREAM fill:#f8d7da,stroke:#dc3545
 ```
