@@ -3552,13 +3552,13 @@ to disk. It powers <code>rahcp iiif upload</code>; see <a href="../iiif/#stream-
 </tr>
 <tr>
 <td><code>RetryableError</code></td>
-<td>408, 429, 500, 503, 504</td>
-<td>Transient failure (raised after retries exhausted)</td>
+<td>408, 429, 500, 502, 503, 504</td>
+<td>Transient failure (retried with backoff; raised after retries exhausted)</td>
 </tr>
 <tr>
 <td><code>UpstreamError</code></td>
 <td>502</td>
-<td>HCP system unreachable</td>
+<td>Backend gateway/upstream error — a <code>RetryableError</code> subclass, so it is retried then raised</td>
 </tr>
 </tbody>
 </table>
@@ -3641,19 +3641,17 @@ rahcp<span class="w"> </span>--log-level<span class="w"> </span>info<span class=
     STATUS2 --&gt;|"200-399"| OK
     STATUS2 --&gt;|"401"| FAIL["Raise AuthenticationError"]
 
-    STATUS --&gt;|"408, 429, 500,&lt;br/&gt;503, 504"| BACKOFF["Wait: base * 2^attempt"]
-    STATUS --&gt;|"502"| UPSTREAM["Raise UpstreamError&lt;br/&gt;(no retry)"]
+    STATUS --&gt;|"408, 429, 500,&lt;br/&gt;502, 503, 504"| BACKOFF["Wait: base * 2^attempt"]
     BACKOFF --&gt; RETRY2["Retry (up to max_retries)"]
     RETRY2 --&gt; STATUS
-    RETRY2 --&gt;|"retries exhausted"| RETRIABLE["Raise RetryableError"]
+    RETRY2 --&gt;|"retries exhausted"| RETRIABLE["Raise RetryableError&lt;br/&gt;(UpstreamError for 502)"]
 
     STATUS --&gt;|"404"| NOT_FOUND["Raise NotFoundError"]
     STATUS --&gt;|"409"| CONFLICT["Raise ConflictError"]
 
     style OK fill:#d4edda,stroke:#28a745
     style FAIL fill:#f8d7da,stroke:#dc3545
-    style RETRIABLE fill:#f8d7da,stroke:#dc3545
-    style UPSTREAM fill:#f8d7da,stroke:#dc3545</code></pre>
+    style RETRIABLE fill:#f8d7da,stroke:#dc3545</code></pre>
 
 
 
