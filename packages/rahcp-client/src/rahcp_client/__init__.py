@@ -14,9 +14,11 @@ from rahcp_client.errors import (
 )
 from rahcp_client.bulk import (
     BulkDownloadConfig,
+    BulkStreamConfig,
     BulkUploadConfig,
     TransferStats,
     bulk_download,
+    bulk_stream_upload,
     bulk_upload,
 )
 from rahcp_tracker import TrackerProtocol, TransferStatus, TransferTracker
@@ -24,6 +26,7 @@ from rahcp_tracker import TrackerProtocol, TransferStatus, TransferTracker
 __all__ = [
     "AuthenticationError",
     "BulkDownloadConfig",
+    "BulkStreamConfig",
     "BulkUploadConfig",
     "ConflictError",
     "HCPClient",
@@ -37,5 +40,6 @@ __all__ = [
     "TransferTracker",
     "UpstreamError",
     "bulk_download",
+    "bulk_stream_upload",
     "bulk_upload",
 ]

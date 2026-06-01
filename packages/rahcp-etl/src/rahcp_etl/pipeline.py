@@ -126,7 +126,9 @@ class Pipeline:
             async for attempt in AsyncRetrying(
                 stop=stop_after_attempt(stage.retries + 1),
                 wait=wait_exponential_jitter(
-                    initial=stage.backoff, max=300, jitter=stage.backoff,
+                    initial=stage.backoff,
+                    max=300,
+                    jitter=stage.backoff,
                 ),
                 reraise=True,
                 before_sleep=_log_retry,

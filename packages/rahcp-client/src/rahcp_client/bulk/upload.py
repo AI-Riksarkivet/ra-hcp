@@ -17,8 +17,10 @@ from rahcp_client.bulk.helpers import (
     matches_filters,
     pool_settings,
     pool_upload,
+    remote_exists_matching,
     run_pipeline,
     run_validation,
+    verify_remote_size,
 )
 
 log = logging.getLogger(__name__)
@@ -53,7 +55,7 @@ def _scan_files(
 
 async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
     """Upload a directory to S3 with batch presigning and connection pooling."""
-    from rahcp_client.errors import ConflictError, NotFoundError
+    from rahcp_client.errors import ConflictError
 
     src = cfg.source_dir
     counters = Counters(done_keys=cfg.tracker.done_keys())
@@ -73,20 +75,6 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
 
     # ── Guard helpers ────────────────────────────────────────────
 
-    async def _check_remote_exists(key: str, local_size: int) -> bool:
-        """HEAD check — True if remote object already matches local size."""
-        if not cfg.skip_existing or cfg.retry_errors:
-            return False
-        try:
-            meta = await cfg.client.s3.head(cfg.bucket, key)
-            remote_size = meta.get("content-length")
-            return remote_size is None or int(remote_size) == local_size
-        except NotFoundError:
-            return False
-        except Exception:
-            log.debug("HEAD check failed for %s, proceeding with upload", key)
-            return False
-
     async def _upload_and_verify(
         key: str,
         file_path: Path,
@@ -105,12 +93,7 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
 
             verified = False
             if cfg.verify_upload:
-                meta = await cfg.client.s3.head(cfg.bucket, key)
-                remote_size = int(meta.get("content-length", 0))
-                if remote_size != local_size:
-                    raise ValueError(
-                        f"Size mismatch: local={local_size}, remote={remote_size}"
-                    )
+                await verify_remote_size(cfg.client.s3, cfg.bucket, key, local_size)
                 verified = True
 
             mark_done(
@@ -152,7 +135,14 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
         ):
             return "error", 0
 
-        if await _check_remote_exists(key, local_size):
+        if await remote_exists_matching(
+            cfg.client.s3,
+            cfg.bucket,
+            key,
+            local_size,
+            skip_existing=cfg.skip_existing,
+            retry_errors=cfg.retry_errors,
+        ):
             mark_done(
                 cfg.tracker,
                 counters.done_keys,

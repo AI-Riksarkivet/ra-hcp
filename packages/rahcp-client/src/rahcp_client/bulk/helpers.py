@@ -218,18 +218,19 @@ def _raise_for_presigned(resp: httpx.Response, bucket: str, key: str) -> None:
         )
 
 
-async def pool_upload(
+async def pool_put_bytes(
     pool: httpx.AsyncClient,
     presigned_url: str,
-    file_path: Path,
+    content: bytes,
     bucket: str,
     key: str,
 ) -> str:
-    """Upload a file using a presigned URL and shared pool. Returns the ETag.
+    """PUT in-memory bytes to a presigned URL via the shared pool. Returns the ETag.
 
     Transient failures (transport errors, 408/429/5xx) are retried with backoff.
+    The single source of truth for "PUT bytes to a presigned URL"; file and
+    streaming uploads both go through it.
     """
-    content = await asyncio.to_thread(file_path.read_bytes)
 
     async def _put() -> str:
         resp = await pool.put(presigned_url, content=content)
@@ -240,6 +241,62 @@ async def pool_upload(
     return await transfer_with_retry(
         _put, max_attempts=_POOL_MAX_ATTEMPTS, base_delay=_POOL_BASE_DELAY
     )
+
+
+async def pool_upload(
+    pool: httpx.AsyncClient,
+    presigned_url: str,
+    file_path: Path,
+    bucket: str,
+    key: str,
+) -> str:
+    """Upload a file using a presigned URL and shared pool. Returns the ETag."""
+    content = await asyncio.to_thread(file_path.read_bytes)
+    return await pool_put_bytes(pool, presigned_url, content, bucket, key)
+
+
+async def remote_exists_matching(
+    s3: S3Client,
+    bucket: str,
+    key: str,
+    size: int | None = None,
+    *,
+    skip_existing: bool,
+    retry_errors: bool,
+) -> bool:
+    """HEAD ``key``; return True if it already exists (and matches ``size``).
+
+    Lets callers skip re-uploading objects already in the bucket. Returns False
+    when skip-existing is off, on a retry-errors pass, or if the object is absent.
+    Pass ``size`` (file path, cheap ``stat``) to also require a size match; pass
+    ``None`` (streaming, size unknown before download) to skip on existence alone.
+    Shared by the file (``bulk_upload``) and streaming (``bulk_stream_upload``) paths.
+    """
+    from rahcp_client.errors import NotFoundError
+
+    if not skip_existing or retry_errors:
+        return False
+    try:
+        meta = await s3.head(bucket, key)
+    except NotFoundError:
+        return False
+    except Exception:
+        log.debug("HEAD check failed for %s/%s, proceeding", bucket, key)
+        return False
+    if size is None:
+        return True
+    remote_size = meta.get("content-length")
+    return remote_size is None or int(remote_size) == size
+
+
+async def verify_remote_size(
+    s3: S3Client, bucket: str, key: str, expected_size: int
+) -> None:
+    """HEAD ``key`` and raise ``ValueError`` if its size differs from expected."""
+    meta = await s3.head(bucket, key)
+    remote_size = int(meta.get("content-length", 0))
+    if remote_size != expected_size:
+        raise ValueError(f"Size mismatch: local={expected_size}, remote={remote_size}")
 
 
 async def pool_download(

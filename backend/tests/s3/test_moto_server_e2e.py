@@ -41,7 +41,10 @@ def moto_server():
     server = ThreadedMotoServer(ip_address="127.0.0.1", port=_free_port())
     server.start()
     host, port = server.get_host_and_port()
-    yield f"http://{host}:{port}"
+    base = f"http://{host}:{port}"
+    # moto's in-memory backends are process-global — wipe state from a prior test.
+    httpx.post(f"{base}/moto-api/reset")
+    yield base
     server.stop()
 
 

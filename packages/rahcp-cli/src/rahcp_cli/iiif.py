@@ -61,6 +61,19 @@ def _get_validator():
     return validate_by_extension
 
 
+def _get_bytes_validator():
+    """Load the in-memory (bytes) validator from rahcp-validate, or exit if absent."""
+    try:
+        from rahcp_validate import validate_bytes_by_extension
+    except ImportError:
+        console.print(
+            "[red]--validate requires rahcp-validate.[/red]\n"
+            "  Install with: uv pip install 'rahcp-cli[validate]'"
+        )
+        raise SystemExit(1)
+    return validate_bytes_by_extension
+
+
 def _print_progress(stats) -> None:
     """Display periodic IIIF download progress."""
     console.print(
@@ -278,6 +291,17 @@ def upload(
     workers: int = typer.Option(
         0, "--workers", "-w", help="Concurrent download+upload workers"
     ),
+    skip_existing: bool = typer.Option(
+        True,
+        "--skip-existing/--overwrite",
+        help="Skip images already present in the bucket (HEAD check before download)",
+    ),
+    validate: bool = typer.Option(
+        False, "--validate", help="Validate each image's bytes before upload"
+    ),
+    verify: bool = typer.Option(
+        False, "--verify", help="Verify each upload by checking remote size after"
+    ),
     query_params: str = typer.Option(
         None,
         "--query-params",
@@ -297,10 +321,26 @@ def upload(
         help="Prefix for tracker DB name (e.g. 'familysearch' → familysearch.iiif-download.db)",
     ),
 ) -> None:
-    """Stream IIIF images straight to S3 — download and upload in one pass (no local disk)."""
+    """Stream IIIF images straight to S3 — download and upload in one pass (no local disk).
+
+    Bytes are fetched on the fly and pushed through the shared bulk transfer
+    engine, so this skips images already in the bucket (--skip-existing), can
+    validate bytes before upload (--validate) and verify size after (--verify) —
+    the same guarantees as `s3 upload-all`, without staging anything to disk.
+    """
 
     async def _run() -> None:
-        from rahcp_iiif import download_batches as _download_batches
+        import asyncio
+
+        import httpx
+
+        from rahcp_client import BulkStreamConfig, bulk_stream_upload
+        from rahcp_iiif.manifest import (
+            build_image_url,
+            fetch_with_retry,
+            file_extension,
+            get_image_ids,
+        )
 
         ids: list[str] = list(batch_ids or [])
         if job_file:
@@ -326,36 +366,90 @@ def upload(
             "iiif_query_params", "full/max/0/default.jpg"
         )
         effective_timeout = ctx.obj.get("iiif_timeout", 60.0)
-        effective_workers = workers or ctx.obj.get("iiif_workers", 4)
+        effective_workers = workers or ctx.obj.get("iiif_workers", 8)
+        ext = file_extension(effective_params)
+        validate_fn = _get_bytes_validator() if validate else None
 
         tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
-
         console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
-        console.print(
-            f"Streaming {len(ids)} batch(es) → s3://{bucket}/{prefix}"
-            f" ({effective_workers} workers)"
-        )
-        console.print(f"  IIIF: {effective_url}  params: {effective_params}")
 
         async with make_client(ctx) as client:
+            # 1. Enumerate manifests -> (s3_key, image_url) items (cheap: strings).
+            console.print(f"Fetching {len(ids)} manifest(s) from {effective_url} …")
+            sem = asyncio.Semaphore(max(4, effective_workers))
 
-            async def sink(key: str, data: bytes) -> None:
-                await client.s3.upload(bucket, f"{prefix}{key}", data)
+            async def _enumerate(batch_id: str) -> list[tuple[str, str]]:
+                async with sem:
+                    try:
+                        image_ids = await get_image_ids(
+                            batch_id, base_url=effective_url, timeout=effective_timeout
+                        )
+                    except Exception as exc:
+                        console.print(
+                            f"  [red]manifest {batch_id} failed: {str(exc)[:100]}[/red]"
+                        )
+                        return []
+                if max_images:
+                    image_ids = image_ids[:max_images]
+                return [
+                    (
+                        f"{prefix}{batch_id}/{image_id}{ext}",
+                        build_image_url(
+                            image_id,
+                            base_url=effective_url,
+                            query_params=effective_params,
+                        ),
+                    )
+                    for image_id in image_ids
+                ]
 
-            stats = await _download_batches(
-                ids,
-                None,
-                tracker,
-                base_url=effective_url,
-                query_params=effective_params,
-                timeout=effective_timeout,
-                workers=effective_workers,
-                max_images=max_images,
-                sink=sink,
-                on_progress=_print_progress,
-                on_error=_print_error,
-                progress_interval=ctx.obj.get("bulk_progress_interval", 5.0),
+            per_batch = await asyncio.gather(*[_enumerate(b) for b in ids])
+            items = [item for sub in per_batch for item in sub]
+            if not items:
+                tracker.close()
+                console.print("[red]No images found in the given batches[/red]")
+                raise SystemExit(1)
+
+            flags = [
+                label
+                for label, on in (
+                    ("skip-existing", skip_existing),
+                    ("validate", validate),
+                    ("verify", verify),
+                )
+                if on
+            ]
+            flag_str = f" [{', '.join(flags)}]" if flags else ""
+            console.print(
+                f"Streaming {len(items)} images from {len(ids)} batch(es)"
+                f" → s3://{bucket}/{prefix} ({effective_workers} workers){flag_str}"
             )
+
+            # 2. fetch = retrying IIIF download over a shared pooled client.
+            async with httpx.AsyncClient(timeout=effective_timeout) as iiif_http:
+
+                async def fetch(url: str) -> bytes:
+                    resp = await fetch_with_retry(iiif_http, url)
+                    return resp.content
+
+                stats = await bulk_stream_upload(
+                    BulkStreamConfig(
+                        client=client,
+                        bucket=bucket,
+                        tracker=tracker,
+                        workers=effective_workers,
+                        queue_depth=ctx.obj.get("bulk_queue_depth", 8),
+                        skip_existing=skip_existing,
+                        validate_bytes=validate_fn,
+                        verify_upload=verify,
+                        presign_batch_size=ctx.obj.get("bulk_presign_batch_size", 200),
+                        on_progress=_print_progress,
+                        on_error=_print_error,
+                        progress_interval=ctx.obj.get("bulk_progress_interval", 5.0),
+                    ),
+                    items,
+                    fetch,
+                )
 
         tracker.close()
         _print_summary(stats, db_path, verb="Uploaded")

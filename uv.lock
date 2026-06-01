@@ -1453,6 +1453,7 @@ dev = [
     { name = "moto", extra = ["s3", "server"] },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "rahcp-validate" },
     { name = "respx" },
 ]
 
@@ -1477,6 +1478,7 @@ dev = [
     { name = "moto", extras = ["s3", "server"], specifier = ">=5.0" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-asyncio", specifier = ">=0.25" },
+    { name = "rahcp-validate", editable = "packages/rahcp-validate" },
     { name = "respx", specifier = ">=0.22" },
 ]
 
@@ -1663,8 +1665,16 @@ dependencies = [
     { name = "pillow" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [{ name = "pillow", specifier = ">=11.0" }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.0" }]
 
 [[package]]
 name = "referencing"

@@ -44,6 +44,31 @@ class TransferStats(BaseModel):
         )
 
 
+class BulkStreamConfig(BaseModel):
+    """Configuration for a streaming upload job (bytes fetched on the fly).
+
+    Like ``BulkUploadConfig`` but with no ``source_dir`` — each object's bytes
+    come from a caller-supplied ``fetch`` callable instead of a local file, so
+    nothing is staged to disk. Validation is byte-based (``validate_bytes``).
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    client: SkipValidation[BulkClient]
+    bucket: str
+    tracker: TrackerProtocol
+    workers: int = 10
+    queue_depth: int = 8
+    skip_existing: bool = True
+    retry_errors: bool = False
+    validate_bytes: Callable[[bytes, str], None] | None = None
+    verify_upload: bool = False
+    presign_batch_size: int = 200
+    on_progress: Callable[[TransferStats], None] | None = None
+    on_error: Callable[[str, Exception], None] | None = None
+    progress_interval: float = 5.0
+
+
 class BulkUploadConfig(BaseModel):
     """Configuration for a bulk upload job."""
 

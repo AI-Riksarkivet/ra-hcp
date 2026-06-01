@@ -71,7 +71,9 @@ async def bulk_download(cfg: BulkDownloadConfig) -> TransferStats:
                     stream_threshold=cfg.stream_threshold,
                 )
             else:
-                downloaded_bytes = await cfg.client.s3.download(cfg.bucket, key, tmp_path)
+                downloaded_bytes = await cfg.client.s3.download(
+                    cfg.bucket, key, tmp_path
+                )
 
             if cfg.verify_download and tmp_path.stat().st_size != size:
                 tmp_path.unlink(missing_ok=True)
