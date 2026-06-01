@@ -101,8 +101,8 @@ async def test_error_mapping(client, status, error_cls):
 
 
 @respx.mock
-async def test_502_does_not_retry():
-    c = HCPClient(endpoint=BASE, max_retries=3, retry_base_delay=0.01)
+async def test_502_is_retried_then_raised():
+    c = HCPClient(endpoint=BASE, max_retries=2, retry_base_delay=0.0)
     c._token = "pre-authed"  # skip login
     route = respx.get(f"{BASE}/test").mock(
         return_value=httpx.Response(502, text="upstream down")
@@ -110,8 +110,24 @@ async def test_502_does_not_retry():
     async with c:
         with pytest.raises(UpstreamError):
             await c.request("GET", "/test")
-    # Should only be called once — no retry on 502
-    assert route.call_count == 1
+    # 502 is a transient gateway error now — retried, then raised.
+    assert route.call_count == 3  # 1 attempt + 2 retries
+
+
+@respx.mock
+async def test_502_recovers_on_retry():
+    c = HCPClient(endpoint=BASE, max_retries=3, retry_base_delay=0.0)
+    c._token = "pre-authed"
+    route = respx.get(f"{BASE}/test").mock(
+        side_effect=[
+            httpx.Response(502, text="upstream down"),
+            httpx.Response(200, json={"ok": True}),
+        ]
+    )
+    async with c:
+        resp = await c.request("GET", "/test")
+    assert resp.status_code == 200
+    assert route.call_count == 2  # 502 then 200
 
 
 @respx.mock

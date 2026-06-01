@@ -30,11 +30,11 @@ class ConflictError(HCPError):
 
 
 class RetryableError(HCPError):
-    """408, 429, 500, 503, 504 — transient failure after all retries exhausted."""
+    """408, 429, 500, 502, 503, 504 — transient failure after all retries exhausted."""
 
 
-class UpstreamError(HCPError):
-    """502 — backend's upstream service is unreachable. Not retried."""
+class UpstreamError(RetryableError):
+    """502 — backend gateway/upstream error. Transient: retried, then raised."""
 
 
 def error_for_status(status_code: int, message: str) -> HCPError:

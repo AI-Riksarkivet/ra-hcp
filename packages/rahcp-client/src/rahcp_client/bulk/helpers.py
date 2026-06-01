@@ -108,9 +108,12 @@ def mark_error(
     ``phase`` (e.g. ``"download"`` / ``"validate"`` / ``"upload"`` / ``"verify"``)
     is prefixed to the recorded reason so the tracker says *where* it failed.
     """
-    reason = f"{phase}: {exc!s}" if phase else str(exc)
+    # Some transport errors (e.g. httpx.ReadError) have an empty str(); fall back
+    # to the class name so a recorded reason is never blank.
+    detail = str(exc) or type(exc).__name__
+    reason = f"{phase}: {detail}" if phase else detail
     tracker.mark(key, size, TransferStatus.error, reason[:200])
-    log.warning("Transfer failed [%s]: %s — %s", phase or "transfer", key, exc)
+    log.warning("Transfer failed [%s]: %s — %r", phase or "transfer", key, exc)
     if on_error:
         on_error(key, exc)
 

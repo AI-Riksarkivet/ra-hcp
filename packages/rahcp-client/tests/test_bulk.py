@@ -3,6 +3,7 @@
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pytest
 
 from rahcp_client.bulk import (
@@ -12,6 +13,7 @@ from rahcp_client.bulk import (
     bulk_download,
     bulk_upload,
 )
+from rahcp_client.bulk.helpers import mark_error
 from rahcp_tracker import TransferStatus, TransferTracker
 
 pytestmark = pytest.mark.asyncio
@@ -409,4 +411,15 @@ async def test_verify_upload_fails_on_size_mismatch(tmp_path: Path):
     assert stats.errors == 1
     assert stats.ok == 0
     assert "file.txt" in errors_seen
+    tracker.close()
+
+
+async def test_mark_error_phase_label_and_blank_reason_fallback(tmp_path):
+    """Phase is prefixed; a blank-message exception (e.g. ReadError) falls back
+    to its class name so the recorded reason is never empty."""
+    tracker = TransferTracker(tmp_path / "t.db")
+    mark_error(tracker, "a/b.jpg", 100, httpx.ReadError(""), None, phase="upload")
+    tracker.flush()
+
+    assert tracker.error_details() == [("a/b.jpg", 100, "upload: ReadError")]
     tracker.close()

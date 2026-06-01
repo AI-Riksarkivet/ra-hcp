@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-_RETRYABLE_STATUSES = frozenset({408, 429, 500, 503, 504})
+_RETRYABLE_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 _SENSITIVE_KEYS = {"password", "token", "access_token", "secret", "authorization"}
 
 
