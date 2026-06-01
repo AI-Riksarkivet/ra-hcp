@@ -100,10 +100,17 @@ def mark_error(
     size: int,
     exc: Exception,
     on_error: Callable[[str, Exception], None] | None,
+    *,
+    phase: str | None = None,
 ) -> None:
-    """Mark a key as failed and notify the error callback."""
-    tracker.mark(key, size, TransferStatus.error, str(exc)[:200])
-    log.warning("Transfer failed: %s — %s", key, exc)
+    """Mark a key as failed and notify the error callback.
+
+    ``phase`` (e.g. ``"download"`` / ``"validate"`` / ``"upload"`` / ``"verify"``)
+    is prefixed to the recorded reason so the tracker says *where* it failed.
+    """
+    reason = f"{phase}: {exc!s}" if phase else str(exc)
+    tracker.mark(key, size, TransferStatus.error, reason[:200])
+    log.warning("Transfer failed [%s]: %s — %s", phase or "transfer", key, exc)
     if on_error:
         on_error(key, exc)
 

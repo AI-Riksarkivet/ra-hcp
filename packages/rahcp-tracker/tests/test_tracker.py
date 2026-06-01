@@ -31,6 +31,19 @@ def test_error_entries(tmp_path: Path):
     tracker.close()
 
 
+def test_error_details_surfaces_reason(tmp_path: Path):
+    tracker = TransferTracker(tmp_path / "test.db")
+    tracker.mark("ok.jpg", 100, TransferStatus.done)
+    tracker.mark(
+        "bad.jpg", 200, TransferStatus.error, "validate: Missing JPEG EOI marker"
+    )
+    tracker.flush()
+
+    details = tracker.error_details()
+    assert details == [("bad.jpg", 200, "validate: Missing JPEG EOI marker")]
+    tracker.close()
+
+
 def test_mark_updates_existing(tmp_path: Path):
     tracker = TransferTracker(tmp_path / "test.db")
     tracker.mark("a.jpg", 100, TransferStatus.error, "first failure")

@@ -243,4 +243,8 @@ async def test_validation_rejects_corrupt_image(s3_client, fake_hcp, tmp_path):
     # The corrupt one must NOT have been uploaded.
     with pytest.raises(ClientError):
         s3_client.head_object(Bucket=BUCKET, Key=KEYS[1])
+    # ...and the failure is recorded with a phase-labeled reason.
+    details = {key: reason for key, _size, reason in tracker.error_details()}
+    assert KEYS[1] in details
+    assert (details[KEYS[1]] or "").startswith("validate:")
     tracker.close()

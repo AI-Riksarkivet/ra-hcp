@@ -83,7 +83,7 @@ async def bulk_stream_upload(
         try:
             data = await fetch(fetch_id)
         except Exception as exc:
-            mark_error(cfg.tracker, key, 0, exc, cfg.on_error)
+            mark_error(cfg.tracker, key, 0, exc, cfg.on_error, phase="download")
             return "error", 0
 
         size = len(data)
@@ -92,7 +92,7 @@ async def bulk_stream_upload(
             try:
                 cfg.validate_bytes(data, PurePosixPath(key).suffix)
             except Exception as exc:
-                mark_error(cfg.tracker, key, size, exc, cfg.on_error)
+                mark_error(cfg.tracker, key, size, exc, cfg.on_error, phase="validate")
                 return "error", 0
 
         try:
@@ -100,23 +100,6 @@ async def bulk_stream_upload(
                 etag = await pool_put_bytes(pool, presigned_url, data, cfg.bucket, key)
             else:
                 etag = await cfg.client.s3.upload(cfg.bucket, key, data)
-
-            verified = False
-            if cfg.verify_upload:
-                await verify_remote_size(cfg.client.s3, cfg.bucket, key, size)
-                verified = True
-
-            mark_done(
-                cfg.tracker,
-                counters.done_keys,
-                key,
-                size,
-                etag=etag or None,
-                validated=cfg.validate_bytes is not None,
-                verified=verified,
-            )
-            return "ok", size
-
         except ConflictError:
             mark_done(cfg.tracker, counters.done_keys, key, size)
             return "skipped", 0
@@ -124,11 +107,31 @@ async def bulk_stream_upload(
             if exc.response.status_code == 409:
                 mark_done(cfg.tracker, counters.done_keys, key, size)
                 return "skipped", 0
-            mark_error(cfg.tracker, key, size, exc, cfg.on_error)
+            mark_error(cfg.tracker, key, size, exc, cfg.on_error, phase="upload")
             return "error", 0
         except Exception as exc:
-            mark_error(cfg.tracker, key, size, exc, cfg.on_error)
+            mark_error(cfg.tracker, key, size, exc, cfg.on_error, phase="upload")
             return "error", 0
+
+        verified = False
+        if cfg.verify_upload:
+            try:
+                await verify_remote_size(cfg.client.s3, cfg.bucket, key, size)
+                verified = True
+            except Exception as exc:
+                mark_error(cfg.tracker, key, size, exc, cfg.on_error, phase="verify")
+                return "error", 0
+
+        mark_done(
+            cfg.tracker,
+            counters.done_keys,
+            key,
+            size,
+            etag=etag or None,
+            validated=cfg.validate_bytes is not None,
+            verified=verified,
+        )
+        return "ok", size
 
     async def produce(queue: asyncio.Queue) -> None:
         if cfg.retry_errors:

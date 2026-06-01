@@ -91,6 +91,18 @@ class SqliteTracker:
         ).all()
         return [(r.key, r.size) for r in rows]
 
+    def error_details(self) -> list[tuple[str, int, str | None]]:
+        """Return (key, size, reason) for all failed transfers.
+
+        Like :meth:`error_entries` but also surfaces the recorded failure reason
+        (phase-prefixed, e.g. ``"download: …"`` / ``"validate: …"``).
+        """
+        self.flush()
+        rows = self._session.exec(
+            select(Transfer).where(Transfer.status == TransferStatus.error)
+        ).all()
+        return [(r.key, r.size, r.error) for r in rows]
+
     def mark(
         self,
         key: str,

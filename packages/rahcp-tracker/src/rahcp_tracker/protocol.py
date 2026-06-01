@@ -20,6 +20,8 @@ class TrackerProtocol(Protocol):
 
     def error_entries(self) -> list[tuple[str, int]]: ...
 
+    def error_details(self) -> list[tuple[str, int, str | None]]: ...
+
     def mark(
         self,
         key: str,
