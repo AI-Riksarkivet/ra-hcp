@@ -793,13 +793,16 @@ All three retry transient network failures automatically (connection/timeout, `4
 | `--tracker-db` | -- | `.rahcp/.iiif-download.db` | Tracker DB path |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `familysearch` → `familysearch.iiif-download.db`) |
 
-**`upload` flags** — downloads each image and uploads it to S3 in memory (no disk). Pass batch IDs as arguments and/or via `--job-file`:
+**`upload` flags** — streams each image from IIIF straight to S3 in memory (no disk) through the shared bulk engine (`bulk_stream_upload`), so it gets the same **skip / validate / verify** guarantees as `s3 upload-all`. Pass batch IDs as arguments and/or via `--job-file`:
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--job-file` | `-f` | none | Text file with batch IDs (one per line) |
 | `--prefix` | `-p` | `""` | Key prefix prepended to `<batch>/<image>` |
-| `--workers` | `-w` | `4` | Concurrent download+upload workers |
+| `--workers` | `-w` | `8` | Concurrent download+upload workers |
+| `--skip-existing` / `--overwrite` | -- | `--skip-existing` | Skip images already in the bucket (HEAD check **before** download) |
+| `--validate` | -- | off | Validate each image's bytes before upload (rejects corrupt/truncated) |
+| `--verify` | -- | off | Verify each upload by checking remote size after the PUT |
 | `--query-params` | `-q` | `full/max/0/default.jpg` | IIIF image API parameters |
 | `--iiif-url` | -- | `https://iiifintern-ai.ra.se` | IIIF server base URL (env: `IIIF_URL`) |
 | `--max-images` | `-n` | all | Limit images per batch |
@@ -807,9 +810,15 @@ All three retry transient network failures automatically (connection/timeout, `4
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name |
 
 !!! note "`upload` needs HCP credentials"
-    Unlike `download`, `upload` talks to the HCP API (to presign each PUT), so it
-    needs a configured endpoint/credentials — pass `--config` if your config
-    isn't at the default `~/.rahcp/config.yaml`.
+    Unlike `download`, `upload` talks to the HCP API (to presign PUTs and HEAD for
+    skip/verify), so it needs a configured endpoint/credentials — pass `--config`
+    if your config isn't at the default `~/.rahcp/config.yaml`.
+
+!!! tip "Resumable + skip-existing"
+    `--skip-existing` (the default) HEAD-checks the bucket **before** downloading,
+    so re-running over a partly-uploaded set re-fetches only what's genuinely
+    missing — even with a brand-new tracker. The tracker additionally skips
+    anything recorded `done` instantly on re-run.
 
 **Examples:**
 
@@ -836,6 +845,11 @@ rahcp s3 upload-all images-batch ./images/ --validate --workers 20
 rahcp iiif upload my-bucket C0074667 C0074865 --workers 10
 # ...or from the same job file:
 rahcp iiif upload my-bucket --job-file batches.txt --workers 10
+
+# Safe production run: skip already-uploaded, validate bytes, verify size
+rahcp iiif upload my-bucket --job-file batches.txt \
+  --iiif-url https://lbiiif.riksarkivet.se \
+  --skip-existing --validate --verify --workers 20
 
 # Use --tracker-prefix to keep separate tracker DBs per dataset
 rahcp iiif download-batches batches.txt -o ./images/ --tracker-prefix familysearch

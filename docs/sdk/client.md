@@ -270,6 +270,37 @@ asyncio.run(main())
 | `on_error` | callback | `None` | Called on each file failure with `(key, exception)` |
 | `progress_interval` | `float` | `5.0` | Minimum seconds between progress callbacks |
 
+### Streaming upload (no local disk)
+
+`bulk_stream_upload` is the streaming sibling of `bulk_upload`: instead of a
+`source_dir`, you pass `(key, fetch_id)` items and an async `fetch(fetch_id) -> bytes`.
+Bytes are fetched on demand and pushed through the **same engine** — skip-existing,
+byte validation, verify, batched presign, resumable tracker — so nothing is staged
+to disk. It powers `rahcp iiif upload`; see [IIIF → S3 streaming](iiif.md#stream-directly-to-s3-no-local-disk).
+
+```python
+from rahcp_client import BulkStreamConfig, bulk_stream_upload
+from rahcp_validate import validate_bytes_by_extension
+
+stats = await bulk_stream_upload(
+    BulkStreamConfig(
+        client=client,
+        bucket="images-batch",
+        tracker=tracker,
+        workers=20,
+        skip_existing=True,                      # HEAD-skip before fetching
+        validate_bytes=validate_bytes_by_extension,  # optional byte validation
+        verify_upload=True,
+    ),
+    items=[("A0038595/A0038595_00001.jpg", "https://.../image.jpg"), ...],
+    fetch=fetch,  # async (fetch_id) -> bytes
+)
+```
+
+`BulkStreamConfig` mirrors `BulkUploadConfig` minus the disk-specific fields
+(`source_dir`, `include`/`exclude`, `chunk_size`) and takes `validate_bytes`
+(`fn(data, ext)`) in place of `validate_file` (`fn(Path)`).
+
 ### BulkDownloadConfig
 
 | Field | Type | Default | Description |

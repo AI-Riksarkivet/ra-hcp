@@ -32,7 +32,33 @@ validate_by_extension(Path("image.png"))  # runs PNG checks
 validate_by_extension(Path("data.csv"))   # skipped (no validator for .csv)
 ```
 
-This is what the `--validate` flag in the CLI uses internally.
+This is what the `--validate` flag on the disk commands (`iiif download`, `s3 upload-all`) uses internally.
+
+### Validating in-memory bytes (streaming)
+
+For streaming workflows that never touch disk (e.g. `rahcp iiif upload` /
+`bulk_stream_upload`), validate the **bytes** directly — same magic-byte + full
+Pillow decode checks, no file needed:
+
+```python
+from rahcp_validate import (
+    validate_jpg_bytes, validate_png_bytes, validate_tiff_bytes,
+    validate_bytes_by_extension, ValidationError,
+)
+
+data: bytes = ...  # e.g. an image just downloaded from IIIF
+
+try:
+    validate_jpg_bytes(data)                       # explicit format
+    validate_bytes_by_extension(data, ".jpg")      # or dispatch by extension
+except ValidationError as e:
+    print(f"corrupt image: {e.reason}")
+```
+
+`validate_bytes_by_extension(data, ext)` is the callback the `iiif upload
+--validate` flag passes to the streaming engine; the `Path` validators above
+simply read the file and delegate to these, so disk and streaming share one
+implementation.
 
 **TIFF checks:** magic bytes (II/MM), version == 42, full Pillow load.
 

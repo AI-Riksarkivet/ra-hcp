@@ -43,32 +43,68 @@ asyncio.run(main())
 
 ## Stream directly to S3 (no local disk)
 
-By default images are written to `output_dir`. Pass a `sink` callback instead to
-hand each downloaded image's bytes straight to another destination — e.g. upload
-to HCP S3 in the same pass, without ever touching local disk. `output_dir` may be
-`None` in this mode.
+To upload IIIF images to HCP S3 **without staging them to disk**, use
+`rahcp_client.bulk.bulk_stream_upload` (or the `rahcp iiif upload` CLI command).
+It reuses the bulk transfer engine, so you get the **same guarantees as
+`s3 upload-all`** — skip-existing, validation, verify, batched presign, resumable
+tracking — while fetching each image's bytes on demand instead of writing to disk.
+Only the in-flight images (≈ `workers` × image size) are ever in memory.
 
 ```python
-from rahcp_client import HCPClient
-from rahcp_iiif import download_batches
+from pathlib import Path
+
+import httpx
+from rahcp_client import BulkStreamConfig, HCPClient, bulk_stream_upload
+from rahcp_iiif.manifest import build_image_url, fetch_with_retry, file_extension, get_image_ids
 from rahcp_tracker import SqliteTracker
+from rahcp_validate import validate_bytes_by_extension
 
-async with HCPClient.from_env() as client:
+async def stream_to_s3(batch_ids, bucket, *, base_url="https://lbiiif.riksarkivet.se"):
     tracker = SqliteTracker(Path(".iiif-upload.db"))
+    ext = file_extension("full/max/0/default.jpg")
 
-    async def sink(key: str, data: bytes) -> None:
-        # key is "{batch_id}/{image_id}{ext}"
-        await client.s3.upload("my-bucket", key, data)
+    async with HCPClient.from_env() as client, httpx.AsyncClient(timeout=60) as iiif:
+        # Build (s3_key, image_url) items from each batch's manifest.
+        items: list[tuple[str, str]] = []
+        for batch_id in batch_ids:
+            for image_id in await get_image_ids(batch_id, base_url=base_url):
+                items.append(
+                    (f"{batch_id}/{image_id}{ext}", build_image_url(image_id, base_url=base_url))
+                )
 
-    stats = await download_batches(
-        ["C0074667", "C0074865"], None, tracker, workers=10, sink=sink
-    )
+        async def fetch(url: str) -> bytes:
+            return (await fetch_with_retry(iiif, url)).content
+
+        stats = await bulk_stream_upload(
+            BulkStreamConfig(
+                client=client,
+                bucket=bucket,
+                tracker=tracker,
+                workers=20,
+                skip_existing=True,                      # HEAD-skip before download
+                validate_bytes=validate_bytes_by_extension,  # reject corrupt bytes
+                verify_upload=True,                      # HEAD-verify size after PUT
+            ),
+            items,
+            fetch,
+        )
     tracker.close()
+    return stats
 ```
 
-The tracker marks a key `done` only after **both** the download and the `sink`
-succeed, so a re-run resumes any image that didn't make it all the way through.
-The `rahcp iiif upload` CLI command wires this up for you (see below).
+`bulk_stream_upload(cfg, items, fetch)` takes `(s3_key, fetch_id)` pairs and an
+async `fetch(fetch_id) -> bytes`. Per image it: **skip** if already in the bucket
+(`skip_existing` — a HEAD check *before* downloading) → **fetch** the bytes →
+**validate** them (`validate_bytes`) → **upload** via a presigned PUT →
+**verify** the size (`verify_upload`) → record in the tracker. Anything not `done`
+is retried on the next run. The `rahcp iiif upload` CLI command wires all of this
+up for you (see below).
+
+!!! note "Two ways to get IIIF images into S3"
+    **Stream** (above / `rahcp iiif upload`) — no disk, ideal when the data is too
+    large to stage locally. **Two-step** — `rahcp iiif download-batches` to disk,
+    then `rahcp s3 upload-all`; useful when you also want the local copy. Both
+    paths share the same engine and the same skip/validate/verify guarantees.
 
 ## Resilience
 
@@ -124,4 +160,4 @@ The `query_params` string follows the [IIIF Image API](https://iiif.io/api/image
 
 ## CLI commands
 
-See [CLI — rahcp iiif](cli.md#rahcp-iiif) for command-line usage: `rahcp iiif download` and `rahcp iiif download-batches` (download to disk), and `rahcp iiif upload` (stream IIIF → S3 in one pass, using the `sink` pattern above).
+See [CLI — rahcp iiif](cli.md#rahcp-iiif) for command-line usage: `rahcp iiif download` and `rahcp iiif download-batches` (download to disk), and `rahcp iiif upload` (stream IIIF → S3 in one pass via `bulk_stream_upload`, with `--skip-existing`, `--validate`, `--verify`).
