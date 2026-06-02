@@ -49,6 +49,7 @@
 	import BucketUploadDialog from './bucket-upload-dialog.svelte';
 	import CreateFolderDialog from './create-folder-dialog.svelte';
 	import { getErrorMessage } from '$lib/utils/get-error-message.js';
+	import { objectListQuery } from '$lib/utils/object-search.js';
 
 	let {
 		bucket,
@@ -69,7 +70,28 @@
 	// --- Flat mode (recursive listing for search across all objects) ---
 	let flat = $state(false);
 
-	let objectData = $derived(get_objects({ bucket, prefix, flat }));
+	// --- Search (server-side prefix query, debounced) ---
+	let search = $state('');
+	let debouncedSearch = $state('');
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
+	$effect(() => {
+		const next = search.trim();
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => {
+			debouncedSearch = next;
+		}, 300);
+		return () => clearTimeout(searchTimer);
+	});
+
+	// While searching, query the backend by key prefix (navigated prefix +
+	// search term) in flat mode, so matches are found across the entire bucket —
+	// not just the first 1,000 objects loaded for the current folder.
+	let searching = $derived(debouncedSearch.length > 0);
+	let listQuery = $derived(objectListQuery(prefix, debouncedSearch, flat));
+	let queryPrefix = $derived(listQuery.prefix);
+	let queryFlat = $derived(listQuery.flat);
+
+	let objectData = $derived(get_objects({ bucket, prefix: queryPrefix, flat: queryFlat }));
 	let isTruncated = $derived(objectData.current?.isTruncated ?? false);
 
 	// On-demand count — user triggers via button, polls for result
@@ -86,8 +108,8 @@
 		try {
 			const result = await start_s3_stats({
 				bucket,
-				prefix: prefix || undefined,
-				delimiter: flat ? undefined : '/',
+				prefix: queryPrefix || undefined,
+				delimiter: queryFlat ? undefined : '/',
 			});
 			pollStatsTask(result.task_id);
 		} catch {
@@ -123,6 +145,7 @@
 	$effect(() => {
 		void prefix;
 		void flat;
+		void debouncedSearch;
 		prefixCount = null;
 		counting = false;
 		clearInterval(countPollInterval);
@@ -135,6 +158,7 @@
 	$effect(() => {
 		void prefix;
 		void flat;
+		void debouncedSearch;
 		if (!selectAllOnLoad) {
 			rowSelection = {};
 		}
@@ -211,8 +235,7 @@
 		return FileText;
 	}
 
-	// --- Filters (client-side within the loaded page) ---
-	let search = $state('');
+	// --- Filters (client-side, applied on top of the fetched results) ---
 	let ownerFilter = $state('');
 	let sizeFilter = $state('');
 	let typeFilter = $state('');
@@ -726,9 +749,7 @@
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					bind:value={search}
-					placeholder={flat
-						? 'Search all objects recursively...'
-						: 'Search objects in current folder...'}
+					placeholder="Search by name prefix across all objects…"
 					class="pl-10"
 				/>
 			</div>
@@ -752,10 +773,10 @@
 				</Tooltip.Trigger>
 				<Tooltip.Content side="bottom" class="max-w-xs">
 					{#if flat}
-						<strong>Flat view</strong> — showing all objects recursively. Search works across all files.
+						<strong>Flat view</strong> — showing all objects recursively.
 						Click to switch back to folder view.
 					{:else}
-						<strong>Folder view</strong> — showing current folder only. Click to flatten and search across
+						<strong>Folder view</strong> — showing current folder only. Click to flatten and list
 						all objects recursively.
 					{/if}
 				</Tooltip.Content>
@@ -930,9 +951,11 @@
 		onrowclick={handleRowClick}
 		noResultsMessage={objectData.current?.error
 			? objectData.current.error
-			: objects.length === 0
-				? 'No objects in this bucket'
-				: `No results matching "${search}"`}
+			: searching
+				? `No objects found with prefix "${debouncedSearch}"`
+				: objects.length === 0
+					? 'No objects in this bucket'
+					: `No results matching "${search}"`}
 	>
 		{#snippet footer()}
 			{#if selectedKeys.length > 0}
