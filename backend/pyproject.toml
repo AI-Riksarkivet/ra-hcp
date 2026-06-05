@@ -57,4 +57,5 @@ markers = [
     "redis: tests requiring a real Redis connection",
     "moto: integration tests using moto S3 mock",
     "minio: integration tests requiring a real MinIO service",
+    "hcp: integration tests requiring the real HCP S3 dev endpoint",
 ]
