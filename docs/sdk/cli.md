@@ -185,7 +185,7 @@ Download all objects from a bucket (or prefix) to a local directory with concurr
 | `--verify` | -- | off | Verify each download by checking file size after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
 | `--presign-batch-size` | -- | `200` | Number of URLs presigned per API call |
-| `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
+| `--tracker-db` | -- | same dir as config.yaml | Tracker DB: SQLite file path or `postgresql://` DSN |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `backup` → `backup.download-tracker.db`) |
 
 **Examples:**
@@ -231,7 +231,7 @@ Upload an entire local directory to a bucket, preserving the directory structure
 | `--verify` | -- | off | Verify each upload by checking remote size (HEAD) after transfer |
 | `--retry-errors` | -- | off | Only retry files that failed in a previous run |
 | `--presign-batch-size` | -- | `200` | Number of URLs presigned per API call |
-| `--tracker-db` | -- | same dir as config.yaml | Path to SQLite tracker database |
+| `--tracker-db` | -- | same dir as config.yaml | Tracker DB: SQLite file path or `postgresql://` DSN |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `andraarkiv` → `andraarkiv.upload-tracker.db`) |
 
 **Examples:**
@@ -790,7 +790,7 @@ All three retry transient network failures automatically (connection/timeout, `4
 | `--iiif-url` | -- | `https://iiifintern-ai.ra.se` | IIIF server base URL (env: `IIIF_URL`) |
 | `--max-images` | `-n` | all | Limit images per batch |
 | `--validate` | -- | off | Validate each image after download |
-| `--tracker-db` | -- | `<config dir>/.iiif-download.db` | Tracker DB path |
+| `--tracker-db` | -- | `<config dir>/.iiif-download.db` | Tracker DB: file path or `postgresql://` DSN |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `familysearch` → `familysearch.iiif-download.db`) |
 
 **`upload` flags** — streams each image from IIIF straight to S3 in memory (no disk) through the shared bulk engine (`bulk_stream_upload`), so it gets the same **skip / validate / verify** guarantees as `s3 upload-all`. Pass batch IDs as arguments and/or via `--job-file`:
@@ -806,7 +806,7 @@ All three retry transient network failures automatically (connection/timeout, `4
 | `--query-params` | `-q` | `full/max/0/default.jpg` | IIIF image API parameters |
 | `--iiif-url` | -- | `https://iiifintern-ai.ra.se` | IIIF server base URL (env: `IIIF_URL`) |
 | `--max-images` | `-n` | all | Limit images per batch |
-| `--tracker-db` | -- | `<config dir>/.iiif-download.db` | Tracker DB path |
+| `--tracker-db` | -- | `<config dir>/.iiif-download.db` | Tracker DB: file path or `postgresql://` DSN |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name |
 
 !!! note "`upload` needs HCP credentials"

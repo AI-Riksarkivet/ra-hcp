@@ -8,9 +8,11 @@ uv pip install rahcp-tracker
 
 | Class | Description |
 |-------|-------------|
-| `TrackerProtocol` | Interface — `mark()`, `commit()`, `close()`, `summary()`, `done_keys()`, `error_entries()`, `error_details()`, `unverified_keys()`, `unvalidated_keys()` |
+| `TrackerProtocol` | Interface — `mark()`, `commit()`, `close()`, `delete()`, `summary()`, `done_keys()`, `error_entries()`, `error_details()`, `unverified_keys()`, `unvalidated_keys()` |
 | `SqliteTracker` | Default SQLite implementation with WAL mode and buffered writes |
+| `PostgresTracker` | PostgreSQL implementation — same behavior, server-backed (`pip install "rahcp-tracker[postgres]"`) |
 | `TransferTracker` | Backwards-compatible alias for `SqliteTracker` |
+| `create_tracker()` | Pick the backend from a SQLite file path or a `postgresql://` DSN |
 | `Transfer` | SQLModel table definition — shared across SQLite and Postgres |
 | `TransferStatus` | Enum: `pending`, `done`, `error` |
 
@@ -23,6 +25,31 @@ tracker.close()
 ```
 
 The `Transfer` model in `models.py` tracks: `key`, `size`, `status`, `error`, `etag`, `validated`, `verified`, `updated_at`.
+
+## PostgreSQL backend
+
+Both backends share one implementation (buffering, flushing, all queries) and
+differ only in engine construction, so behavior is identical. Use Postgres when
+several machines share one tracker, or tracker state must outlive the host:
+
+```python
+from rahcp_tracker import PostgresTracker, create_tracker
+
+tracker = PostgresTracker("postgresql://user:pass@db-host:5432/rahcp")
+
+# Or select the backend from configuration with create_tracker():
+tracker = create_tracker(target)   # "jobs.db" → SQLite, "postgresql://…" → Postgres
+```
+
+In the CLI, pass a DSN straight to the existing flag — or set it once via the
+`RAHCP_TRACKER_DB` env var (keeps credentials out of shell history):
+
+```bash
+rahcp s3 upload-all my-bucket ./scans --tracker-db postgresql://user:pass@db-host/rahcp
+# or:
+export RAHCP_TRACKER_DB=postgresql://user:pass@db-host/rahcp
+rahcp s3 upload-all my-bucket ./scans
+```
 
 ## Inspecting failures
 

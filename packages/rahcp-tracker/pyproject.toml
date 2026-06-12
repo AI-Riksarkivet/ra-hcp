@@ -5,8 +5,11 @@ description = "Pluggable transfer state tracking (SQLite, Postgres)"
 requires-python = ">=3.13"
 dependencies = ["sqlmodel>=0.0.22"]
 
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.2"]
+
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "psycopg[binary]>=3.2", "pytest-postgresql>=6.1"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

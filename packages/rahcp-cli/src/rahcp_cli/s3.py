@@ -213,7 +213,7 @@ def _print_progress(stats: TransferStats) -> None:
     )
 
 
-def _print_summary(label: str, stats: TransferStats, db_path: Path) -> None:
+def _print_summary(label: str, stats: TransferStats, db_path: Path | str) -> None:
     """Display final transfer summary."""
     parts = [f"{label} {stats.ok} files"]
     if stats.skipped:
@@ -235,13 +235,20 @@ def _resolve_tracker(
     default_name: str,
     *,
     prefix: str | None = None,
-) -> tuple[TrackerProtocol, Path]:
+) -> tuple[TrackerProtocol, Path | str]:
     """Create a tracker from CLI args + profile config.
 
-    Resolution: --tracker-db (exact path) > prefix + default_name > config defaults.
+    Resolution: --tracker-db (exact path or postgresql:// DSN) >
+    prefix + default_name > config defaults.
     Prefix from: --tracker-prefix flag > bulk_tracker_prefix in profile > none.
     """
-    from rahcp_tracker import TransferTracker
+    from rahcp_tracker import create_tracker, redact_dsn
+
+    flush_every = ctx.obj.get("bulk_tracker_flush_every", 500)
+    if tracker_db and "://" in tracker_db:
+        return create_tracker(tracker_db, flush_every=flush_every), redact_dsn(
+            tracker_db
+        )
 
     if tracker_db:
         db_path = Path(tracker_db)
@@ -265,8 +272,7 @@ def _resolve_tracker(
         else:
             db_path = tracker_dir / default_name
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    flush_every = ctx.obj.get("bulk_tracker_flush_every", 500)
-    return TransferTracker(db_path, flush_every=flush_every), db_path
+    return create_tracker(db_path, flush_every=flush_every), db_path
 
 
 def _resolve_workers(workers: int, ctx: typer.Context) -> int:
@@ -332,7 +338,8 @@ def upload_all(
     tracker_db: str | None = typer.Option(
         None,
         "--tracker-db",
-        help="Tracker DB path (overrides prefix and default)",
+        envvar="RAHCP_TRACKER_DB",
+        help="Tracker DB: file path or postgresql:// DSN (overrides prefix and default)",
     ),
     tracker_prefix: str | None = typer.Option(
         None,
@@ -449,7 +456,8 @@ def download_all(
     tracker_db: str | None = typer.Option(
         None,
         "--tracker-db",
-        help="Tracker DB path (overrides prefix and default)",
+        envvar="RAHCP_TRACKER_DB",
+        help="Tracker DB: file path or postgresql:// DSN (overrides prefix and default)",
     ),
     tracker_prefix: str | None = typer.Option(
         None,

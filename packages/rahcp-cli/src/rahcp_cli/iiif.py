@@ -22,13 +22,20 @@ def _resolve_iiif_tracker(
     tracker_db: str | None,
     *,
     prefix: str | None = None,
-) -> tuple[TrackerProtocol, Path]:
+) -> tuple[TrackerProtocol, Path | str]:
     """Create a tracker for IIIF downloads.
 
-    Uses a single DB for all IIIF downloads (like .upload-tracker.db for S3).
-    Keys include the batch ID so there are no collisions.
+    Accepts a file path or a postgresql:// DSN via --tracker-db. Uses a single
+    DB for all IIIF downloads (like .upload-tracker.db for S3). Keys include
+    the batch ID so there are no collisions.
     """
-    from rahcp_tracker import TransferTracker
+    from rahcp_tracker import create_tracker, redact_dsn
+
+    flush_every = ctx.obj.get("bulk_tracker_flush_every", 500)
+    if tracker_db and "://" in tracker_db:
+        return create_tracker(tracker_db, flush_every=flush_every), redact_dsn(
+            tracker_db
+        )
 
     if tracker_db:
         db_path = Path(tracker_db)
@@ -44,8 +51,7 @@ def _resolve_iiif_tracker(
             db_path = tracker_dir / default_name
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    flush_every = ctx.obj.get("bulk_tracker_flush_every", 500)
-    return TransferTracker(db_path, flush_every=flush_every), db_path
+    return create_tracker(db_path, flush_every=flush_every), db_path
 
 
 def _get_validator():
@@ -88,7 +94,7 @@ def _print_error(key: str, exc: Exception) -> None:
     console.print(f"  [red]{key}[/red] — {str(exc)[:120]}")
 
 
-def _print_summary(stats, db_path: Path, *, verb: str = "Downloaded") -> None:
+def _print_summary(stats, db_path: Path | str, *, verb: str = "Downloaded") -> None:
     """Display final transfer summary."""
     parts = [f"{verb} {stats.ok} images"]
     if stats.skipped:
@@ -128,7 +134,12 @@ def download(
     validate: bool = typer.Option(
         False, "--validate", help="Validate each image after download"
     ),
-    tracker_db: str = typer.Option(None, "--tracker-db", help="Tracker DB path"),
+    tracker_db: str | None = typer.Option(
+        None,
+        "--tracker-db",
+        envvar="RAHCP_TRACKER_DB",
+        help="Tracker DB: file path or postgresql:// DSN",
+    ),
     tracker_prefix: str | None = typer.Option(
         None,
         "--tracker-prefix",
@@ -208,7 +219,12 @@ def download_batches(
     validate: bool = typer.Option(
         False, "--validate", help="Validate each image after download"
     ),
-    tracker_db: str = typer.Option(None, "--tracker-db", help="Tracker DB path"),
+    tracker_db: str | None = typer.Option(
+        None,
+        "--tracker-db",
+        envvar="RAHCP_TRACKER_DB",
+        help="Tracker DB: file path or postgresql:// DSN",
+    ),
     tracker_prefix: str | None = typer.Option(
         None,
         "--tracker-prefix",
@@ -314,7 +330,12 @@ def upload(
     max_images: int = typer.Option(
         None, "--max-images", "-n", help="Limit images per batch"
     ),
-    tracker_db: str = typer.Option(None, "--tracker-db", help="Tracker DB path"),
+    tracker_db: str | None = typer.Option(
+        None,
+        "--tracker-db",
+        envvar="RAHCP_TRACKER_DB",
+        help="Tracker DB: file path or postgresql:// DSN",
+    ),
     tracker_prefix: str | None = typer.Option(
         None,
         "--tracker-prefix",

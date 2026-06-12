@@ -50,6 +50,14 @@ Auto-generated from source code docstrings.
 
 ::: rahcp_tracker.sqlite
 
+### PostgreSQL Tracker
+
+::: rahcp_tracker.postgres
+
+### Backend Selection
+
+::: rahcp_tracker.factory
+
 ---
 
 ## rahcp-iiif

@@ -365,7 +365,7 @@ rahcp-tracker/
   sqlite.py     — SqliteTracker (default SQLite implementation)
 ```
 
-To add a new backend (e.g. Postgres), implement `TrackerProtocol` in a new file — no changes to the `bulk/` engine, the CLI, or any consumer code. The `Transfer` SQLModel table in `models.py` works with both SQLite and Postgres via SQLAlchemy's dialect system.
+A PostgreSQL backend ships in the package (`PostgresTracker`, selected by `create_tracker()` from a `postgresql://` DSN — see [rahcp-tracker](tracker.md)). To add another backend, implement `TrackerProtocol` in a new file — no changes to the `bulk/` engine or any consumer code. The `Transfer` SQLModel table in `models.py` works with both SQLite and Postgres via SQLAlchemy's dialect system.
 
 ## MAPI operations
 
