@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import typer
@@ -369,7 +370,8 @@ def upload_all(
         )
         effective_workers = _resolve_workers(workers, ctx)
 
-        console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
+        done_count = len(await asyncio.to_thread(tracker.done_keys))
+        console.print(f"Tracker: {db_path} — {done_count} already done")
         flags = []
         if include:
             flags.append(f"include={include}")
@@ -482,7 +484,8 @@ def download_all(
         )
         effective_workers = _resolve_workers(workers, ctx)
 
-        console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
+        done_count = len(await asyncio.to_thread(tracker.done_keys))
+        console.print(f"Tracker: {db_path} — {done_count} already done")
         flags = []
         if include:
             flags.append(f"include={include}")

@@ -50,7 +50,7 @@ async def bulk_stream_upload(
     """
     from rahcp_client.errors import ConflictError
 
-    counters = Counters(done_keys=cfg.tracker.done_keys())
+    counters = Counters(done_keys=await asyncio.to_thread(cfg.tracker.done_keys))
     verify_ssl, pool_timeout, _ = pool_settings(cfg.client)
     pool = make_pool(cfg.workers, verify_ssl=verify_ssl, timeout=pool_timeout)
 
@@ -135,7 +135,9 @@ async def bulk_stream_upload(
 
     async def produce(queue: asyncio.Queue) -> None:
         if cfg.retry_errors:
-            error_keys = {k for k, _ in cfg.tracker.error_entries()}
+            error_keys = {
+                k for k, _ in await asyncio.to_thread(cfg.tracker.error_entries)
+            }
             todo = [(k, fid) for k, fid in items if k in error_keys]
         else:
             todo = [(k, fid) for k, fid in items if k not in counters.done_keys]

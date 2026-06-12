@@ -26,7 +26,7 @@ async def bulk_download(cfg: BulkDownloadConfig) -> TransferStats:
     """Download objects from S3 with batch presigning and connection pooling."""
     dest = cfg.dest_dir
     dest.mkdir(parents=True, exist_ok=True)
-    counters = Counters(done_keys=cfg.tracker.done_keys())
+    counters = Counters(done_keys=await asyncio.to_thread(cfg.tracker.done_keys))
 
     verify_ssl, pool_timeout, _ = pool_settings(cfg.client)
     pool = make_pool(cfg.workers, verify_ssl=verify_ssl, timeout=pool_timeout)
@@ -107,7 +107,7 @@ async def bulk_download(cfg: BulkDownloadConfig) -> TransferStats:
 
     async def produce(queue: asyncio.Queue) -> None:
         if cfg.retry_errors:
-            for key, size in cfg.tracker.error_entries():
+            for key, size in await asyncio.to_thread(cfg.tracker.error_entries):
                 await queue.put((key, size, None))
             return
 

@@ -58,7 +58,7 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
     from rahcp_client.errors import ConflictError
 
     src = cfg.source_dir
-    counters = Counters(done_keys=cfg.tracker.done_keys())
+    counters = Counters(done_keys=await asyncio.to_thread(cfg.tracker.done_keys))
 
     verify_ssl, pool_timeout, multipart_threshold = pool_settings(cfg.client)
     pool = make_pool(cfg.workers, verify_ssl=verify_ssl, timeout=pool_timeout)
@@ -164,7 +164,7 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
 
     async def produce(queue: asyncio.Queue) -> None:
         if cfg.retry_errors:
-            for key, _ in cfg.tracker.error_entries():
+            for key, _ in await asyncio.to_thread(cfg.tracker.error_entries):
                 await queue.put((src / key, key, None))
             return
 

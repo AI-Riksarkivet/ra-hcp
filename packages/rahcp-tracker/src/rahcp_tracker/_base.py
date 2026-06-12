@@ -76,19 +76,21 @@ class _BufferedSqlTracker:
 
     def done_keys(self) -> set[str]:
         """Return all keys with status 'done'."""
-        self.flush()
-        rows = self._session.exec(
-            select(Transfer.key).where(Transfer.status == TransferStatus.done)
-        ).all()
-        return set(rows)
+        with self._lock:
+            self._flush_locked()
+            rows = self._session.exec(
+                select(Transfer.key).where(Transfer.status == TransferStatus.done)
+            ).all()
+            return set(rows)
 
     def error_entries(self) -> list[tuple[str, int]]:
         """Return (key, size) pairs for all failed transfers."""
-        self.flush()
-        rows = self._session.exec(
-            select(Transfer).where(Transfer.status == TransferStatus.error)
-        ).all()
-        return [(r.key, r.size) for r in rows]
+        with self._lock:
+            self._flush_locked()
+            rows = self._session.exec(
+                select(Transfer).where(Transfer.status == TransferStatus.error)
+            ).all()
+            return [(r.key, r.size) for r in rows]
 
     def error_details(self) -> list[tuple[str, int, str | None]]:
         """Return (key, size, reason) for all failed transfers.
@@ -96,27 +98,31 @@ class _BufferedSqlTracker:
         Like :meth:`error_entries` but also surfaces the recorded failure reason
         (phase-prefixed, e.g. ``"download: …"`` / ``"validate: …"``).
         """
-        self.flush()
-        rows = self._session.exec(
-            select(Transfer).where(Transfer.status == TransferStatus.error)
-        ).all()
-        return [(r.key, r.size, r.error) for r in rows]
+        with self._lock:
+            self._flush_locked()
+            rows = self._session.exec(
+                select(Transfer).where(Transfer.status == TransferStatus.error)
+            ).all()
+            return [(r.key, r.size, r.error) for r in rows]
 
     def delete(self, key: str) -> None:
         """Flush the buffer, then delete the entry for ``key`` if present."""
-        self.flush()
-        row = self._session.exec(select(Transfer).where(Transfer.key == key)).first()
-        if row is not None:
-            self._session.delete(row)
-            self._session.commit()
+        with self._lock:
+            self._flush_locked()
+            row = self._session.exec(
+                select(Transfer).where(Transfer.key == key)
+            ).first()
+            if row is not None:
+                self._session.delete(row)
+                self._session.commit()
 
     def mark(
         self,
         key: str,
         size: int,
         status: TransferStatus,
-        error: str = "",
         *,
+        error: str = "",
         etag: str | None = None,
         validated: bool = False,
         verified: bool = False,
@@ -164,38 +170,42 @@ class _BufferedSqlTracker:
 
     def close(self) -> None:
         """Flush remaining buffer and release resources."""
-        self.flush()
-        self._session.close()
+        with self._lock:
+            self._flush_locked()
+            self._session.close()
         self._engine.dispose()
 
     def summary(self) -> dict[str, int]:
         """Return counts grouped by status."""
-        self.flush()
-        return {
-            status.value: self._session.exec(
-                select(func.count()).where(Transfer.status == status)
-            ).one()
-            for status in TransferStatus
-        }
+        with self._lock:
+            self._flush_locked()
+            return {
+                status.value: self._session.exec(
+                    select(func.count()).where(Transfer.status == status)
+                ).one()
+                for status in TransferStatus
+            }
 
     def unverified_keys(self) -> list[tuple[str, int, str | None]]:
         """Return (key, size, etag) for done files not yet verified."""
-        self.flush()
-        rows = self._session.exec(
-            select(Transfer).where(
-                Transfer.status == TransferStatus.done,
-                Transfer.verified == False,  # noqa: E712
-            )
-        ).all()
-        return [(r.key, r.size, r.etag) for r in rows]
+        with self._lock:
+            self._flush_locked()
+            rows = self._session.exec(
+                select(Transfer).where(
+                    Transfer.status == TransferStatus.done,
+                    Transfer.verified == False,  # noqa: E712
+                )
+            ).all()
+            return [(r.key, r.size, r.etag) for r in rows]
 
     def unvalidated_keys(self) -> list[tuple[str, int]]:
         """Return (key, size) for done files not yet validated."""
-        self.flush()
-        rows = self._session.exec(
-            select(Transfer).where(
-                Transfer.status == TransferStatus.done,
-                Transfer.validated == False,  # noqa: E712
-            )
-        ).all()
-        return [(r.key, r.size) for r in rows]
+        with self._lock:
+            self._flush_locked()
+            rows = self._session.exec(
+                select(Transfer).where(
+                    Transfer.status == TransferStatus.done,
+                    Transfer.validated == False,  # noqa: E712
+                )
+            ).all()
+            return [(r.key, r.size) for r in rows]

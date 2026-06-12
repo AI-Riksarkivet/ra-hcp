@@ -340,7 +340,7 @@ tracker = SqliteTracker(Path("my-job.db"), flush_every=200)
 
 # Mark files
 tracker.mark("folder/file.jpg", 12345, TransferStatus.done, etag='"abc"', validated=True)
-tracker.mark("folder/bad.jpg", 0, TransferStatus.error, "SSL timeout")
+tracker.mark("folder/bad.jpg", 0, TransferStatus.error, error="SSL timeout")
 
 # Query state
 done = tracker.done_keys()           # set[str] — instant skip lookups

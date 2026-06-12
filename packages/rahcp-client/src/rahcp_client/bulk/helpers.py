@@ -112,7 +112,7 @@ def mark_error(
     # to the class name so a recorded reason is never blank.
     detail = str(exc) or type(exc).__name__
     reason = f"{phase}: {detail}" if phase else detail
-    tracker.mark(key, size, TransferStatus.error, reason[:200])
+    tracker.mark(key, size, TransferStatus.error, error=reason[:200])
     log.warning("Transfer failed [%s]: %s — %r", phase or "transfer", key, exc)
     if on_error:
         on_error(key, exc)
@@ -146,7 +146,7 @@ async def run_validation(
             key,
             size,
             TransferStatus.error,
-            f"{phase}: {exc!s:.200}",
+            error=f"{phase}: {exc!s:.200}",
             validated=False,
         )
         log.warning("%s failed: %s — %s", phase.capitalize(), key, exc)
@@ -428,5 +428,5 @@ async def run_pipeline(
     await asyncio.gather(*tasks, return_exceptions=True)
     await pool.aclose()
 
-    tracker.commit()
+    await asyncio.to_thread(tracker.commit)
     return build_stats(counters)

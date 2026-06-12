@@ -107,7 +107,7 @@ async def download_batch(
 
     ext = file_extension(query_params)
 
-    done_keys = tracker.done_keys()
+    done_keys = await asyncio.to_thread(tracker.done_keys)
     stats = DownloadStats()
     last_report = time.monotonic()
     queue: asyncio.Queue[str | object] = asyncio.Queue(maxsize=workers * 8)
@@ -153,7 +153,7 @@ async def download_batch(
                         key,
                         file_size,
                         TransferStatus.error,
-                        f"validation: {exc!s}"[:200],
+                        error=f"validation: {exc!s}"[:200],
                     )
                     log.warning("Validation failed: %s — %s", key, exc)
                     if on_error:
@@ -171,7 +171,7 @@ async def download_batch(
             stats.total_bytes += file_size
 
         except Exception as exc:
-            tracker.mark(key, 0, TransferStatus.error, str(exc)[:200])
+            tracker.mark(key, 0, TransferStatus.error, error=str(exc)[:200])
             log.warning("Download failed: %s — %s", key, exc)
             if on_error:
                 on_error(key, exc)
@@ -204,7 +204,7 @@ async def download_batch(
         await asyncio.create_task(produce())
         await asyncio.gather(*worker_tasks)
 
-    tracker.commit()
+    await asyncio.to_thread(tracker.commit)
     return stats
 
 
@@ -243,5 +243,5 @@ async def download_batches(
         combined.errors += stats.errors
         combined.total_bytes += stats.total_bytes
 
-    tracker.commit()
+    await asyncio.to_thread(tracker.commit)
     return combined

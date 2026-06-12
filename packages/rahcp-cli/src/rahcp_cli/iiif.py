@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import typer
@@ -164,7 +165,8 @@ def download(
 
         tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
 
-        console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
+        done_count = len(await asyncio.to_thread(tracker.done_keys))
+        console.print(f"Tracker: {db_path} — {done_count} already done")
         flags = []
         if validate:
             flags.append("validate")
@@ -263,7 +265,8 @@ def download_batches(
 
         tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
 
-        console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
+        done_count = len(await asyncio.to_thread(tracker.done_keys))
+        console.print(f"Tracker: {db_path} — {done_count} already done")
         console.print(
             f"Downloading {len(batch_ids)} batches from [bold]{job_path.name}[/bold]"
             f" → {dest}/ ({effective_workers} workers)"
@@ -351,8 +354,6 @@ def upload(
     """
 
     async def _run() -> None:
-        import asyncio
-
         import httpx
 
         from rahcp_client import BulkStreamConfig, bulk_stream_upload
@@ -392,7 +393,8 @@ def upload(
         validate_fn = _get_bytes_validator() if validate else None
 
         tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
-        console.print(f"Tracker: {db_path} — {len(tracker.done_keys())} already done")
+        done_count = len(await asyncio.to_thread(tracker.done_keys))
+        console.print(f"Tracker: {db_path} — {done_count} already done")
 
         async with make_client(ctx) as client:
             # 1. Enumerate manifests -> (s3_key, image_url) items (cheap: strings).
@@ -410,14 +412,15 @@ def upload(
                         console.print(
                             f"  [red]manifest {batch_id} failed: {str(exc)[:100]}[/red]"
                         )
-                        tracker.mark(
+                        await asyncio.to_thread(
+                            tracker.mark,
                             sentinel_key,
                             0,
                             TransferStatus.error,
-                            f"manifest: {str(exc)[:300]}",
+                            error=f"manifest: {str(exc)[:300]}",
                         )
                         return []
-                tracker.delete(sentinel_key)
+                await asyncio.to_thread(tracker.delete, sentinel_key)
                 if max_images:
                     image_ids = image_ids[:max_images]
                 return [

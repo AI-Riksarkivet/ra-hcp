@@ -202,7 +202,7 @@ def pg_tracker(_pg_server, postgresql_conn):
 
 def test_postgres_mark_flush_and_query(pg_tracker):
     pg_tracker.mark("a.jpg", 100, TransferStatus.done, etag='"e1"', validated=True)
-    pg_tracker.mark("b.jpg", 0, TransferStatus.error, "download: HTTP 500")
+    pg_tracker.mark("b.jpg", 0, TransferStatus.error, error="download: HTTP 500")
     pg_tracker.flush()
 
     assert pg_tracker.done_keys() == {"a.jpg"}
@@ -214,7 +214,7 @@ def test_postgres_mark_flush_and_query(pg_tracker):
 def test_postgres_same_key_twice_in_one_buffer_last_wins(pg_tracker):
     # Duplicate keys in one flush would raise "cannot affect row a second
     # time" on Postgres without the buffer dedupe.
-    pg_tracker.mark("a.jpg", 0, TransferStatus.error, "download: timeout")
+    pg_tracker.mark("a.jpg", 0, TransferStatus.error, error="download: timeout")
     pg_tracker.mark("a.jpg", 100, TransferStatus.done)
     pg_tracker.flush()
 
@@ -223,7 +223,7 @@ def test_postgres_same_key_twice_in_one_buffer_last_wins(pg_tracker):
 
 
 def test_postgres_remark_updates_existing_row(pg_tracker):
-    pg_tracker.mark("a.jpg", 100, TransferStatus.error, "first failure")
+    pg_tracker.mark("a.jpg", 100, TransferStatus.error, error="first failure")
     pg_tracker.flush()
     pg_tracker.mark("a.jpg", 100, TransferStatus.done)
     pg_tracker.flush()
@@ -234,7 +234,7 @@ def test_postgres_remark_updates_existing_row(pg_tracker):
 
 def test_postgres_delete_removes_entry(pg_tracker):
     pg_tracker.mark("ok.jpg", 100, TransferStatus.done)
-    pg_tracker.mark("bad/__manifest__", 0, TransferStatus.error, "manifest: 403")
+    pg_tracker.mark("bad/__manifest__", 0, TransferStatus.error, error="manifest: 403")
 
     pg_tracker.delete("bad/__manifest__")
 
