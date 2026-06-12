@@ -9777,7 +9777,7 @@ nothing is staged to disk. Validation is byte-based (<code>validate_bytes</code>
     <span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_client.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConflictError</span>
 
     <span class="n">src</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">source_dir</span>
-    <span class="n">counters</span> <span class="o">=</span> <span class="n">Counters</span><span class="p">(</span><span class="n">done_keys</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">())</span>
+    <span class="n">counters</span> <span class="o">=</span> <span class="n">Counters</span><span class="p">(</span><span class="n">done_keys</span><span class="o">=</span><span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">))</span>
 
     <span class="n">verify_ssl</span><span class="p">,</span> <span class="n">pool_timeout</span><span class="p">,</span> <span class="n">multipart_threshold</span> <span class="o">=</span> <span class="n">pool_settings</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">client</span><span class="p">)</span>
     <span class="n">pool</span> <span class="o">=</span> <span class="n">make_pool</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">workers</span><span class="p">,</span> <span class="n">verify_ssl</span><span class="o">=</span><span class="n">verify_ssl</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">pool_timeout</span><span class="p">)</span>
@@ -9883,7 +9883,7 @@ nothing is staged to disk. Validation is byte-based (<code>validate_bytes</code>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">produce</span><span class="p">(</span><span class="n">queue</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">retry_errors</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">error_entries</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">error_entries</span><span class="p">):</span>
                 <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">src</span> <span class="o">/</span> <span class="n">key</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
             <span class="k">return</span>
 
@@ -10131,7 +10131,7 @@ nothing is staged to disk. Validation is byte-based (<code>validate_bytes</code>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Download objects from S3 with batch presigning and connection pooling.&quot;&quot;&quot;</span>
     <span class="n">dest</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">dest_dir</span>
     <span class="n">dest</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">counters</span> <span class="o">=</span> <span class="n">Counters</span><span class="p">(</span><span class="n">done_keys</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">())</span>
+    <span class="n">counters</span> <span class="o">=</span> <span class="n">Counters</span><span class="p">(</span><span class="n">done_keys</span><span class="o">=</span><span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">))</span>
 
     <span class="n">verify_ssl</span><span class="p">,</span> <span class="n">pool_timeout</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pool_settings</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">client</span><span class="p">)</span>
     <span class="n">pool</span> <span class="o">=</span> <span class="n">make_pool</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">workers</span><span class="p">,</span> <span class="n">verify_ssl</span><span class="o">=</span><span class="n">verify_ssl</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">pool_timeout</span><span class="p">)</span>
@@ -10212,7 +10212,7 @@ nothing is staged to disk. Validation is byte-based (<code>validate_bytes</code>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">produce</span><span class="p">(</span><span class="n">queue</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">retry_errors</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">error_entries</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">error_entries</span><span class="p">):</span>
                 <span class="k">await</span> <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">key</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
             <span class="k">return</span>
 
@@ -10542,7 +10542,9 @@ tracker mark. Reuses the same engine and guards as <code>bulk_upload</code>.</p>
 <span class="normal">173</span>
 <span class="normal">174</span>
 <span class="normal">175</span>
-<span class="normal">176</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">bulk_stream_upload</span><span class="p">(</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">bulk_stream_upload</span><span class="p">(</span>
     <span class="n">cfg</span><span class="p">:</span> <span class="n">BulkStreamConfig</span><span class="p">,</span>
     <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
     <span class="n">fetch</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="n">Awaitable</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]],</span>
@@ -10562,7 +10564,7 @@ tracker mark. Reuses the same engine and guards as <code>bulk_upload</code>.</p>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_client.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConflictError</span>
 
-    <span class="n">counters</span> <span class="o">=</span> <span class="n">Counters</span><span class="p">(</span><span class="n">done_keys</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">())</span>
+    <span class="n">counters</span> <span class="o">=</span> <span class="n">Counters</span><span class="p">(</span><span class="n">done_keys</span><span class="o">=</span><span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">))</span>
     <span class="n">verify_ssl</span><span class="p">,</span> <span class="n">pool_timeout</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pool_settings</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">client</span><span class="p">)</span>
     <span class="n">pool</span> <span class="o">=</span> <span class="n">make_pool</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">workers</span><span class="p">,</span> <span class="n">verify_ssl</span><span class="o">=</span><span class="n">verify_ssl</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">pool_timeout</span><span class="p">)</span>
 
@@ -10647,7 +10649,9 @@ tracker mark. Reuses the same engine and guards as <code>bulk_upload</code>.</p>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">produce</span><span class="p">(</span><span class="n">queue</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">cfg</span><span class="o">.</span><span class="n">retry_errors</span><span class="p">:</span>
-            <span class="n">error_keys</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">error_entries</span><span class="p">()}</span>
+            <span class="n">error_keys</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">tracker</span><span class="o">.</span><span class="n">error_entries</span><span class="p">)</span>
+            <span class="p">}</span>
             <span class="n">todo</span> <span class="o">=</span> <span class="p">[(</span><span class="n">k</span><span class="p">,</span> <span class="n">fid</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">fid</span> <span class="ow">in</span> <span class="n">items</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">error_keys</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">todo</span> <span class="o">=</span> <span class="p">[(</span><span class="n">k</span><span class="p">,</span> <span class="n">fid</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">fid</span> <span class="ow">in</span> <span class="n">items</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">counters</span><span class="o">.</span><span class="n">done_keys</span><span class="p">]</span>
@@ -13080,7 +13084,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
     <span class="n">ext</span> <span class="o">=</span> <span class="n">file_extension</span><span class="p">(</span><span class="n">query_params</span><span class="p">)</span>
 
-    <span class="n">done_keys</span> <span class="o">=</span> <span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">()</span>
+    <span class="n">done_keys</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">)</span>
     <span class="n">stats</span> <span class="o">=</span> <span class="n">DownloadStats</span><span class="p">()</span>
     <span class="n">last_report</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
     <span class="n">queue</span><span class="p">:</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">workers</span> <span class="o">*</span> <span class="mi">8</span><span class="p">)</span>
@@ -13126,7 +13130,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
                         <span class="n">key</span><span class="p">,</span>
                         <span class="n">file_size</span><span class="p">,</span>
                         <span class="n">TransferStatus</span><span class="o">.</span><span class="n">error</span><span class="p">,</span>
-                        <span class="sa">f</span><span class="s2">&quot;validation: </span><span class="si">{</span><span class="n">exc</span><span class="si">!s}</span><span class="s2">&quot;</span><span class="p">[:</span><span class="mi">200</span><span class="p">],</span>
+                        <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;validation: </span><span class="si">{</span><span class="n">exc</span><span class="si">!s}</span><span class="s2">&quot;</span><span class="p">[:</span><span class="mi">200</span><span class="p">],</span>
                     <span class="p">)</span>
                     <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Validation failed: </span><span class="si">%s</span><span class="s2"> — </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">exc</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">on_error</span><span class="p">:</span>
@@ -13144,7 +13148,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
             <span class="n">stats</span><span class="o">.</span><span class="n">total_bytes</span> <span class="o">+=</span> <span class="n">file_size</span>
 
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-            <span class="n">tracker</span><span class="o">.</span><span class="n">mark</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">TransferStatus</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)[:</span><span class="mi">200</span><span class="p">])</span>
+            <span class="n">tracker</span><span class="o">.</span><span class="n">mark</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">TransferStatus</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)[:</span><span class="mi">200</span><span class="p">])</span>
             <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Download failed: </span><span class="si">%s</span><span class="s2"> — </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">exc</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">on_error</span><span class="p">:</span>
                 <span class="n">on_error</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">exc</span><span class="p">)</span>
@@ -13177,7 +13181,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
         <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">produce</span><span class="p">())</span>
         <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="n">worker_tasks</span><span class="p">)</span>
 
-    <span class="n">tracker</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">commit</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">stats</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -13377,7 +13381,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
         <span class="n">combined</span><span class="o">.</span><span class="n">errors</span> <span class="o">+=</span> <span class="n">stats</span><span class="o">.</span><span class="n">errors</span>
         <span class="n">combined</span><span class="o">.</span><span class="n">total_bytes</span> <span class="o">+=</span> <span class="n">stats</span><span class="o">.</span><span class="n">total_bytes</span>
 
-    <span class="n">tracker</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">commit</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">combined</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -13446,8 +13450,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/s3.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 70</span>
-<span class="normal"> 71</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 71</span>
 <span class="normal"> 72</span>
 <span class="normal"> 73</span>
 <span class="normal"> 74</span>
@@ -13497,7 +13500,8 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">118</span>
 <span class="normal">119</span>
 <span class="normal">120</span>
-<span class="normal">121</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;ls&quot;</span><span class="p">)</span>
+<span class="normal">121</span>
+<span class="normal">122</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;ls&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">ls</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span>
@@ -13571,8 +13575,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/s3.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">124</span>
-<span class="normal">125</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">125</span>
 <span class="normal">126</span>
 <span class="normal">127</span>
 <span class="normal">128</span>
@@ -13585,7 +13588,8 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">135</span>
 <span class="normal">136</span>
 <span class="normal">137</span>
-<span class="normal">138</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="normal">138</span>
+<span class="normal">139</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">upload</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
@@ -13622,8 +13626,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/s3.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">141</span>
-<span class="normal">142</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">142</span>
 <span class="normal">143</span>
 <span class="normal">144</span>
 <span class="normal">145</span>
@@ -13637,7 +13640,8 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">153</span>
 <span class="normal">154</span>
 <span class="normal">155</span>
-<span class="normal">156</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="normal">156</span>
+<span class="normal">157</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">download</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
@@ -13675,8 +13679,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/s3.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">159</span>
-<span class="normal">160</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">160</span>
 <span class="normal">161</span>
 <span class="normal">162</span>
 <span class="normal">163</span>
@@ -13691,7 +13694,8 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">172</span>
 <span class="normal">173</span>
 <span class="normal">174</span>
-<span class="normal">175</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="normal">175</span>
+<span class="normal">176</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">rm</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
@@ -13730,8 +13734,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/s3.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">178</span>
-<span class="normal">179</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">179</span>
 <span class="normal">180</span>
 <span class="normal">181</span>
 <span class="normal">182</span>
@@ -13747,7 +13750,8 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">192</span>
 <span class="normal">193</span>
 <span class="normal">194</span>
-<span class="normal">195</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="normal">195</span>
+<span class="normal">196</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">presign</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
@@ -13787,8 +13791,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/s3.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">299</span>
-<span class="normal">300</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">300</span>
 <span class="normal">301</span>
 <span class="normal">302</span>
 <span class="normal">303</span>
@@ -13903,7 +13906,9 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">412</span>
 <span class="normal">413</span>
 <span class="normal">414</span>
-<span class="normal">415</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;upload-all&quot;</span><span class="p">)</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;upload-all&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">upload_all</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
@@ -13976,7 +13981,8 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
         <span class="p">)</span>
         <span class="n">effective_workers</span> <span class="o">=</span> <span class="n">_resolve_workers</span><span class="p">(</span><span class="n">workers</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
 
-        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">())</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
+        <span class="n">done_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">))</span>
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="n">done_count</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
         <span class="n">flags</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">include</span><span class="p">:</span>
             <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;include=</span><span class="si">{</span><span class="n">include</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -14042,9 +14048,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/s3.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">418</span>
-<span class="normal">419</span>
-<span class="normal">420</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">420</span>
 <span class="normal">421</span>
 <span class="normal">422</span>
 <span class="normal">423</span>
@@ -14154,7 +14158,10 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">527</span>
 <span class="normal">528</span>
 <span class="normal">529</span>
-<span class="normal">530</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;download-all&quot;</span><span class="p">)</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;download-all&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">download_all</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
@@ -14221,7 +14228,8 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
         <span class="p">)</span>
         <span class="n">effective_workers</span> <span class="o">=</span> <span class="n">_resolve_workers</span><span class="p">(</span><span class="n">workers</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
 
-        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">())</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
+        <span class="n">done_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">))</span>
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="n">done_count</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
         <span class="n">flags</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">include</span><span class="p">:</span>
             <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;include=</span><span class="si">{</span><span class="n">include</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -14289,10 +14297,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/s3.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">557</span>
-<span class="normal">558</span>
-<span class="normal">559</span>
-<span class="normal">560</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">560</span>
 <span class="normal">561</span>
 <span class="normal">562</span>
 <span class="normal">563</span>
@@ -14352,7 +14357,10 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">617</span>
 <span class="normal">618</span>
 <span class="normal">619</span>
-<span class="normal">620</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">verify</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">),</span>
@@ -14481,8 +14489,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/iiif.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">116</span>
-<span class="normal">117</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">117</span>
 <span class="normal">118</span>
 <span class="normal">119</span>
 <span class="normal">120</span>
@@ -14563,7 +14570,9 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">195</span>
 <span class="normal">196</span>
 <span class="normal">197</span>
-<span class="normal">198</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;download&quot;</span><span class="p">)</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;download&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">download</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">batch_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Volume/batch ID (e.g. C0074667)&quot;</span><span class="p">),</span>
@@ -14614,7 +14623,8 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
         <span class="n">tracker</span><span class="p">,</span> <span class="n">db_path</span> <span class="o">=</span> <span class="n">_resolve_iiif_tracker</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tracker_db</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">tracker_prefix</span><span class="p">)</span>
 
-        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">())</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
+        <span class="n">done_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">))</span>
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="n">done_count</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
         <span class="n">flags</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">validate</span><span class="p">:</span>
             <span class="n">flags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;validate&quot;</span><span class="p">)</span>
@@ -14668,9 +14678,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/iiif.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">203</span>
 <span class="normal">204</span>
 <span class="normal">205</span>
 <span class="normal">206</span>
@@ -14758,7 +14766,10 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">288</span>
 <span class="normal">289</span>
 <span class="normal">290</span>
-<span class="normal">291</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;download-batches&quot;</span><span class="p">)</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;download-batches&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">download_batches</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">job_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Text file with batch IDs (one per line)&quot;</span><span class="p">),</span>
@@ -14823,7 +14834,8 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
         <span class="n">tracker</span><span class="p">,</span> <span class="n">db_path</span> <span class="o">=</span> <span class="n">_resolve_iiif_tracker</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tracker_db</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">tracker_prefix</span><span class="p">)</span>
 
-        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">())</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
+        <span class="n">done_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">))</span>
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="n">done_count</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
         <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;Downloading </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">batch_ids</span><span class="p">)</span><span class="si">}</span><span class="s2"> batches from [bold]</span><span class="si">{</span><span class="n">job_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">[/bold]&quot;</span>
             <span class="sa">f</span><span class="s2">&quot; → </span><span class="si">{</span><span class="n">dest</span><span class="si">}</span><span class="s2">/ (</span><span class="si">{</span><span class="n">effective_workers</span><span class="si">}</span><span class="s2"> workers)&quot;</span>
@@ -14875,10 +14887,7 @@ the same guarantees as <code>s3 upload-all</code>, without staging anything to d
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/iiif.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">294</span>
-<span class="normal">295</span>
-<span class="normal">296</span>
-<span class="normal">297</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">297</span>
 <span class="normal">298</span>
 <span class="normal">299</span>
 <span class="normal">300</span>
@@ -15067,7 +15076,10 @@ the same guarantees as <code>s3 upload-all</code>, without staging anything to d
 <span class="normal">483</span>
 <span class="normal">484</span>
 <span class="normal">485</span>
-<span class="normal">486</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;upload&quot;</span><span class="p">)</span>
+<span class="normal">486</span>
+<span class="normal">487</span>
+<span class="normal">488</span>
+<span class="normal">489</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;upload&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">upload</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Target S3 bucket&quot;</span><span class="p">),</span>
@@ -15127,8 +15139,6 @@ the same guarantees as <code>s3 upload-all</code>, without staging anything to d
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_run</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
-
         <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
 
         <span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_client</span><span class="w"> </span><span class="kn">import</span> <span class="n">BulkStreamConfig</span><span class="p">,</span> <span class="n">bulk_stream_upload</span>
@@ -15168,7 +15178,8 @@ the same guarantees as <code>s3 upload-all</code>, without staging anything to d
         <span class="n">validate_fn</span> <span class="o">=</span> <span class="n">_get_bytes_validator</span><span class="p">()</span> <span class="k">if</span> <span class="n">validate</span> <span class="k">else</span> <span class="kc">None</span>
 
         <span class="n">tracker</span><span class="p">,</span> <span class="n">db_path</span> <span class="o">=</span> <span class="n">_resolve_iiif_tracker</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tracker_db</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">tracker_prefix</span><span class="p">)</span>
-        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">())</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
+        <span class="n">done_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">))</span>
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="n">done_count</span><span class="si">}</span><span class="s2"> already done&quot;</span><span class="p">)</span>
 
         <span class="k">async</span> <span class="k">with</span> <span class="n">make_client</span><span class="p">(</span><span class="n">ctx</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
             <span class="c1"># 1. Enumerate manifests -&gt; (s3_key, image_url) items (cheap: strings).</span>
@@ -15186,14 +15197,15 @@ the same guarantees as <code>s3 upload-all</code>, without staging anything to d
                         <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
                             <span class="sa">f</span><span class="s2">&quot;  [red]manifest </span><span class="si">{</span><span class="n">batch_id</span><span class="si">}</span><span class="s2"> failed: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)[:</span><span class="mi">100</span><span class="p">]</span><span class="si">}</span><span class="s2">[/red]&quot;</span>
                         <span class="p">)</span>
-                        <span class="n">tracker</span><span class="o">.</span><span class="n">mark</span><span class="p">(</span>
+                        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span>
+                            <span class="n">tracker</span><span class="o">.</span><span class="n">mark</span><span class="p">,</span>
                             <span class="n">sentinel_key</span><span class="p">,</span>
                             <span class="mi">0</span><span class="p">,</span>
                             <span class="n">TransferStatus</span><span class="o">.</span><span class="n">error</span><span class="p">,</span>
-                            <span class="sa">f</span><span class="s2">&quot;manifest: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)[:</span><span class="mi">300</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                            <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;manifest: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)[:</span><span class="mi">300</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                         <span class="p">)</span>
                         <span class="k">return</span> <span class="p">[]</span>
-                <span class="n">tracker</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">sentinel_key</span><span class="p">)</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">delete</span><span class="p">,</span> <span class="n">sentinel_key</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">max_images</span><span class="p">:</span>
                     <span class="n">image_ids</span> <span class="o">=</span> <span class="n">image_ids</span><span class="p">[:</span><span class="n">max_images</span><span class="p">]</span>
                 <span class="k">return</span> <span class="p">[</span>
