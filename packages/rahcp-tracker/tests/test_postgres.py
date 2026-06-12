@@ -113,6 +113,15 @@ def test_create_tracker_windows_drive_path_is_sqlite(tmp_path: Path):
     tracker.close()
 
 
+def test_postgres_tracker_missing_driver_raises_actionable_error(monkeypatch):
+    def boom(*args, **kwargs):
+        raise ModuleNotFoundError("No module named 'psycopg'")
+
+    monkeypatch.setattr("rahcp_tracker.postgres.create_engine", boom)
+    with pytest.raises(ImportError, match=r"rahcp-tracker\[postgres\]"):
+        PostgresTracker("postgresql://u@host/db")
+
+
 def test_redact_dsn_masks_password():
     from rahcp_tracker import redact_dsn
 
