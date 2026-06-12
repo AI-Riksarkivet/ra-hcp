@@ -22,6 +22,10 @@ class TrackerProtocol(Protocol):
 
     def error_details(self) -> list[tuple[str, int, str | None]]: ...
 
+    def delete(self, key: str) -> None:
+        """Flush the buffer, then delete the entry for ``key`` if present."""
+        ...
+
     def mark(
         self,
         key: str,

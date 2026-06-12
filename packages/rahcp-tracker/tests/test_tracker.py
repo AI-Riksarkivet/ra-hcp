@@ -44,6 +44,29 @@ def test_error_details_surfaces_reason(tmp_path: Path):
     tracker.close()
 
 
+def test_delete_removes_entry(tmp_path: Path):
+    tracker = TransferTracker(tmp_path / "test.db")
+    tracker.mark("ok.jpg", 100, TransferStatus.done)
+    tracker.mark("bad/__manifest__", 0, TransferStatus.error, "manifest: timeout")
+
+    tracker.delete("bad/__manifest__")
+
+    assert tracker.error_details() == []
+    assert tracker.summary() == {"pending": 0, "done": 1, "error": 0}
+    tracker.close()
+
+
+def test_delete_nonexistent_key_is_noop(tmp_path: Path):
+    tracker = TransferTracker(tmp_path / "test.db")
+    tracker.mark("a.jpg", 100, TransferStatus.done)
+
+    tracker.delete("never-marked.jpg")
+
+    assert tracker.summary() == {"pending": 0, "done": 1, "error": 0}
+    assert "a.jpg" in tracker.done_keys()
+    tracker.close()
+
+
 def test_mark_updates_existing(tmp_path: Path):
     tracker = TransferTracker(tmp_path / "test.db")
     tracker.mark("a.jpg", 100, TransferStatus.error, "first failure")

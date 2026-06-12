@@ -9,7 +9,7 @@ import typer
 from rahcp_cli._client import make_client
 from rahcp_cli._output import console
 from rahcp_cli._run import run
-from rahcp_tracker import TrackerProtocol
+from rahcp_tracker import TrackerProtocol, TransferStatus
 
 app = typer.Typer(help="IIIF image download operations", no_args_is_help=True)
 
@@ -379,6 +379,7 @@ def upload(
             sem = asyncio.Semaphore(max(4, effective_workers))
 
             async def _enumerate(batch_id: str) -> list[tuple[str, str]]:
+                sentinel_key = f"{prefix}{batch_id}/__manifest__"
                 async with sem:
                     try:
                         image_ids = await get_image_ids(
@@ -388,7 +389,14 @@ def upload(
                         console.print(
                             f"  [red]manifest {batch_id} failed: {str(exc)[:100]}[/red]"
                         )
+                        tracker.mark(
+                            sentinel_key,
+                            0,
+                            TransferStatus.error,
+                            f"manifest: {str(exc)[:300]}",
+                        )
                         return []
+                tracker.delete(sentinel_key)
                 if max_images:
                     image_ids = image_ids[:max_images]
                 return [

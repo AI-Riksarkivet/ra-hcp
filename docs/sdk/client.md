@@ -361,7 +361,7 @@ The tracker package is structured for pluggable backends:
 ```
 rahcp-tracker/
   models.py     — TransferStatus enum + Transfer table (SQLModel, shared across backends)
-  protocol.py   — TrackerProtocol (interface — 9 methods any backend must implement)
+  protocol.py   — TrackerProtocol (interface — 10 methods any backend must implement)
   sqlite.py     — SqliteTracker (default SQLite implementation)
 ```
 

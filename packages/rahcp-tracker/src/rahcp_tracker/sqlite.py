@@ -103,6 +103,14 @@ class SqliteTracker:
         ).all()
         return [(r.key, r.size, r.error) for r in rows]
 
+    def delete(self, key: str) -> None:
+        """Flush the buffer, then delete the entry for ``key`` if present."""
+        self.flush()
+        row = self._session.exec(select(Transfer).where(Transfer.key == key)).first()
+        if row is not None:
+            self._session.delete(row)
+            self._session.commit()
+
     def mark(
         self,
         key: str,
