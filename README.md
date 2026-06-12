@@ -37,3 +37,13 @@ For production mode with real HCP credentials: `make run-api`
 - [Deno](https://deno.com) — frontend runtime
 - [uv](https://docs.astral.sh/uv/) — Python package manager
 - Docker — for Redis caching (optional)
+
+
+## Gallery
+
+<img width="2523" height="1298" alt="image" src="https://github.com/user-attachments/assets/e3e27ebf-5901-4c41-8d68-0d12a13f2d97" />
+
+<img width="2534" height="1317" alt="image" src="https://github.com/user-attachments/assets/43ec04b3-2fcc-4b49-b2b1-26ea70d3fd17" />
+
+<img width="2530" height="1253" alt="image" src="https://github.com/user-attachments/assets/9098e9f9-2778-42ba-9c13-24f6259c0a69" />
+
