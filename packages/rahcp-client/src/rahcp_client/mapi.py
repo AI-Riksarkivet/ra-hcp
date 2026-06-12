@@ -29,8 +29,11 @@ class MapiOps:
 
     async def list_namespaces(
         self, tenant: str, *, verbose: bool = False
-    ) -> list[dict[str, Any]]:
-        """List all namespaces for a tenant."""
+    ) -> dict[str, Any]:
+        """List all namespaces for a tenant.
+
+        Returns the MAPI response shape ``{"name": ["ns1", "ns2", ...]}``.
+        """
         params: dict[str, Any] = {}
         if verbose:
             params["verbose"] = "true"

@@ -12,7 +12,7 @@ from tenacity import (
     wait_exponential_jitter,
 )
 
-from rahcp_iiif.config import IIIF_TIMEOUT, IIIF_URL
+from rahcp_iiif.config import IIIF_QUERY_PARAMS, IIIF_TIMEOUT, IIIF_URL
 
 log = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ def build_image_url(
     image_id: str,
     *,
     base_url: str = IIIF_URL,
-    query_params: str = "full/max/0/default.jpg",
+    query_params: str = IIIF_QUERY_PARAMS,
 ) -> str:
     """Build the IIIF image URL for a given image ID.
 
@@ -118,6 +118,6 @@ def build_image_url(
     return f"{base_url}/arkis!{image_id}/{query_params}"
 
 
-def file_extension(query_params: str = "full/max/0/default.jpg") -> str:
+def file_extension(query_params: str = IIIF_QUERY_PARAMS) -> str:
     """Extract file extension from IIIF query params (e.g. '.jpg')."""
     return "." + query_params.rsplit(".", 1)[-1]

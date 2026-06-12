@@ -18,10 +18,10 @@ async def main() -> None:
     async with HCPClient.from_env() as client:
         # --8<-- [start:namespace-crud]
         # List existing namespaces
-        namespaces = await client.mapi.list_namespaces(TENANT, verbose=True)
+        namespaces = await client.mapi.list_namespaces(TENANT)
         print(f"Namespaces in '{TENANT}':")
-        for ns in namespaces:
-            print(f"  - {ns['name']}: {ns.get('description', '(no description)')}")
+        for name in namespaces.get("name", []):
+            print(f"  - {name}")
 
         # Create a new namespace
         await client.mapi.create_namespace(

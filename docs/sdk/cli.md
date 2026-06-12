@@ -278,7 +278,7 @@ Failed files (validation, transfer, or verification) are marked as `error` in th
 uv run python -c "
 from rahcp_tracker import SqliteTracker
 from pathlib import Path
-t = SqliteTracker(Path('.rahcp/.upload-tracker.db'))
+t = SqliteTracker(Path('~/.rahcp/.upload-tracker.db').expanduser())
 for key, size in t.error_entries():
     print(key)
 t.close()
@@ -300,7 +300,7 @@ The command recursively finds all files in the source directory and uploads them
 
 #### Bulk transfer tracking
 
-Both `upload-all` and `download-all` track progress in a local SQLite database (`.upload-tracker.db` / `.download-tracker.db` in the current working directory by default). This enables:
+Both `upload-all` and `download-all` track progress in a local SQLite database (`.upload-tracker.db` / `.download-tracker.db`, stored next to the config file by default — `~/.rahcp/` unless `--config` points elsewhere or `bulk_tracker_dir` is set). This enables:
 
 - **Instant resume** -- on re-run, completed files are skipped without any network calls
 - **Selective retry** -- `--retry-errors` retries only files that failed previously
@@ -314,10 +314,10 @@ Use `--tracker-prefix` to keep separate tracker DBs per dataset (SQLite only):
 
 ```bash
 rahcp s3 upload-all bucket ./andraarkiv --tracker-prefix andraarkiv
-# → .rahcp/andraarkiv.upload-tracker.db
+# → ~/.rahcp/andraarkiv.upload-tracker.db
 
 rahcp s3 upload-all bucket ./familysearch --tracker-prefix familysearch
-# → .rahcp/familysearch.upload-tracker.db
+# → ~/.rahcp/familysearch.upload-tracker.db
 ```
 
 Or set it in the config file to apply to all commands:
@@ -540,9 +540,9 @@ The single biggest win for upload is **getting files off NFS onto local disk fir
 | `bulk_workers` | Yes | `--workers` | 10 | Concurrent coroutines doing transfers simultaneously | More workers = more parallel transfers. Beyond a point, adding workers just adds queue contention since they share the same network pipe. |
 | `bulk_presign_batch_size` | Yes | `--presign-batch-size` | 200 | How many URLs are presigned in one API call | Reduces presign round-trips. 500 keys = 1 API call instead of 500. Saves ~5-10ms per file. |
 | `bulk_queue_depth` | Yes | — | 8 | Queue size = workers × depth. How many items are buffered ahead of workers | Keeps workers from starving when the producer is doing a presign batch call. Higher = workers always have work. |
-| `bulk_chunk_size` | Yes | — | 1 MB | Chunk size for streaming large files | Only matters for files above `stream_threshold`. For typical ~5 MB images: irrelevant (single-shot path). |
+| `bulk_chunk_size` | Yes | — | 4 MB | Chunk size for streaming large files | Only matters for files above `stream_threshold`. For typical ~5 MB images: irrelevant (single-shot path). |
 | `bulk_stream_threshold` | Yes | — | 100 MB | Files below this are read into memory in one shot | Small files hit the fast single-shot path. No effect unless you have files above this threshold. |
-| `bulk_tracker_flush_every` | Yes | — | 200 | How often SQLite writes buffered marks | Lower = more disk I/O. Higher = risk losing state on crash. |
+| `bulk_tracker_flush_every` | Yes | — | 500 | How often SQLite writes buffered marks | Lower = more disk I/O. Higher = risk losing state on crash. |
 | `bulk_progress_interval` | Yes | — | 5.0 | Seconds between progress reports | |
 | `bulk_tracker_dir` | Yes | `--tracker-db` | same dir as config.yaml | Where the tracker DB lives | |
 | `bulk_tracker_prefix` | Yes | `--tracker-prefix` | none | Prefix tracker DB name per dataset | |
@@ -790,7 +790,7 @@ All three retry transient network failures automatically (connection/timeout, `4
 | `--iiif-url` | -- | `https://iiifintern-ai.ra.se` | IIIF server base URL (env: `IIIF_URL`) |
 | `--max-images` | `-n` | all | Limit images per batch |
 | `--validate` | -- | off | Validate each image after download |
-| `--tracker-db` | -- | `.rahcp/.iiif-download.db` | Tracker DB path |
+| `--tracker-db` | -- | `<config dir>/.iiif-download.db` | Tracker DB path |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name (e.g. `familysearch` → `familysearch.iiif-download.db`) |
 
 **`upload` flags** — streams each image from IIIF straight to S3 in memory (no disk) through the shared bulk engine (`bulk_stream_upload`), so it gets the same **skip / validate / verify** guarantees as `s3 upload-all`. Pass batch IDs as arguments and/or via `--job-file`:
@@ -799,14 +799,14 @@ All three retry transient network failures automatically (connection/timeout, `4
 |------|-------|---------|-------------|
 | `--job-file` | `-f` | none | Text file with batch IDs (one per line) |
 | `--prefix` | `-p` | `""` | Key prefix prepended to `<batch>/<image>` |
-| `--workers` | `-w` | `8` | Concurrent download+upload workers |
+| `--workers` | `-w` | `4` | Concurrent download+upload workers (profile `iiif_workers` default) |
 | `--skip-existing` / `--overwrite` | -- | `--skip-existing` | Skip images already in the bucket (HEAD check **before** download) |
 | `--validate` | -- | off | Validate each image's bytes before upload (rejects corrupt/truncated) |
 | `--verify` | -- | off | Verify each upload by checking remote size after the PUT |
 | `--query-params` | `-q` | `full/max/0/default.jpg` | IIIF image API parameters |
 | `--iiif-url` | -- | `https://iiifintern-ai.ra.se` | IIIF server base URL (env: `IIIF_URL`) |
 | `--max-images` | `-n` | all | Limit images per batch |
-| `--tracker-db` | -- | `.rahcp/.iiif-download.db` | Tracker DB path |
+| `--tracker-db` | -- | `<config dir>/.iiif-download.db` | Tracker DB path |
 | `--tracker-prefix` | -- | none | Prefix for tracker DB name |
 
 !!! note "`upload` needs HCP credentials"
@@ -854,7 +854,7 @@ rahcp iiif upload my-bucket --job-file batches.txt \
 # Use --tracker-prefix to keep separate tracker DBs per dataset
 rahcp iiif download-batches batches.txt -o ./images/ --tracker-prefix familysearch
 rahcp s3 upload-all images-batch ./images/ --tracker-prefix familysearch
-# Creates: .rahcp/familysearch.iiif-download.db, .rahcp/familysearch.upload-tracker.db
+# Creates: ~/.rahcp/familysearch.iiif-download.db, ~/.rahcp/familysearch.upload-tracker.db
 ```
 
 IIIF settings can be configured per profile in `config.yaml`:

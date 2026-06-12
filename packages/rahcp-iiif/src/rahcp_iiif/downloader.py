@@ -12,6 +12,7 @@ import httpx
 
 from rahcp_tracker import TrackerProtocol, TransferStatus
 
+from rahcp_iiif.config import IIIF_QUERY_PARAMS, IIIF_TIMEOUT, IIIF_URL
 from rahcp_iiif.manifest import (
     build_image_url,
     fetch_with_retry,
@@ -53,9 +54,9 @@ async def download_batch(
     output_dir: Path,
     tracker: TrackerProtocol,
     *,
-    base_url: str = "https://iiifintern-ai.ra.se",
-    query_params: str = "full/max/0/default.jpg",
-    timeout: float = 60.0,
+    base_url: str = IIIF_URL,
+    query_params: str = IIIF_QUERY_PARAMS,
+    timeout: float = IIIF_TIMEOUT,
     workers: int = 4,
     max_images: int | None = None,
     validate_file: Callable[[Path], None] | None = None,

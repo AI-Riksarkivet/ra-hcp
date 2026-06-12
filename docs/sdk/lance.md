@@ -56,6 +56,12 @@ schema = pa.schema([
 table = await ds.create("embeddings", schema=schema)
 ```
 
+## Dropping tables
+
+```python
+await ds.drop("embeddings")   # deletes the table and its data
+```
+
 ## Querying
 
 ```python

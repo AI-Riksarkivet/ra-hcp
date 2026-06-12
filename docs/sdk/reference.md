@@ -20,6 +20,16 @@ Auto-generated from source code docstrings.
 
 ::: rahcp_client.config.HCPSettings
 
+### Bulk Transfers
+
+::: rahcp_client.bulk.config
+
+::: rahcp_client.bulk.upload
+
+::: rahcp_client.bulk.download
+
+::: rahcp_client.bulk.stream
+
 ### Errors
 
 ::: rahcp_client.errors
@@ -30,11 +40,39 @@ Auto-generated from source code docstrings.
 
 ---
 
+## rahcp-tracker
+
+### Tracker Protocol
+
+::: rahcp_tracker.protocol
+
+### SQLite Tracker
+
+::: rahcp_tracker.sqlite
+
+---
+
+## rahcp-iiif
+
+### Manifest Helpers
+
+::: rahcp_iiif.manifest
+
+### Downloader
+
+::: rahcp_iiif.downloader
+
+---
+
 ## rahcp-cli
 
 ### S3 Commands
 
 ::: rahcp_cli.s3
+
+### IIIF Commands
+
+::: rahcp_cli.iiif
 
 ### Auth Commands
 

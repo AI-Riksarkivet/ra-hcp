@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Basic S3 operations: upload, download, list, and delete.
 
-Requires HCP_ENDPOINT, HCP_USERNAME, HCP_PASSWORD env vars (or a config file).
+Requires HCP_ENDPOINT, HCP_USERNAME, HCP_PASSWORD env vars (HCP_* only —
+the ~/.rahcp/config.yaml profile file is used by the CLI, not by from_env()).
 """
 
 from __future__ import annotations
@@ -49,7 +50,7 @@ async def main() -> None:
         # --8<-- [start:list]
         # List objects under a prefix
         result = await client.s3.list_objects(BUCKET, prefix="examples/", max_keys=10)
-        print(f"Objects   → {[obj['key'] for obj in result['objects']]}")
+        print(f"Objects   → {[obj['Key'] for obj in result['objects']]}")
         # --8<-- [end:list]
 
         # --8<-- [start:presign]

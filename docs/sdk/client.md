@@ -17,7 +17,7 @@ sequenceDiagram
 
     note over App,S3: Upload flow (presigned PUT)
     App->>API: POST /presign {bucket, key, method: "put_object"}
-    API-->>App: Presigned URL (valid 10 min)
+    API-->>App: Presigned URL (valid 1 hour)
     App->>S3: PUT presigned-url (file bytes)
     S3-->>App: 200 OK + ETag
 
@@ -83,7 +83,7 @@ asyncio.run(main())
 client = HCPClient.from_env()
 ```
 
-Reads from `HCP_ENDPOINT`, `HCP_USERNAME`, `HCP_PASSWORD`, `HCP_TENANT`, `HCP_TIMEOUT`, `HCP_MAX_RETRIES`, `HCP_MULTIPART_THRESHOLD`, `HCP_MULTIPART_CHUNK`, `HCP_MULTIPART_CONCURRENCY`, `HCP_VERIFY_SSL`.
+Reads from `HCP_ENDPOINT`, `HCP_USERNAME`, `HCP_PASSWORD`, `HCP_TENANT`, `HCP_TIMEOUT`, `HCP_MAX_RETRIES`, `HCP_RETRY_BASE_DELAY`, `HCP_MULTIPART_THRESHOLD`, `HCP_MULTIPART_CHUNK`, `HCP_MULTIPART_CONCURRENCY`, `HCP_VERIFY_SSL`.
 
 ### Properties
 
@@ -177,7 +177,7 @@ await client.s3.copy("dest-bucket", "dest-key", "src-bucket", "src-key")
 
 ### Staging pattern
 
-Atomic directory-level operations: upload to a staging prefix, validate, then commit to the final prefix in one step. This prevents downstream consumers from seeing partial results.
+Directory-level staging: upload to a staging prefix, validate, then commit to the final prefix (server-side copy + delete, one object at a time). A failure before commit leaves the final prefix untouched. The commit itself is not atomic — consumers listing the final prefix mid-commit can see a partial batch, so gate readers on a marker written after the commit if they must never see partial results.
 
 ```mermaid
 flowchart LR
@@ -259,7 +259,7 @@ asyncio.run(main())
 | `workers` | `int` | `10` | Number of concurrent upload workers |
 | `queue_depth` | `int` | `8` | Queue size multiplier (queue = workers × depth) |
 | `presign_batch_size` | `int` | `200` | URLs presigned per API call (higher = fewer round-trips) |
-| `chunk_size` | `int` | `1048576` | Chunk size in bytes for streaming uploads (1 MB) |
+| `chunk_size` | `int` | `4194304` | Chunk size in bytes (4 MB) — currently used by downloads only; uploads send each file in a single PUT |
 | `skip_existing` | `bool` | `True` | Skip files already on remote with matching size |
 | `retry_errors` | `bool` | `False` | Only process files marked as error in tracker |
 | `include` | `list[str]` | `[]` | Glob patterns — only matching filenames are transferred |
@@ -298,8 +298,9 @@ stats = await bulk_stream_upload(
 ```
 
 `BulkStreamConfig` mirrors `BulkUploadConfig` minus the disk-specific fields
-(`source_dir`, `include`/`exclude`, `chunk_size`) and takes `validate_bytes`
-(`fn(data, ext)`) in place of `validate_file` (`fn(Path)`).
+(`source_dir`, `prefix`, `include`/`exclude`, `chunk_size`) and takes
+`validate_bytes` (`fn(data, ext)`) in place of `validate_file` (`fn(Path)`) —
+keys are provided per item, so there is no prefix field.
 
 ### BulkDownloadConfig
 
@@ -313,7 +314,7 @@ stats = await bulk_stream_upload(
 | `workers` | `int` | `10` | Number of concurrent download workers |
 | `queue_depth` | `int` | `8` | Queue size multiplier (queue = workers × depth) |
 | `presign_batch_size` | `int` | `200` | URLs presigned per API call (higher = fewer round-trips) |
-| `chunk_size` | `int` | `1048576` | Chunk size in bytes for streaming large files (1 MB) |
+| `chunk_size` | `int` | `4194304` | Chunk size in bytes for streaming large files (4 MB) |
 | `stream_threshold` | `int` | `104857600` | Files below this (100 MB) are downloaded in one shot |
 | `retry_errors` | `bool` | `False` | Only process files marked as error in tracker |
 | `include` | `list[str]` | `[]` | Glob patterns — only matching keys are downloaded |
@@ -360,11 +361,11 @@ The tracker package is structured for pluggable backends:
 ```
 rahcp-tracker/
   models.py     — TransferStatus enum + Transfer table (SQLModel, shared across backends)
-  protocol.py   — TrackerProtocol (interface — 8 methods any backend must implement)
+  protocol.py   — TrackerProtocol (interface — 9 methods any backend must implement)
   sqlite.py     — SqliteTracker (default SQLite implementation)
 ```
 
-To add a new backend (e.g. Postgres), implement `TrackerProtocol` in a new file — no changes to `bulk.py`, the CLI, or any consumer code. The `Transfer` SQLModel table in `models.py` works with both SQLite and Postgres via SQLAlchemy's dialect system.
+To add a new backend (e.g. Postgres), implement `TrackerProtocol` in a new file — no changes to the `bulk/` engine, the CLI, or any consumer code. The `Transfer` SQLModel table in `models.py` works with both SQLite and Postgres via SQLAlchemy's dialect system.
 
 ## MAPI operations
 

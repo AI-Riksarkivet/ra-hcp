@@ -149,6 +149,8 @@ url = build_image_url("C0074667_00001", query_params="full/,1200/0/default.jpg")
 | `timeout` | `IIIF_TIMEOUT` | `60` | Request timeout in seconds |
 | `query_params` | `IIIF_QUERY_PARAMS` | `full/max/0/default.jpg` | IIIF image API parameters |
 
+The env vars are read once at import time and set the *defaults* for `download_batch`, `download_batches`, `get_image_ids`, `build_image_url`, and `file_extension`; explicit keyword arguments always take precedence. For the CLI, the profile's `iiif_timeout`/`iiif_query_params` win over env vars — but note the `--iiif-url` flag itself reads `IIIF_URL`, so that env var overrides the profile's `iiif_url` when the flag isn't passed.
+
 The `query_params` string follows the [IIIF Image API](https://iiif.io/api/image/3.0/) format: `{region}/{size}/{rotation}/{quality}.{format}`. Common values:
 
 | `query_params` | Description |

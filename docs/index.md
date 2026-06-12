@@ -24,7 +24,7 @@ hide:
     ---
 
     Presigned URL transfers, multipart uploads, bulk operations with
-    crash-safe resume, and staging/commit patterns for atomic writes.
+    crash-safe resume, and staging/commit patterns for safe batch writes.
 
     [:octicons-arrow-right-24: S3 API](api/s3-objects.md)
 

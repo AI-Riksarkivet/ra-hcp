@@ -1,8 +1,8 @@
 # Cross-tenant TIFF→JPG conversion with staging, verification, and cleanup.
 #
 # Reads TIFFs from a source tenant, converts to JPG, writes to a destination
-# tenant via staging/ prefix, then commits atomically. Exit handler cleans up
-# on failure.
+# tenant via staging/ prefix, then commits (copy + delete per object).
+# Exit handler cleans up on failure.
 #
 # Prerequisites:
 #   kubectl create secret generic hcp-source-creds \

@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Atomic staging → commit pattern for safe batch writes.
+"""Staging → commit pattern for safe batch writes.
 
-Uploads files to a staging/ prefix, then atomically commits them to
-the final prefix. If anything fails, the staging prefix is cleaned up.
+Uploads files to a staging/ prefix, then commits them to the final prefix
+(server-side copy + delete, one object at a time). If anything fails before
+the commit, the staging prefix is cleaned up.
 
-This pattern ensures downstream consumers never see partial results.
+Note: the commit itself is not atomic — consumers listing the final prefix
+mid-commit can observe a partial batch. Gate readers on a separate signal
+(e.g. a manifest/_SUCCESS marker written after the commit) if they must
+never see partial results.
 """
 
 from __future__ import annotations
@@ -51,7 +55,7 @@ async def main() -> None:
             result = await client.s3.list_objects(BUCKET, prefix=FINAL_PREFIX)
             print(f"Final prefix contains {len(result['objects'])} objects:")
             for obj in result["objects"]:
-                print(f"  - {obj['key']}")
+                print(f"  - {obj['Key']}")
 
         except Exception:
             # Clean up staging on any failure
