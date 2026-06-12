@@ -1896,6 +1896,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#postgresql-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PostgreSQL backend
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#inspecting-failures" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2251,6 +2262,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#postgresql-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PostgreSQL backend
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#inspecting-failures" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2374,15 +2396,23 @@
 <tbody>
 <tr>
 <td><code>TrackerProtocol</code></td>
-<td>Interface — <code>mark()</code>, <code>commit()</code>, <code>close()</code>, <code>summary()</code>, <code>done_keys()</code>, <code>error_entries()</code>, <code>error_details()</code>, <code>unverified_keys()</code>, <code>unvalidated_keys()</code></td>
+<td>Interface — <code>mark()</code>, <code>commit()</code>, <code>close()</code>, <code>delete()</code>, <code>summary()</code>, <code>done_keys()</code>, <code>error_entries()</code>, <code>error_details()</code>, <code>unverified_keys()</code>, <code>unvalidated_keys()</code></td>
 </tr>
 <tr>
 <td><code>SqliteTracker</code></td>
 <td>Default SQLite implementation with WAL mode and buffered writes</td>
 </tr>
 <tr>
+<td><code>PostgresTracker</code></td>
+<td>PostgreSQL implementation — same behavior, server-backed (<code>pip install "rahcp-tracker[postgres]"</code>)</td>
+</tr>
+<tr>
 <td><code>TransferTracker</code></td>
 <td>Backwards-compatible alias for <code>SqliteTracker</code></td>
+</tr>
+<tr>
+<td><code>create_tracker()</code></td>
+<td>Pick the backend from a SQLite file path or a <code>postgresql://</code> DSN</td>
 </tr>
 <tr>
 <td><code>Transfer</code></td>
@@ -2401,6 +2431,24 @@
 <span class="n">tracker</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </code></pre></div>
 <p>The <code>Transfer</code> model in <code>models.py</code> tracks: <code>key</code>, <code>size</code>, <code>status</code>, <code>error</code>, <code>etag</code>, <code>validated</code>, <code>verified</code>, <code>updated_at</code>.</p>
+<h2 id="postgresql-backend">PostgreSQL backend<a class="headerlink" href="#postgresql-backend" title="Permanent link">&para;</a></h2>
+<p>Both backends share one implementation (buffering, flushing, all queries) and
+differ only in engine construction, so behavior is identical. Use Postgres when
+several machines share one tracker, or tracker state must outlive the host:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_tracker</span><span class="w"> </span><span class="kn">import</span> <span class="n">PostgresTracker</span><span class="p">,</span> <span class="n">create_tracker</span>
+
+<span class="n">tracker</span> <span class="o">=</span> <span class="n">PostgresTracker</span><span class="p">(</span><span class="s2">&quot;postgresql://user:pass@db-host:5432/rahcp&quot;</span><span class="p">)</span>
+
+<span class="c1"># Or select the backend from configuration with create_tracker():</span>
+<span class="n">tracker</span> <span class="o">=</span> <span class="n">create_tracker</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>   <span class="c1"># &quot;jobs.db&quot; → SQLite, &quot;postgresql://…&quot; → Postgres</span>
+</code></pre></div>
+<p>In the CLI, pass a DSN straight to the existing flag — or set it once via the
+<code>RAHCP_TRACKER_DB</code> env var (keeps credentials out of shell history):</p>
+<div class="highlight"><pre><span></span><code>rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./scans<span class="w"> </span>--tracker-db<span class="w"> </span>postgresql://user:pass@db-host/rahcp
+<span class="c1"># or:</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">RAHCP_TRACKER_DB</span><span class="o">=</span>postgresql://user:pass@db-host/rahcp
+rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>my-bucket<span class="w"> </span>./scans
+</code></pre></div>
 <h2 id="inspecting-failures">Inspecting failures<a class="headerlink" href="#inspecting-failures" title="Permanent link">&para;</a></h2>
 <p><code>error_entries()</code> returns <code>(key, size)</code> pairs — used to drive retries.
 <code>error_details()</code> additionally surfaces the recorded <strong>reason</strong>, which the bulk

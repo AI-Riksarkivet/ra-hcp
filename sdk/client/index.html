@@ -3494,7 +3494,7 @@ keys are provided per item, so there is no prefix field.</p>
   protocol.py   — TrackerProtocol (interface — 10 methods any backend must implement)
   sqlite.py     — SqliteTracker (default SQLite implementation)
 </code></pre></div>
-<p>To add a new backend (e.g. Postgres), implement <code>TrackerProtocol</code> in a new file — no changes to the <code>bulk/</code> engine, the CLI, or any consumer code. The <code>Transfer</code> SQLModel table in <code>models.py</code> works with both SQLite and Postgres via SQLAlchemy's dialect system.</p>
+<p>A PostgreSQL backend ships in the package (<code>PostgresTracker</code>, selected by <code>create_tracker()</code> from a <code>postgresql://</code> DSN — see <a href="../tracker/">rahcp-tracker</a>). To add another backend, implement <code>TrackerProtocol</code> in a new file — no changes to the <code>bulk/</code> engine or any consumer code. The <code>Transfer</code> SQLModel table in <code>models.py</code> works with both SQLite and Postgres via SQLAlchemy's dialect system.</p>
 <h2 id="mapi-operations">MAPI operations<a class="headerlink" href="#mapi-operations" title="Permanent link">&para;</a></h2>
 <p><code>client.mapi</code> returns a <code>MapiOps</code> instance for namespace administration:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># List namespaces</span>
