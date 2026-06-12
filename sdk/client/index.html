@@ -3491,7 +3491,7 @@ keys are provided per item, so there is no prefix field.</p>
 <p>The tracker package is structured for pluggable backends:</p>
 <div class="highlight"><pre><span></span><code>rahcp-tracker/
   models.py     — TransferStatus enum + Transfer table (SQLModel, shared across backends)
-  protocol.py   — TrackerProtocol (interface — 9 methods any backend must implement)
+  protocol.py   — TrackerProtocol (interface — 10 methods any backend must implement)
   sqlite.py     — SqliteTracker (default SQLite implementation)
 </code></pre></div>
 <p>To add a new backend (e.g. Postgres), implement <code>TrackerProtocol</code> in a new file — no changes to the <code>bulk/</code> engine, the CLI, or any consumer code. The <code>Transfer</code> SQLModel table in <code>models.py</code> works with both SQLite and Postgres via SQLAlchemy's dialect system.</p>
