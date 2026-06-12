@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.ico">
-      <meta name="generator" content="zensical-0.0.44">
+      <meta name="generator" content="zensical-0.0.45">
     
     
       
@@ -2627,6 +2627,7 @@ up to <code>max_attempts</code> before being recorded as an error.</p>
 </tr>
 </tbody>
 </table>
+<p>The env vars are read once at import time and set the <em>defaults</em> for <code>download_batch</code>, <code>download_batches</code>, <code>get_image_ids</code>, <code>build_image_url</code>, and <code>file_extension</code>; explicit keyword arguments always take precedence. For the CLI, the profile's <code>iiif_timeout</code>/<code>iiif_query_params</code> win over env vars — but note the <code>--iiif-url</code> flag itself reads <code>IIIF_URL</code>, so that env var overrides the profile's <code>iiif_url</code> when the flag isn't passed.</p>
 <p>The <code>query_params</code> string follows the <a href="https://iiif.io/api/image/3.0/">IIIF Image API</a> format: <code>{region}/{size}/{rotation}/{quality}.{format}</code>. Common values:</p>
 <table>
 <thead>

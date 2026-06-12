@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.ico">
-      <meta name="generator" content="zensical-0.0.44">
+      <meta name="generator" content="zensical-0.0.45">
     
     
       
@@ -2884,7 +2884,7 @@
 
     note over App,S3: Upload flow (presigned PUT)
     App-&gt;&gt;API: POST /presign {bucket, key, method: "put_object"}
-    API--&gt;&gt;App: Presigned URL (valid 10 min)
+    API--&gt;&gt;App: Presigned URL (valid 1 hour)
     App-&gt;&gt;S3: PUT presigned-url (file bytes)
     S3--&gt;&gt;App: 200 OK + ETag
 
@@ -3003,7 +3003,7 @@
 <h3 id="from-environment-variables">From environment variables<a class="headerlink" href="#from-environment-variables" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="n">client</span> <span class="o">=</span> <span class="n">HCPClient</span><span class="o">.</span><span class="n">from_env</span><span class="p">()</span>
 </code></pre></div>
-<p>Reads from <code>HCP_ENDPOINT</code>, <code>HCP_USERNAME</code>, <code>HCP_PASSWORD</code>, <code>HCP_TENANT</code>, <code>HCP_TIMEOUT</code>, <code>HCP_MAX_RETRIES</code>, <code>HCP_MULTIPART_THRESHOLD</code>, <code>HCP_MULTIPART_CHUNK</code>, <code>HCP_MULTIPART_CONCURRENCY</code>, <code>HCP_VERIFY_SSL</code>.</p>
+<p>Reads from <code>HCP_ENDPOINT</code>, <code>HCP_USERNAME</code>, <code>HCP_PASSWORD</code>, <code>HCP_TENANT</code>, <code>HCP_TIMEOUT</code>, <code>HCP_MAX_RETRIES</code>, <code>HCP_RETRY_BASE_DELAY</code>, <code>HCP_MULTIPART_THRESHOLD</code>, <code>HCP_MULTIPART_CHUNK</code>, <code>HCP_MULTIPART_CONCURRENCY</code>, <code>HCP_VERIFY_SSL</code>.</p>
 <h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -3099,7 +3099,7 @@
 <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="s2">&quot;dest-bucket&quot;</span><span class="p">,</span> <span class="s2">&quot;dest-key&quot;</span><span class="p">,</span> <span class="s2">&quot;src-bucket&quot;</span><span class="p">,</span> <span class="s2">&quot;src-key&quot;</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="staging-pattern">Staging pattern<a class="headerlink" href="#staging-pattern" title="Permanent link">&para;</a></h3>
-<p>Atomic directory-level operations: upload to a staging prefix, validate, then commit to the final prefix in one step. This prevents downstream consumers from seeing partial results.</p>
+<p>Directory-level staging: upload to a staging prefix, validate, then commit to the final prefix (server-side copy + delete, one object at a time). A failure before commit leaves the final prefix untouched. The commit itself is not atomic — consumers listing the final prefix mid-commit can see a partial batch, so gate readers on a marker written after the commit if they must never see partial results.</p>
 <pre class="mermaid"><code>flowchart LR
     subgraph Write["1. Write to staging"]
         W1["upload obj-1"] --&gt; STG[("staging/&lt;br/&gt;batch-1/")]
@@ -3156,7 +3156,7 @@
             <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">list_objects</span><span class="p">(</span><span class="n">BUCKET</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">FINAL_PREFIX</span><span class="p">)</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Final prefix contains </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;objects&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> objects:&quot;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;objects&quot;</span><span class="p">]:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">obj</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">obj</span><span class="p">[</span><span class="s1">&#39;Key&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="c1"># Clean up staging on any failure</span>
@@ -3256,8 +3256,8 @@
 <tr>
 <td><code>chunk_size</code></td>
 <td><code>int</code></td>
-<td><code>1048576</code></td>
-<td>Chunk size in bytes for streaming uploads (1 MB)</td>
+<td><code>4194304</code></td>
+<td>Chunk size in bytes (4 MB) — currently used by downloads only; uploads send each file in a single PUT</td>
 </tr>
 <tr>
 <td><code>skip_existing</code></td>
@@ -3339,8 +3339,9 @@ to disk. It powers <code>rahcp iiif upload</code>; see <a href="../iiif/#stream-
 <span class="p">)</span>
 </code></pre></div>
 <p><code>BulkStreamConfig</code> mirrors <code>BulkUploadConfig</code> minus the disk-specific fields
-(<code>source_dir</code>, <code>include</code>/<code>exclude</code>, <code>chunk_size</code>) and takes <code>validate_bytes</code>
-(<code>fn(data, ext)</code>) in place of <code>validate_file</code> (<code>fn(Path)</code>).</p>
+(<code>source_dir</code>, <code>prefix</code>, <code>include</code>/<code>exclude</code>, <code>chunk_size</code>) and takes
+<code>validate_bytes</code> (<code>fn(data, ext)</code>) in place of <code>validate_file</code> (<code>fn(Path)</code>) —
+keys are provided per item, so there is no prefix field.</p>
 <h3 id="bulkdownloadconfig">BulkDownloadConfig<a class="headerlink" href="#bulkdownloadconfig" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -3403,8 +3404,8 @@ to disk. It powers <code>rahcp iiif upload</code>; see <a href="../iiif/#stream-
 <tr>
 <td><code>chunk_size</code></td>
 <td><code>int</code></td>
-<td><code>1048576</code></td>
-<td>Chunk size in bytes for streaming large files (1 MB)</td>
+<td><code>4194304</code></td>
+<td>Chunk size in bytes for streaming large files (4 MB)</td>
 </tr>
 <tr>
 <td><code>stream_threshold</code></td>
@@ -3490,10 +3491,10 @@ to disk. It powers <code>rahcp iiif upload</code>; see <a href="../iiif/#stream-
 <p>The tracker package is structured for pluggable backends:</p>
 <div class="highlight"><pre><span></span><code>rahcp-tracker/
   models.py     — TransferStatus enum + Transfer table (SQLModel, shared across backends)
-  protocol.py   — TrackerProtocol (interface — 8 methods any backend must implement)
+  protocol.py   — TrackerProtocol (interface — 9 methods any backend must implement)
   sqlite.py     — SqliteTracker (default SQLite implementation)
 </code></pre></div>
-<p>To add a new backend (e.g. Postgres), implement <code>TrackerProtocol</code> in a new file — no changes to <code>bulk.py</code>, the CLI, or any consumer code. The <code>Transfer</code> SQLModel table in <code>models.py</code> works with both SQLite and Postgres via SQLAlchemy's dialect system.</p>
+<p>To add a new backend (e.g. Postgres), implement <code>TrackerProtocol</code> in a new file — no changes to the <code>bulk/</code> engine, the CLI, or any consumer code. The <code>Transfer</code> SQLModel table in <code>models.py</code> works with both SQLite and Postgres via SQLAlchemy's dialect system.</p>
 <h2 id="mapi-operations">MAPI operations<a class="headerlink" href="#mapi-operations" title="Permanent link">&para;</a></h2>
 <p><code>client.mapi</code> returns a <code>MapiOps</code> instance for namespace administration:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># List namespaces</span>

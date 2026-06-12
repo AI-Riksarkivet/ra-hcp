@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.ico">
-      <meta name="generator" content="zensical-0.0.44">
+      <meta name="generator" content="zensical-0.0.45">
     
     
       
@@ -2458,7 +2458,7 @@
 <p><strong><code>Stage</code> dataclass</strong> (<code>name</code>, <code>handler</code>, <code>retries=3</code>, <code>backoff=2.0</code>):</p>
 <ul>
 <li>Stages execute sequentially; each receives the output of the previous stage</li>
-<li>Failed stages retry with exponential backoff (<code>delay * backoff^attempt</code>)</li>
+<li>Failed stages retry with exponential backoff plus jitter — the wait before the n-th retry is <code>min(backoff * 2^n + uniform(0, backoff), 300)</code> seconds (<code>backoff</code> sets the initial delay and the jitter range; the exponential base is fixed at 2)</li>
 <li>After each successful stage, a checkpoint is saved to NATS KV</li>
 <li>If a pipeline fails and is re-run with the same <code>pipeline_id</code>, it resumes from the last checkpoint</li>
 <li>Checkpoints are cleared on successful completion</li>

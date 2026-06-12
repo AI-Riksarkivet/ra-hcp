@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/favicon.ico">
-      <meta name="generator" content="zensical-0.0.44">
+      <meta name="generator" content="zensical-0.0.45">
     
     
       
@@ -3445,7 +3445,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
 uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
 <span class="s2">from rahcp_tracker import SqliteTracker</span>
 <span class="s2">from pathlib import Path</span>
-<span class="s2">t = SqliteTracker(Path(&#39;.rahcp/.upload-tracker.db&#39;))</span>
+<span class="s2">t = SqliteTracker(Path(&#39;~/.rahcp/.upload-tracker.db&#39;).expanduser())</span>
 <span class="s2">for key, size in t.error_entries():</span>
 <span class="s2">    print(key)</span>
 <span class="s2">t.close()</span>
@@ -3461,7 +3461,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 ./scans/batch-2/image-003.tif  →  s3://my-bucket/data/batch-2/image-003.tif
 </code></pre></div>
 <h4 id="bulk-transfer-tracking">Bulk transfer tracking<a class="headerlink" href="#bulk-transfer-tracking" title="Permanent link">&para;</a></h4>
-<p>Both <code>upload-all</code> and <code>download-all</code> track progress in a local SQLite database (<code>.upload-tracker.db</code> / <code>.download-tracker.db</code> in the current working directory by default). This enables:</p>
+<p>Both <code>upload-all</code> and <code>download-all</code> track progress in a local SQLite database (<code>.upload-tracker.db</code> / <code>.download-tracker.db</code>, stored next to the config file by default — <code>~/.rahcp/</code> unless <code>--config</code> points elsewhere or <code>bulk_tracker_dir</code> is set). This enables:</p>
 <ul>
 <li><strong>Instant resume</strong> -- on re-run, completed files are skipped without any network calls</li>
 <li><strong>Selective retry</strong> -- <code>--retry-errors</code> retries only files that failed previously</li>
@@ -3471,10 +3471,10 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 <p>Tracker location resolution: <code>--tracker-db</code> (exact path) &gt; <code>--tracker-prefix</code> + default name &gt; <code>bulk_tracker_prefix</code> in profile &gt; <code>bulk_tracker_dir</code> in profile &gt; config file directory.</p>
 <p>Use <code>--tracker-prefix</code> to keep separate tracker DBs per dataset (SQLite only):</p>
 <div class="highlight"><pre><span></span><code>rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>bucket<span class="w"> </span>./andraarkiv<span class="w"> </span>--tracker-prefix<span class="w"> </span>andraarkiv
-<span class="c1"># → .rahcp/andraarkiv.upload-tracker.db</span>
+<span class="c1"># → ~/.rahcp/andraarkiv.upload-tracker.db</span>
 
 rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>bucket<span class="w"> </span>./familysearch<span class="w"> </span>--tracker-prefix<span class="w"> </span>familysearch
-<span class="c1"># → .rahcp/familysearch.upload-tracker.db</span>
+<span class="c1"># → ~/.rahcp/familysearch.upload-tracker.db</span>
 </code></pre></div>
 <p>Or set it in the config file to apply to all commands:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">bulk_tracker_prefix</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">andraarkiv</span>
@@ -3754,7 +3754,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 <td><code>bulk_chunk_size</code></td>
 <td>Yes</td>
 <td>—</td>
-<td>1 MB</td>
+<td>4 MB</td>
 <td>Chunk size for streaming large files</td>
 <td>Only matters for files above <code>stream_threshold</code>. For typical ~5 MB images: irrelevant (single-shot path).</td>
 </tr>
@@ -3770,7 +3770,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 <td><code>bulk_tracker_flush_every</code></td>
 <td>Yes</td>
 <td>—</td>
-<td>200</td>
+<td>500</td>
 <td>How often SQLite writes buffered marks</td>
 <td>Lower = more disk I/O. Higher = risk losing state on crash.</td>
 </tr>
@@ -4133,7 +4133,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
 <tr>
 <td><code>--tracker-db</code></td>
 <td>--</td>
-<td><code>.rahcp/.iiif-download.db</code></td>
+<td><code>&lt;config dir&gt;/.iiif-download.db</code></td>
 <td>Tracker DB path</td>
 </tr>
 <tr>
@@ -4170,8 +4170,8 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
 <tr>
 <td><code>--workers</code></td>
 <td><code>-w</code></td>
-<td><code>8</code></td>
-<td>Concurrent download+upload workers</td>
+<td><code>4</code></td>
+<td>Concurrent download+upload workers (profile <code>iiif_workers</code> default)</td>
 </tr>
 <tr>
 <td><code>--skip-existing</code> / <code>--overwrite</code></td>
@@ -4212,7 +4212,7 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>verify<span class="w"> </
 <tr>
 <td><code>--tracker-db</code></td>
 <td>--</td>
-<td><code>.rahcp/.iiif-download.db</code></td>
+<td><code>&lt;config dir&gt;/.iiif-download.db</code></td>
 <td>Tracker DB path</td>
 </tr>
 <tr>
@@ -4268,7 +4268,7 @@ rahcp<span class="w"> </span>iiif<span class="w"> </span>upload<span class="w"> 
 <span class="c1"># Use --tracker-prefix to keep separate tracker DBs per dataset</span>
 rahcp<span class="w"> </span>iiif<span class="w"> </span>download-batches<span class="w"> </span>batches.txt<span class="w"> </span>-o<span class="w"> </span>./images/<span class="w"> </span>--tracker-prefix<span class="w"> </span>familysearch
 rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"> </span>images-batch<span class="w"> </span>./images/<span class="w"> </span>--tracker-prefix<span class="w"> </span>familysearch
-<span class="c1"># Creates: .rahcp/familysearch.iiif-download.db, .rahcp/familysearch.upload-tracker.db</span>
+<span class="c1"># Creates: ~/.rahcp/familysearch.iiif-download.db, ~/.rahcp/familysearch.upload-tracker.db</span>
 </code></pre></div>
 <p>IIIF settings can be configured per profile in <code>config.yaml</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">profiles</span><span class="p">:</span>
