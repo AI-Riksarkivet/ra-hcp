@@ -42,8 +42,17 @@ spec:
             - name: BACKEND_URL
               value: {{ .Values.frontend.env.BACKEND_URL | default (printf "http://%s:%v" (include "ra-hcp.fullname" .) .Values.service.port) | quote }}
             {{- if .Values.frontend.env.ORIGIN }}
+            # Explicit public origin (overrides the proxy-header derivation below).
             - name: ORIGIN
               value: {{ .Values.frontend.env.ORIGIN | quote }}
+            {{- else }}
+            # Without a fixed ORIGIN, derive it from the ingress's forwarded
+            # headers so SvelteKit's CSRF check accepts remote-function POSTs
+            # (mutations) behind any host. svelte-adapter-bun reads these.
+            - name: PROTOCOL_HEADER
+              value: {{ .Values.frontend.env.PROTOCOL_HEADER | default "x-forwarded-proto" | quote }}
+            - name: HOST_HEADER
+              value: {{ .Values.frontend.env.HOST_HEADER | default "x-forwarded-host" | quote }}
             {{- end }}
           livenessProbe:
             httpGet:

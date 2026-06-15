@@ -20,6 +20,9 @@ frontend/build/
 frontend/.output/
 frontend/storybook-static/
 frontend/vite.config.js.timestamp-*
+frontend/test-results/
+frontend/playwright-report/
+frontend/.last-run.json
 frontend/vite.config.ts.timestamp-*
 
 # CLI config (contains credentials/tokens)

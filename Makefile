@@ -9,7 +9,7 @@ export PATH := $(HOME)/.bun/bin:$(PATH)
         run-api run-api-mock \
         frontend-dev frontend-build storybook build-storybook test-storybook \
         docs docs-build \
-        checks test test-integration serve-backend full-serve build \
+        checks test test-integration e2e serve-backend full-serve build \
         scan scan-backend scan-frontend scan-image \
         publish publish-backend publish-frontend
 
@@ -116,6 +116,10 @@ test:
 ## test-integration: run integration tests (real Redis) in Dagger
 test-integration:
 	dagger call test-integration --source=.
+
+## e2e: full-stack Playwright smoke test (browser -> frontend -> backend -> S3/MinIO) in Dagger
+e2e:
+	dagger call end-to-end --source=.
 
 ## serve-backend: start backend + Redis in Dagger on :8000
 serve-backend:

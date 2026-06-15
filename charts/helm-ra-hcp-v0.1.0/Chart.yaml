@@ -2,8 +2,8 @@ apiVersion: v2
 name: ra-hcp
 description: FastAPI backend and SvelteKit frontend for HCP S3 data-plane and Management API (MAPI) operations
 type: application
-version: 0.4.0
-appVersion: "v0.2.0"
+version: 0.4.1
+appVersion: "v0.2.1"
 home: https://github.com/AI-Riksarkivet/ra-hcp
 sources:
   - https://github.com/AI-Riksarkivet/ra-hcp

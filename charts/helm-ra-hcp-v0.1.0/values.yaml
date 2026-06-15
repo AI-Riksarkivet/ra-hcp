@@ -89,7 +89,7 @@ opentelemetry:
   serviceName: "ra-hcp"
   # service.version lets Grafana group by release; deployment.environment.name
   # is the current semconv key.
-  resourceAttributes: "service.version=v0.2.0,deployment.environment.name=dev"
+  resourceAttributes: "service.version=v0.2.1,deployment.environment.name=dev"
   headers: ""
 
 frontend:
@@ -113,6 +113,14 @@ frontend:
     #   memory: 256Mi
   env:
     BACKEND_URL: ""
+    # SvelteKit CSRF: remote-function POSTs (create/delete) are rejected (403)
+    # unless the server knows its public origin. Either set ORIGIN to the exact
+    # public URL (e.g. "https://hcp.example.com"), or leave it empty and the
+    # chart derives the origin from these forwarded headers (works behind an
+    # ingress that sets them — the default).
+    ORIGIN: ""
+    PROTOCOL_HEADER: "x-forwarded-proto"
+    HOST_HEADER: "x-forwarded-host"
 
 redis:
   enabled: false

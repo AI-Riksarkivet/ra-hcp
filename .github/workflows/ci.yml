@@ -48,6 +48,21 @@ jobs:
           args: test-integration --source=.
           version: "0.20.1"
 
+  e2e:
+    name: E2E (Playwright full-stack)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Full-stack smoke: real browser -> SvelteKit SSR/remote functions ->
+      # FastAPI backend -> S3 (MinIO), MAPI off. See frontend/e2e/s3-smoke.spec.ts.
+      - name: Run end-to-end test
+        uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+        with:
+          verb: call
+          args: end-to-end --source=.
+          version: "0.20.1"
+
   scan:
     name: CVE Scan (Trivy)
     runs-on: ubuntu-latest

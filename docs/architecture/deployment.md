@@ -29,6 +29,30 @@ graph LR
 
 The mock server implements the same interface as the real MAPI service, allowing the frontend to be developed and tested independently. Start it with `make run-api-mock`.
 
+## Testing
+
+Tests run in Dagger so they behave identically locally and in CI (`.github/workflows/ci.yml`):
+
+| Layer | Command | What it covers |
+|-------|---------|----------------|
+| Lint + type check | `make checks` | ruff + ty (backend), `bun run check` (frontend) |
+| Unit tests | `make test` | backend unit tests with coverage (mocked S3) |
+| Integration | `make test-integration` | backend against real Redis; S3 against **moto** (`test_moto_server_e2e.py`, a real `ThreadedMotoServer`) and **MinIO** (`test_minio_integration.py`) |
+| **End-to-end** | `make e2e` | **full stack**: a real browser (Playwright) drives the SvelteKit frontend → FastAPI backend → S3 (MinIO), MAPI disabled |
+
+The end-to-end test (`.dagger/e2e.go` → `frontend/e2e/s3-smoke.spec.ts`) is the only test exercising the complete chain — browser → SSR + remote functions → backend → real S3 write/read. It logs in, creates a bucket through the UI, and asserts it appears in the list, so a break in *any* layer (auth wiring, the remote-function layer, the S3 adapter, storage config) fails the run. It is also wired as the `e2e` job in CI.
+
+!!! warning "Frontend CSRF / origin (required for mutations)"
+    SvelteKit rejects remote-function **POSTs** (create/delete and other mutations) with **403** unless the server knows its public origin. Set the frontend's **`ORIGIN`** env to the exact public URL (e.g. `https://hcp.example.com`), **or** run it behind an ingress that sets `x-forwarded-proto` / `x-forwarded-host` — the Helm chart wires `PROTOCOL_HEADER`/`HOST_HEADER` to those by default, so mutations work without hardcoding the host. (Read-only `query()` GETs are unaffected.)
+
+```bash
+# Run the full-stack e2e in Dagger (builds the stack, runs Playwright/Chromium)
+make e2e
+
+# Or against a locally-running stack (e.g. `make full-serve` in another shell):
+cd frontend && E2E_BASE_URL=http://localhost:5174 bun run e2e
+```
+
 ## CVE Scanning (Trivy)
 
 Images are scanned for known CVEs with [Trivy](https://trivy.dev/) inside the
