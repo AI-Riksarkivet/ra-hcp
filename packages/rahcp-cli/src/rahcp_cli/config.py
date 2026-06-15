@@ -66,6 +66,7 @@ class Profile(BaseModel):
     iiif_timeout: float = 60.0
     iiif_query_params: str = "full/max/0/default.jpg"
     iiif_workers: int = 4
+    iiif_referer: str = ""
 
     # Observability
     log_level: str = "warning"

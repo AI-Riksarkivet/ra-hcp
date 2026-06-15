@@ -6,6 +6,7 @@ import asyncio
 import logging
 import time
 from collections.abc import Callable
+from enum import Enum, auto
 from pathlib import Path
 
 import httpx
@@ -22,7 +23,14 @@ from rahcp_iiif.manifest import (
 
 log = logging.getLogger(__name__)
 
-_DONE = object()
+
+class _Signal(Enum):
+    """Queue control markers distinct from the ``str`` image IDs workers consume."""
+
+    DONE = auto()
+
+
+_DONE = _Signal.DONE
 
 
 class DownloadStats:
@@ -57,6 +65,7 @@ async def download_batch(
     base_url: str = IIIF_URL,
     query_params: str = IIIF_QUERY_PARAMS,
     timeout: float = IIIF_TIMEOUT,
+    headers: dict[str, str] | None = None,
     workers: int = 4,
     max_images: int | None = None,
     validate_file: Callable[[Path], None] | None = None,
@@ -78,6 +87,7 @@ async def download_batch(
         base_url: IIIF server base URL.
         query_params: IIIF image API parameters (region/size/rotation/quality.format).
         timeout: HTTP request timeout per image.
+        headers: Extra HTTP headers sent with every request (e.g. Referer).
         workers: Number of concurrent download workers.
         max_images: Limit number of images to download (None = all).
         validate_file: Optional callback to validate each downloaded file.
@@ -101,6 +111,7 @@ async def download_batch(
         timeout=timeout,
         attempts=max_attempts,
         base_delay=retry_base_delay,
+        headers=headers,
     )
     if max_images:
         image_ids = image_ids[:max_images]
@@ -110,7 +121,7 @@ async def download_batch(
     done_keys = await asyncio.to_thread(tracker.done_keys)
     stats = DownloadStats()
     last_report = time.monotonic()
-    queue: asyncio.Queue[str | object] = asyncio.Queue(maxsize=workers * 8)
+    queue: asyncio.Queue[str | _Signal] = asyncio.Queue(maxsize=workers * 8)
 
     log.info(
         "Downloading batch %s: %d images, %d already done, %d workers",
@@ -184,7 +195,7 @@ async def download_batch(
                 queue.task_done()
                 break
             try:
-                await download_one(client, item)  # type: ignore[arg-type]
+                await download_one(client, item)
                 nonlocal last_report
                 now = time.monotonic()
                 if on_progress and now - last_report >= progress_interval:
@@ -199,7 +210,7 @@ async def download_batch(
         for _ in range(workers):
             await queue.put(_DONE)
 
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
         worker_tasks = [asyncio.create_task(worker(client)) for _ in range(workers)]
         await asyncio.create_task(produce())
         await asyncio.gather(*worker_tasks)

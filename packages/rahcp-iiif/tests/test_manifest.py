@@ -39,6 +39,31 @@ async def test_get_image_ids_empty_manifest():
 
 @pytest.mark.asyncio
 @respx.mock
+async def test_get_image_ids_sends_referer_header():
+    route = respx.get(f"{BASE}/arkis!C0074667/manifest").mock(
+        return_value=httpx.Response(200, json={"items": []})
+    )
+    referer = "https://sok.riksarkivet.se/"
+
+    await get_image_ids("C0074667", base_url=BASE, headers={"Referer": referer})
+
+    assert route.calls.last.request.headers["referer"] == referer
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_image_ids_no_referer_when_headers_none():
+    route = respx.get(f"{BASE}/arkis!C0074667/manifest").mock(
+        return_value=httpx.Response(200, json={"items": []})
+    )
+
+    await get_image_ids("C0074667", base_url=BASE, headers=None)
+
+    assert "referer" not in route.calls.last.request.headers
+
+
+@pytest.mark.asyncio
+@respx.mock
 async def test_get_image_ids_uppercases():
     manifest = {
         "items": [

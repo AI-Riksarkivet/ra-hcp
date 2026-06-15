@@ -148,8 +148,11 @@ url = build_image_url("C0074667_00001", query_params="full/,1200/0/default.jpg")
 | `base_url` | `IIIF_URL` | `https://iiifintern-ai.ra.se` | IIIF server base URL |
 | `timeout` | `IIIF_TIMEOUT` | `60` | Request timeout in seconds |
 | `query_params` | `IIIF_QUERY_PARAMS` | `full/max/0/default.jpg` | IIIF image API parameters |
+| `headers` | — | `None` | Extra HTTP headers sent with every request (e.g. `Referer`) |
 
 The env vars are read once at import time and set the *defaults* for `download_batch`, `download_batches`, `get_image_ids`, `build_image_url`, and `file_extension`; explicit keyword arguments always take precedence. For the CLI, the profile's `iiif_timeout`/`iiif_query_params` win over env vars — but note the `--iiif-url` flag itself reads `IIIF_URL`, so that env var overrides the profile's `iiif_url` when the flag isn't passed.
+
+Some servers (e.g. `lbiiif.riksarkivet.se`) return 403 unless requests carry a `Referer` header — set it via the CLI's `--referer` flag, the `IIIF_REFERER` env var, or the profile's `iiif_referer` key (e.g. `https://sok.riksarkivet.se/`).
 
 The `query_params` string follows the [IIIF Image API](https://iiif.io/api/image/3.0/) format: `{region}/{size}/{rotation}/{quality}.{format}`. Common values:
 

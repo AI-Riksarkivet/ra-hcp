@@ -129,6 +129,12 @@ def download(
     iiif_url: str = typer.Option(
         None, "--iiif-url", envvar="IIIF_URL", help="IIIF server base URL"
     ),
+    referer: str = typer.Option(
+        None,
+        "--referer",
+        envvar="IIIF_REFERER",
+        help="Referer header for servers that require one (e.g. https://sok.riksarkivet.se/)",
+    ),
     max_images: int = typer.Option(
         None, "--max-images", "-n", help="Limit number of images"
     ),
@@ -161,6 +167,8 @@ def download(
         )
         effective_timeout = ctx.obj.get("iiif_timeout", 60.0)
         effective_workers = workers or ctx.obj.get("iiif_workers", 4)
+        effective_referer = referer or ctx.obj.get("iiif_referer")
+        headers = {"Referer": effective_referer} if effective_referer else None
         validate_fn = _get_validator() if validate else None
 
         tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
@@ -186,6 +194,7 @@ def download(
             base_url=effective_url,
             query_params=effective_params,
             timeout=effective_timeout,
+            headers=headers,
             workers=effective_workers,
             max_images=max_images,
             validate_file=validate_fn,
@@ -214,6 +223,12 @@ def download_batches(
     ),
     iiif_url: str = typer.Option(
         None, "--iiif-url", envvar="IIIF_URL", help="IIIF server base URL"
+    ),
+    referer: str = typer.Option(
+        None,
+        "--referer",
+        envvar="IIIF_REFERER",
+        help="Referer header for servers that require one (e.g. https://sok.riksarkivet.se/)",
     ),
     max_images: int = typer.Option(
         None, "--max-images", "-n", help="Limit images per batch"
@@ -261,6 +276,8 @@ def download_batches(
         )
         effective_timeout = ctx.obj.get("iiif_timeout", 60.0)
         effective_workers = workers or ctx.obj.get("iiif_workers", 4)
+        effective_referer = referer or ctx.obj.get("iiif_referer")
+        headers = {"Referer": effective_referer} if effective_referer else None
         validate_fn = _get_validator() if validate else None
 
         tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
@@ -280,6 +297,7 @@ def download_batches(
             base_url=effective_url,
             query_params=effective_params,
             timeout=effective_timeout,
+            headers=headers,
             workers=effective_workers,
             max_images=max_images,
             validate_file=validate_fn,
@@ -329,6 +347,12 @@ def upload(
     ),
     iiif_url: str = typer.Option(
         None, "--iiif-url", envvar="IIIF_URL", help="IIIF server base URL"
+    ),
+    referer: str = typer.Option(
+        None,
+        "--referer",
+        envvar="IIIF_REFERER",
+        help="Referer header for servers that require one (e.g. https://sok.riksarkivet.se/)",
     ),
     max_images: int = typer.Option(
         None, "--max-images", "-n", help="Limit images per batch"
@@ -389,6 +413,8 @@ def upload(
         )
         effective_timeout = ctx.obj.get("iiif_timeout", 60.0)
         effective_workers = workers or ctx.obj.get("iiif_workers", 8)
+        effective_referer = referer or ctx.obj.get("iiif_referer")
+        headers = {"Referer": effective_referer} if effective_referer else None
         ext = file_extension(effective_params)
         validate_fn = _get_bytes_validator() if validate else None
 
@@ -406,7 +432,10 @@ def upload(
                 async with sem:
                     try:
                         image_ids = await get_image_ids(
-                            batch_id, base_url=effective_url, timeout=effective_timeout
+                            batch_id,
+                            base_url=effective_url,
+                            timeout=effective_timeout,
+                            headers=headers,
                         )
                     except Exception as exc:
                         console.print(
@@ -458,7 +487,9 @@ def upload(
             )
 
             # 2. fetch = retrying IIIF download over a shared pooled client.
-            async with httpx.AsyncClient(timeout=effective_timeout) as iiif_http:
+            async with httpx.AsyncClient(
+                timeout=effective_timeout, headers=headers
+            ) as iiif_http:
 
                 async def fetch(url: str) -> bytes:
                     resp = await fetch_with_retry(iiif_http, url)

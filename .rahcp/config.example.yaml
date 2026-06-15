@@ -22,3 +22,4 @@ profiles:
     iiif_timeout: 60
     iiif_query_params: full/max/0/default.jpg
     iiif_workers: 4
+    # iiif_referer: https://sok.riksarkivet.se/   # Referer header for servers that require one

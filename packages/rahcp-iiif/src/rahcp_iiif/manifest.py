@@ -66,6 +66,7 @@ async def get_image_ids(
     timeout: float = IIIF_TIMEOUT,
     attempts: int = 4,
     base_delay: float = 0.5,
+    headers: dict[str, str] | None = None,
 ) -> list[str]:
     """Fetch a IIIF manifest and extract image IDs.
 
@@ -75,6 +76,7 @@ async def get_image_ids(
         timeout: HTTP request timeout in seconds.
         attempts: Maximum manifest-fetch attempts (transient failures retried).
         base_delay: Base backoff delay in seconds between retries.
+        headers: Extra HTTP headers sent with every request (e.g. Referer).
 
     Returns:
         Sorted list of image IDs (e.g. ["C0074667_00001", "C0074667_00002", ...]).
@@ -82,7 +84,7 @@ async def get_image_ids(
     manifest_url = f"{base_url}/arkis!{batch_id}/manifest"
     log.info("Fetching manifest: %s", manifest_url)
 
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with httpx.AsyncClient(timeout=timeout, headers=headers) as client:
         resp = await fetch_with_retry(
             client, manifest_url, attempts=attempts, base_delay=base_delay
         )

@@ -132,5 +132,6 @@ def main(
     ctx.obj["iiif_timeout"] = p.iiif_timeout
     ctx.obj["iiif_query_params"] = p.iiif_query_params
     ctx.obj["iiif_workers"] = p.iiif_workers
+    ctx.obj["iiif_referer"] = p.iiif_referer
     ctx.obj["config_dir"] = str(config_dir)
     ctx.obj["json"] = output_json
