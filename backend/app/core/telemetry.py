@@ -76,7 +76,11 @@ def setup_telemetry(app: FastAPI) -> None:
         )
 
         tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
-    else:
+    elif os.getenv("OTEL_TRACES_EXPORTER") == "console":
+        # Opt-in console exporter for local debugging only. Without an OTLP
+        # endpoint and without this opt-in we attach NO exporter, so spans are
+        # dropped silently — otherwise every request (incl. k8s health probes)
+        # dumps span JSON to stdout and floods production logs.
         tracer_provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
 
     trace.set_tracer_provider(tracer_provider)

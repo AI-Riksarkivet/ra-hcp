@@ -32,6 +32,12 @@ COPY --from=builder /app/build /app/build
 # svelte-adapter-bun listens on PORT (default 3000)
 ENV PORT=3000
 
+# Bun writes its runtime cache to $HOME. Under a non-root UID with no /etc/passwd
+# entry (e.g. k8s podSecurityContext.runAsUser), $HOME falls back to "/" which
+# isn't writable → "bun is unable to write files: AccessDenied". Point HOME at
+# the world-writable /tmp so it works regardless of the runtime UID.
+ENV HOME=/tmp
+
 EXPOSE 3000
 
 # Run as a non-root UID (distroless has no shell to create a named user; the
