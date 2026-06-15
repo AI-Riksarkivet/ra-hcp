@@ -112,7 +112,14 @@ def setup_telemetry(app: FastAPI) -> None:
         if span.is_recording():
             span.set_attribute("http.request.header.authorization", "[REDACTED]")
 
-    FastAPIInstrumentor.instrument_app(app, server_request_hook=_server_request_hook)
+    # Exclude k8s health probes from tracing — they fire every few seconds and
+    # would otherwise flood traces with probe spans (and the readiness
+    # connectivity HEAD that intentionally returns 403).
+    FastAPIInstrumentor.instrument_app(
+        app,
+        server_request_hook=_server_request_hook,
+        excluded_urls="liveness,readiness,health",
+    )
     HTTPXClientInstrumentor().instrument(request_hook=_client_request_hook)
 
     # ── Structured JSON logging ────────────────────────────────────────
@@ -121,6 +128,11 @@ def setup_telemetry(app: FastAPI) -> None:
     logging.root.handlers.clear()
     logging.root.addHandler(handler)
     logging.root.setLevel(logging.INFO)
+    # Quiet per-request client noise: the `access` logger already records every
+    # inbound request (status/user/duration). httpx otherwise logs an INFO line
+    # for every outbound HCP/S3 call — including the readiness HEAD that
+    # intentionally 403s on the system endpoint (see MapiService.ping).
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     # ── Log provider (OTLP → Loki) ───────────────────────────────────
     if os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
         from opentelemetry._logs import set_logger_provider

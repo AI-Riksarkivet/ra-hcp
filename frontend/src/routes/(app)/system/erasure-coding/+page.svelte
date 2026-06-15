@@ -57,7 +57,8 @@
 					minimumObjectSize: createMinimumObjectSize ? Number(createMinimumObjectSize) : undefined,
 					restorePeriod: createRestorePeriod ? Number(createRestorePeriod) : undefined,
 				},
-			}).updates(topologiesData);
+			});
+			topologiesData.refresh();
 			toast.success(`Topology "${createName}" created`);
 			createOpen = false;
 			createName = '';
@@ -76,7 +77,8 @@
 
 	async function handleDelete() {
 		try {
-			await delete_ec_topology({ topologyName: deleteName }).updates(topologiesData);
+			await delete_ec_topology({ topologyName: deleteName });
+			topologiesData.refresh();
 			toast.success(`Topology "${deleteName}" deleted`);
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to delete topology'));

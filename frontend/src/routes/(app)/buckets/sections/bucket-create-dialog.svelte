@@ -41,7 +41,8 @@
 		creating = true;
 		createError = '';
 		try {
-			const result = await create_bucket({ bucket: name }).updates(bucketData);
+			const result = await create_bucket({ bucket: name });
+			bucketData.refresh();
 			if (result?.error) {
 				createError = result.error;
 			} else {

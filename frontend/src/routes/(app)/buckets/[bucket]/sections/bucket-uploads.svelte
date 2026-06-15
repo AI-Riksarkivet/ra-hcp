@@ -41,7 +41,8 @@
 				bucket,
 				key: abortTarget.Key,
 				upload_id: abortTarget.UploadId,
-			}).updates(uploadsData);
+			});
+			uploadsData.refresh();
 			abortDialogOpen = false;
 			toast.success(`Aborted upload for "${abortTarget.Key}"`);
 		} catch (err) {

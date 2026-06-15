@@ -123,7 +123,8 @@
 		creating = true;
 		createError = '';
 		try {
-			await create_content_class({ tenant, name }).updates(classesData);
+			await create_content_class({ tenant, name });
+			classesData.refresh();
 			toast.success(`Content class "${name}" created`);
 			createOpen = false;
 			form.reset();
@@ -143,7 +144,8 @@
 		if (!tenant || !classesData || !deleteTarget) return;
 		deleting = true;
 		try {
-			await delete_content_class({ tenant, name: deleteTarget }).updates(classesData);
+			await delete_content_class({ tenant, name: deleteTarget });
+			classesData.refresh();
 			toast.success(`Content class "${deleteTarget}" deleted`);
 			deleteOpen = false;
 			deleteTarget = null;

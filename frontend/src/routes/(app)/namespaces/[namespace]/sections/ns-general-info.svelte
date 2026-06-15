@@ -65,7 +65,8 @@
 					owner: ownerInput || '',
 					ownerType: ownerInput ? 'LOCAL' : '',
 				},
-			}).updates(nsData);
+			});
+			nsData.refresh();
 			toast.success('Namespace owner updated');
 			editingOwner = false;
 		} catch (err) {
@@ -102,7 +103,8 @@
 				tenant,
 				name: namespaceName,
 				body: { hardQuota: trimmed },
-			}).updates(nsData);
+			});
+			nsData.refresh();
 			toast.success('Hard quota updated');
 			editingHardQuota = false;
 		} catch (err) {
@@ -139,7 +141,8 @@
 				tenant,
 				name: namespaceName,
 				body: { softQuota: softQuotaInput.trim() === '' ? null : val },
-			}).updates(nsData);
+			});
+			nsData.refresh();
 			toast.success('Soft quota updated');
 			editingSoftQuota = false;
 		} catch (err) {

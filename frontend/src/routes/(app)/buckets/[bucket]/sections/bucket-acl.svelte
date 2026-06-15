@@ -129,7 +129,8 @@
 					...acl.grants.map((g) => ({ Grantee: g.Grantee, Permission: g.Permission })),
 					newGrant,
 				],
-			}).updates(aclData);
+			});
+			aclData.refresh();
 			toast.success(`Granted ${permissionLabel(grantPermission)} access`);
 			granteeId = '';
 			grantPermission = 'READ';
@@ -153,7 +154,8 @@
 				bucket,
 				owner: acl.owner ? { ID: acl.owner.ID, DisplayName: acl.owner.DisplayName } : undefined,
 				grants: remaining,
-			}).updates(aclData);
+			});
+			aclData.refresh();
 			toast.success('Permission revoked');
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to revoke'));

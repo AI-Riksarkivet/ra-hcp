@@ -120,7 +120,8 @@
 									description: localDescription,
 									roles: { role: localRoles },
 								};
-								await update_group({ tenant, groupname, body }).updates(groupData);
+								await update_group({ tenant, groupname, body });
+								groupData.refresh();
 							})}
 					/>
 				</div>

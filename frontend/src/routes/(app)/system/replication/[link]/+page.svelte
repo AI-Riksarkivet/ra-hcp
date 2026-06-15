@@ -53,7 +53,8 @@
 		if (!linkName || !linkData || actionLoading) return;
 		actionLoading = action;
 		try {
-			await action_replication_link({ linkName, action }).updates(linkData);
+			await action_replication_link({ linkName, action });
+			linkData.refresh();
 			toast.success(`${label} completed successfully`);
 		} catch (err) {
 			toast.error(getErrorMessage(err, `Failed to ${label.toLowerCase()}`));
@@ -74,7 +75,8 @@
 		addTenantLoading = true;
 		addTenantError = '';
 		try {
-			await add_tenant_to_link({ linkName, tenantName: addTenantName.trim() }).updates(contentData);
+			await add_tenant_to_link({ linkName, tenantName: addTenantName.trim() });
+			contentData.refresh();
 			toast.success(`Tenant "${addTenantName.trim()}" added to link`);
 			addTenantName = '';
 			addTenantOpen = false;
@@ -92,7 +94,8 @@
 		if (!linkName || !contentData || removingTenant) return;
 		removingTenant = tenantName;
 		try {
-			await remove_tenant_from_link({ linkName, tenantName }).updates(contentData);
+			await remove_tenant_from_link({ linkName, tenantName });
+			contentData.refresh();
 			toast.success(`Tenant "${tenantName}" removed from link`);
 		} catch (err) {
 			toast.error(getErrorMessage(err, `Failed to remove tenant "${tenantName}"`));

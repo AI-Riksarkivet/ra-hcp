@@ -249,7 +249,8 @@
 									allowIfInBothLists: localBoth[proto],
 								},
 							},
-						}).updates(qd);
+						});
+						qd.refresh();
 					});
 				}}
 			/>

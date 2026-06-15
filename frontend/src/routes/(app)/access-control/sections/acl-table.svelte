@@ -184,15 +184,14 @@
 				.filter((_, i) => i !== grantIndex)
 				.map((g) => ({ Grantee: g.Grantee, Permission: g.Permission }));
 
-			const result = put_bucket_acl({
+			await put_bucket_acl({
 				bucket: row.bucket,
 				owner: currentAcl.owner
 					? { ID: currentAcl.owner.ID, DisplayName: currentAcl.owner.DisplayName }
 					: undefined,
 				grants: remainingGrants,
 			});
-			if (aclQuery) await result.updates(aclQuery);
-			else await result;
+			aclQuery?.refresh();
 
 			toast.success(`Revoked ${permissionLabel(permValue)} on ${row.bucket}`);
 		} catch (err) {

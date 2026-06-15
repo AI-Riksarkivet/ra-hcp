@@ -70,7 +70,8 @@
 					contentProperties: localProperties,
 					namespaces: localNamespaces,
 				},
-			}).updates(classData);
+			});
+			classData.refresh();
 			syncVersion++;
 			toast.success('Content class updated');
 		} catch {

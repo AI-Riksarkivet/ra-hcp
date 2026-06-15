@@ -47,7 +47,8 @@
 				},
 				username: createUsername,
 				password: createPassword,
-			}).updates(tenantsData);
+			});
+			tenantsData.refresh();
 			toast.success(`Tenant "${createName}" created`);
 			createOpen = false;
 			createName = '';
@@ -63,7 +64,8 @@
 
 	async function handleDelete() {
 		try {
-			await delete_tenant({ name: deleteName }).updates(tenantsData);
+			await delete_tenant({ name: deleteName });
+			tenantsData.refresh();
 			toast.success(`Tenant "${deleteName}" deleted`);
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to delete tenant'));

@@ -60,7 +60,8 @@
 		resetting = true;
 		try {
 			if (!versioningData) return;
-			await delete_ns_versioning({ tenant, name: namespaceName }).updates(versioningData);
+			await delete_ns_versioning({ tenant, name: namespaceName });
+			versioningData.refresh();
 			toast.success('Versioning settings reset to defaults');
 			resetOpen = false;
 		} catch (err) {
@@ -152,7 +153,8 @@
 								prune: localPrune,
 								pruneDays: localPruneDays,
 							},
-						}).updates(versioningData);
+						});
+						versioningData.refresh();
 					})}
 			/>
 		</Card.Footer>

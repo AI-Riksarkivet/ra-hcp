@@ -29,7 +29,8 @@
 		if (!markMessage.trim()) return;
 		markLoading = true;
 		try {
-			await mark_logs({ message: markMessage }).updates(statusData);
+			await mark_logs({ message: markMessage });
+			statusData.refresh();
 			toast.success('Logs marked successfully');
 			markMessage = '';
 		} catch (err) {
@@ -45,7 +46,8 @@
 			await prepare_logs({
 				startDate: startDate || undefined,
 				endDate: endDate || undefined,
-			}).updates(statusData);
+			});
+			statusData.refresh();
 			toast.success('Log package preparation started');
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to prepare logs'));
@@ -56,7 +58,8 @@
 
 	async function handleCancel() {
 		try {
-			await cancel_log_download({}).updates(statusData);
+			await cancel_log_download({});
+			statusData.refresh();
 			toast.success('Log download cancelled');
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to cancel'));

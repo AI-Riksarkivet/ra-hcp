@@ -75,7 +75,9 @@
 	const del = useDelete({ entityName: 'namespace' });
 
 	function onConfirmDelete() {
-		del.confirmDelete(() => delete_namespace({ tenant, name: del.deleteTarget }).updates(nsData!));
+		del.confirmDelete(() =>
+			delete_namespace({ tenant, name: del.deleteTarget }).then(() => nsData!.refresh())
+		);
 	}
 
 	function onConfirmBulkDelete() {
@@ -83,7 +85,7 @@
 			selectedKeys,
 			(name, isLast) => {
 				const call = delete_namespace({ tenant, name });
-				return isLast ? call.updates(nsData!) : call;
+				return isLast ? call.then(() => nsData!.refresh()) : call;
 			},
 			() => (rowSelection = {})
 		);
@@ -103,7 +105,8 @@
 				tenant,
 				name: nsName,
 				body: { tags: { tag: tags } },
-			}).updates(nsData);
+			});
+			nsData.refresh();
 			toast.success('Tags updated');
 			editingTagsNs = '';
 		} catch {

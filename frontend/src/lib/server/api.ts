@@ -15,7 +15,10 @@ export async function apiFetch(
   const url = `${BACKEND_URL}${path}`;
   try {
     const res = await fetch(url, { ...init, headers });
-    if (!res.ok) {
+    // Only warn on real server errors. 4xx are expected/handled by callers
+    // (e.g. HCP returns 404 when no CORS is set, 403 when the tenant user lacks
+    // a MAPI permission) — logging them as warnings is misleading noise.
+    if (res.status >= 500) {
       console.warn(
         `[apiFetch] ${init?.method ?? "GET"} ${url} → ${res.status}`,
       );

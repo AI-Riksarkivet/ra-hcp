@@ -206,7 +206,8 @@
 									},
 									recipients: localRecipients.filter((r) => r.address.trim()),
 								},
-							}).updates(emailData);
+							});
+							emailData.refresh();
 						})}
 				/>
 			</Card.Footer>

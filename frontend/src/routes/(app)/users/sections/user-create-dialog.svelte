@@ -34,9 +34,8 @@
 			const description = (fd.get('description') as string) || undefined;
 			const enabled = fd.has('enabled');
 			const roles = AVAILABLE_ROLES.filter((r) => fd.has(`role-${r}`));
-			await create_user({ tenant, username, fullName, description, enabled, roles }).updates(
-				usersData
-			);
+			await create_user({ tenant, username, fullName, description, enabled, roles });
+			usersData.refresh();
 			toast.success(`User "${username}" created`);
 			open = false;
 			form.reset();

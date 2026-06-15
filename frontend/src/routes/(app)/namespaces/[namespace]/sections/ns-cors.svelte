@@ -21,12 +21,14 @@
 
 	async function handleSave(xml: string) {
 		if (!corsData) return;
-		await set_ns_cors({ tenant, name: namespaceName, body: { cors: xml } }).updates(corsData);
+		await set_ns_cors({ tenant, name: namespaceName, body: { cors: xml } });
+		corsData.refresh();
 	}
 
 	async function handleDelete() {
 		if (!corsData) return;
-		await delete_ns_cors({ tenant, name: namespaceName }).updates(corsData);
+		await delete_ns_cors({ tenant, name: namespaceName });
+		corsData.refresh();
 	}
 </script>
 

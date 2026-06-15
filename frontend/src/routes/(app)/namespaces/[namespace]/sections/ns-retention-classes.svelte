@@ -63,7 +63,8 @@
 				tenant,
 				namespace: namespaceName,
 				body: { name, value, description, allowDisposition },
-			}).updates(rcData);
+			});
+			rcData.refresh();
 			toast.success(`Retention class "${name}" created`);
 			createOpen = false;
 			form.reset();
@@ -103,7 +104,8 @@
 				namespace: namespaceName,
 				className: editTarget.name,
 				body: { value, description, allowDisposition },
-			}).updates(rcData);
+			});
+			rcData.refresh();
 			toast.success(`Retention class "${editTarget.name}" updated`);
 			editOpen = false;
 		} catch (err) {
@@ -131,7 +133,8 @@
 				tenant,
 				namespace: namespaceName,
 				className: deleteTarget,
-			}).updates(rcData);
+			});
+			rcData.refresh();
 			toast.success(`Retention class "${deleteTarget}" deleted`);
 			deleteOpen = false;
 		} catch {

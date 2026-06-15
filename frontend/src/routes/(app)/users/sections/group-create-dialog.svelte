@@ -32,7 +32,8 @@
 		try {
 			const description = (fd.get('description') as string) || undefined;
 			const roles = GROUP_ROLES.filter((r) => fd.has(`role-${r}`));
-			await create_group({ tenant, groupname, description, roles }).updates(groupsData);
+			await create_group({ tenant, groupname, description, roles });
+			groupsData.refresh();
 			toast.success(`Group "${groupname}" created`);
 			open = false;
 			form.reset();

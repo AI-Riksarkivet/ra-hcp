@@ -20,12 +20,14 @@
 
 	async function handleSave(xml: string) {
 		if (!corsData) return;
-		await set_tenant_cors({ tenant, body: { cors: xml } }).updates(corsData);
+		await set_tenant_cors({ tenant, body: { cors: xml } });
+		corsData.refresh();
 	}
 
 	async function handleDelete() {
 		if (!corsData) return;
-		await delete_tenant_cors({ tenant }).updates(corsData);
+		await delete_tenant_cors({ tenant });
+		corsData.refresh();
 	}
 </script>
 

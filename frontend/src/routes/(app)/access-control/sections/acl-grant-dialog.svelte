@@ -131,8 +131,8 @@
 						newGrant,
 					],
 				});
-				if (aclQuery) await result.updates(aclQuery);
-				else await result;
+				await result;
+				if (aclQuery) aclQuery.refresh();
 			}
 			toast.success(
 				`Granted ${permissionLabel(grantPermission)} to ${grantBuckets.length} bucket(s)`

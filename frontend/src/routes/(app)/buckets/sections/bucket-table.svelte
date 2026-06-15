@@ -130,7 +130,9 @@
 	function onConfirmDelete() {
 		del.confirmDelete(() => {
 			const queries = nsData ? [bucketData, nsData] : [bucketData];
-			return delete_bucket({ bucket: del.deleteTarget, force: forceDelete }).updates(...queries);
+			return delete_bucket({ bucket: del.deleteTarget, force: forceDelete }).then(() =>
+				queries.forEach((q) => q.refresh())
+			);
 		});
 	}
 
@@ -141,7 +143,7 @@
 				const call = delete_bucket({ bucket: name, force: forceBulkDelete });
 				if (isLast) {
 					const queries = nsData ? [bucketData, nsData] : [bucketData];
-					return call.updates(...queries);
+					return call.then(() => queries.forEach((q) => q.refresh()));
 				}
 				return call;
 			},

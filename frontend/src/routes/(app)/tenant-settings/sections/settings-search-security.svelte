@@ -94,7 +94,8 @@
 									allowIfInBothLists: localAllowIfInBoth,
 								},
 							},
-						}).updates(securityData);
+						});
+						securityData.refresh();
 					})}
 			/>
 		</Card.Footer>

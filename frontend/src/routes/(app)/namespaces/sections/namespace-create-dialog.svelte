@@ -58,7 +58,8 @@
 				optimizedFor: createOptimizedFor || undefined,
 				tags: createTags.length > 0 ? createTags : undefined,
 				owner,
-			}).updates(nsData);
+			});
+			nsData.refresh();
 			toast.success('Namespace created successfully');
 			open = false;
 			createTags = [];

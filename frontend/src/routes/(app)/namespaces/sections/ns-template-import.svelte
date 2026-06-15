@@ -258,7 +258,8 @@
 			importNames[importNames.length - 1] || templateData[templateData.length - 1]?.name;
 		if (lastName) {
 			try {
-				await update_namespace({ tenant, name: lastName, body: {} }).updates(nsData);
+				await update_namespace({ tenant, name: lastName, body: {} });
+				nsData.refresh();
 			} catch {
 				// Ignore -- list refreshes on next navigation
 			}

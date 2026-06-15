@@ -104,7 +104,8 @@
 								deleteEnabled: localDeleteEnabled,
 								deleteDays: parseInt(localDeleteDays, 10) || 0,
 							},
-						}).updates(replData);
+						});
+						replData.refresh();
 					})}
 			/>
 		</Card.Footer>

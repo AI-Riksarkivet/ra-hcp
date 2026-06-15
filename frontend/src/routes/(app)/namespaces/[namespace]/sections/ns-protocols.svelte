@@ -266,7 +266,8 @@
 									body: changes[i].body,
 								});
 								if (i === changes.length - 1) {
-									await call.updates(protocolsData);
+									await call;
+									protocolsData.refresh();
 								} else {
 									await call;
 								}

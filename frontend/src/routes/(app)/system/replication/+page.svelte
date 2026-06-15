@@ -72,7 +72,8 @@
 					compression: createCompression,
 					encryption: createEncryption,
 				},
-			}).updates(linksData);
+			});
+			linksData.refresh();
 			toast.success(`Replication link "${createName}" created`);
 			createOpen = false;
 			createName = '';
@@ -90,7 +91,8 @@
 
 	async function handleDeleteLink() {
 		try {
-			await delete_replication_link({ linkName: deleteLinkName }).updates(linksData);
+			await delete_replication_link({ linkName: deleteLinkName });
+			linksData.refresh();
 			toast.success(`Replication link "${deleteLinkName}" deleted`);
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to delete replication link'));
@@ -99,7 +101,8 @@
 
 	async function handleDeleteCert() {
 		try {
-			await delete_replication_certificate({ certificateId: deleteCertId }).updates(certsData);
+			await delete_replication_certificate({ certificateId: deleteCertId });
+			certsData.refresh();
 			toast.success('Certificate deleted');
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to delete certificate'));
@@ -117,7 +120,8 @@
 					| 'failBack'
 					| 'beginRecover'
 					| 'completeRecovery',
-			}).updates(linksData);
+			});
+			linksData.refresh();
 			toast.success(
 				`Replication link "${linkName}" ${action === 'suspend' ? 'suspended' : 'resumed'}`
 			);

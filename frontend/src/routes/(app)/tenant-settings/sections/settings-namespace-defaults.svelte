@@ -148,7 +148,8 @@
 										versioningEnabled: localVersioningEnabled,
 										useDeleteMarkers: localUseDeleteMarkers,
 									},
-								}).updates(settingsData);
+								});
+								settingsData.refresh();
 							})}
 					/>
 				</div>

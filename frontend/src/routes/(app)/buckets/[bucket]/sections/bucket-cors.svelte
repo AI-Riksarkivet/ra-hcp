@@ -140,7 +140,8 @@
 		deleting = true;
 		try {
 			if (!corsData) return;
-			await delete_bucket_cors({ bucket }).updates(corsData);
+			await delete_bucket_cors({ bucket });
+			corsData.refresh();
 			toast.success('CORS configuration deleted');
 			deleteOpen = false;
 		} catch (err) {
@@ -334,7 +335,8 @@
 								await put_bucket_cors({
 									bucket,
 									cors_rules: localRules,
-								}).updates(corsData);
+								});
+								corsData.refresh();
 							})}
 					/>
 				</div>

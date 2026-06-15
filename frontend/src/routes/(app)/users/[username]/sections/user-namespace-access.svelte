@@ -26,6 +26,7 @@
 			tenant,
 			username,
 			body: body as unknown as Record<string, unknown>,
-		}).updates(permsData);
+		});
+		permsData.refresh();
 	}}
 />

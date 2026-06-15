@@ -31,7 +31,8 @@
 				startDate: startDate || undefined,
 				endDate: endDate || undefined,
 				collectCurrent,
-			}).updates(statusData);
+			});
+			statusData.refresh();
 			toast.success('Health report preparation started');
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to prepare report'));
@@ -42,7 +43,8 @@
 
 	async function handleCancel() {
 		try {
-			await cancel_health_report({}).updates(statusData);
+			await cancel_health_report({});
+			statusData.refresh();
 			toast.success('Health report cancelled');
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to cancel'));

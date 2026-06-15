@@ -116,7 +116,8 @@
 								contentClasses: classes.length > 0 ? classes : undefined,
 								excludedAnnotations: localExcludedAnnotations || undefined,
 							},
-						}).updates(indexingData);
+						});
+						indexingData.refresh();
 					})}
 			/>
 		</Card.Footer>

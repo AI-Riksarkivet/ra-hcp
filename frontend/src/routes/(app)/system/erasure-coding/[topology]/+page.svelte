@@ -79,7 +79,8 @@
 			await add_tenant_to_ec_topology({
 				topologyName,
 				tenantName: addTenantName,
-			}).updates(topologyData);
+			});
+			topologyData.refresh();
 			toast.success(`Tenant "${addTenantName}" added to topology`);
 			addTenantOpen = false;
 			addTenantName = '';
@@ -96,7 +97,8 @@
 			await remove_tenant_from_ec_topology({
 				topologyName,
 				tenantName: removeTenantName,
-			}).updates(topologyData);
+			});
+			topologyData.refresh();
 			toast.success(`Tenant "${removeTenantName}" removed from topology`);
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to remove tenant'));
@@ -107,7 +109,8 @@
 		if (!topologyData) return;
 		retiring = true;
 		try {
-			await retire_ec_topology({ topologyName }).updates(topologyData);
+			await retire_ec_topology({ topologyName });
+			topologyData.refresh();
 			toast.success(`Topology "${topologyName}" retired`);
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to retire topology'));

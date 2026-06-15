@@ -130,7 +130,8 @@
 								customMetadataChanges: localCustomMetadataChanges || undefined,
 								dispositionEnabled: localDispositionEnabled,
 							},
-						}).updates(complianceData);
+						});
+						complianceData.refresh();
 					})}
 			/>
 		</Card.Footer>

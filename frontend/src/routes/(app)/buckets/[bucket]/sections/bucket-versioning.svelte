@@ -27,7 +27,8 @@
 		const newStatus = versioning.status === 'Enabled' ? 'Suspended' : 'Enabled';
 		saving = true;
 		try {
-			await set_bucket_versioning({ bucket, status: newStatus }).updates(versioningData);
+			await set_bucket_versioning({ bucket, status: newStatus });
+			versioningData.refresh();
 			toast.success(`Versioning ${newStatus.toLowerCase()}`);
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to update versioning'));

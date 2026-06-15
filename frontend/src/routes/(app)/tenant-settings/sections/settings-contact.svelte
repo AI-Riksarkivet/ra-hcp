@@ -86,7 +86,8 @@
 								await update_contact_info({
 									tenant,
 									body: { name: localName, email: localEmail, phone: localPhone },
-								}).updates(settingsData);
+								});
+								settingsData.refresh();
 							})}
 					/>
 				</div>

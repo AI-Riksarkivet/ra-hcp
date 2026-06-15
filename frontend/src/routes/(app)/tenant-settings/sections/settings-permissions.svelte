@@ -119,7 +119,8 @@
 								await update_permissions({
 									tenant,
 									body: { ...localPermissions },
-								}).updates(settingsData);
+								});
+								settingsData.refresh();
 							})}
 					/>
 				</div>

@@ -216,7 +216,8 @@
 				bucket,
 				key: deleteTarget.key,
 				version_id: deleteTarget.versionId,
-			}).updates(versionData);
+			});
+			versionData.refresh();
 			deleteDialogOpen = false;
 			toast.success('Version deleted permanently');
 		} catch (err) {

@@ -40,7 +40,8 @@
 				tenant,
 				name: namespaceName,
 				body: { tags: { tag: editTags } },
-			}).updates(nsData);
+			});
+			nsData.refresh();
 			toast.success('Tags updated');
 			editingTags = false;
 		} catch {

@@ -176,7 +176,8 @@
 									enabled: localEnabled,
 									roles: { role: localRoles },
 								};
-								await update_user({ tenant, username, body }).updates(userData);
+								await update_user({ tenant, username, body });
+								userData.refresh();
 							})}
 					/>
 				</div>

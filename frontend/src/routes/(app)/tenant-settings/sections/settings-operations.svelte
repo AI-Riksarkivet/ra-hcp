@@ -142,7 +142,8 @@
 									syslogLoggingEnabled: localSyslogLoggingEnabled,
 									tenantVisibleDescription: localTenantVisibleDescription,
 								},
-							}).updates(tenantData);
+							});
+							tenantData.refresh();
 						})}
 				/>
 			</div>

@@ -72,7 +72,8 @@
 							if (!networkData) return;
 							await update_network_settings({
 								body: { downstreamDNSMode: localDnsMode },
-							}).updates(networkData);
+							});
+							networkData.refresh();
 						})}
 				/>
 			</Card.Footer>
