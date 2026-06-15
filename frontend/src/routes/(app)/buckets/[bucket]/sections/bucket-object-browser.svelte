@@ -54,14 +54,12 @@
 	let {
 		bucket,
 		prefix,
-		totalObjects = null,
 		uploadOpen = $bindable(false),
 		createFolderOpen = $bindable(false),
 		onnavigate,
 	}: {
 		bucket: string;
 		prefix: string;
-		totalObjects?: number | null;
 		uploadOpen: boolean;
 		createFolderOpen: boolean;
 		onnavigate: (prefix: string) => void;
@@ -98,6 +96,19 @@
 	let prefixCount = $state<{ files: number; folders: number } | null>(null);
 	let counting = $state(false);
 	let countPollInterval: ReturnType<typeof setInterval> | undefined;
+
+	// Pre-rendered count label — computed here so null-narrowing holds (template
+	// snippets don't inherit the outer `{#if prefixCount}` narrowing).
+	let prefixCountLabel = $derived.by(() => {
+		if (!prefixCount) return '';
+		const { files, folders } = prefixCount;
+		const filePart = `${files.toLocaleString()} file${files !== 1 ? 's' : ''}`;
+		const folderPart =
+			folders > 0
+				? `, ${folders.toLocaleString()} folder${folders !== 1 ? 's' : ''}`
+				: '';
+		return filePart + folderPart;
+	});
 
 	onDestroy(() => clearInterval(countPollInterval));
 
@@ -868,7 +879,7 @@
 						<Tooltip.Trigger>
 							{#snippet child({ props })}
 								<span {...props}>
-									{prefixCount.files.toLocaleString()} file{prefixCount.files !== 1 ? 's' : ''}{prefixCount.folders > 0 ? `, ${prefixCount.folders.toLocaleString()} folder${prefixCount.folders !== 1 ? 's' : ''}` : ''}
+									{prefixCountLabel}
 								</span>
 							{/snippet}
 						</Tooltip.Trigger>

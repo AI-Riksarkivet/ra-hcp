@@ -1,10 +1,10 @@
 # HCP Frontend
 
-SvelteKit 2 + Svelte 5 frontend for the HCP application, running on **Deno**.
+SvelteKit 2 + Svelte 5 frontend for the HCP application, running on **Bun**.
 
 ## Tech Stack
 
-- **Runtime:** Deno
+- **Runtime:** Bun
 - **Framework:** SvelteKit 2 + Svelte 5
 - **Styling:** Tailwind CSS 4, tw-animate-css
 - **Components:** Bits UI, Lucide Svelte icons
@@ -17,13 +17,13 @@ SvelteKit 2 + Svelte 5 frontend for the HCP application, running on **Deno**.
 ### Install dependencies
 
 ```bash
-deno install
+bun install
 ```
 
 ### Start the dev server
 
 ```bash
-deno task dev
+bun run dev
 ```
 
 Or via the root Makefile (also sets `BACKEND_URL`):
@@ -38,26 +38,40 @@ backend at `http://localhost:8000`.
 ### Build for production
 
 ```bash
-deno task build
+bun run build
 ```
 
 ### Preview the production build
 
 ```bash
-deno task preview
+bun run preview
 ```
 
-## Available Tasks
+### Run the production server
 
-| Task      | Command             | Description              |
-| --------- | ------------------- | ------------------------ |
-| `dev`     | `deno task dev`     | Start Vite dev server    |
-| `build`   | `deno task build`   | Build for production     |
-| `preview` | `deno task preview` | Preview production build |
-| `sync`    | `deno task sync`    | SvelteKit sync (codegen) |
-| `check`   | `deno task check`   | TypeScript type checking |
-| `fmt`     | `deno task fmt`     | Format code (Deno fmt)   |
-| `lint`    | `deno task lint`    | Lint code (Deno lint)    |
+The build output (`build/index.js`, from `svelte-adapter-bun`) is the SSR server.
+Start it with Bun (listens on port 3000 by default):
+
+```bash
+bun run start
+```
+
+## Available Scripts
+
+Run with `bun run <script>`.
+
+| Script            | Command                                | Description                       |
+| ----------------- | -------------------------------------- | --------------------------------- |
+| `dev`             | `vite dev`                             | Start Vite dev server             |
+| `build`           | `vite build`                           | Build for production              |
+| `preview`         | `vite preview`                         | Preview production build          |
+| `start`           | `bun ./build/index.js`                 | Run the production SSR server     |
+| `sync`            | `svelte-kit sync`                      | SvelteKit sync (codegen)          |
+| `check`           | `svelte-kit sync && svelte-check ...`  | TypeScript type checking          |
+| `format`          | `prettier --write .`                   | Format code (Prettier)            |
+| `format:check`    | `prettier --check .`                   | Check formatting without writing  |
+| `storybook`       | `storybook dev -p 6006`                | Start Storybook dev server        |
+| `build-storybook` | `storybook build`                      | Build Storybook static site       |
 
 ## Project Structure
 
@@ -75,8 +89,7 @@ frontend/
 │   └── lib/
 │       ├── components/         # Shared components
 │       └── hooks/              # Svelte hooks
-├── deno.json                   # Deno tasks and config
-├── package.json                # npm dependencies
+├── package.json                # Scripts and dependencies (Bun)
 ├── svelte.config.js            # Svelte compiler config
 ├── vite.config.ts              # Vite bundler config
 └── tsconfig.json               # TypeScript config

@@ -9,7 +9,7 @@ import TestHarness from "./save-button-test-harness.svelte";
 
 const meta = {
   title: "Tests/SaveButton Interactions",
-  // deno-lint-ignore no-explicit-any -- Storybook Meta types incompatible with Svelte 5 Component
+  // Storybook Meta types incompatible with Svelte 5 Component
   component: TestHarness as any,
   tags: ["!autodocs"],
 } satisfies Meta<typeof TestHarness>;

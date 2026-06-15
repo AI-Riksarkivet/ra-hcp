@@ -18,7 +18,7 @@ export default mergeConfig(
           plugins: [
             storybookTest({
               configDir: path.join(dirname, ".storybook"),
-              storybookScript: "deno task storybook --ci",
+              storybookScript: "bun run storybook --ci",
             }),
           ],
           test: {

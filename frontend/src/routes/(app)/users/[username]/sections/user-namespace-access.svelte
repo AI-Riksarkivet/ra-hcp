@@ -3,7 +3,6 @@
 	import {
 		get_user_permissions,
 		set_user_permissions,
-		type DataAccessPermissions,
 	} from '$lib/remote/users.remote.js';
 
 	let {

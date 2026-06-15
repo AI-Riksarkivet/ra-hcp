@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 
-	// deno-lint-ignore no-explicit-any -- lucide-svelte uses Svelte 4 class constructor API
+	// lucide-svelte uses Svelte 4 class constructor API
 	type IconComponent = new (...args: any[]) => any;
 
 	let {

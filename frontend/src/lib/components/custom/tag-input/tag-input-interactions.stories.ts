@@ -11,7 +11,7 @@ import TagInputTestHarness from "./tag-input-test-harness.svelte";
 
 const meta = {
   title: "Tests/TagInput Interactions",
-  // deno-lint-ignore no-explicit-any -- Storybook Meta types incompatible with Svelte 5 Component
+  // Storybook Meta types incompatible with Svelte 5 Component
   component: TagInputTestHarness as any,
   tags: ["!autodocs"],
 } satisfies Meta<TagInputTestHarness>;

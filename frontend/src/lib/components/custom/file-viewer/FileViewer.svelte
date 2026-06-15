@@ -376,7 +376,7 @@
 							Download
 						</Button>
 						<p class="mt-4 text-xs text-muted-foreground">
-							Parquet, DuckDB, and LanceDB viewers coming soon
+							Parquet and DuckDB viewers coming soon
 						</p>
 					</div>
 				{/if}

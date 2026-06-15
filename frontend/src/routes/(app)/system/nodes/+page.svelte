@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
-	import * as Table from '$lib/components/ui/table/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Progress } from '$lib/components/ui/progress/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
@@ -18,11 +17,6 @@
 
 	function cpuPercent(node: NodeStats): number {
 		return Math.round((node.cpuUser ?? 0) + (node.cpuSystem ?? 0));
-	}
-
-	function connPercent(current: number | undefined, max: number | undefined): number {
-		if (!current || !max || max === 0) return 0;
-		return Math.round((current / max) * 100);
 	}
 </script>
 

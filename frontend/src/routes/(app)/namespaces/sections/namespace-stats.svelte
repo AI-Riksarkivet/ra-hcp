@@ -11,18 +11,12 @@
 	} from '$lib/remote/tenant-info.remote.js';
 	import { type Namespace } from '$lib/remote/namespaces.remote.js';
 	import { get_users } from '$lib/remote/users.remote.js';
-	import {
-		formatBytes,
-		parseQuotaBytes,
-		buildStorageMap,
-		calcQuotaPercent,
-		type ChargebackEntry,
-	} from '$lib/utils/format.js';
+	import { formatBytes, parseQuotaBytes, calcQuotaPercent } from '$lib/utils/format.js';
 
 	let {
 		tenant,
 		nsData,
-		chargebackData,
+		chargebackData: _chargebackData,
 	}: {
 		tenant: string;
 		nsData: RemoteQuery<Namespace[]>;
@@ -33,7 +27,6 @@
 	let tenantStats = $derived(get_tenant_statistics({ tenant }));
 	let usersData = $derived(get_users({ tenant }));
 
-	let chargeback = $derived((chargebackData?.current?.chargebackData ?? []) as ChargebackEntry[]);
 	let users = $derived((usersData?.current ?? []) as { username: string }[]);
 	let namespaces = $derived((nsData?.current ?? []) as Namespace[]);
 

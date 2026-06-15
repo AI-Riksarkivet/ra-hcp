@@ -25,7 +25,6 @@
 		getCoreRowModel,
 		getSortedRowModel,
 		getPaginationRowModel,
-		getFilteredRowModel,
 		renderComponent,
 		renderSnippet,
 	} from './index.js';

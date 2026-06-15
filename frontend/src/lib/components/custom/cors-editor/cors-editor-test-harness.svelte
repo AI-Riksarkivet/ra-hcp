@@ -1,12 +1,11 @@
 <script lang="ts">
 	import CorsEditor from './cors-editor.svelte';
-	import { toast } from 'svelte-sonner';
 	import { Toaster } from '$lib/components/ui/sonner/index.js';
 
 	let saved = $state(false);
 	let deleted = $state(false);
 
-	async function handleSave(xml: string) {
+	async function handleSave(_xml: string) {
 		await new Promise((r) => setTimeout(r, 100));
 		saved = true;
 	}

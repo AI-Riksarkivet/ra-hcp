@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Search, X, Loader2 } from 'lucide-svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';

@@ -16,7 +16,7 @@
 	let createError = $state('');
 	let creating = $state(false);
 
-	const BUCKET_NAME_RE = /^[a-z0-9][a-z0-9.\-]{1,61}[a-z0-9]$/;
+	const BUCKET_NAME_RE = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
 	const BUCKET_NAME_HINT =
 		'Use only lowercase letters, numbers, hyphens, and dots. Must be 3–63 characters.';
 

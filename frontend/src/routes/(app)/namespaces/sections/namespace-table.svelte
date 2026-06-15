@@ -10,7 +10,6 @@
 	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/custom/bulk-delete-dialog/bulk-delete-dialog.svelte';
 	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
-	import ServiceTagBadge from '$lib/components/custom/service-tag-badge/service-tag-badge.svelte';
 	import type { RemoteQuery } from '@sveltejs/kit';
 	import {
 		update_namespace,

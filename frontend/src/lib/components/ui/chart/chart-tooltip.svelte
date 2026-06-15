@@ -9,7 +9,7 @@
 		payload: TooltipPayload[];
 	}
 
-	// deno-lint-ignore no-explicit-any -- tooltip values are untyped chart data
+	// tooltip values are untyped chart data
 	function defaultFormatter(value: any, _payload: TooltipPayload[]) {
 		return `${value}`;
 	}
@@ -36,7 +36,7 @@
 		labelKey?: string;
 		hideIndicator?: boolean;
 		labelClassName?: string;
-		// deno-lint-ignore no-explicit-any -- tooltip values are untyped chart data
+		// tooltip values are untyped chart data
 		labelFormatter?: ((value: any, payload: TooltipPayload[]) => string | number | Snippet) | null;
 		formatter?: Snippet<
 			[

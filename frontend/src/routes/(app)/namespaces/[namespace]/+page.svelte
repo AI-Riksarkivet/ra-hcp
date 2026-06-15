@@ -48,14 +48,6 @@
 		tenant ? get_ns_protocols({ tenant, name: namespaceName }) : undefined
 	);
 	let protocols = $derived((protocolsData?.current ?? {}) as NsProtocolsType);
-	let hasBlockingProtocol = $derived(
-		!!(
-			protocols.httpsEnabled ||
-			protocols.httpEnabled ||
-			protocols.cifsEnabled ||
-			protocols.nfsEnabled
-		)
-	);
 
 	// Namespace rename
 	let editingName = $state(false);

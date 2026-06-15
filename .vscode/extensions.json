@@ -2,7 +2,7 @@
   "recommendations": [
     "svelte.svelte-vscode",
     "esbenp.prettier-vscode",
-    "denoland.vscode-deno",
+    "oven.bun-vscode",
     "fastapilabs.fastapi-vscode",
     "ms-python.python",
     "charliermarsh.ruff",

@@ -9,7 +9,7 @@
 
 <NavigationProgress />
 <Sidebar.Provider>
-	<AppSidebar accessLevel={data.accessLevel} />
+	<AppSidebar accessLevel={data.accessLevel} mapiEnabled={data.mapiEnabled} />
 	<Sidebar.Inset>
 		<AppHeader
 			username={data.username}

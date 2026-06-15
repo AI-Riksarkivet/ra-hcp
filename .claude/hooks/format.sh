@@ -11,10 +11,10 @@ for f in "$@"; do
       ;;
     *.svelte)
       cd /home/coder/hcp/frontend
-      npx prettier --plugin prettier-plugin-svelte --write "$f"
+      bunx prettier --plugin prettier-plugin-svelte --write "$f"
       ;;
     *.ts|*.js)
-      ~/.deno/bin/deno fmt "$f"
+      bunx prettier --write "$f"
       ;;
   esac
 done

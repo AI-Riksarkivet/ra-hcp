@@ -9,7 +9,7 @@ import TestHarness from "./TenantSwitcher-test-harness.svelte";
 
 const meta = {
   title: "Tests/TenantSwitcher Interactions",
-  // deno-lint-ignore no-explicit-any -- Storybook Meta types incompatible with Svelte 5 Component
+  // Storybook Meta types incompatible with Svelte 5 Component
   component: TestHarness as any,
   tags: ["!autodocs"],
 } satisfies Meta<typeof TestHarness>;

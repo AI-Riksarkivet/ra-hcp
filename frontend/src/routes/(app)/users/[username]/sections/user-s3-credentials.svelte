@@ -5,7 +5,7 @@
 	import { get_s3_credentials } from '$lib/remote/buckets.remote.js';
 
 	let {
-		tenant,
+		tenant: _tenant,
 		username,
 	}: {
 		tenant: string;

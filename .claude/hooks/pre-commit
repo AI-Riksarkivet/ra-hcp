@@ -2,7 +2,7 @@
 # Pre-commit: format and lint staged files via Makefile
 set -euo pipefail
 
-export PATH="$HOME/.deno/bin:$PATH"
+export PATH="$HOME/.bun/bin:$PATH"
 
 # Format all code (same as make fmt)
 make -C "$(git rev-parse --show-toplevel)" fmt 2>&1 | tail -3

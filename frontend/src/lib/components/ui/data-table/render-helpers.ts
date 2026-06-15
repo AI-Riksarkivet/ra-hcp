@@ -75,7 +75,7 @@ export class RenderSnippetConfig<TProps> {
  * @see {@link https://tanstack.com/table/latest/docs/guide/column-defs}
  */
 export function renderComponent<
-  // deno-lint-ignore no-explicit-any -- required: Component is contravariant in Props, no safe alternative
+  // required: Component is contravariant in Props, no safe alternative
   T extends Component<any>,
   Props extends ComponentProps<T>,
 >(component: T, props: Props = {} as Props) {

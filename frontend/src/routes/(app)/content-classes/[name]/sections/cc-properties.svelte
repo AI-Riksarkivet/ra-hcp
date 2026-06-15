@@ -36,7 +36,7 @@
 
 	{#if properties.length > 0}
 		<div class="mt-3 space-y-2">
-			{#each properties as prop, i (i)}
+			{#each properties as _prop, i (i)}
 				<div class="flex items-end gap-2 rounded-md border p-3">
 					<div class="min-w-0 flex-1">
 						<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

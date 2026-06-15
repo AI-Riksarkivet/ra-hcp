@@ -27,16 +27,16 @@ jobs:
           PYTHONPATH: backend
 
       # Build Storybook and embed in docs site
-      - name: Install Deno
-        uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          deno-version: v2.x
+          bun-version: latest
       - name: Install frontend dependencies
         working-directory: frontend
-        run: deno install
+        run: bun install --frozen-lockfile
       - name: Build Storybook
         working-directory: frontend
-        run: deno task build-storybook
+        run: bun run build-storybook
       - name: Copy Storybook into docs site
         run: cp -r frontend/storybook-static site/storybook
 

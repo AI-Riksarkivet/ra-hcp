@@ -133,7 +133,7 @@
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="space-y-3">
-				{#each localRecipients as recipient, i (i)}
+				{#each localRecipients as _recipient, i (i)}
 					<div class="flex items-end gap-2 rounded-md border p-3">
 						<div class="min-w-0 flex-1 space-y-2">
 							<div class="grid gap-2 sm:grid-cols-3">

@@ -40,7 +40,7 @@
 <Story name="All Levels">
 	{#snippet template()}
 		<div class="space-y-4 w-64">
-			{#each [0, 10, 30, 50, 70, 80, 90, 95, 100, 120] as pct}
+			{#each [0, 10, 30, 50, 70, 80, 90, 95, 100, 120] as pct (pct)}
 				<div>
 					<div class="flex justify-between text-xs text-muted-foreground mb-1">
 						<span>{pct}%</span>

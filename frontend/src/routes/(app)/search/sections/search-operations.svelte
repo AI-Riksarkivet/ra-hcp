@@ -90,10 +90,6 @@
 		}
 	}
 
-	function searchFromStart() {
-		handleOpSearch();
-	}
-
 	function toggleTransaction(tx: string) {
 		if (opTransactions.includes(tx)) {
 			opTransactions = opTransactions.filter((t) => t !== tx);

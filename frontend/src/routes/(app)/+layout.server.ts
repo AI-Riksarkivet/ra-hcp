@@ -14,6 +14,19 @@ function parseJwtPayload(token: string): Record<string, unknown> {
   }
 }
 
+async function fetchMapiEnabled(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/capabilities`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.mapi_enabled !== false;
+    }
+  } catch {
+    // Non-critical — default to enabled so HCP deployments are unchanged.
+  }
+  return true;
+}
+
 async function fetchUserProfile(
   token: string,
   tenant: string,
@@ -50,6 +63,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     ? await fetchUserProfile(locals.token, tenant, username)
     : { userGUID: undefined, roles: [] as string[] };
   const accessLevel = getAccessLevel(tenant, profile.roles);
+  const mapiEnabled = await fetchMapiEnabled();
   return {
     authenticated: true,
     username,
@@ -57,6 +71,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
     userGUID: profile.userGUID,
     roles: profile.roles,
     accessLevel,
+    mapiEnabled,
     sessions: locals.sessions,
   };
 };

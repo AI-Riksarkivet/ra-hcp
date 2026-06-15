@@ -1,33 +1,37 @@
 # syntax=docker/dockerfile:1
-FROM denoland/deno:2.7.1@sha256:ee49ef20aec2e0c2967e5563161d32f8a54a282aa08112c8e6e719e02d216abc AS builder
+FROM oven/bun:1.2-slim AS builder
 
 WORKDIR /app
 
 # Install dependencies first (cache-friendly)
-COPY frontend/deno.json frontend/deno.lock frontend/package.json ./
-RUN deno install
+COPY frontend/package.json frontend/bun.lock* ./
+RUN bun install --frozen-lockfile
 
-# Copy source and build
+# Copy source and build (svelte-adapter-bun emits a self-contained build/index.js)
 COPY frontend/ .
-RUN deno task build && \
-    chmod -R a+rX node_modules
+RUN bun run build
 
 # ── Production stage ─────────────────────────────────────────────────
-FROM denoland/deno:2.7.1@sha256:ee49ef20aec2e0c2967e5563161d32f8a54a282aa08112c8e6e719e02d216abc
+FROM oven/bun:1.2-slim
 
-RUN groupadd -g 1000 app 2>/dev/null || true && \
-    useradd -u 1000 -g 1000 -s /bin/sh app 2>/dev/null || true
+# Apply available OS security patches (openssl, glibc/libc6, zlib, etc.) so the
+# image ships with the latest fixed Debian packages. Trivy gates these CVEs in
+# CI (`make scan`).
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder --chown=1000:1000 /app/.deno-deploy /app/.deno-deploy
-COPY --from=builder --chown=1000:1000 /app/node_modules /app/node_modules
-COPY --from=builder --chown=1000:1000 /app/deno.json /app/deno.lock /app/package.json /app/
-COPY --from=builder --chown=1000:1000 /app/server.ts /app/server.ts
 
-ENV DENO_DIR=/deno-dir
+# build/ is fully bundled by svelte-adapter-bun — no node_modules needed at runtime
+COPY --from=builder --chown=bun:bun /app/build /app/build
 
-USER 1000
+# svelte-adapter-bun listens on PORT (default 3000)
+ENV PORT=3000
 
-EXPOSE 8000
+USER bun
 
-CMD ["deno", "run", "-A", "server.ts"]
+EXPOSE 3000
+
+CMD ["bun", "./build/index.js"]

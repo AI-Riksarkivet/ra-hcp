@@ -26,7 +26,7 @@ graph LR
 
 **SvelteKit 2 + Svelte 5** — Svelte 5's runes (`$state`, `$derived`, `$effect`) provide fine-grained reactivity without a virtual DOM. SvelteKit adds server-side rendering, file-based routing, and remote functions (server-side RPC). The combination means the frontend can fetch data on the server, enforce access control before any HTML reaches the browser, and still have a reactive client-side experience.
 
-**Deno** — TypeScript-first runtime with built-in formatting and linting. The security model (explicit permissions) and modern tooling (`deno fmt`, `deno lint`) reduce configuration overhead compared to Node.js + ESLint + Prettier.
+**Bun** — a fast, all-in-one JavaScript runtime and package manager with native TypeScript support. `bun install` resolves dependencies quickly, `bun run` executes scripts and the production server (`bun ./build/index.js` via `svelte-adapter-bun`), and TypeScript runs without a separate transpile step — reducing tooling overhead compared to Node.js + a separate package manager.
 
 **shadcn-svelte** — copy-paste UI components built on Bits UI accessibility primitives and Tailwind CSS. The project owns every component file, so customization doesn't fight upstream. Bits UI handles keyboard navigation, focus management, and ARIA attributes.
 
@@ -180,7 +180,6 @@ All remote files live in `src/lib/remote/`:
 | `tenant-info.remote.ts` | Tenant info, statistics, chargeback, settings |
 | `buckets.remote.ts` | S3 bucket/object CRUD, ACL, versioning, presign, multipart, ZIP download |
 | `search.remote.ts` | Object and operation search |
-| `lance.remote.ts` | LanceDB table discovery, schema, rows, search |
 | `system.remote.ts` | System-level admin operations |
 | `replication.remote.ts` | Replication link management |
 

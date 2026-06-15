@@ -4,11 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import CardSkeleton from '$lib/components/ui/skeleton/card-skeleton.svelte';
 	import PageHeader from '$lib/components/custom/page-header/page-header.svelte';
-	import {
-		get_service_statistics,
-		type ServiceStatistics,
-		type ServiceInfo,
-	} from '$lib/remote/system.remote.js';
+	import { get_service_statistics, type ServiceStatistics } from '$lib/remote/system.remote.js';
 
 	let statsData = $derived(get_service_statistics({}));
 	let stats = $derived((statsData?.current ?? { services: [] }) as ServiceStatistics);

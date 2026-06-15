@@ -8,7 +8,6 @@
 /plugin marketplace add spences10/svelte-skills-kit
 /plugin marketplace add astral-sh/claude-code-plugins
 /plugin marketplace add spences10/claude-code-toolkit
-/plugin marketplace add denoland/skills
 /plugin marketplace add redis/agent-skills
 /plugin marketplace add sveltejs/ai-tools
 ```
@@ -20,7 +19,6 @@
 /plugin install mcp-essentials@claude-code-toolkit
 /plugin install analytics@claude-code-toolkit
 /plugin install toolkit-skills@claude-code-toolkit
-/plugin install deno-skills@denoland-skills
 /plugin install redis-development@redis
 /plugin install svelte@sveltejs-ai-tools
 /plugin install astral@astral-sh
@@ -51,7 +49,6 @@ pnpx claude-skills-cli add-hook
 |---|---|---|
 | svelte-skills-kit | [spences10/svelte-skills-kit](https://github.com/spences10/svelte-skills-kit) | svelte-skills (runes, SvelteKit data flow, components, deployment) |
 | claude-code-toolkit | [spences10/claude-code-toolkit](https://github.com/spences10/claude-code-toolkit) | mcp-essentials, analytics, toolkit-skills |
-| denoland-skills | [denoland/skills](https://github.com/denoland/skills) | deno-skills |
 | redis | [redis/agent-skills](https://github.com/redis/agent-skills) | redis-development |
 | sveltejs-ai-tools | [sveltejs/ai-tools](https://github.com/sveltejs/ai-tools) | svelte |
 

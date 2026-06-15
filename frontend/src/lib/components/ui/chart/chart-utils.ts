@@ -15,7 +15,7 @@ export type ChartConfig = {
 };
 
 export type TooltipPayload = {
-  // deno-lint-ignore no-explicit-any -- tooltip payloads are untyped chart data
+  // tooltip payloads are untyped chart data
   [key: string]: any;
   payload?: Record<string, unknown>;
   key?: string;

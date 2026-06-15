@@ -16,10 +16,8 @@ __pycache__/
 # Frontend
 frontend/node_modules/
 frontend/.svelte-kit/
-frontend/.deno-deploy/
 frontend/build/
 frontend/.output/
-frontend/deno.lock
 frontend/storybook-static/
 frontend/vite.config.js.timestamp-*
 frontend/vite.config.ts.timestamp-*
@@ -35,3 +33,7 @@ site/
 
 # 
 adhoc_downloader/
+
+# local trash
+*.log
+*.txt

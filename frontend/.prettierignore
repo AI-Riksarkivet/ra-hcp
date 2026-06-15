@@ -1,3 +1,7 @@
 .svelte-kit/
 node_modules/
 build/
+dist/
+storybook-static/
+bun.lock
+*.md
