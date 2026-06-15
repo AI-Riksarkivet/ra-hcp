@@ -2280,33 +2280,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/lance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  LanceDB
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../sdk/etl/" class="md-nav__link">
         
   
@@ -2985,7 +2958,7 @@
     Data --&gt;|"*.remote.ts"| API["FastAPI Backend"]</code></pre>
 <h2 id="technology-choices">Technology choices<a class="headerlink" href="#technology-choices" title="Permanent link">&para;</a></h2>
 <p><strong>SvelteKit 2 + Svelte 5</strong> — Svelte 5's runes (<code>$state</code>, <code>$derived</code>, <code>$effect</code>) provide fine-grained reactivity without a virtual DOM. SvelteKit adds server-side rendering, file-based routing, and remote functions (server-side RPC). The combination means the frontend can fetch data on the server, enforce access control before any HTML reaches the browser, and still have a reactive client-side experience.</p>
-<p><strong>Deno</strong> — TypeScript-first runtime with built-in formatting and linting. The security model (explicit permissions) and modern tooling (<code>deno fmt</code>, <code>deno lint</code>) reduce configuration overhead compared to Node.js + ESLint + Prettier.</p>
+<p><strong>Bun</strong> — a fast, all-in-one JavaScript runtime and package manager with native TypeScript support. <code>bun install</code> resolves dependencies quickly, <code>bun run</code> executes scripts and the production server (<code>bun ./build/index.js</code> via <code>svelte-adapter-bun</code>), and TypeScript runs without a separate transpile step — reducing tooling overhead compared to Node.js + a separate package manager.</p>
 <p><strong>shadcn-svelte</strong> — copy-paste UI components built on Bits UI accessibility primitives and Tailwind CSS. The project owns every component file, so customization doesn't fight upstream. Bits UI handles keyboard navigation, focus management, and ARIA attributes.</p>
 <h2 id="authentication-flow">Authentication flow<a class="headerlink" href="#authentication-flow" title="Permanent link">&para;</a></h2>
 <h3 id="cookie-based-sessions">Cookie-based sessions<a class="headerlink" href="#cookie-based-sessions" title="Permanent link">&para;</a></h3>
@@ -3173,10 +3146,6 @@
 <tr>
 <td><code>search.remote.ts</code></td>
 <td>Object and operation search</td>
-</tr>
-<tr>
-<td><code>lance.remote.ts</code></td>
-<td>LanceDB table discovery, schema, rows, search</td>
 </tr>
 <tr>
 <td><code>system.remote.ts</code></td>

@@ -2164,33 +2164,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../sdk/lance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  LanceDB
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../sdk/etl/" class="md-nav__link">
         
   
@@ -2806,7 +2779,7 @@
     end
 
     CACHED &lt;--&gt;|"get / set / invalidate"| REDIS["Redis"]</code></pre>
-<p>There are four independently cached services:</p>
+<p>There are three independently cached services:</p>
 <table>
 <thead>
 <tr>
@@ -2834,12 +2807,6 @@
 <td>S3 listings, metadata, ACLs, versioning status</td>
 <td><code>s3:{bucket}:{operation}</code></td>
 <td><code>s3:invoices:list_objects</code></td>
-</tr>
-<tr>
-<td><strong>CachedLanceService</strong></td>
-<td>Table listings and schemas (metadata only)</td>
-<td><code>lance:{table}:{operation}</code></td>
-<td><code>lance:my_table:schema</code></td>
 </tr>
 </tbody>
 </table>

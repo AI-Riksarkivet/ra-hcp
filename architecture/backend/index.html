@@ -1072,17 +1072,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#lanceservice" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        LanceService
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1127,17 +1116,6 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         CachedStorage
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cachedlanceservice" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        CachedLanceService
       </span>
     </span>
   </a>
@@ -2297,33 +2275,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/lance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  LanceDB
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../sdk/etl/" class="md-nav__link">
         
   
@@ -2734,17 +2685,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#lanceservice" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        LanceService
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2789,17 +2729,6 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         CachedStorage
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#cachedlanceservice" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        CachedLanceService
       </span>
     </span>
   </a>
@@ -3218,9 +3147,6 @@
 <p><code>connect()</code> attempts to reach the backing store and silently disables caching if it fails. The <code>enabled</code> property reflects whether the store is actually available. All cache operations swallow exceptions — a store failure never breaks the application.</p>
 <p>Operations: <code>get</code>, <code>set</code> (with TTL), <code>delete</code> — all async. Values are JSON-serialized internally (with <code>default=str</code> for datetime handling) and wrapped in <code>{"_raw": ...}</code> for type safety.</p>
 <p>OTel instrumentation records three counters: <code>cache.hits</code>, <code>cache.misses</code>, <code>cache.errors</code>. Every operation also creates a trace span.</p>
-<h3 id="lanceservice">LanceService<a class="headerlink" href="#lanceservice" title="Permanent link">&para;</a></h3>
-<p><code>LanceService</code> (<code>app/services/lance_service.py</code>) connects to S3-hosted Lance datasets via <code>lancedb</code>. It provides table listing, schema inspection, paginated row reads, full-text/vector/hybrid search, and single-cell byte access.</p>
-<p>Data reads use Lance's native push-down filtering, which is more efficient than serializing through Redis. Only metadata operations (<code>list_tables</code>, <code>get_schema</code>) are cached.</p>
 <h2 id="cached-wrappers-the-composition-pattern">Cached wrappers — the composition pattern<a class="headerlink" href="#cached-wrappers-the-composition-pattern" title="Permanent link">&para;</a></h2>
 <p>All caching wrappers use composition: each wraps an <code>inner</code> service and a <code>KVCache</code>. No inheritance is involved. This means the same wrapper works regardless of whether the inner service is a base service or another wrapper.</p>
 <pre class="mermaid"><code>graph LR
@@ -3270,8 +3196,6 @@
 <p>Cached reads: <code>list_buckets</code>, <code>head_bucket</code>, <code>list_objects</code> (first page only — continuation tokens are not cached), <code>head_object</code>, <code>get_bucket_versioning</code>, <code>get_bucket_acl</code>, <code>get_object_acl</code>.</p>
 <p>Uncached reads: <code>get_object</code> (streams binary data), <code>list_object_versions</code>, <code>generate_presigned_url</code>.</p>
 <p>Write operations delegate first, then precisely invalidate affected cache entries using explicit key tracking (<code>_tracked</code> dict) instead of pattern-based SCAN. For example, <code>create_bucket</code> invalidates <code>list_buckets</code> + <code>head_bucket</code> + versioning + ACL + all <code>list_objects</code> entries for that bucket. This precision avoids over-invalidation while keeping the cache consistent.</p>
-<h3 id="cachedlanceservice">CachedLanceService<a class="headerlink" href="#cachedlanceservice" title="Permanent link">&para;</a></h3>
-<p>Async wrapper around the sync <code>LanceService</code>. Caches metadata: <code>list_tables</code> (default TTL) and <code>get_schema</code> (config TTL) via <code>KVCache</code>. Data reads (<code>get_rows</code>, <code>get_vector_preview</code>, <code>get_cell_bytes</code>, <code>search</code>) are not cached — Lance's native push-down is more efficient than serializing through a cache. Uncached methods are forwarded via explicit async methods that delegate to <code>asyncio.to_thread(self._inner.method, ...)</code>.</p>
 <h2 id="routers-and-endpoints">Routers and endpoints<a class="headerlink" href="#routers-and-endpoints" title="Permanent link">&para;</a></h2>
 <p>The API is organized into five endpoint groups:</p>
 <table>
@@ -3362,7 +3286,7 @@
 <ol>
 <li>Create <code>KVCache</code> via <code>create_kv_cache(CacheSettings())</code> and <code>await cache.connect()</code></li>
 <li>Create <code>MapiService(MapiSettings())</code>, wrap with <code>CachedMapiService</code> if cache is enabled → <code>app.state.mapi</code></li>
-<li>Initialize empty dicts: <code>app.state.s3_cache = {}</code>, <code>app.state.lance_cache = {}</code></li>
+<li>Initialize empty dict: <code>app.state.s3_cache = {}</code></li>
 <li>Create <code>QueryService(MapiSettings())</code>, wrap with <code>CachedQueryService</code> if cache is enabled → <code>app.state.query</code></li>
 </ol>
 <p><strong>Shutdown:</strong> Close query service, MAPI service, and cache in order.</p>
@@ -3388,7 +3312,6 @@
 <li>Every <code>Boto3Operations</code> method: <code>s3.list_buckets</code>, <code>s3.put_object</code>, etc.</li>
 <li>Every cached wrapper method: <code>cached_s3.list_buckets</code>, <code>cached_mapi.request</code>, etc.</li>
 <li>Every cache operation: <code>cache.get</code>, <code>cache.set</code>, <code>cache.delete</code>, <code>cache.invalidate</code></li>
-<li>Every Lance operation: <code>lance.list_tables</code>, <code>lance.search</code>, etc.</li>
 </ul>
 <h3 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h3>
 <table>

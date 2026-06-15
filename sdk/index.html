@@ -1971,33 +1971,6 @@
   
   
     <li class="md-nav__item">
-      <a href="./lance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  LanceDB
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="./etl/" class="md-nav__link">
         
   
@@ -2405,21 +2378,19 @@
 
 
 <h1 id="python-sdk">Python SDK<a class="headerlink" href="#python-sdk" title="Permanent link">&para;</a></h1>
-<p>The <code>rahcp</code> Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a <a href="https://docs.astral.sh/uv/concepts/workspaces/">uv workspace</a> with seven installable packages:</p>
+<p>The <code>rahcp</code> Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a <a href="https://docs.astral.sh/uv/concepts/workspaces/">uv workspace</a> with six installable packages:</p>
 <pre class="mermaid"><code>graph TD
     ROOT["rahcp (umbrella)"]
     TRACKER["rahcp-tracker&lt;br/&gt;&lt;small&gt;Transfer state tracking&lt;/small&gt;"]
     CLIENT["rahcp-client&lt;br/&gt;&lt;small&gt;Async HTTP client&lt;/small&gt;"]
     CLI["rahcp-cli&lt;br/&gt;&lt;small&gt;Typer CLI&lt;/small&gt;"]
     IIIF["rahcp-iiif&lt;br/&gt;&lt;small&gt;IIIF image downloader&lt;/small&gt;"]
-    LANCE["rahcp-lance&lt;br/&gt;&lt;small&gt;LanceDB datasets&lt;/small&gt;"]
     ETL["rahcp-etl&lt;br/&gt;&lt;small&gt;JetStream pipelines&lt;/small&gt;"]
     VAL["rahcp-validate&lt;br/&gt;&lt;small&gt;File validation&lt;/small&gt;"]
 
     ROOT --&gt; CLIENT
     ROOT --&gt; CLI
     ROOT -.-&gt;|optional| IIIF
-    ROOT -.-&gt;|optional| LANCE
     ROOT -.-&gt;|optional| ETL
     ROOT -.-&gt;|optional| VAL
     CLIENT --&gt; TRACKER
@@ -2428,7 +2399,6 @@
     CLI --&gt; CLIENT
     CLI --&gt; IIIF
     CLI -.-&gt;|optional| VAL
-    LANCE --&gt; CLIENT
     ETL --&gt; CLIENT</code></pre>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>Requires <strong>Python &gt;= 3.13</strong> and <a href="https://docs.astral.sh/uv/">uv</a>.</p>
@@ -2437,9 +2407,6 @@ uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </s
 
 <span class="c1"># With OpenTelemetry tracing</span>
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;rahcp-client[otel]&quot;</span>
-
-<span class="c1"># With Lance dataset support</span>
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;rahcp[lance]&quot;</span>
 
 <span class="c1"># With ETL pipelines (NATS JetStream)</span>
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;rahcp[etl]&quot;</span>
@@ -2453,7 +2420,7 @@ uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </s
 <span class="c1"># Everything</span>
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;rahcp[all]&quot;</span>
 </code></pre></div>
-<p>The default install includes both the Python SDK (<code>rahcp-client</code>) and the CLI (<code>rahcp-cli</code>). The heavier packages (Lance, ETL, validation) are opt-in.</p>
+<p>The default install includes both the Python SDK (<code>rahcp-client</code>) and the CLI (<code>rahcp-cli</code>). The heavier packages (ETL, validation) are opt-in.</p>
 <p>For local development from the repository:</p>
 <div class="highlight"><pre><span></span><code>uv<span class="w"> </span>sync<span class="w">                    </span><span class="c1"># install all workspace packages</span>
 uv<span class="w"> </span>run<span class="w"> </span>rahcp<span class="w"> </span>s3<span class="w"> </span>ls<span class="w">         </span><span class="c1"># run CLI via uv</span>
@@ -2492,11 +2459,6 @@ uv<span class="w"> </span>run<span class="w"> </span>rahcp<span class="w"> </spa
 <td><a href="iiif/">rahcp-iiif</a></td>
 <td>IIIF downloader</td>
 <td>Async IIIF image downloader with parallel workers</td>
-</tr>
-<tr>
-<td><a href="lance/">rahcp-lance</a></td>
-<td>LanceDB datasets</td>
-<td>LanceDB dataset management on HCP S3</td>
 </tr>
 <tr>
 <td><a href="etl/">rahcp-etl</a></td>

@@ -18,7 +18,7 @@
         <link rel="prev" href="../tracker/">
       
       
-        <link rel="next" href="../lance/">
+        <link rel="next" href="../etl/">
       
       
         
@@ -2004,33 +2004,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../lance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  LanceDB
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../etl/" class="md-nav__link">
         
   
@@ -2625,9 +2598,16 @@ up to <code>max_attempts</code> before being recorded as an error.</p>
 <td><code>full/max/0/default.jpg</code></td>
 <td>IIIF image API parameters</td>
 </tr>
+<tr>
+<td><code>headers</code></td>
+<td>—</td>
+<td><code>None</code></td>
+<td>Extra HTTP headers sent with every request (e.g. <code>Referer</code>)</td>
+</tr>
 </tbody>
 </table>
 <p>The env vars are read once at import time and set the <em>defaults</em> for <code>download_batch</code>, <code>download_batches</code>, <code>get_image_ids</code>, <code>build_image_url</code>, and <code>file_extension</code>; explicit keyword arguments always take precedence. For the CLI, the profile's <code>iiif_timeout</code>/<code>iiif_query_params</code> win over env vars — but note the <code>--iiif-url</code> flag itself reads <code>IIIF_URL</code>, so that env var overrides the profile's <code>iiif_url</code> when the flag isn't passed.</p>
+<p>Some servers (e.g. <code>lbiiif.riksarkivet.se</code>) return 403 unless requests carry a <code>Referer</code> header — set it via the CLI's <code>--referer</code> flag, the <code>IIIF_REFERER</code> env var, or the profile's <code>iiif_referer</code> key (e.g. <code>https://sok.riksarkivet.se/</code>).</p>
 <p>The <code>query_params</code> string follows the <a href="https://iiif.io/api/image/3.0/">IIIF Image API</a> format: <code>{region}/{size}/{rotation}/{quality}.{format}</code>. Common values:</p>
 <table>
 <thead>
@@ -2713,13 +2693,13 @@ up to <code>max_attempts</code> before being recorded as an error.</p>
         
         
           
-          <a href="../lance/" class="md-footer__link md-footer__link--next" aria-label="Next: LanceDB">
+          <a href="../etl/" class="md-footer__link md-footer__link--next" aria-label="Next: ETL Pipelines">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                LanceDB
+                ETL Pipelines
               </div>
             </div>
             <div class="md-footer__button md-icon">

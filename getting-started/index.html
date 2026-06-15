@@ -2036,33 +2036,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../sdk/lance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  LanceDB
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../sdk/etl/" class="md-nav__link">
         
   
@@ -2490,9 +2463,9 @@
 </thead>
 <tbody>
 <tr>
-<td><a href="https://deno.land/">Deno</a></td>
+<td><a href="https://bun.sh">Bun</a></td>
 <td>Frontend runtime (SvelteKit)</td>
-<td><code>curl -fsSL https://deno.land/install.sh \| sh</code></td>
+<td><code>curl -fsSL https://bun.sh/install \| bash</code></td>
 </tr>
 <tr>
 <td><a href="https://docs.astral.sh/uv/">uv</a></td>
@@ -2515,7 +2488,7 @@
 <div class="highlight"><pre><span></span><code>make<span class="w"> </span>setup
 </code></pre></div>
 <p>Or install them individually:</p>
-<div class="highlight"><pre><span></span><code>make<span class="w"> </span>install-deno<span class="w">    </span><span class="c1"># Install Deno</span>
+<div class="highlight"><pre><span></span><code>make<span class="w"> </span>install-bun<span class="w">     </span><span class="c1"># Install Bun</span>
 make<span class="w"> </span>install-uv<span class="w">      </span><span class="c1"># Install uv and Python dependencies</span>
 </code></pre></div>
 <h2 id="start-the-backend">Start the Backend<a class="headerlink" href="#start-the-backend" title="Permanent link">&para;</a></h2>
@@ -2542,7 +2515,7 @@ make<span class="w"> </span>install-uv<span class="w">      </span><span class="
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>Frontend dependencies are installed automatically by <code>make setup</code>. If you skipped setup, run <code>cd frontend &amp;&amp; deno install</code> first.</p>
+<p>Frontend dependencies are installed automatically by <code>make setup</code>. If you skipped setup, run <code>cd frontend &amp;&amp; bun install</code> first.</p>
 </div>
 <h2 id="redis-cache-optional">Redis Cache (Optional)<a class="headerlink" href="#redis-cache-optional" title="Permanent link">&para;</a></h2>
 <p>Redis provides response caching to reduce load on the HCP system. It is entirely optional.</p>

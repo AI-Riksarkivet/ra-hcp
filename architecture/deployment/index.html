@@ -1037,6 +1037,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Testing
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cve-scanning-trivy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        CVE Scanning (Trivy)
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#publishing-container-images" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1055,6 +1077,23 @@
       </span>
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Helm Chart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#s3-only-deployment-mapi-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        S3-only deployment (MAPI optional)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2125,33 +2164,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../sdk/lance/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  LanceDB
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../sdk/etl/" class="md-nav__link">
         
   
@@ -2446,6 +2458,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Testing
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cve-scanning-trivy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        CVE Scanning (Trivy)
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#publishing-container-images" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -2464,6 +2498,23 @@
       </span>
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Helm Chart">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#s3-only-deployment-mapi-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        S3-only deployment (MAPI optional)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2673,14 +2724,110 @@
     FIX --&gt;|"initial data"| STATE
     DISP --&gt;|"CRUD operations"| STATE</code></pre>
 <p>The mock server implements the same interface as the real MAPI service, allowing the frontend to be developed and tested independently. Start it with <code>make run-api-mock</code>.</p>
+<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
+<p>Tests run in Dagger so they behave identically locally and in CI (<code>.github/workflows/ci.yml</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Command</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lint + type check</td>
+<td><code>make checks</code></td>
+<td>ruff + ty (backend), <code>bun run check</code> (frontend)</td>
+</tr>
+<tr>
+<td>Unit tests</td>
+<td><code>make test</code></td>
+<td>backend unit tests with coverage (mocked S3)</td>
+</tr>
+<tr>
+<td>Integration</td>
+<td><code>make test-integration</code></td>
+<td>backend against real Redis; S3 against <strong>moto</strong> (<code>test_moto_server_e2e.py</code>, a real <code>ThreadedMotoServer</code>) and <strong>MinIO</strong> (<code>test_minio_integration.py</code>)</td>
+</tr>
+<tr>
+<td><strong>End-to-end</strong></td>
+<td><code>make e2e</code></td>
+<td><strong>full stack</strong>: a real browser (Playwright) drives the SvelteKit frontend → FastAPI backend → S3 (MinIO), MAPI disabled</td>
+</tr>
+</tbody>
+</table>
+<p>The end-to-end test (<code>.dagger/e2e.go</code> → <code>frontend/e2e/s3-smoke.spec.ts</code>) is the only test exercising the complete chain — browser → SSR + remote functions → backend → real S3 write/read. It logs in, creates a bucket through the UI, and asserts it appears in the list, so a break in <em>any</em> layer (auth wiring, the remote-function layer, the S3 adapter, storage config) fails the run. It is also wired as the <code>e2e</code> job in CI.</p>
+<div class="admonition warning">
+<p class="admonition-title">Frontend CSRF / origin (required for mutations)</p>
+<p>SvelteKit rejects remote-function <strong>POSTs</strong> (create/delete and other mutations) with <strong>403</strong> unless the server knows its public origin. Set the frontend's <strong><code>ORIGIN</code></strong> env to the exact public URL (e.g. <code>https://hcp.example.com</code>), <strong>or</strong> run it behind an ingress that sets <code>x-forwarded-proto</code> / <code>x-forwarded-host</code> — the Helm chart wires <code>PROTOCOL_HEADER</code>/<code>HOST_HEADER</code> to those by default, so mutations work without hardcoding the host. (Read-only <code>query()</code> GETs are unaffected.)</p>
+</div>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run the full-stack e2e in Dagger (builds the stack, runs Playwright/Chromium)</span>
+make<span class="w"> </span>e2e
+
+<span class="c1"># Or against a locally-running stack (e.g. `make full-serve` in another shell):</span>
+<span class="nb">cd</span><span class="w"> </span>frontend<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nv">E2E_BASE_URL</span><span class="o">=</span>http://localhost:5174<span class="w"> </span>bun<span class="w"> </span>run<span class="w"> </span>e2e
+</code></pre></div>
+<h2 id="cve-scanning-trivy">CVE Scanning (Trivy)<a class="headerlink" href="#cve-scanning-trivy" title="Permanent link">&para;</a></h2>
+<p>Images are scanned for known CVEs with <a href="https://trivy.dev/">Trivy</a> inside the
+Dagger pipeline (<code>.dagger/scan.go</code>), using the
+<a href="https://daggerverse.dev/mod/github.com/jpadams/daggerverse/trivy"><code>jpadams/daggerverse/trivy</code></a>
+module. Scans run against the freshly-built images — no separate registry push
+is needed — and report <strong>HIGH/CRITICAL</strong> findings by default:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Scan both backend + frontend images (report-only)</span>
+make<span class="w"> </span>scan
+
+<span class="c1"># Scan individually</span>
+make<span class="w"> </span>scan-backend
+make<span class="w"> </span>scan-frontend
+
+<span class="c1"># Gate a release: fail on any HIGH/CRITICAL finding</span>
+make<span class="w"> </span>scan<span class="w"> </span><span class="nv">EXIT_CODE</span><span class="o">=</span><span class="m">1</span>
+
+<span class="c1"># Scan an already-published image ref (e.g. to verify what&#39;s live)</span>
+make<span class="w"> </span>scan-image<span class="w"> </span><span class="nv">IMAGE</span><span class="o">=</span>riksarkivet/ra-hcp:v0.2.0
+</code></pre></div>
+<p>By default scans are <strong>informational</strong> (<code>EXIT_CODE=0</code>) and always print the full
+vulnerability table. Pass <code>EXIT_CODE=1</code> to make Trivy fail the pipeline when any
+matching CVE is present — the recommended setting for the release gate in CI.
+Override the severity filter on the underlying Dagger function with
+<code>--severity=UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL</code> if a fuller report is needed.</p>
+<p>The Dagger functions map directly to the Make targets:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Scans</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dagger call scan</code></td>
+<td>both images</td>
+</tr>
+<tr>
+<td><code>dagger call scan-backend</code></td>
+<td>backend image</td>
+</tr>
+<tr>
+<td><code>dagger call scan-frontend</code></td>
+<td>frontend image</td>
+</tr>
+<tr>
+<td><code>dagger call scan-image --image-ref=&lt;ref&gt;</code></td>
+<td>a published image ref</td>
+</tr>
+</tbody>
+</table>
+<p>Run scans <strong>before publishing</strong> — the typical release flow is <code>make scan EXIT_CODE=1</code> → <code>make publish</code>.</p>
 <h2 id="publishing-container-images">Publishing Container Images<a class="headerlink" href="#publishing-container-images" title="Permanent link">&para;</a></h2>
 <p>The project uses a Dagger pipeline (<code>.dagger/publish.go</code>) to build and push images to Docker Hub. Three Make targets are available:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># Publish both backend and frontend</span>
-make<span class="w"> </span>publish<span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.1.0
+make<span class="w"> </span>publish<span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.2.0
 
 <span class="c1"># Publish individually</span>
-make<span class="w"> </span>publish-backend<span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.1.0
-make<span class="w"> </span>publish-frontend<span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.1.0
+make<span class="w"> </span>publish-backend<span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.2.0
+make<span class="w"> </span>publish-frontend<span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.2.0
 </code></pre></div>
 <p>Credentials are read from <code>.env</code>:</p>
 <table>
@@ -2791,6 +2938,11 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
 <td><code>false</code></td>
 <td>Enable OTEL export</td>
 </tr>
+<tr>
+<td><code>env.MAPI_ENABLED</code></td>
+<td><code>"true"</code></td>
+<td>Mount MAPI routes + UI; set <code>"false"</code> for S3-only (e.g. MinIO)</td>
+</tr>
 </tbody>
 </table>
 <p>Enable the frontend and Redis:</p>
@@ -2799,6 +2951,23 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
 <span class="w">  </span>--set<span class="w"> </span>redis.enabled<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--set<span class="w"> </span>env.HCP_DOMAIN<span class="o">=</span>hcp.example.com
 </code></pre></div>
+<h3 id="s3-only-deployment-mapi-optional">S3-only deployment (MAPI optional)<a class="headerlink" href="#s3-only-deployment-mapi-optional" title="Permanent link">&para;</a></h3>
+<p>The Management API (MAPI) is Hitachi-specific. To run against a plain
+S3-compatible store such as MinIO — which has no Management API — set
+<code>MAPI_ENABLED=false</code>. The MAPI / tenant / namespace / query routes are then not
+mounted, <code>GET /api/v1/capabilities</code> reports <code>mapi_enabled: false</code>, and the
+frontend hides all MAPI management UI. Auth (local JWT), the S3 data plane,
+IIIF, and health checks are unaffected.</p>
+<div class="highlight"><pre><span></span><code>helm<span class="w"> </span>install<span class="w"> </span>ra-hcp<span class="w"> </span>charts/helm-ra-hcp-v0.1.0<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.MAPI_ENABLED<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.STORAGE_BACKEND<span class="o">=</span>minio<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.S3_ENDPOINT_URL<span class="o">=</span>http://minio:9000<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.S3_ACCESS_KEY<span class="o">=</span>minioadmin<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>env.S3_ADDRESSING_STYLE<span class="o">=</span>path<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>secret.S3_SECRET_KEY<span class="o">=</span>minioadmin123<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--set<span class="w"> </span>secret.API_SECRET_KEY<span class="o">=</span>your-secret-key
+</code></pre></div>
+<p><code>MAPI_ENABLED</code> defaults to <code>true</code>, so existing HCP deployments are unchanged.</p>
 <h2 id="production-architecture">Production Architecture<a class="headerlink" href="#production-architecture" title="Permanent link">&para;</a></h2>
 <p>A production deployment consists of a frontend, a backend, an optional Redis cache, and the HCP system it manages. A load balancer or ingress controller sits in front and routes traffic.</p>
 <pre class="mermaid"><code>graph TB
@@ -2808,8 +2977,8 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
         ING["Ingress / Load Balancer"]
 
         subgraph "Frontend Pods"
-            FE1["Frontend #1&lt;br/&gt;SvelteKit + Deno"]
-            FE2["Frontend #2&lt;br/&gt;SvelteKit + Deno"]
+            FE1["Frontend #1&lt;br/&gt;SvelteKit + Bun"]
+            FE2["Frontend #2&lt;br/&gt;SvelteKit + Bun"]
         end
 
         subgraph "Backend Pods"
@@ -2844,8 +3013,8 @@ make<span class="w"> </span>publish-frontend<span class="w"> </span><span class=
 <tbody>
 <tr>
 <td>Frontend</td>
-<td>SvelteKit 2 + Svelte 5, Deno</td>
-<td>5173 (dev), 8000 (container)</td>
+<td>SvelteKit 2 + Svelte 5, Bun</td>
+<td>5173 (dev), 3000 (container)</td>
 </tr>
 <tr>
 <td>Backend</td>
