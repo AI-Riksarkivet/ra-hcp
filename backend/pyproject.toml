@@ -1,6 +1,6 @@
 [project]
 name = "hcp-s3-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "Unified API gateway for Hitachi Content Platform (MAPI, S3, Metadata Query)"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -16,9 +16,8 @@ dependencies = [
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "pyjwt>=2.11.0",
-    "python-multipart>=0.0.22",
+    "python-multipart>=0.0.27",
     "py-key-value-aio[redis,memory]>=0.2",
-    "pyarrow>=17.0",
     "tenacity>=9.1.4",
 ]
 
@@ -26,10 +25,6 @@ dependencies = [
 serve = [
     "uvicorn[standard]>=0.41.0",
     "gunicorn>=23.0",
-]
-lance = [
-    "lancedb>=0.29",
-    "pylance>=2.0.1",
 ]
 
 [dependency-groups]

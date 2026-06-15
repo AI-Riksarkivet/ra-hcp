@@ -23,7 +23,6 @@ from app.schemas.s3 import (
     BulkPresignRequest,
     BulkPresignResponse,
     CopyObjectRequest,
-    CountObjectsResponse,
     StatsTaskResponse,
     CreateFolderRequest,
     CreateFolderResponse,

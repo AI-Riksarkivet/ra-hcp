@@ -133,3 +133,17 @@ class AuthSettings(BaseSettings):
     api_secret_key: str = "change-me-in-production"
     api_token_expire_minutes: int = 480  # 8 hours
     cors_origins: str = ""  # Comma-separated origins, empty = allow all
+
+
+class FeatureSettings(BaseSettings):
+    """Deployment feature toggles.
+
+    ``mapi_enabled`` defaults to ``True`` so existing HCP deployments are
+    unchanged. Set ``MAPI_ENABLED=false`` for an S3-only deployment against a
+    plain S3 server (e.g. MinIO) that has no Management API — the MAPI/tenant/
+    namespace/query routers are then not mounted and the frontend hides their UI.
+    """
+
+    model_config = {"env_file": _ENV_FILE, "extra": "ignore"}
+
+    mapi_enabled: bool = True

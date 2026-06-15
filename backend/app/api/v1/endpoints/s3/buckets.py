@@ -175,7 +175,7 @@ async def _retry_delete_bucket(
     try:
         await hcp.send("DELETE", ns_path, resource=f"bucket '{bucket}'")
         return {"status": "deleted", "bucket": bucket}
-    except HTTPException as exc:
+    except HTTPException:
         logger.info(
             "force-delete: '%s' — waiting for HCP to prune deletion records",
             bucket,

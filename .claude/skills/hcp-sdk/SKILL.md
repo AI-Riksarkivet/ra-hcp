@@ -338,6 +338,7 @@ profiles:
     iiif_url: https://iiifintern-ai.ra.se
     iiif_query_params: full/max/0/default.jpg
     iiif_workers: 4
+    iiif_referer: https://sok.riksarkivet.se/  # Referer header (some servers 403 without it)
 ```
 
 Priority: CLI flags > env vars (`HCP_*`, `IIIF_*`) > config file > defaults.

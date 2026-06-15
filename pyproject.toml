@@ -6,11 +6,10 @@ requires-python = ">=3.13"
 dependencies = ["rahcp-client", "rahcp-cli"]
 
 [project.optional-dependencies]
-lance = ["rahcp-lance"]
 etl = ["rahcp-etl"]
 validate = ["rahcp-validate"]
 iiif = ["rahcp-iiif"]
-all = ["rahcp-lance", "rahcp-etl", "rahcp-validate", "rahcp-iiif"]
+all = ["rahcp-etl", "rahcp-validate", "rahcp-iiif"]
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -19,7 +18,6 @@ exclude = ["backend"]
 [tool.uv.sources]
 rahcp-client = { workspace = true }
 rahcp-cli = { workspace = true }
-rahcp-lance = { workspace = true }
 rahcp-etl = { workspace = true }
 rahcp-validate = { workspace = true }
 rahcp-iiif = { workspace = true }

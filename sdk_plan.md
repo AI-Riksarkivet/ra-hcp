@@ -2,7 +2,7 @@
 
 ## Context
 
-The `ra-hcp` monorepo has a well-factored FastAPI backend where services (`MapiService`, `StorageProtocol` adapters, `QueryService`, `LanceService`) have **zero FastAPI imports** — they're pure async domain logic. However, to use any HCP operation today you must run the full FastAPI server.
+The `ra-hcp` monorepo has a well-factored FastAPI backend where services (`MapiService`, `StorageProtocol` adapters, `QueryService`) have **zero FastAPI imports** — they're pure async domain logic. However, to use any HCP operation today you must run the full FastAPI server.
 
 > **Recent refactor (58d9790):** The S3 storage layer was migrated from sync `boto3` to async `aioboto3`, and the custom `CacheService` (275-line dual sync/async Redis wrapper) was replaced by `KVCache` backed by `py-key-value`'s composable async stores. All `StorageProtocol` methods are now `async def`, adapters use `AsyncExitStack` for client lifecycle, and `run_storage()` accepts coroutines instead of sync callables.
 
@@ -12,7 +12,7 @@ By extracting these services into standalone SDK packages, we enable:
 - **Thinner backend** — FastAPI app becomes a thin HTTP adapter over the SDK
 - **Reusability** — migration scripts, audit tools, CI/CD pipelines import the SDK directly
 
-The monorepo stays unified: `backend/`, `frontend/`, `docs/`, and new `packages/` all live in `ra-hcp/`. Only Python packages participate in the uv workspace; the frontend (Deno) is unaffected.
+The monorepo stays unified: `backend/`, `frontend/`, `docs/`, and new `packages/` all live in `ra-hcp/`. Only Python packages participate in the uv workspace; the frontend (Bun) is unaffected.
 
 ## Gains
 
@@ -72,13 +72,6 @@ ra-hcp/                              # Workspace root = rahcp umbrella package
 │   │       ├── query.py             # <- query_service.py
 │   │       └── types.py             # <- schemas/query.py
 │   │
-│   ├── rahcp-lance/                 # Lance vector search (optional: pip install rahcp[lance])
-│   │   ├── pyproject.toml           # deps: rahcp-core, lancedb, pyarrow, opentelemetry-api
-│   │   └── src/rahcp_lance/
-│   │       ├── __init__.py          # Exports: LanceService, LanceError
-│   │       ├── service.py           # <- lance_service.py (sync API, 446 lines)
-│   │       └── errors.py            # LanceError (dataset not found, connection, etc.)
-│   │
 │   └── rahcp-cli/                   # CLI (optional: pip install rahcp[cli])
 │       ├── pyproject.toml           # deps: rahcp, typer, rich
 │       └── src/rahcp_cli/
@@ -100,12 +93,10 @@ ra-hcp/                              # Workspace root = rahcp umbrella package
 **Dependency graph:**
 ```
 rahcp-cli ──→ rahcp ──→ rahcp-s3 ───→ rahcp-core
-                    ├──→ rahcp-mapi ──→ rahcp-core
-                    └──→ rahcp-lance ─→ rahcp-core
+                    └──→ rahcp-mapi ──→ rahcp-core
 
 backend ──→ rahcp-s3
-        ├──→ rahcp-mapi
-        └──→ rahcp-lance
+        └──→ rahcp-mapi
 ```
 
 ## What Moves vs Stays
@@ -126,10 +117,9 @@ backend ──→ rahcp-s3
 | `mapi_service.py` (MapiService, AuthenticatedMapiService) | `rahcp-mapi/service.py` | Remove CachedMapiService TYPE_CHECKING |
 | `query_service.py` (QueryService, AuthenticatedQueryService) | `rahcp-mapi/query.py` | 6 import rewrites |
 | `schemas/query.py` (query types) | `rahcp-mapi/types.py` | Zero internal deps |
-| `lance_service.py` (LanceService) | `rahcp-lance/service.py` | 2 import rewrites; lancedb/pyarrow optional |
 
 **Stays in backend (not extracted):**
-- `CachedStorage`, `CachedMapiService`, `CachedQueryService`, `CachedLanceService` — cache wrappers
+- `CachedStorage`, `CachedMapiService`, `CachedQueryService` — cache wrappers
 - `KVCache` (py-key-value) — `app/services/kv/` (composable async cache stores)
 - `CacheSettings`, `AuthSettings` — backend-only config
 - `dependencies.py` — FastAPI DI layer
@@ -155,7 +145,6 @@ backend ──→ rahcp-s3
 | `rahcp_mapi/service.py` | `from app.services.mapi_errors import ...` | `from rahcp_mapi.errors import ...` |
 | `rahcp_mapi/query.py` | `from app.core.tenant_routing import ...` | `from rahcp_core.routing import ...` |
 | `rahcp_mapi/query.py` | `from app.schemas.query import ...` | `from rahcp_mapi.types import ...` |
-| `rahcp_lance/service.py` | `from app.services.lance_service import ...` | (self-contained) |
 
 ### Backend re-export shims (Phase 6)
 
@@ -176,7 +165,6 @@ Backend files become thin re-exports so **no endpoint code changes**:
 | `app/services/storage/adapters/generic_boto3.py` | `from rahcp_s3.adapters.generic import *` |
 | `app/services/storage/factory.py` | Re-export `create_storage` from SDK; keep `create_cached_storage` locally |
 | `app/schemas/query.py` | `from rahcp_mapi.types import *` |
-| `app/services/lance_service.py` | `from rahcp_lance.service import *` |
 
 ## Key Design Decisions
 
@@ -186,8 +174,7 @@ Backend files become thin re-exports so **no endpoint code changes**:
 4. **Re-export shims first** — Phase 6 uses `from rahcp_x import *` shims so zero endpoint code changes; direct imports in follow-up PR
 5. **AuthenticatedMapiService type hint** — change `base: MapiService | CachedMapiService` → `base: MapiService` (CachedMapiService conforms at runtime via duck typing)
 6. **create_cached_storage stays in backend** — depends on KVCache (py-key-value), not an SDK concern
-7. **rahcp-lance is optional** — heavy deps (lancedb ~200 MB); `pip install rahcp[lance]` pulls it in; LanceService already has graceful ImportError handling
-8. **All caching wrappers stay in backend** — `CachedStorage`, `CachedMapiService`, `CachedQueryService`, `CachedLanceService` all depend on KVCache (py-key-value)
+7. **All caching wrappers stay in backend** — `CachedStorage`, `CachedMapiService`, `CachedQueryService` all depend on KVCache (py-key-value)
 
 ## Implementation Phases
 
@@ -219,38 +206,30 @@ Backend files become thin re-exports so **no endpoint code changes**:
 - `query.py` ← copy `query_service.py` (6 import rewrites)
 - `types.py` ← copy `schemas/query.py` (zero changes)
 
-### Phase 5: Extract `rahcp-lance`
-- `service.py` ← copy `lance_service.py` (2 import rewrites: opentelemetry stays, remove app.* refs)
-- `errors.py` ← new `LanceError` base exception (dataset not found, connection errors)
-- LanceService is sync — endpoints use `CachedLanceService` which wraps via `asyncio.to_thread()`
-- `CachedLanceService` stays in backend (async wrapper + KVCache for metadata caching)
-- `lancedb` + `pyarrow` are optional deps (graceful ImportError already in source)
-
-### Phase 6: Create `rahcp` umbrella
-- `client.py` — `HCPClient` composing S3Client + MapiService + QueryService + optional LanceService
+### Phase 5: Create `rahcp` umbrella
+- `client.py` — `HCPClient` composing S3Client + MapiService + QueryService
 - `__init__.py` — re-exports from sub-packages
 
-### Phase 7: Update backend imports
+### Phase 6: Update backend imports
 - Replace extracted files with re-export shims (`from rahcp_x import *`)
 - Split `config.py`: keep CacheSettings/AuthSettings, re-export SDK settings
 - Split `factory.py`: keep `create_cached_storage`, re-export `create_storage`
 - **Zero changes to endpoint files or test files**
 
-### Phase 8: Create `rahcp-cli` (can defer)
+### Phase 7: Create `rahcp-cli` (can defer)
 - CLI entry point with typer subcommands
 - `rahcp s3 ls/cp/rm`, `rahcp tenant list/get`, `rahcp ns list/create`
 
-### Phase 9: SDK test suites
+### Phase 8: SDK test suites
 - `rahcp-core/tests/` — auth, config, routing tests
 - `rahcp-s3/tests/` — moto integration tests, error mapping, factory
 - `rahcp-mapi/tests/` — respx-mocked MAPI, query service tests
-- `rahcp-lance/tests/` — mock lancedb tests, schema introspection, search
 
-### Phase 10: Verify everything
+### Phase 9: Verify everything
 - `uv sync` from root
 - `uv run --package rahcp-core pytest` / `--package rahcp-s3` / `--package rahcp-mapi`
 - `cd backend && uv run pytest` — all existing tests pass
-- `make quality` — ruff/deno/prettier/svelte-check clean
+- `make quality` — ruff/bun/prettier/svelte-check clean
 - `uv run python -c "from rahcp import HCPClient"` — works
 
 ## pyproject.toml Configurations
@@ -265,9 +244,8 @@ requires-python = ">=3.13"
 dependencies = ["rahcp-s3", "rahcp-mapi"]
 
 [project.optional-dependencies]
-lance = ["rahcp-lance"]
 cli = ["rahcp-cli"]
-all = ["rahcp-lance", "rahcp-cli"]
+all = ["rahcp-cli"]
 
 [tool.uv.workspace]
 members = ["packages/*", "backend"]
@@ -275,7 +253,6 @@ members = ["packages/*", "backend"]
 [tool.uv.sources]
 rahcp-s3 = { workspace = true }
 rahcp-mapi = { workspace = true }
-rahcp-lance = { workspace = true }
 rahcp-cli = { workspace = true }
 rahcp-core = { workspace = true }
 
@@ -332,23 +309,6 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 ```
 
-### `packages/rahcp-lance/pyproject.toml`
-```toml
-[project]
-name = "rahcp-lance"
-version = "0.1.0"
-description = "Lance vector search for HCP S3-hosted datasets"
-requires-python = ">=3.13"
-dependencies = ["rahcp-core", "lancedb>=0.20", "pyarrow>=17.0", "opentelemetry-api>=1.29"]
-
-[tool.uv.sources]
-rahcp-core = { workspace = true }
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-```
-
 ### `packages/rahcp-cli/pyproject.toml`
 ```toml
 [project]
@@ -379,7 +339,6 @@ requires-python = ">=3.13"
 dependencies = [
     "rahcp-s3",
     "rahcp-mapi",
-    "rahcp-lance",
     "fastapi>=0.133",
     "opentelemetry-sdk>=1.29",
     "opentelemetry-instrumentation-fastapi>=0.50b0",
@@ -394,7 +353,6 @@ dependencies = [
 [tool.uv.sources]
 rahcp-s3 = { workspace = true }
 rahcp-mapi = { workspace = true }
-rahcp-lance = { workspace = true }
 rahcp-core = { workspace = true }
 ```
 
@@ -426,9 +384,7 @@ rahcp ns export my-tenant my-namespace > ns-config.json
 ```bash
 pip install rahcp-s3          # Just S3 (40 MB)
 pip install rahcp-mapi        # Just MAPI (10 MB)
-pip install rahcp-lance       # Just Lance search (200 MB — lancedb + pyarrow)
 pip install rahcp             # S3 + MAPI (45 MB)
-pip install rahcp[lance]      # S3 + MAPI + Lance (240 MB)
 pip install rahcp[cli]        # S3 + MAPI + CLI (50 MB)
-pip install rahcp[all]        # Everything (250 MB)
+pip install rahcp[all]        # Everything (50 MB)
 ```

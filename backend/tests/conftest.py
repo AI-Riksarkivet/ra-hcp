@@ -228,7 +228,6 @@ async def client(
     app.state.mapi = mapi_svc
     app.state.query = query_svc
     app.state.s3_cache = {}
-    app.state.lance_cache = {}
     app.state.storage_probe = None
 
     # IIIF singleton (uncached, for endpoint tests)

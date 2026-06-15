@@ -11,7 +11,7 @@ Web application for managing Hitachi Content Platform (HCP) — S3-compatible ob
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | SvelteKit 2, Svelte 5, Tailwind CSS 4, Deno |
+| Frontend | SvelteKit 2, Svelte 5, Tailwind CSS 4, Bun |
 | Backend | FastAPI, boto3, Python, uv |
 | Caching | Redis |
 | Docs | Zensical |
@@ -20,7 +20,7 @@ Web application for managing Hitachi Content Platform (HCP) — S3-compatible ob
 ## Quick Start
 
 ```bash
-make setup          # Install Deno + uv and all dependencies
+make setup          # Install Bun + uv and all dependencies
 make run-api-mock   # Start mock backend (no HCP credentials needed)
 make frontend-dev   # Start frontend dev server
 ```
@@ -34,7 +34,7 @@ For production mode with real HCP credentials: `make run-api`
 
 ## Requirements
 
-- [Deno](https://deno.com) — frontend runtime
+- [Bun](https://bun.sh) — frontend runtime
 - [uv](https://docs.astral.sh/uv/) — Python package manager
 - Docker — for Redis caching (optional)
 

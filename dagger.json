@@ -1,8 +1,15 @@
 {
   "name": "ra-hcp",
-  "engineVersion": "v0.20.1",
+  "engineVersion": "v0.20.3",
   "sdk": {
     "source": "go"
   },
+  "dependencies": [
+    {
+      "name": "trivy",
+      "source": "github.com/jpadams/daggerverse/trivy@trivy/v0.6.0",
+      "pin": "44c178290a412483e785a436aabc46c707842a62"
+    }
+  ],
   "source": ".dagger"
 }

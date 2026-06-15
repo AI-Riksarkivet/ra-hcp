@@ -159,6 +159,9 @@ func (m *RaHcp) ServeMinio(
 		WithEnvVariable("S3_SECRET_KEY", minioRootPassword).
 		WithEnvVariable("S3_VERIFY_SSL", "false").
 		WithEnvVariable("S3_ADDRESSING_STYLE", "path").
+		// MinIO has no Management API — run S3-only so MAPI routes/services
+		// aren't mounted or contacted.
+		WithEnvVariable("MAPI_ENABLED", "false").
 		WithEnvVariable("API_SECRET_KEY", "dagger-dev-secret")
 
 	return ctr.

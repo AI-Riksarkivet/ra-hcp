@@ -189,12 +189,6 @@ Operations: `get`, `set` (with TTL), `delete` — all async. Values are JSON-ser
 
 OTel instrumentation records three counters: `cache.hits`, `cache.misses`, `cache.errors`. Every operation also creates a trace span.
 
-### LanceService
-
-`LanceService` (`app/services/lance_service.py`) connects to S3-hosted Lance datasets via `lancedb`. It provides table listing, schema inspection, paginated row reads, full-text/vector/hybrid search, and single-cell byte access.
-
-Data reads use Lance's native push-down filtering, which is more efficient than serializing through Redis. Only metadata operations (`list_tables`, `get_schema`) are cached.
-
 ## Cached wrappers — the composition pattern
 
 All caching wrappers use composition: each wraps an `inner` service and a `KVCache`. No inheritance is involved. This means the same wrapper works regardless of whether the inner service is a base service or another wrapper.
@@ -239,10 +233,6 @@ Cached reads: `list_buckets`, `head_bucket`, `list_objects` (first page only —
 Uncached reads: `get_object` (streams binary data), `list_object_versions`, `generate_presigned_url`.
 
 Write operations delegate first, then precisely invalidate affected cache entries using explicit key tracking (`_tracked` dict) instead of pattern-based SCAN. For example, `create_bucket` invalidates `list_buckets` + `head_bucket` + versioning + ACL + all `list_objects` entries for that bucket. This precision avoids over-invalidation while keeping the cache consistent.
-
-### CachedLanceService
-
-Async wrapper around the sync `LanceService`. Caches metadata: `list_tables` (default TTL) and `get_schema` (config TTL) via `KVCache`. Data reads (`get_rows`, `get_vector_preview`, `get_cell_bytes`, `search`) are not cached — Lance's native push-down is more efficient than serializing through a cache. Uncached methods are forwarded via explicit async methods that delegate to `asyncio.to_thread(self._inner.method, ...)`.
 
 ## Routers and endpoints
 
@@ -318,7 +308,7 @@ The `lifespan()` async context manager in `app/main.py` handles startup and shut
 
 1. Create `KVCache` via `create_kv_cache(CacheSettings())` and `await cache.connect()`
 2. Create `MapiService(MapiSettings())`, wrap with `CachedMapiService` if cache is enabled → `app.state.mapi`
-3. Initialize empty dicts: `app.state.s3_cache = {}`, `app.state.lance_cache = {}`
+3. Initialize empty dict: `app.state.s3_cache = {}`
 4. Create `QueryService(MapiSettings())`, wrap with `CachedQueryService` if cache is enabled → `app.state.query`
 
 **Shutdown:** Close query service, MAPI service, and cache in order.
@@ -350,7 +340,6 @@ Manual spans are created throughout the service layer:
 - Every `Boto3Operations` method: `s3.list_buckets`, `s3.put_object`, etc.
 - Every cached wrapper method: `cached_s3.list_buckets`, `cached_mapi.request`, etc.
 - Every cache operation: `cache.get`, `cache.set`, `cache.delete`, `cache.invalidate`
-- Every Lance operation: `lance.list_tables`, `lance.search`, etc.
 
 ### Metrics
 

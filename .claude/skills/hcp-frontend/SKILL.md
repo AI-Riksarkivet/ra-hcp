@@ -13,9 +13,9 @@ description: >
 
 - **SvelteKit 2** + **Svelte 5** (runes mode only)
 - **shadcn-svelte** component library (Bits UI primitives)
-- **Deno** as runtime + package manager
+- **Bun** as runtime + package manager
 - **Tailwind CSS** for styling
-- Quality: `make quality` runs deno fmt/lint + prettier + svelte-check
+- Quality: `make quality` runs eslint + prettier + svelte-check
 
 ## Project Layout
 
@@ -368,10 +368,9 @@ When working on frontend code, **always activate these skills**:
 
 - `svelte:svelte-core-bestpractices` — Svelte 5 reactivity, events, styling
 - `svelte:svelte-code-writer` — documentation lookup + autofixer validation
-- `deno-skills:deno-expert` — Deno runtime best practices
 - **Svelte MCP server** (`@sveltejs/mcp`) — use `svelte-autofixer` tool to validate components, `get-documentation` for syntax questions
 
-These ensure code follows Svelte 5 runes patterns and Deno conventions.
+These ensure code follows Svelte 5 runes patterns and Bun conventions.
 Run the Svelte autofixer (`mcp__plugin_svelte_svelte__svelte-autofixer`) on any new or modified `.svelte` file before finalizing.
 Use the shadcn-svelte MCP tools (`shadcnSvelteGetTool`, `shadcnSvelteSearchTool`) when looking up component APIs.
 

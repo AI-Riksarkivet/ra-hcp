@@ -92,14 +92,13 @@ graph LR
     CACHED <-->|"get / set / invalidate"| REDIS["Redis"]
 ```
 
-There are four independently cached services:
+There are three independently cached services:
 
 | Service | What it caches | Cache key pattern | Example |
 |---------|---------------|-------------------|---------|
 | **CachedMapiService** | Admin API responses (tenant config, namespace settings, user lists) | `mapi:{host}:{path}?{query}` | `mapi:corp.hcp.com:/tenants/corp/namespaces` |
 | **CachedQueryService** | Metadata search results | `query:{tenant}:obj:{sha256[:16]}` | `query:corp:obj:a1b2c3d4e5f67890` |
 | **CachedStorage** | S3 listings, metadata, ACLs, versioning status | `s3:{bucket}:{operation}` | `s3:invoices:list_objects` |
-| **CachedLanceService** | Table listings and schemas (metadata only) | `lance:{table}:{operation}` | `lance:my_table:schema` |
 
 ### TTL Strategy — Different Data, Different Lifetimes
 

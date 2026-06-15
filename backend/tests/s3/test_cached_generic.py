@@ -87,7 +87,10 @@ async def test_list_objects_cache_miss(
 ):
     await cached.list_objects("bucket", prefix="logs/")
     mock_inner.list_objects.assert_called_once()
-    mock_cache.set.assert_called_once()
+    # Caches the list result under a generation-scoped key (a separate set for
+    # the generation token may also occur).
+    set_keys = [c.args[0] for c in mock_cache.set.call_args_list]
+    assert any("list_objects" in k for k in set_keys)
 
 
 async def test_list_objects_with_continuation_skips_cache(
@@ -190,31 +193,39 @@ async def test_put_bucket_versioning_invalidates(
 # ── Key tracking: reads populate tracking, writes invalidate tracked ─
 
 
-async def test_tracked_list_objects_invalidated_on_put(
+async def test_put_object_bumps_list_generation(
     cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    """list_objects keys are tracked and deleted when put_object is called."""
-    # Read populates tracking
+    """put_object invalidates list_objects by bumping the per-bucket generation.
+
+    The bump is a set on the ``listgen`` key (stored in the shared cache), so
+    it invalidates other workers'/replicas' cached listings — unlike the old
+    in-process key tracking. The mutated object's head_object is deleted by key.
+    """
     await cached.list_objects("bucket", prefix="docs/")
-    # Write should invalidate tracked keys
     await cached.put_object("bucket", "docs/new.txt", MagicMock())
 
-    # The tracked list_objects key + the head_object key should be deleted
+    set_keys = [c.args[0] for c in mock_cache.set.call_args_list]
+    assert any("listgen:bucket" in k for k in set_keys)
     delete_keys = [c.args[0] for c in mock_cache.delete.call_args_list]
-    assert any("list_objects" in k for k in delete_keys)
     assert "s3:head_object:bucket:docs/new.txt" in delete_keys
 
 
-async def test_tracked_head_object_invalidated_on_delete_bucket(
+async def test_delete_bucket_bumps_list_generation(
     cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
-    """head_object keys are tracked per bucket and deleted on bucket operations."""
+    """delete_bucket clears fixed bucket keys and bumps the list generation.
+
+    Per-object meta (head_object/object_acl) for a removed bucket is left to
+    expire by TTL — it can't be requested once the bucket is gone.
+    """
     await cached.head_object("mybucket", "file.txt")
     await cached.delete_bucket("mybucket")
 
     delete_keys = [c.args[0] for c in mock_cache.delete.call_args_list]
-    # Tracked head_object key should be in deletes
-    assert "s3:head_object:mybucket:file.txt" in delete_keys
+    assert "s3:list_buckets" in delete_keys
+    set_keys = [c.args[0] for c in mock_cache.set.call_args_list]
+    assert any("listgen:mybucket" in k for k in set_keys)
 
 
 # ── Pass-through operations ──────────────────────────────────────────

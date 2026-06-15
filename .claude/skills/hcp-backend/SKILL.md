@@ -41,7 +41,7 @@ class CachedMapiService(MapiService):  # tight coupling, brittle
 
 Use `inner` as the conventional name for the wrapped service.
 Forward public methods explicitly; use `__getattr__` only for truly
-generic delegation (e.g., LanceService has many passthrough methods).
+generic delegation when a wrapper has many passthrough methods.
 
 ### Clean layering — services never import from API
 
@@ -121,15 +121,11 @@ backend/
 │       │   ├── service.py         # CacheService (Redis)
 │       │   ├── mapi.py            # CachedMapiService
 │       │   ├── query.py           # CachedQueryService
-│       │   ├── lance.py           # CachedLanceService
 │       │   └── storage.py         # CachedStorage
 │       ├── mapi/                  # HCP Management API
 │       │   ├── errors.py          # MapiError hierarchy
 │       │   ├── service.py         # MapiService + AuthenticatedMapiService
 │       │   └── query.py           # QueryService + AuthenticatedQueryService
-│       ├── lance/                 # Lance vector DB
-│       │   ├── service.py         # LanceService
-│       │   └── serialize.py       # PyArrow value serializer
 │       └── storage/               # S3 storage adapters
 │           ├── errors.py          # StorageError
 │           ├── protocol.py        # StorageProtocol (ABC)
@@ -207,7 +203,7 @@ When working on backend code, **always activate these skills**:
 - `astral:ruff` — Python linting and formatting
 - `astral:uv` — Python package management
 - `testing-python` — pytest patterns and best practices
-- `fastapi-templates` — Best practices for fastapi patterns
+- `fastapi` — Best practices for FastAPI patterns
 
 
 ## Testing

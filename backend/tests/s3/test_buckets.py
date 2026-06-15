@@ -7,9 +7,8 @@ are deliberately omitted — they test FastAPI, not our code.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-import pytest
 from httpx import AsyncClient
 
 from app.services.storage.errors import StorageError, StorageOperationNotSupported

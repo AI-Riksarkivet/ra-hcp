@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends
 
+from app.core.config import FeatureSettings
 from app.core.security import get_current_user
 from app.api.v1.endpoints import auth
 from app.api.v1.endpoints.s3 import buckets, credentials, multipart, objects, versions
@@ -31,7 +32,6 @@ from app.api.v1.endpoints.mapi.namespace import (
 )
 from app.api.v1.endpoints.query import search as query_search
 from app.api.v1.endpoints import iiif as iiif_explorer
-from app.api.v1.endpoints import lance as lance_explorer
 
 api_router = APIRouter()
 
@@ -48,41 +48,55 @@ api_router.include_router(versions.router, dependencies=_auth)
 api_router.include_router(multipart.router, dependencies=_auth)
 api_router.include_router(credentials.router, dependencies=_auth)
 
-# ── System-level MAPI (requires HCP system admin) ───────────────────
-api_router.include_router(sys_tenants.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(sys_user_accounts.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(sys_group_accounts.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(infrastructure.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(operations.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(replication.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(erasure_coding.router, prefix="/mapi", dependencies=_auth)
+# ── MAPI management plane (optional) ─────────────────────────────────
+# Mounted only when MAPI is enabled. An S3-only deployment (e.g. MinIO,
+# which has no Management API) sets MAPI_ENABLED=false and these routes
+# simply don't exist — S3, auth, and IIIF below stay available.
+if FeatureSettings().mapi_enabled:
+    # System-level MAPI (requires HCP system admin)
+    api_router.include_router(sys_tenants.router, prefix="/mapi", dependencies=_auth)
+    api_router.include_router(
+        sys_user_accounts.router, prefix="/mapi", dependencies=_auth
+    )
+    api_router.include_router(
+        sys_group_accounts.router, prefix="/mapi", dependencies=_auth
+    )
+    api_router.include_router(infrastructure.router, prefix="/mapi", dependencies=_auth)
+    api_router.include_router(operations.router, prefix="/mapi", dependencies=_auth)
+    api_router.include_router(replication.router, prefix="/mapi", dependencies=_auth)
+    api_router.include_router(erasure_coding.router, prefix="/mapi", dependencies=_auth)
 
-# ── Tenant-level MAPI (requires tenant admin) ───────────────────────
-api_router.include_router(tenant_settings.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(tenant_statistics.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(
-    tenant_user_accounts.router, prefix="/mapi", dependencies=_auth
-)
-api_router.include_router(
-    tenant_group_accounts.router, prefix="/mapi", dependencies=_auth
-)
-api_router.include_router(content_classes.router, prefix="/mapi", dependencies=_auth)
+    # Tenant-level MAPI (requires tenant admin)
+    api_router.include_router(
+        tenant_settings.router, prefix="/mapi", dependencies=_auth
+    )
+    api_router.include_router(
+        tenant_statistics.router, prefix="/mapi", dependencies=_auth
+    )
+    api_router.include_router(
+        tenant_user_accounts.router, prefix="/mapi", dependencies=_auth
+    )
+    api_router.include_router(
+        tenant_group_accounts.router, prefix="/mapi", dependencies=_auth
+    )
+    api_router.include_router(
+        content_classes.router, prefix="/mapi", dependencies=_auth
+    )
 
-# ── Namespace-level MAPI (requires admin/compliance role) ────────────
-# Templates must be registered before management so /export is matched
-# before the {ns_name} path parameter.
-api_router.include_router(ns_templates.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(ns_management.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(ns_compliance.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(ns_access.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(ns_indexing.router, prefix="/mapi", dependencies=_auth)
-api_router.include_router(ns_statistics.router, prefix="/mapi", dependencies=_auth)
+    # Namespace-level MAPI (requires admin/compliance role)
+    # Templates must be registered before management so /export is matched
+    # before the {ns_name} path parameter.
+    api_router.include_router(ns_templates.router, prefix="/mapi", dependencies=_auth)
+    api_router.include_router(ns_management.router, prefix="/mapi", dependencies=_auth)
+    api_router.include_router(ns_compliance.router, prefix="/mapi", dependencies=_auth)
+    api_router.include_router(ns_access.router, prefix="/mapi", dependencies=_auth)
+    api_router.include_router(ns_indexing.router, prefix="/mapi", dependencies=_auth)
+    api_router.include_router(ns_statistics.router, prefix="/mapi", dependencies=_auth)
 
-# ── Metadata Query API ──────────────────────────────────────────────
-api_router.include_router(query_search.router, prefix="/query", dependencies=_auth)
+    # Metadata Query API (HCP Metadata Query — part of the MAPI plane)
+    api_router.include_router(
+        query_search.router, prefix="/query", dependencies=_auth
+    )
 
 # ── IIIF ──────────────────────────────────────────────────────────────
 api_router.include_router(iiif_explorer.router, dependencies=_auth)
-
-# ── Lance Data Explorer ───────────────────────────────────────────────
-api_router.include_router(lance_explorer.router, dependencies=_auth)

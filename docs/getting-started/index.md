@@ -8,7 +8,7 @@ Before you begin, ensure the following tools are installed:
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| [Deno](https://deno.land/) | Frontend runtime (SvelteKit) | `curl -fsSL https://deno.land/install.sh \| sh` |
+| [Bun](https://bun.sh) | Frontend runtime (SvelteKit) | `curl -fsSL https://bun.sh/install \| bash` |
 | [uv](https://docs.astral.sh/uv/) | Backend Python package manager | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | [Docker](https://www.docker.com/) | Redis cache (optional) | [docker.com/get-docker](https://www.docker.com/get-docker) |
 
@@ -26,7 +26,7 @@ make setup
 Or install them individually:
 
 ```bash
-make install-deno    # Install Deno
+make install-bun     # Install Bun
 make install-uv      # Install uv and Python dependencies
 ```
 
@@ -65,7 +65,7 @@ make frontend-dev
 ```
 
 !!! tip
-    Frontend dependencies are installed automatically by `make setup`. If you skipped setup, run `cd frontend && deno install` first.
+    Frontend dependencies are installed automatically by `make setup`. If you skipped setup, run `cd frontend && bun install` first.
 
 ## Redis Cache (Optional)
 

@@ -27,11 +27,18 @@ spec:
         - name: frontend
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}{{- if .Values.frontend.image.digest }}@{{ .Values.frontend.image.digest }}{{- end }}"
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          # svelte-adapter-bun build output: build/index.js is the server entrypoint.
+          command: ["bun"]
+          args: ["./build/index.js"]
           ports:
             - name: http
               containerPort: {{ .Values.frontend.service.targetPort }}
               protocol: TCP
           env:
+            # svelte-adapter-bun binds 0.0.0.0:$PORT (default 3000); pin it to the
+            # chart's containerPort so the service/probe port stays in sync.
+            - name: PORT
+              value: {{ .Values.frontend.service.targetPort | quote }}
             - name: BACKEND_URL
               value: {{ .Values.frontend.env.BACKEND_URL | default (printf "http://%s:%v" (include "ra-hcp.fullname" .) .Values.service.port) | quote }}
             {{- if .Values.frontend.env.ORIGIN }}
@@ -59,14 +66,12 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
+            # Bun needs a writable /tmp (readOnlyRootFilesystem is true elsewhere,
+            # false here) for runtime scratch.
             - name: tmp
               mountPath: /tmp
-            - name: deno-dir
-              mountPath: /deno-dir
       volumes:
         - name: tmp
-          emptyDir: {}
-        - name: deno-dir
           emptyDir: {}
       {{- with .Values.nodeSelector }}
       nodeSelector:

@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.dependencies import get_cache_service
 from app.api.v1.router import api_router
-from app.core.config import AuthSettings, StorageSettings
+from app.core.config import AuthSettings, FeatureSettings, StorageSettings
 from app.core.middleware import RequestIDMiddleware
 from app.core.telemetry import setup_telemetry
 from app.services.kv import KVCache, create_kv_cache
@@ -24,7 +24,12 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.core.config import CacheSettings, MapiSettings, StorageSettings
+    from app.core.config import (
+        CacheSettings,
+        FeatureSettings,
+        MapiSettings,
+        StorageSettings,
+    )
     from app.services.mapi_service import MapiService
     from app.services.query_service import QueryService
 
@@ -35,18 +40,23 @@ async def lifespan(app: FastAPI):
     app.state.cache = cache
 
     mapi_settings = MapiSettings()
-    mapi = MapiService(mapi_settings)
-    if cache.enabled:
-        from app.services.cached_mapi import CachedMapiService
+    features = FeatureSettings()
+    app.state.mapi_enabled = features.mapi_enabled
+    if features.mapi_enabled:
+        mapi = MapiService(mapi_settings)
+        if cache.enabled:
+            from app.services.cached_mapi import CachedMapiService
 
-        logger.info("Creating CachedMapiService singleton")
-        app.state.mapi = CachedMapiService(mapi, cache, cache_settings)
+            logger.info("Creating CachedMapiService singleton")
+            app.state.mapi = CachedMapiService(mapi, cache, cache_settings)
+        else:
+            logger.info("Creating MapiService singleton")
+            app.state.mapi = mapi
     else:
-        logger.info("Creating MapiService singleton")
-        app.state.mapi = mapi
+        logger.info("MAPI disabled (MAPI_ENABLED=false) — running S3-only")
+        app.state.mapi = None
 
     app.state.s3_cache = {}
-    app.state.lance_cache = {}
 
     # ── IIIF service (singleton, shared httpx client) ────────────────
     from app.services.iiif_service import IiifService
@@ -67,15 +77,18 @@ async def lifespan(app: FastAPI):
             cache_settings,
         )
 
-    query = QueryService(mapi_settings)
-    if cache.enabled:
-        from app.services.cached_query import CachedQueryService
+    if features.mapi_enabled:
+        query = QueryService(mapi_settings)
+        if cache.enabled:
+            from app.services.cached_query import CachedQueryService
 
-        logger.info("Creating CachedQueryService singleton")
-        app.state.query = CachedQueryService(query, cache, cache_settings)
+            logger.info("Creating CachedQueryService singleton")
+            app.state.query = CachedQueryService(query, cache, cache_settings)
+        else:
+            logger.info("Creating QueryService singleton")
+            app.state.query = query
     else:
-        logger.info("Creating QueryService singleton")
-        app.state.query = query
+        app.state.query = None
 
     # S3 storage probe for readiness checks on non-HCP backends
     storage_settings = StorageSettings()
@@ -113,8 +126,10 @@ async def lifespan(app: FastAPI):
             logger.warning("Failed to close S3 storage adapter", exc_info=True)
 
     await app.state.iiif.close()
-    await app.state.query.close()
-    await app.state.mapi.close()
+    if app.state.query is not None:
+        await app.state.query.close()
+    if app.state.mapi is not None:
+        await app.state.mapi.close()
     await cache.close()
 
 
@@ -251,10 +266,6 @@ OPENAPI_TAGS = [
         "name": "IIIF",
         "description": "Fetch and cache IIIF manifests, resolve image URLs.",
     },
-    {
-        "name": "Lance Explorer",
-        "description": "Browse and query Lance vector datasets stored in S3.",
-    },
 ]
 
 app = FastAPI(
@@ -383,4 +394,18 @@ async def health(cache: KVCache | None = Depends(get_cache_service)):
     return {
         "status": "ok",
         "cache": "connected" if cache and cache.enabled else "disabled",
+    }
+
+
+@app.get("/api/v1/capabilities", tags=["Health"])
+async def capabilities():
+    """Report deployment capabilities so clients adapt (e.g. hide MAPI UI).
+
+    Public (no auth) — the frontend reads this before login to decide which
+    management features to show. ``mapi_enabled=false`` marks an S3-only
+    deployment (e.g. against MinIO).
+    """
+    return {
+        "mapi_enabled": FeatureSettings().mapi_enabled,
+        "storage_backend": StorageSettings().storage_backend,
     }

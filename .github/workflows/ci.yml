@@ -47,3 +47,21 @@ jobs:
           verb: call
           args: test-integration --source=.
           version: "0.20.1"
+
+  scan:
+    name: CVE Scan (Trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Builds the backend + frontend images and scans them for known CVEs with
+      # Trivy (github.com/jpadams/daggerverse/trivy) via .dagger/scan.go. Runs
+      # report-only (exit-code=0) so the HIGH/CRITICAL table is surfaced on every
+      # push/PR without permanently failing on unfixable upstream (fix_deferred)
+      # OS CVEs. Bump --exit-code=1 once the base images have no unfixable highs.
+      - name: Trivy CVE scan
+        uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+        with:
+          verb: call
+          args: scan --source=. --severity=HIGH,CRITICAL --exit-code=0
+          version: "0.20.1"

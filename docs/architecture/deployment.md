@@ -29,17 +29,57 @@ graph LR
 
 The mock server implements the same interface as the real MAPI service, allowing the frontend to be developed and tested independently. Start it with `make run-api-mock`.
 
+## CVE Scanning (Trivy)
+
+Images are scanned for known CVEs with [Trivy](https://trivy.dev/) inside the
+Dagger pipeline (`.dagger/scan.go`), using the
+[`jpadams/daggerverse/trivy`](https://daggerverse.dev/mod/github.com/jpadams/daggerverse/trivy)
+module. Scans run against the freshly-built images — no separate registry push
+is needed — and report **HIGH/CRITICAL** findings by default:
+
+```bash
+# Scan both backend + frontend images (report-only)
+make scan
+
+# Scan individually
+make scan-backend
+make scan-frontend
+
+# Gate a release: fail on any HIGH/CRITICAL finding
+make scan EXIT_CODE=1
+
+# Scan an already-published image ref (e.g. to verify what's live)
+make scan-image IMAGE=riksarkivet/ra-hcp:v0.2.0
+```
+
+By default scans are **informational** (`EXIT_CODE=0`) and always print the full
+vulnerability table. Pass `EXIT_CODE=1` to make Trivy fail the pipeline when any
+matching CVE is present — the recommended setting for the release gate in CI.
+Override the severity filter on the underlying Dagger function with
+`--severity=UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL` if a fuller report is needed.
+
+The Dagger functions map directly to the Make targets:
+
+| Function | Scans |
+|----------|-------|
+| `dagger call scan` | both images |
+| `dagger call scan-backend` | backend image |
+| `dagger call scan-frontend` | frontend image |
+| `dagger call scan-image --image-ref=<ref>` | a published image ref |
+
+Run scans **before publishing** — the typical release flow is `make scan EXIT_CODE=1` → `make publish`.
+
 ## Publishing Container Images
 
 The project uses a Dagger pipeline (`.dagger/publish.go`) to build and push images to Docker Hub. Three Make targets are available:
 
 ```bash
 # Publish both backend and frontend
-make publish TAG=v0.1.0
+make publish TAG=v0.2.0
 
 # Publish individually
-make publish-backend TAG=v0.1.0
-make publish-frontend TAG=v0.1.0
+make publish-backend TAG=v0.2.0
+make publish-frontend TAG=v0.2.0
 ```
 
 Credentials are read from `.env`:
@@ -81,6 +121,7 @@ Key configuration values (see `charts/helm-ra-hcp-v0.1.0/values.yaml` for the fu
 | `frontend.service.nodePort` | `30517` | Frontend NodePort |
 | `redis.enabled` | `false` | Enable Redis sidecar |
 | `opentelemetry.enabled` | `false` | Enable OTEL export |
+| `env.MAPI_ENABLED` | `"true"` | Mount MAPI routes + UI; set `"false"` for S3-only (e.g. MinIO) |
 
 Enable the frontend and Redis:
 
@@ -90,6 +131,28 @@ helm install ra-hcp charts/helm-ra-hcp-v0.1.0 \
   --set redis.enabled=true \
   --set env.HCP_DOMAIN=hcp.example.com
 ```
+
+### S3-only deployment (MAPI optional)
+
+The Management API (MAPI) is Hitachi-specific. To run against a plain
+S3-compatible store such as MinIO — which has no Management API — set
+`MAPI_ENABLED=false`. The MAPI / tenant / namespace / query routes are then not
+mounted, `GET /api/v1/capabilities` reports `mapi_enabled: false`, and the
+frontend hides all MAPI management UI. Auth (local JWT), the S3 data plane,
+IIIF, and health checks are unaffected.
+
+```bash
+helm install ra-hcp charts/helm-ra-hcp-v0.1.0 \
+  --set env.MAPI_ENABLED=false \
+  --set env.STORAGE_BACKEND=minio \
+  --set env.S3_ENDPOINT_URL=http://minio:9000 \
+  --set env.S3_ACCESS_KEY=minioadmin \
+  --set env.S3_ADDRESSING_STYLE=path \
+  --set secret.S3_SECRET_KEY=minioadmin123 \
+  --set secret.API_SECRET_KEY=your-secret-key
+```
+
+`MAPI_ENABLED` defaults to `true`, so existing HCP deployments are unchanged.
 
 ## Production Architecture
 
@@ -103,8 +166,8 @@ graph TB
         ING["Ingress / Load Balancer"]
 
         subgraph "Frontend Pods"
-            FE1["Frontend #1<br/>SvelteKit + Deno"]
-            FE2["Frontend #2<br/>SvelteKit + Deno"]
+            FE1["Frontend #1<br/>SvelteKit + Bun"]
+            FE2["Frontend #2<br/>SvelteKit + Bun"]
         end
 
         subgraph "Backend Pods"
@@ -132,7 +195,7 @@ graph TB
 
 | Component | Technology | Port |
 |-----------|-----------|------|
-| Frontend | SvelteKit 2 + Svelte 5, Deno | 5173 (dev), 8000 (container) |
+| Frontend | SvelteKit 2 + Svelte 5, Bun | 5173 (dev), 3000 (container) |
 | Backend | FastAPI, Python 3.13+, uv | 8000 |
 | Storage adapters | HcpStorage (aioboto3) — pluggable via StorageProtocol | — |
 | Cache | Redis 7+ (optional) | 6379 |

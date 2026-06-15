@@ -1,7 +1,7 @@
 // HCP App CI/CD pipeline powered by Dagger
 //
 // Provides build, lint, type-check, and test functions for the
-// ra-hcp backend (Python/FastAPI) and frontend (SvelteKit/Deno).
+// ra-hcp backend (Python/FastAPI) and frontend (SvelteKit/Bun).
 
 package main
 
@@ -11,7 +11,7 @@ import (
 
 const (
 	uvPythonImage = "ghcr.io/astral-sh/uv:0.10.9-python3.13-trixie-slim"
-	denoImage     = "denoland/deno:2.7.1"
+	bunImage      = "oven/bun:1.2-slim"
 	redisImage    = "redis:8.0.1-alpine"
 	minioImage    = "minio/minio:latest"
 	backendDir    = "backend"
@@ -31,19 +31,18 @@ func (m *RaHcp) buildBackendDev(source *dagger.Directory) *dagger.Container {
 		WithMountedCache("/root/.cache/uv", dag.CacheVolume("uv-cache")).
 		WithMountedDirectory("/app", backend).
 		WithWorkdir("/app").
-		WithExec([]string{"uv", "sync", "--frozen", "--extra", "lance"})
+		WithExec([]string{"uv", "sync", "--frozen"})
 }
 
-// buildFrontendDev returns a Deno container with frontend deps installed.
+// buildFrontendDev returns a Bun container with frontend deps installed.
 func (m *RaHcp) buildFrontendDev(source *dagger.Directory) *dagger.Container {
 	frontend := source.Directory(frontendDir)
 
-	return dag.Container().From(denoImage).
-		WithEnvVariable("DENO_DIR", "/deno-dir").
-		WithMountedCache("/deno-dir", dag.CacheVolume("deno-cache")).
+	return dag.Container().From(bunImage).
+		WithMountedCache("/root/.bun/install/cache", dag.CacheVolume("bun-cache")).
 		WithMountedDirectory("/app", frontend).
 		WithWorkdir("/app").
-		WithExec([]string{"deno", "install"})
+		WithExec([]string{"bun", "install"})
 }
 
 // redis returns a Redis service for integration tests.

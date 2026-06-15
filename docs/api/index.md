@@ -48,7 +48,6 @@ All endpoints require a JWT bearer token obtained via the [Authentication](authe
 | **Namespace: Indexing** | `/api/v1/mapi/tenants/{name}/namespaces/{ns}/...` | Custom metadata indexing settings. | Tenant admin (ADMINISTRATOR) |
 | **Namespace: Statistics** | `/api/v1/mapi/tenants/{name}/namespaces/{ns}/statistics` | Namespace statistics and chargeback reports. | Tenant monitor (MONITOR) |
 | **Metadata Query** | `/api/v1/query/tenants/{name}` | Search objects by metadata and audit operations. | JWT required |
-| **Lance Explorer** | `/api/v1/lance` | Browse LanceDB datasets: list tables, inspect schemas, read rows, and search. | JWT required |
 
 ## Access levels
 

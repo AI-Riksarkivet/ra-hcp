@@ -96,22 +96,6 @@ Auto-generated from source code docstrings.
 
 ---
 
-## rahcp-lance
-
-### LanceDataset
-
-::: rahcp_lance.dataset.LanceDataset
-
-### Query Helpers
-
-::: rahcp_lance.query
-
-### Schemas
-
-::: rahcp_lance.schemas
-
----
-
 ## rahcp-etl
 
 ### Pipeline

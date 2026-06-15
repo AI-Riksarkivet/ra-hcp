@@ -1,6 +1,6 @@
 # Python SDK
 
-The `rahcp` Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with seven installable packages:
+The `rahcp` Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with six installable packages:
 
 ```mermaid
 graph TD
@@ -9,14 +9,12 @@ graph TD
     CLIENT["rahcp-client<br/><small>Async HTTP client</small>"]
     CLI["rahcp-cli<br/><small>Typer CLI</small>"]
     IIIF["rahcp-iiif<br/><small>IIIF image downloader</small>"]
-    LANCE["rahcp-lance<br/><small>LanceDB datasets</small>"]
     ETL["rahcp-etl<br/><small>JetStream pipelines</small>"]
     VAL["rahcp-validate<br/><small>File validation</small>"]
 
     ROOT --> CLIENT
     ROOT --> CLI
     ROOT -.->|optional| IIIF
-    ROOT -.->|optional| LANCE
     ROOT -.->|optional| ETL
     ROOT -.->|optional| VAL
     CLIENT --> TRACKER
@@ -25,7 +23,6 @@ graph TD
     CLI --> CLIENT
     CLI --> IIIF
     CLI -.->|optional| VAL
-    LANCE --> CLIENT
     ETL --> CLIENT
 ```
 
@@ -40,9 +37,6 @@ uv pip install rahcp
 # With OpenTelemetry tracing
 uv pip install "rahcp-client[otel]"
 
-# With Lance dataset support
-uv pip install "rahcp[lance]"
-
 # With ETL pipelines (NATS JetStream)
 uv pip install "rahcp[etl]"
 
@@ -56,7 +50,7 @@ uv pip install "rahcp[iiif]"
 uv pip install "rahcp[all]"
 ```
 
-The default install includes both the Python SDK (`rahcp-client`) and the CLI (`rahcp-cli`). The heavier packages (Lance, ETL, validation) are opt-in.
+The default install includes both the Python SDK (`rahcp-client`) and the CLI (`rahcp-cli`). The heavier packages (ETL, validation) are opt-in.
 
 For local development from the repository:
 
@@ -77,7 +71,6 @@ uv run rahcp auth whoami   # check current identity
 | [rahcp-cli](cli.md) | CLI tool | Command-line interface for S3, IIIF, and namespace operations |
 | [rahcp-tracker](tracker.md) | Transfer tracking | Resumable transfer state tracking with SQLite |
 | [rahcp-iiif](iiif.md) | IIIF downloader | Async IIIF image downloader with parallel workers |
-| [rahcp-lance](lance.md) | LanceDB datasets | LanceDB dataset management on HCP S3 |
 | [rahcp-etl](etl.md) | ETL pipelines | NATS JetStream event-driven pipelines with checkpointing |
 | [rahcp-validate](validation.md) | File validation | Format-specific file validation with composable rules |
 

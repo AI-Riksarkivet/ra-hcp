@@ -6,7 +6,7 @@ import logging
 from functools import lru_cache
 from typing import Annotated, AsyncGenerator
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Request
 
 from app.core.auth_utils import derive_s3_keys
 from app.core.config import CacheSettings, MapiSettings, S3Settings, StorageSettings
@@ -20,9 +20,6 @@ from app.services.kv import KVCache
 from app.services.cached_iiif import CachedIiifService
 from app.services.mapi_service import AuthenticatedMapiService
 from app.services.query_service import AuthenticatedQueryService
-from app.schemas.lance import LanceDatasetParams
-from app.services.cached_lance import CachedLanceService
-from app.services.lance_service import LanceService
 from app.services.storage import StorageProtocol
 from app.services.storage.factory import create_cached_storage, create_storage
 
@@ -164,65 +161,3 @@ async def get_s3_service(
                     secret_key,
                 )
         yield s3_client_cache[cache_key]
-
-
-# ── Lance per-credential cache ────────────────────────────────────────
-
-
-async def get_lance_service(
-    request: Request,
-    token: Annotated[str, Depends(oauth2_scheme)],
-    params: LanceDatasetParams = Depends(),
-) -> AsyncGenerator[CachedLanceService, None]:
-    """Yield a CachedLanceService for the given S3 bucket/path, keyed by credentials."""
-    try:
-        import lancedb as _  # noqa: F811, F401  # ty: ignore[unresolved-import]
-    except ImportError:
-        raise HTTPException(
-            status_code=501,
-            detail="Lance support not installed. Install with: pip install '.[lance]'",
-        )
-    creds = verify_token_with_credentials(token)
-    access_key, secret_key = _derive_s3_keys(creds)
-    settings = get_s3_settings()
-    endpoint_url = s3_endpoint_for_tenant(creds.tenant, settings.hcp_domain)
-    if not endpoint_url:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot derive S3 endpoint: hcp_domain or tenant missing",
-        )
-    s3_uri = (
-        f"s3://{params.bucket}/{params.path}"
-        if params.path
-        else f"s3://{params.bucket}"
-    )
-
-    cache_key = (creds, params.bucket, params.path)
-    lance_cache: dict = request.app.state.lance_cache
-    if cache_key not in lance_cache:
-        inner = LanceService.with_credentials(
-            s3_uri,
-            access_key,
-            secret_key,
-            endpoint_url,
-            verify_ssl=settings.hcp_verify_ssl,
-        )
-        cache: KVCache | None = getattr(request.app.state, "cache", None)
-        if cache is not None and cache.enabled:
-            lance_cache[cache_key] = CachedLanceService(
-                inner, cache, get_cache_settings()
-            )
-        else:
-            from key_value.aio.stores.null import NullStore
-
-            lance_cache[cache_key] = CachedLanceService(
-                inner,
-                cache or KVCache(NullStore(), enabled=False),
-                get_cache_settings(),
-            )
-        logger.info(
-            "Creating CachedLanceService for %s/%s",
-            params.bucket,
-            params.path,
-        )
-    yield lance_cache[cache_key]

@@ -3,14 +3,18 @@
 Wraps any StorageProtocol via the decorator pattern. One class works with
 any backend — HCP, MinIO, Ceph, AWS, or future adapters.
 
-Uses explicit key tracking instead of pattern-based invalidation,
-so the backing cache store doesn't need SCAN support.
+Invalidation works across worker processes and replicas: ``list_objects``
+results carry a per-bucket *generation* token stored in the shared cache, and
+mutations bump that token. Fixed-key entries (bucket listing, head/versioning/
+ACL) are deleted by exact key. No in-process key tracking — that only worked
+within a single process and went stale under multiple workers/replicas.
 """
 
 from __future__ import annotations
 
 import logging
 from typing import IO
+from uuid import uuid4
 
 from opentelemetry import trace
 
@@ -20,9 +24,6 @@ from app.services.storage.protocol import StorageProtocol
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
-
-# Beyond this limit, new keys aren't tracked — cache TTL handles expiry.
-_MAX_TRACKED_PER_GROUP = 2048
 
 
 class CachedStorage:
@@ -37,24 +38,28 @@ class CachedStorage:
         self._inner = inner
         self._cache = cache
         self._cs = cache_settings
-        # Track cached keys by (operation, bucket) for targeted invalidation
-        self._tracked: dict[tuple[str, str], set[str]] = {}
 
     def _key(self, *parts: str) -> str:
         return "s3:" + ":".join(parts)
 
-    def _track(self, op: str, bucket: str, cache_key: str) -> None:
-        """Register a cache key for later invalidation."""
-        tracked = self._tracked.setdefault((op, bucket), set())
-        if len(tracked) >= _MAX_TRACKED_PER_GROUP:
-            return  # TTL will handle expiry for excess keys
-        tracked.add(cache_key)
+    async def _list_generation(self, bucket: str) -> str:
+        """Per-bucket generation token embedded in ``list_objects`` cache keys.
 
-    async def _invalidate_tracked(self, op: str, bucket: str) -> None:
-        """Delete all tracked cache keys for (operation, bucket)."""
-        keys = self._tracked.pop((op, bucket), set())
-        for key in keys:
-            await self._cache.delete(key)
+        Stored in the shared cache so invalidation works across worker
+        processes and replicas (an in-process set would not). Bumping the
+        token orphans every existing ``list_objects`` entry for the bucket;
+        the stale entries then expire by TTL.
+        """
+        gen_key = self._key("listgen", bucket)
+        gen = await self._cache.get(gen_key)
+        if gen is None:
+            gen = "0"
+            await self._cache.set(gen_key, gen)
+        return gen
+
+    async def _bump_list_generation(self, bucket: str) -> None:
+        """Invalidate all cached ``list_objects`` results for ``bucket``."""
+        await self._cache.set(self._key("listgen", bucket), uuid4().hex)
 
     # ── Lifecycle (delegate to inner) ──────────────────────────────────
 
@@ -109,8 +114,14 @@ class CachedStorage:
             "cached_s3.list_objects",
             attributes={"s3.bucket": bucket, "s3.prefix": prefix or ""},
         ) as span:
+            gen = await self._list_generation(bucket)
             key = self._key(
-                "list_objects", bucket, prefix or "", delimiter or "", str(max_keys)
+                "list_objects",
+                bucket,
+                gen,
+                prefix or "",
+                delimiter or "",
+                str(max_keys),
             )
             cached = await self._cache.get(key)
             if cached is not None:
@@ -121,7 +132,6 @@ class CachedStorage:
                 bucket, prefix, max_keys, continuation_token, delimiter, fetch_owner
             )
             await self._cache.set(key, result, ttl=self._cs.cache_s3_list_ttl)
-            self._track("list_objects", bucket, key)
             return result
 
     async def head_object(self, bucket: str, key: str) -> dict:
@@ -137,7 +147,6 @@ class CachedStorage:
             span.set_attribute("cache.hit", False)
             result = await self._inner.head_object(bucket, key)
             await self._cache.set(cache_key, result, ttl=self._cs.cache_s3_meta_ttl)
-            self._track("head_object", bucket, cache_key)
             return result
 
     async def get_bucket_versioning(self, bucket: str) -> dict:
@@ -183,7 +192,6 @@ class CachedStorage:
             span.set_attribute("cache.hit", False)
             result = await self._inner.get_object_acl(bucket, key)
             await self._cache.set(cache_key, result, ttl=self._cs.cache_s3_meta_ttl)
-            self._track("object_acl", bucket, cache_key)
             return result
 
     # ── Uncached reads (streams / large results) ──────────────────────
@@ -225,9 +233,10 @@ class CachedStorage:
         await self._cache.delete(self._key("head_bucket", name))
         await self._cache.delete(self._key("versioning", name))
         await self._cache.delete(self._key("bucket_acl", name))
-        await self._invalidate_tracked("list_objects", name)
-        await self._invalidate_tracked("head_object", name)
-        await self._invalidate_tracked("object_acl", name)
+        # Orphan all list_objects entries for the bucket (cross-instance).
+        # Per-object meta (head_object/object_acl) for a removed bucket is left
+        # to expire by TTL — it won't be requested once the bucket is gone.
+        await self._bump_list_generation(name)
 
     async def create_bucket(self, name: str) -> dict:
         result = await self._inner.create_bucket(name)
@@ -241,21 +250,21 @@ class CachedStorage:
 
     async def put_object(self, bucket: str, key: str, body: IO[bytes]) -> None:
         await self._inner.put_object(bucket, key, body)
-        await self._invalidate_tracked("list_objects", bucket)
+        await self._bump_list_generation(bucket)
         await self._cache.delete(self._key("head_object", bucket, key))
 
     async def delete_object(
         self, bucket: str, key: str, version_id: str | None = None
     ) -> dict:
         result = await self._inner.delete_object(bucket, key, version_id)
-        await self._invalidate_tracked("list_objects", bucket)
+        await self._bump_list_generation(bucket)
         await self._cache.delete(self._key("head_object", bucket, key))
         await self._cache.delete(self._key("object_acl", bucket, key))
         return result
 
     async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
         result = await self._inner.delete_objects(bucket, keys)
-        await self._invalidate_tracked("list_objects", bucket)
+        await self._bump_list_generation(bucket)
         for k in keys:
             await self._cache.delete(self._key("head_object", bucket, k))
             await self._cache.delete(self._key("object_acl", bucket, k))
@@ -269,7 +278,7 @@ class CachedStorage:
         dst_key: str,
     ) -> dict:
         result = await self._inner.copy_object(src_bucket, src_key, dst_bucket, dst_key)
-        await self._invalidate_tracked("list_objects", dst_bucket)
+        await self._bump_list_generation(dst_bucket)
         await self._cache.delete(self._key("head_object", dst_bucket, dst_key))
         await self._cache.delete(self._key("object_acl", dst_bucket, dst_key))
         return result
@@ -325,7 +334,7 @@ class CachedStorage:
         result = await self._inner.complete_multipart_upload(
             bucket, key, upload_id, parts
         )
-        await self._invalidate_tracked("list_objects", bucket)
+        await self._bump_list_generation(bucket)
         await self._cache.delete(self._key("head_object", bucket, key))
         return result
 

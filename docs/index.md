@@ -62,7 +62,7 @@ hide:
 === "Development (mock)"
 
     ```bash
-    make setup          # Install Deno + uv and all dependencies
+    make setup          # Install Bun + uv and all dependencies
     make run-api-mock   # Start mock backend (no HCP credentials needed)
     make frontend-dev   # Start frontend dev server
     ```
@@ -70,7 +70,7 @@ hide:
 === "Production (real HCP)"
 
     ```bash
-    make setup          # Install Deno + uv and all dependencies
+    make setup          # Install Bun + uv and all dependencies
     make run-api        # Start backend with real HCP credentials
     make frontend-dev   # Start frontend dev server
     ```
@@ -89,7 +89,7 @@ hide:
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | SvelteKit 2, Svelte 5, Tailwind CSS 4, Deno |
+| **Frontend** | SvelteKit 2, Svelte 5, Tailwind CSS 4, Bun |
 | **Backend** | FastAPI, boto3, Python 3.13, uv |
 | **SDK** | rahcp-client, rahcp-cli, rahcp-tracker, rahcp-iiif |
 | **Caching** | Redis |

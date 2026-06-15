@@ -5,14 +5,22 @@ WORKDIR /app
 
 # Install dependencies first (cache-friendly)
 COPY backend/pyproject.toml backend/uv.lock ./
-RUN uv sync --frozen --no-install-project --extra serve --extra lance
+RUN uv sync --frozen --no-install-project --extra serve
 
 # Copy application code
 COPY backend/ .
-RUN uv sync --frozen --extra serve --extra lance
+RUN uv sync --frozen --extra serve
 
 # ── Production stage ─────────────────────────────────────────────────
 FROM python:3.13-slim@sha256:7d8999b140f22939451e00b79c0fd86f13d0bc0577b369f8212fce063101fb2a
+
+# Apply available OS security patches (openssl, glibc/libc6, zlib, etc.) so the
+# image ships with the latest fixed Debian packages rather than whatever the
+# pinned base layer froze. Trivy gates these CVEs in CI (`make scan`).
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN addgroup --system app && adduser --system --ingroup app app
 

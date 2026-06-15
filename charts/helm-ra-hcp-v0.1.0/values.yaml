@@ -61,6 +61,20 @@ env:
   API_TOKEN_EXPIRE_MINUTES: "480"
   CORS_ORIGINS: ""
   ROOT_PATH: ""
+  # MAPI (HCP Management API) toggle. Default "true" preserves HCP behavior.
+  # Set "false" for an S3-only deployment (e.g. MinIO) that has no Management
+  # API: the MAPI/tenant/namespace/query routes are not mounted and the
+  # frontend hides their UI (via GET /api/v1/capabilities).
+  MAPI_ENABLED: "true"
+
+# Example S3-only / MinIO override — uncomment + adjust to run without MAPI.
+# Put S3_SECRET_KEY in `secret:` below, not here.
+#   MAPI_ENABLED: "false"
+#   STORAGE_BACKEND: "minio"
+#   S3_ENDPOINT_URL: "http://minio:9000"
+#   S3_ACCESS_KEY: "minioadmin"
+#   S3_VERIFY_SSL: "false"
+#   S3_ADDRESSING_STYLE: "path"
 
 # Sensitive environment variables (stored in a Secret)
 secret:
@@ -68,10 +82,14 @@ secret:
 
 opentelemetry:
   enabled: false
-  endpoint: "http://otel-collector:4318"
+  # Grafana Alloy OTLP/HTTP receiver (otelcol.receiver.otlp http on :4318).
+  # The app exports OTLP/HTTP, so use the 4318 endpoint (not gRPC 4317).
+  endpoint: "http://grafana-alloy.grafana-alloy.svc.cluster.local:4318"
   protocol: "http/protobuf"
   serviceName: "ra-hcp"
-  resourceAttributes: "deployment.environment=dev"
+  # service.version lets Grafana group by release; deployment.environment.name
+  # is the current semconv key.
+  resourceAttributes: "service.version=v0.2.0,deployment.environment.name=dev"
   headers: ""
 
 frontend:
@@ -150,7 +168,11 @@ securityContext:
   capabilities:
     drop: ["ALL"]
 
-# Frontend container security context (separate from backend because Deno needs write access)
+# Frontend container security context (separate from backend). The Bun server
+# (svelte-adapter-bun) serves the prebuilt bundle and needs no writable build
+# cache, but it still wants a writable root filesystem for runtime scratch, so
+# readOnlyRootFilesystem stays false. A writable /tmp emptyDir is mounted in the
+# deployment for temp files.
 frontendSecurityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: false

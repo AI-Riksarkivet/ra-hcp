@@ -33,14 +33,7 @@ func (m *RaHcp) TypeCheck(ctx context.Context, source *dagger.Directory) (string
 // FrontendCheck runs type-checking on the frontend.
 func (m *RaHcp) FrontendCheck(ctx context.Context, source *dagger.Directory) (string, error) {
 	return m.buildFrontendDev(source).
-		WithExec([]string{"deno", "task", "check"}).
-		Stdout(ctx)
-}
-
-// FrontendLint runs deno lint on the frontend.
-func (m *RaHcp) FrontendLint(ctx context.Context, source *dagger.Directory) (string, error) {
-	return m.buildFrontendDev(source).
-		WithExec([]string{"deno", "lint"}).
+		WithExec([]string{"bun", "run", "check"}).
 		Stdout(ctx)
 }
 
@@ -65,11 +58,6 @@ func (m *RaHcp) Checks(ctx context.Context, source *dagger.Directory) (string, e
 
 	g.Go(func() error {
 		_, err := m.FrontendCheck(ctx, source)
-		return err
-	})
-
-	g.Go(func() error {
-		_, err := m.FrontendLint(ctx, source)
 		return err
 	})
 
