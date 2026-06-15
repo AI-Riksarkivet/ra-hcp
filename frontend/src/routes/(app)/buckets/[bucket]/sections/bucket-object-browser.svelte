@@ -498,7 +498,8 @@
 	async function handleConfirmDelete() {
 		deleting = true;
 		try {
-			await delete_object({ bucket, key: deleteTarget }).updates(objectData);
+			await delete_object({ bucket, key: deleteTarget });
+			objectData.refresh();
 			deleteDialogOpen = false;
 			toast.success('Object deleted');
 		} catch (err) {
@@ -513,7 +514,8 @@
 		if (keys.length === 0) return;
 		deleting = true;
 		try {
-			await bulk_delete_objects({ bucket, keys }).updates(objectData);
+			await bulk_delete_objects({ bucket, keys });
+			objectData.refresh();
 			rowSelection = {};
 			bulkDeleteOpen = false;
 			toast.success(`Deleted ${keys.length} object${keys.length !== 1 ? 's' : ''}`);
@@ -760,7 +762,7 @@
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					bind:value={search}
-					placeholder="Search by name prefix across all objects…"
+					placeholder="Search by name prefix (folders included; flat view searches all objects)…"
 					class="pl-10"
 				/>
 			</div>

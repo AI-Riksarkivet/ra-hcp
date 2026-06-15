@@ -14,6 +14,11 @@ RUN uv sync --frozen --extra serve
 # ── Production stage ─────────────────────────────────────────────────
 FROM python:3.13-slim@sha256:7d8999b140f22939451e00b79c0fd86f13d0bc0577b369f8212fce063101fb2a
 
+LABEL org.opencontainers.image.title="ra-hcp" \
+      org.opencontainers.image.description="HCP S3 + Management API gateway (FastAPI)" \
+      org.opencontainers.image.source="https://github.com/AI-Riksarkivet/ra-hcp" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
 # Apply available OS security patches (openssl, glibc/libc6, zlib, etc.) so the
 # image ships with the latest fixed Debian packages rather than whatever the
 # pinned base layer froze. Trivy gates these CVEs in CI (`make scan`).

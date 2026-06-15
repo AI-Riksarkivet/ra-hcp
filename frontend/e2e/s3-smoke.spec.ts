@@ -32,8 +32,20 @@ test('login, create a bucket, and see it listed', async ({ page }) => {
 	// The dialog closes only on a successful create (errors keep it open).
 	await expect(page.locator('#bucket-name')).toBeHidden({ timeout: 15000 });
 
-	// 3. After a reload the bucket must be listed — proving the write reached S3
-	//    and the read-back round-trips through the whole stack.
-	await page.reload();
+	// 3. The bucket must appear in the list LIVE — no manual refresh. This guards
+	//    the mutation→query refresh wiring (regression: stale list after create).
 	await expect(page.getByText(bucket)).toBeVisible({ timeout: 15000 });
+
+	// 4. Open the bucket and create a folder. It must appear LIVE (object-list
+	//    refresh) AND remain visible when searched (folder-search regression:
+	//    search must not strip folders by forcing flat mode).
+	await page.goto(`/buckets/${bucket}`);
+	await page.getByRole('button', { name: 'New Folder' }).click();
+	const folder = `e2e-folder-${Date.now()}`;
+	await page.locator('#folder-name').fill(folder);
+	await page.getByRole('button', { name: 'Create', exact: true }).click();
+	await expect(page.getByText(folder)).toBeVisible({ timeout: 15000 });
+
+	await page.getByPlaceholder(/Search by name prefix/i).fill(folder);
+	await expect(page.getByText(folder)).toBeVisible({ timeout: 15000 });
 });

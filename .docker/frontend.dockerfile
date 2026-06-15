@@ -19,6 +19,11 @@ RUN bun run build
 # just passes the server entry as its argument.
 FROM oven/bun:1.2-distroless@sha256:e2c3f36733fa2c2c9c80d89b481d9fc7629558cac2533c776f6285ae1ba6b8fa
 
+LABEL org.opencontainers.image.title="ra-hcp-frontend" \
+      org.opencontainers.image.description="HCP admin UI (SvelteKit SSR on Bun, distroless)" \
+      org.opencontainers.image.source="https://github.com/AI-Riksarkivet/ra-hcp" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
 WORKDIR /app
 
 # build/ is fully bundled by svelte-adapter-bun — no node_modules needed at runtime
@@ -28,5 +33,10 @@ COPY --from=builder /app/build /app/build
 ENV PORT=3000
 
 EXPOSE 3000
+
+# Run as a non-root UID (distroless has no shell to create a named user; the
+# build/ files are world-readable and 3000 is unprivileged, so a numeric UID
+# works). Container-security best practice + satisfies non-root scan policies.
+USER 65532:65532
 
 CMD ["./build/index.js"]

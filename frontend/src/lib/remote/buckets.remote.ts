@@ -146,6 +146,10 @@ export const create_bucket = command(
       }
       return { error: message };
     }
+    // Single-flight: refresh the bucket list in the same round-trip so the UI
+    // updates without a manual page refresh (server-driven; get_buckets has no
+    // args so the client instance matches). The framework awaits this for us.
+    get_buckets().refresh();
     return { error: null as string | null };
   },
 );
@@ -167,6 +171,8 @@ export const delete_bucket = command(
         : JSON.stringify(err.detail);
       error(res.status, detail);
     }
+    // Single-flight refresh so the list reflects the deletion immediately.
+    get_buckets().refresh();
   },
 );
 
