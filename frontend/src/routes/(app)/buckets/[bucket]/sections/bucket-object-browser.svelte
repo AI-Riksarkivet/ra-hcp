@@ -28,6 +28,8 @@
 		start_s3_stats,
 		delete_object,
 		bulk_delete_objects,
+		start_delete_task,
+		get_delete_task,
 		bulk_presign,
 		start_zip_download,
 	} from '$lib/remote/buckets.remote.js';
@@ -495,6 +497,19 @@
 		deleteDialogOpen = true;
 	}
 
+	// Folder deletes run as a background task on the server (survives huge
+	// folders + transient endpoint blips); poll until it finishes, return the
+	// real deleted count so the toast is honest.
+	async function deleteFolderViaTask(folderPrefix: string): Promise<number> {
+		const { task_id } = await start_delete_task({ bucket, prefix: folderPrefix });
+		for (let i = 0; i < 5000; i++) {
+			await new Promise((r) => setTimeout(r, 1500));
+			const st = await get_delete_task({ bucket, task_id });
+			if (st.status === 'done') return st.deleted;
+		}
+		throw new Error('Folder delete timed out — re-run to finish');
+	}
+
 	async function handleConfirmDelete() {
 		deleting = true;
 		try {
@@ -503,7 +518,7 @@
 			const isFolder = deleteTarget.endsWith('/');
 			let count = 1;
 			if (isFolder) {
-				count = await bulk_delete_objects({ bucket, prefix: deleteTarget });
+				count = await deleteFolderViaTask(deleteTarget);
 			} else {
 				await delete_object({ bucket, key: deleteTarget });
 			}
@@ -524,8 +539,8 @@
 	async function handleConfirmBulkDelete() {
 		const keys = selectedKeys;
 		if (keys.length === 0) return;
-		// Folders (keys ending in "/") are recursively deleted by prefix; plain
-		// files go in one batched call. Supports select-all across many folders.
+		// Files go in one batched call; each selected folder is deleted as a
+		// background task. Supports select-all across many large folders.
 		const fileKeys = keys.filter((k) => !k.endsWith('/'));
 		const folderPrefixes = keys.filter((k) => k.endsWith('/'));
 		deleting = true;
@@ -535,7 +550,7 @@
 				total += await bulk_delete_objects({ bucket, keys: fileKeys });
 			}
 			for (const prefix of folderPrefixes) {
-				total += await bulk_delete_objects({ bucket, prefix });
+				total += await deleteFolderViaTask(prefix);
 			}
 			objectData.refresh();
 			rowSelection = {};

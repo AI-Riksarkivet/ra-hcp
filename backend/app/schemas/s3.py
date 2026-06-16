@@ -132,6 +132,21 @@ class DeleteObjectsRequest(BaseModel):
     )
 
 
+class DeleteTaskRequest(BaseModel):
+    """Request body to start a background recursive folder delete."""
+
+    prefix: str = Field(description="Folder prefix to recursively delete")
+
+
+class DeleteTaskResponse(BaseModel):
+    """Status of a background folder-delete task."""
+
+    task_id: str = Field(description="Task identifier for polling")
+    status: str = Field(description="processing | done | failed")
+    deleted: int = Field(default=0, description="Objects deleted so far")
+    failed: int = Field(default=0, description="Objects that failed to delete")
+
+
 class BulkDownloadRequest(BaseModel):
     """Request body for bulk downloading objects as ZIP."""
 

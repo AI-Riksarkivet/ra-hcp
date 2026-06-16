@@ -28,6 +28,8 @@ from app.schemas.s3 import (
     CreateFolderResponse,
     DeleteObjectsRequest,
     DeleteObjectsResponse,
+    DeleteTaskRequest,
+    DeleteTaskResponse,
     ListObjectsResponse,
     ObjectInfo,
     ObjectMutationResponse,
@@ -214,6 +216,107 @@ async def delete_objects(
         errors.extend(e)
 
     return {"status": "deleted", "deleted": deleted, "errors": errors}
+
+
+# ── Async folder delete task (must be before {key:path} catch-all) ───
+
+_delete_tasks: dict[str, dict] = {}
+
+
+async def _get_delete_state(task_id: str, cache: KVCache | None) -> dict | None:
+    if cache and cache.enabled:
+        state = await cache.get(f"delete_task:{task_id}")
+        if state:
+            return state
+    return _delete_tasks.get(task_id)
+
+
+async def _set_delete_state(task_id: str, state: dict, cache: KVCache | None) -> None:
+    if cache and cache.enabled:
+        await cache.set(f"delete_task:{task_id}", state, ttl=600)
+    _delete_tasks[task_id] = state
+
+
+async def _run_delete(
+    task_id: str,
+    s3: StorageProtocol,
+    bucket: str,
+    prefix: str,
+    cache: KVCache | None,
+) -> None:
+    """Background runner: recursively delete a prefix, reporting progress.
+
+    Deletes page-by-page (≤1000 keys/call), so it survives huge folders and
+    long runtimes that would exceed an HTTP timeout. Pages already deleted stay
+    deleted, so re-running resumes after a transient endpoint blip.
+    """
+    state: dict = {"status": "processing", "deleted": 0, "failed": 0, "failed_keys": []}
+    await _set_delete_state(task_id, state, cache)
+    try:
+        token: str | None = None
+        while True:
+            result = await s3.list_objects(bucket, prefix, 1000, token)
+            batch = [obj["Key"] for obj in result.get("Contents", [])]
+            if batch:
+                res = await s3.delete_objects(bucket, batch)
+                errs = res.get("Errors", [])
+                state["deleted"] += len(batch) - len(errs)
+                state["failed"] += len(errs)
+                state["failed_keys"].extend(e.get("Key", "") for e in errs[:50])
+                await _set_delete_state(task_id, state, cache)
+            if not result.get("IsTruncated", False):
+                break
+            token = result.get("NextContinuationToken")
+        state["status"] = "done"
+        await _set_delete_state(task_id, state, cache)
+    except Exception as exc:
+        logger.exception("Delete task %s failed", task_id)
+        state["status"] = "failed"
+        state["error"] = str(exc)
+        await _set_delete_state(task_id, state, cache)
+
+
+@router.post("/delete-task", response_model=DeleteTaskResponse, status_code=202)
+async def start_delete_task(
+    bucket: str,
+    body: DeleteTaskRequest,
+    s3: StorageProtocol = Depends(get_s3_service),
+    cache: KVCache | None = Depends(get_cache_service),
+):
+    """Start a background recursive delete of everything under ``prefix``.
+
+    Returns 202 + task_id; poll ``GET /delete-task/{task_id}``. Use this rather
+    than the synchronous ``/delete`` for large folders that would exceed an
+    HTTP timeout.
+    """
+    if not body.prefix:
+        raise HTTPException(400, "Provide a 'prefix' (folder) to delete")
+    task_id = str(uuid.uuid4())
+    asyncio.ensure_future(_run_delete(task_id, s3, bucket, body.prefix, cache))
+    return DeleteTaskResponse(task_id=task_id, status="processing")
+
+
+@router.get("/delete-task/{task_id}", response_model=DeleteTaskResponse)
+async def get_delete_task(
+    bucket: str,
+    task_id: str,
+    cache: KVCache | None = Depends(get_cache_service),
+):
+    """Poll progress of a background folder-delete task."""
+    state = await _get_delete_state(task_id, cache)
+    if not state:
+        raise HTTPException(404, "Task not found")
+    if state["status"] == "failed":
+        raise HTTPException(
+            502,
+            detail={"status": "failed", "error": state.get("error", "delete failed")},
+        )
+    return DeleteTaskResponse(
+        task_id=task_id,
+        status=state["status"],
+        deleted=state.get("deleted", 0),
+        failed=state.get("failed", 0),
+    )
 
 
 # ── ZIP task helpers ──────────────────────────────────────────────────

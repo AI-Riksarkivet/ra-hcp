@@ -215,6 +215,39 @@ export const bulk_delete_objects = command(
   },
 );
 
+export const start_delete_task = command(
+  z.object({ bucket: z.string(), prefix: z.string() }),
+  async ({ bucket, prefix }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/delete-task`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prefix }),
+      },
+    );
+    await throwIfNotOk(res, "Failed to start folder delete");
+    const data = await res.json();
+    return { task_id: data.task_id as string, status: data.status as string };
+  },
+);
+
+export const get_delete_task = command(
+  z.object({ bucket: z.string(), task_id: z.string() }),
+  async ({ bucket, task_id }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/delete-task/${encodeURIComponent(task_id)}`,
+    );
+    await throwIfNotOk(res, "Failed to check delete progress");
+    const data = await res.json();
+    return {
+      status: data.status as string,
+      deleted: (data.deleted ?? 0) as number,
+      failed: (data.failed ?? 0) as number,
+    };
+  },
+);
+
 export const get_s3_credentials = query(async () => {
   try {
     const res = await apiFetch("/api/v1/credentials");

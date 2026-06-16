@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock, MagicMock
 from botocore.exceptions import ClientError
 from httpx import AsyncClient
 
+from app.api.v1.endpoints.s3.objects import _delete_tasks, _run_delete
 from app.services.storage.errors import StorageError
 
 
@@ -236,6 +237,45 @@ async def test_delete_objects_empty_prefix_deletes_nothing(
     assert resp.status_code == 200
     assert resp.json()["deleted"] == 0
     mock_s3_service.delete_objects.assert_not_called()
+
+
+async def test_run_delete_task_deletes_all_under_prefix(mock_s3_service: MagicMock):
+    mock_s3_service.list_objects.side_effect = [
+        {
+            "Contents": [{"Key": "f/a"}, {"Key": "f/b"}],
+            "IsTruncated": True,
+            "NextContinuationToken": "t",
+        },
+        {"Contents": [{"Key": "f/c"}], "IsTruncated": False},
+    ]
+    mock_s3_service.delete_objects.return_value = {"Errors": []}
+
+    await _run_delete("task-del-1", mock_s3_service, "bucket", "f/", None)
+
+    state = _delete_tasks["task-del-1"]
+    assert state["status"] == "done"
+    assert state["deleted"] == 3
+    assert state["failed"] == 0
+
+
+async def test_start_delete_task_returns_202_with_task_id(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/delete-task",
+        headers=auth_headers,
+        json={"prefix": "f/"},
+    )
+    assert resp.status_code == 202
+    assert resp.json()["task_id"]
+
+
+async def test_get_delete_task_unknown_is_404(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(
+        "/api/v1/buckets/my-bucket/objects/delete-task/does-not-exist",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 404
 
 
 async def test_download_objects_bulk(
