@@ -312,6 +312,118 @@ def download_batches(
     run(_run())
 
 
+@app.command("verify")
+def verify(
+    ctx: typer.Context,
+    job_file: str = typer.Argument(..., help="Text file with batch IDs (one per line)"),
+    iiif_url: str = typer.Option(
+        None, "--iiif-url", envvar="IIIF_URL", help="IIIF server base URL"
+    ),
+    referer: str = typer.Option(
+        None,
+        "--referer",
+        envvar="IIIF_REFERER",
+        help="Referer header for servers that require one",
+    ),
+    workers: int = typer.Option(
+        16, "--workers", "-w", help="Concurrent manifest fetches"
+    ),
+    tracker_db: str | None = typer.Option(
+        None,
+        "--tracker-db",
+        envvar="RAHCP_TRACKER_DB",
+        help="Tracker DB: file path or postgresql:// DSN",
+    ),
+    tracker_prefix: str | None = typer.Option(
+        None, "--tracker-prefix", help="Prefix for tracker DB name"
+    ),
+    write_deficient: str | None = typer.Option(
+        None,
+        "--write-deficient",
+        help="Write deficient batch IDs (one per line) to this file for re-running",
+    ),
+) -> None:
+    """Reconcile downloaded images against live manifests; flag short/missing batches.
+
+    Re-fetches each batch's manifest and compares its image count to the tracker.
+    Exits non-zero if any batch is short or missing, so it is usable as a gate.
+    """
+
+    async def _run() -> None:
+        from rahcp_iiif import verify_batches
+
+        job_path = Path(job_file)
+        if not job_path.exists():
+            console.print(f"[red]File not found: {job_path}[/red]")
+            raise SystemExit(1)
+
+        batch_ids = [
+            line.strip()
+            for line in job_path.read_text().splitlines()
+            if line.strip() and not line.startswith("#")
+        ]
+        if not batch_ids:
+            console.print("[red]No batch IDs found in file[/red]")
+            raise SystemExit(1)
+
+        effective_url = iiif_url or ctx.obj.get(
+            "iiif_url", "https://iiifintern-ai.ra.se"
+        )
+        effective_timeout = ctx.obj.get("iiif_timeout", 60.0)
+        effective_referer = referer or ctx.obj.get("iiif_referer")
+        headers = {"Referer": effective_referer} if effective_referer else None
+
+        tracker, db_path = _resolve_iiif_tracker(ctx, tracker_db, prefix=tracker_prefix)
+        done_keys = await asyncio.to_thread(tracker.done_keys)
+        tracker.close()
+
+        console.print(
+            f"Verifying {len(batch_ids)} batches against [bold]{effective_url}[/bold]"
+            f" (tracker: {db_path})"
+        )
+        report = await verify_batches(
+            batch_ids,
+            done_keys,
+            base_url=effective_url,
+            timeout=effective_timeout,
+            headers=headers,
+            workers=workers,
+        )
+
+        console.print(
+            f"\n[bold]Verify:[/bold] {len(report.complete)} complete,"
+            f" [red]{len(report.short)} short[/red],"
+            f" [red]{len(report.missing)} missing[/red],"
+            f" {len(report.fetch_errors)} fetch-error"
+        )
+        for r in sorted(report.deficient, key=lambda x: -x.missing_count):
+            console.print(
+                f"  [red]{r.batch_id}[/red]  expected {r.expected}, got {r.got}"
+                f"  (missing {r.missing_count})"
+            )
+        if report.fetch_errors:
+            errs = ", ".join(r.batch_id for r in report.fetch_errors)
+            console.print(f"  [yellow]fetch-error (recheck):[/yellow] {errs}")
+
+        if report.deficient:
+            console.print(
+                f"\n[bold red]{report.total_missing_images} images missing across"
+                f" {len(report.deficient)} batches.[/bold red]"
+            )
+            if write_deficient:
+                Path(write_deficient).write_text(
+                    "\n".join(r.batch_id for r in report.deficient) + "\n"
+                )
+                console.print(
+                    f"  Deficient batch IDs written to [bold]{write_deficient}[/bold]"
+                )
+            raise SystemExit(1)
+
+        console.print("[green]All batches complete.[/green]")
+
+    run(_run())
+
+
 @app.command("upload")
 def upload(
     ctx: typer.Context,

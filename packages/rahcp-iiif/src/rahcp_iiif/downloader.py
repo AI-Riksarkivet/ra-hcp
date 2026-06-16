@@ -216,6 +216,18 @@ async def download_batch(
         await asyncio.gather(*worker_tasks)
 
     await asyncio.to_thread(tracker.commit)
+
+    accounted = stats.ok + stats.skipped
+    if accounted < len(image_ids):
+        log.error(
+            "batch %s incomplete: %d/%d images present (%d errors) — "
+            "rerun, or use `rahcp iiif verify` to reconcile against the manifest",
+            batch_id,
+            accounted,
+            len(image_ids),
+            stats.errors,
+        )
+
     return stats
 
 
