@@ -158,20 +158,62 @@ async def get_s3_stats(
 # ── Bulk delete (must be before {key:path} catch-all) ────────────────
 
 
+# S3 DeleteObjects accepts at most 1000 keys per call.
+_DELETE_BATCH = 1000
+
+
+async def _delete_prefix(
+    s3: StorageProtocol, bucket: str, prefix: str
+) -> tuple[int, list[dict]]:
+    """Delete every object under ``prefix``, page by page (bounded memory).
+
+    Lists in pages of 1000 and deletes each page immediately, so a folder of
+    any size is removed without loading every key into memory at once.
+    """
+    deleted = 0
+    errors: list[dict] = []
+    token: str | None = None
+    while True:
+        result = await s3.list_objects(bucket, prefix, 1000, token)
+        batch = [obj["Key"] for obj in result.get("Contents", [])]
+        if batch:
+            res = await s3.delete_objects(bucket, batch)
+            errs = res.get("Errors", [])
+            errors.extend(errs)
+            deleted += len(batch) - len(errs)
+        if not result.get("IsTruncated", False):
+            break
+        token = result.get("NextContinuationToken")
+    return deleted, errors
+
+
 @router.post("/delete", response_model=DeleteObjectsResponse)
 async def delete_objects(
     bucket: str,
     body: DeleteObjectsRequest,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    result = await run_storage(
-        s3.delete_objects(bucket, body.keys), f"bucket '{bucket}'"
-    )
-    return {
-        "status": "deleted",
-        "deleted": len(body.keys),
-        "errors": result.get("Errors", []),
-    }
+    """Delete explicit ``keys`` and/or everything under a ``prefix`` (folder)."""
+    deleted = 0
+    errors: list[dict] = []
+
+    # Explicit keys (batched — delete_objects caps at 1000 per call).
+    for start in range(0, len(body.keys), _DELETE_BATCH):
+        chunk = body.keys[start : start + _DELETE_BATCH]
+        res = await run_storage(s3.delete_objects(bucket, chunk), f"bucket '{bucket}'")
+        errs = res.get("Errors", [])
+        errors.extend(errs)
+        deleted += len(chunk) - len(errs)
+
+    # Recursive folder delete: enumerate the prefix and delete every object.
+    if body.prefix is not None:
+        d, e = await run_storage(
+            _delete_prefix(s3, bucket, body.prefix), f"prefix '{body.prefix}'"
+        )
+        deleted += d
+        errors.extend(e)
+
+    return {"status": "deleted", "deleted": deleted, "errors": errors}
 
 
 # ── ZIP task helpers ──────────────────────────────────────────────────

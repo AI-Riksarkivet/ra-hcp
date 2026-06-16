@@ -498,12 +498,24 @@
 	async function handleConfirmDelete() {
 		deleting = true;
 		try {
-			await delete_object({ bucket, key: deleteTarget });
+			// A folder row's key is its prefix (ends with "/"); deleting it must
+			// remove every object underneath, not the (non-existent) prefix key.
+			const isFolder = deleteTarget.endsWith('/');
+			let count = 1;
+			if (isFolder) {
+				count = await bulk_delete_objects({ bucket, prefix: deleteTarget });
+			} else {
+				await delete_object({ bucket, key: deleteTarget });
+			}
 			objectData.refresh();
 			deleteDialogOpen = false;
-			toast.success('Object deleted');
+			toast.success(
+				isFolder
+					? `Deleted folder — ${count} object${count !== 1 ? 's' : ''}`
+					: 'Object deleted'
+			);
 		} catch (err) {
-			toast.error(getErrorMessage(err, 'Failed to delete object'));
+			toast.error(getErrorMessage(err, 'Failed to delete'));
 		} finally {
 			deleting = false;
 		}
@@ -512,13 +524,23 @@
 	async function handleConfirmBulkDelete() {
 		const keys = selectedKeys;
 		if (keys.length === 0) return;
+		// Folders (keys ending in "/") are recursively deleted by prefix; plain
+		// files go in one batched call. Supports select-all across many folders.
+		const fileKeys = keys.filter((k) => !k.endsWith('/'));
+		const folderPrefixes = keys.filter((k) => k.endsWith('/'));
 		deleting = true;
 		try {
-			await bulk_delete_objects({ bucket, keys });
+			let total = 0;
+			if (fileKeys.length > 0) {
+				total += await bulk_delete_objects({ bucket, keys: fileKeys });
+			}
+			for (const prefix of folderPrefixes) {
+				total += await bulk_delete_objects({ bucket, prefix });
+			}
 			objectData.refresh();
 			rowSelection = {};
 			bulkDeleteOpen = false;
-			toast.success(`Deleted ${keys.length} object${keys.length !== 1 ? 's' : ''}`);
+			toast.success(`Deleted ${total} object${total !== 1 ? 's' : ''}`);
 		} catch (err) {
 			toast.error(getErrorMessage(err, 'Failed to delete objects'));
 		} finally {

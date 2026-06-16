@@ -189,6 +189,55 @@ async def test_delete_objects_bulk(
     assert body["errors"] == []
 
 
+async def test_delete_objects_by_prefix_recursively_deletes_folder(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    # Two pages of objects live under the folder prefix.
+    mock_s3_service.list_objects.side_effect = [
+        {
+            "Contents": [{"Key": "fold/a.txt"}, {"Key": "fold/b.txt"}],
+            "IsTruncated": True,
+            "NextContinuationToken": "tok",
+        },
+        {"Contents": [{"Key": "fold/c.txt"}], "IsTruncated": False},
+    ]
+    mock_s3_service.delete_objects.return_value = {"Errors": []}
+
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/delete",
+        headers=auth_headers,
+        json={"prefix": "fold/"},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["deleted"] == 3
+    assert body["errors"] == []
+    # Every object under the prefix was deleted across the paginated batches.
+    deleted = [
+        key
+        for call in mock_s3_service.delete_objects.call_args_list
+        for key in call.args[1]
+    ]
+    assert set(deleted) == {"fold/a.txt", "fold/b.txt", "fold/c.txt"}
+
+
+async def test_delete_objects_empty_prefix_deletes_nothing(
+    client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
+):
+    mock_s3_service.list_objects.return_value = {"Contents": [], "IsTruncated": False}
+
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/delete",
+        headers=auth_headers,
+        json={"prefix": "empty/"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["deleted"] == 0
+    mock_s3_service.delete_objects.assert_not_called()
+
+
 async def test_download_objects_bulk(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):

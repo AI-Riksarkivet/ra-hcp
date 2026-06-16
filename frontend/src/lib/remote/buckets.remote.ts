@@ -190,24 +190,28 @@ export const delete_object = command(
 );
 
 export const bulk_delete_objects = command(
-  z.object({ bucket: z.string(), keys: z.array(z.string()) }),
-  async ({ bucket, keys }) => {
+  z.object({
+    bucket: z.string(),
+    keys: z.array(z.string()).default([]),
+    prefix: z.string().optional(),
+  }),
+  async ({ bucket, keys, prefix }) => {
+    const payload: { keys: string[]; prefix?: string } = { keys };
+    if (prefix != null) payload.prefix = prefix;
     const res = await apiFetch(
       `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/delete`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keys }),
+        body: JSON.stringify(payload),
       },
     );
     await throwIfNotOk(res, "Failed to delete objects");
     const data = await res.json();
     if (data.errors && data.errors.length > 0) {
-      error(
-        500,
-        `Failed to delete ${data.errors.length} of ${keys.length} objects`,
-      );
+      error(500, `Failed to delete ${data.errors.length} object(s)`);
     }
+    return (data.deleted ?? 0) as number;
   },
 );
 

@@ -117,9 +117,19 @@ class CopyObjectRequest(BaseModel):
 
 
 class DeleteObjectsRequest(BaseModel):
-    """Request body for bulk deleting objects."""
+    """Request body for bulk deleting objects.
 
-    keys: List[str] = Field(description="List of object keys to delete")
+    Provide an explicit ``keys`` list, a ``prefix`` (recursively delete every
+    object under a folder), or both.
+    """
+
+    keys: List[str] = Field(
+        default_factory=list, description="Explicit object keys to delete"
+    )
+    prefix: str | None = Field(
+        default=None,
+        description="Recursively delete every object under this prefix (a folder)",
+    )
 
 
 class BulkDownloadRequest(BaseModel):
