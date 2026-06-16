@@ -3370,6 +3370,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#rahcp_cli.iiif.verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;verify
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#rahcp_cli.iiif.upload" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -5610,6 +5621,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;download_batches
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rahcp_cli.iiif.verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;verify
       </span>
     </span>
   </a>
@@ -12506,7 +12528,19 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">216</span>
 <span class="normal">217</span>
 <span class="normal">218</span>
-<span class="normal">219</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">download_batch</span><span class="p">(</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">download_batch</span><span class="p">(</span>
     <span class="n">batch_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">tracker</span><span class="p">:</span> <span class="n">TrackerProtocol</span><span class="p">,</span>
@@ -12665,6 +12699,18 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
         <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="n">worker_tasks</span><span class="p">)</span>
 
     <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">commit</span><span class="p">)</span>
+
+    <span class="n">accounted</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">ok</span> <span class="o">+</span> <span class="n">stats</span><span class="o">.</span><span class="n">skipped</span>
+    <span class="k">if</span> <span class="n">accounted</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">image_ids</span><span class="p">):</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="s2">&quot;batch </span><span class="si">%s</span><span class="s2"> incomplete: </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2"> images present (</span><span class="si">%d</span><span class="s2"> errors) — &quot;</span>
+            <span class="s2">&quot;rerun, or use `rahcp iiif verify` to reconcile against the manifest&quot;</span><span class="p">,</span>
+            <span class="n">batch_id</span><span class="p">,</span>
+            <span class="n">accounted</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">image_ids</span><span class="p">),</span>
+            <span class="n">stats</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span>
+        <span class="p">)</span>
+
     <span class="k">return</span> <span class="n">stats</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -12793,19 +12839,7 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>packages/rahcp-iiif/src/rahcp_iiif/downloader.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">234</span>
 <span class="normal">235</span>
 <span class="normal">236</span>
 <span class="normal">237</span>
@@ -12829,7 +12863,19 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <span class="normal">255</span>
 <span class="normal">256</span>
 <span class="normal">257</span>
-<span class="normal">258</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">download_batches</span><span class="p">(</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">download_batches</span><span class="p">(</span>
     <span class="n">batch_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">tracker</span><span class="p">:</span> <span class="n">TrackerProtocol</span><span class="p">,</span>
@@ -14389,19 +14435,17 @@ terminal ones (e.g. 404) are not. 1 disables retrying.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="rahcp_cli.iiif.upload" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">upload</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Target S3 bucket&#39;</span><span class="p">),</span> <span class="n">batch_ids</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Batch IDs to stream (e.g. C0074667). Omit when using --job-file.&#39;</span><span class="p">),</span> <span class="n">prefix</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;--prefix&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Key prefix prepended to &#39;&lt;batch&gt;/&lt;image&gt;&#39;&quot;</span><span class="p">),</span> <span class="n">job_file</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--job-file&#39;</span><span class="p">,</span> <span class="s1">&#39;-f&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Text file with batch IDs (one per line)&#39;</span><span class="p">),</span> <span class="n">workers</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;--workers&#39;</span><span class="p">,</span> <span class="s1">&#39;-w&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Concurrent download+upload workers&#39;</span><span class="p">),</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;--skip-existing/--overwrite&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Skip images already present in the bucket (HEAD check before download)&#39;</span><span class="p">),</span> <span class="n">validate</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;--validate&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Validate each image&#39;s bytes before upload&quot;</span><span class="p">),</span> <span class="n">verify</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;--verify&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Verify each upload by checking remote size after&#39;</span><span class="p">),</span> <span class="n">query_params</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--query-params&#39;</span><span class="p">,</span> <span class="s1">&#39;-q&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;IIIF params (e.g. &#39;full/,1200/0/default.jpg&#39;)&quot;</span><span class="p">),</span> <span class="n">iiif_url</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--iiif-url&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;IIIF_URL&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;IIIF server base URL&#39;</span><span class="p">),</span> <span class="n">referer</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--referer&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;IIIF_REFERER&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Referer header for servers that require one (e.g. https://sok.riksarkivet.se/)&#39;</span><span class="p">),</span> <span class="n">max_images</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--max-images&#39;</span><span class="p">,</span> <span class="s1">&#39;-n&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Limit images per batch&#39;</span><span class="p">),</span> <span class="n">tracker_db</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--tracker-db&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;RAHCP_TRACKER_DB&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Tracker DB: file path or postgresql:// DSN&#39;</span><span class="p">),</span> <span class="n">tracker_prefix</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--tracker-prefix&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Prefix for tracker DB name (e.g. &#39;familysearch&#39; → familysearch.iiif-download.db)&quot;</span><span class="p">))</span></code>
+<h3 id="rahcp_cli.iiif.verify" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">verify</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">job_file</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Text file with batch IDs (one per line)&#39;</span><span class="p">),</span> <span class="n">iiif_url</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--iiif-url&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;IIIF_URL&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;IIIF server base URL&#39;</span><span class="p">),</span> <span class="n">referer</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--referer&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;IIIF_REFERER&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Referer header for servers that require one&#39;</span><span class="p">),</span> <span class="n">workers</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="s1">&#39;--workers&#39;</span><span class="p">,</span> <span class="s1">&#39;-w&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Concurrent manifest fetches&#39;</span><span class="p">),</span> <span class="n">tracker_db</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--tracker-db&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;RAHCP_TRACKER_DB&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Tracker DB: file path or postgresql:// DSN&#39;</span><span class="p">),</span> <span class="n">tracker_prefix</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--tracker-prefix&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Prefix for tracker DB name&#39;</span><span class="p">),</span> <span class="n">write_deficient</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--write-deficient&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Write deficient batch IDs (one per line) to this file for re-running&#39;</span><span class="p">))</span></code>
 
-<a href="#rahcp_cli.iiif.upload" class="headerlink" title="Permanent link">&para;</a></h3>
+<a href="#rahcp_cli.iiif.verify" class="headerlink" title="Permanent link">&para;</a></h3>
 
 
     <div class="doc doc-contents ">
 
-        <p>Stream IIIF images straight to S3 — download and upload in one pass (no local disk).</p>
-<p>Bytes are fetched on the fly and pushed through the shared bulk transfer
-engine, so this skips images already in the bucket (--skip-existing), can
-validate bytes before upload (--validate) and verify size after (--verify) —
-the same guarantees as <code>s3 upload-all</code>, without staging anything to disk.</p>
+        <p>Reconcile downloaded images against live manifests; flag short/missing batches.</p>
+<p>Re-fetches each batch's manifest and compares its image count to the tracker.
+Exits non-zero if any batch is short or missing, so it is usable as a gate.</p>
 
 
             <details class="mkdocstrings-source">
@@ -14515,10 +14559,143 @@ the same guarantees as <code>s3 upload-all</code>, without staging anything to d
 <span class="normal">421</span>
 <span class="normal">422</span>
 <span class="normal">423</span>
-<span class="normal">424</span>
-<span class="normal">425</span>
-<span class="normal">426</span>
-<span class="normal">427</span>
+<span class="normal">424</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;verify&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">verify</span><span class="p">(</span>
+    <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+    <span class="n">job_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Text file with batch IDs (one per line)&quot;</span><span class="p">),</span>
+    <span class="n">iiif_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;--iiif-url&quot;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s2">&quot;IIIF_URL&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;IIIF server base URL&quot;</span>
+    <span class="p">),</span>
+    <span class="n">referer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;--referer&quot;</span><span class="p">,</span>
+        <span class="n">envvar</span><span class="o">=</span><span class="s2">&quot;IIIF_REFERER&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Referer header for servers that require one&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="mi">16</span><span class="p">,</span> <span class="s2">&quot;--workers&quot;</span><span class="p">,</span> <span class="s2">&quot;-w&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Concurrent manifest fetches&quot;</span>
+    <span class="p">),</span>
+    <span class="n">tracker_db</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;--tracker-db&quot;</span><span class="p">,</span>
+        <span class="n">envvar</span><span class="o">=</span><span class="s2">&quot;RAHCP_TRACKER_DB&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Tracker DB: file path or postgresql:// DSN&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">tracker_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;--tracker-prefix&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Prefix for tracker DB name&quot;</span>
+    <span class="p">),</span>
+    <span class="n">write_deficient</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span>
+        <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;--write-deficient&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Write deficient batch IDs (one per line) to this file for re-running&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reconcile downloaded images against live manifests; flag short/missing batches.</span>
+
+<span class="sd">    Re-fetches each batch&#39;s manifest and compares its image count to the tracker.</span>
+<span class="sd">    Exits non-zero if any batch is short or missing, so it is usable as a gate.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_run</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">rahcp_iiif</span><span class="w"> </span><span class="kn">import</span> <span class="n">verify_batches</span>
+
+        <span class="n">job_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">job_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">job_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[red]File not found: </span><span class="si">{</span><span class="n">job_path</span><span class="si">}</span><span class="s2">[/red]&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">batch_ids</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">job_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">batch_ids</span><span class="p">:</span>
+            <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="s2">&quot;[red]No batch IDs found in file[/red]&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">effective_url</span> <span class="o">=</span> <span class="n">iiif_url</span> <span class="ow">or</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;iiif_url&quot;</span><span class="p">,</span> <span class="s2">&quot;https://iiifintern-ai.ra.se&quot;</span>
+        <span class="p">)</span>
+        <span class="n">effective_timeout</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;iiif_timeout&quot;</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">)</span>
+        <span class="n">effective_referer</span> <span class="o">=</span> <span class="n">referer</span> <span class="ow">or</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;iiif_referer&quot;</span><span class="p">)</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Referer&quot;</span><span class="p">:</span> <span class="n">effective_referer</span><span class="p">}</span> <span class="k">if</span> <span class="n">effective_referer</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="n">tracker</span><span class="p">,</span> <span class="n">db_path</span> <span class="o">=</span> <span class="n">_resolve_iiif_tracker</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">tracker_db</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">tracker_prefix</span><span class="p">)</span>
+        <span class="n">done_keys</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">tracker</span><span class="o">.</span><span class="n">done_keys</span><span class="p">)</span>
+        <span class="n">tracker</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Verifying </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">batch_ids</span><span class="p">)</span><span class="si">}</span><span class="s2"> batches against [bold]</span><span class="si">{</span><span class="n">effective_url</span><span class="si">}</span><span class="s2">[/bold]&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; (tracker: </span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="p">)</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="k">await</span> <span class="n">verify_batches</span><span class="p">(</span>
+            <span class="n">batch_ids</span><span class="p">,</span>
+            <span class="n">done_keys</span><span class="p">,</span>
+            <span class="n">base_url</span><span class="o">=</span><span class="n">effective_url</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">effective_timeout</span><span class="p">,</span>
+            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">,</span>
+            <span class="n">workers</span><span class="o">=</span><span class="n">workers</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[bold]Verify:[/bold] </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">complete</span><span class="p">)</span><span class="si">}</span><span class="s2"> complete,&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; [red]</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">short</span><span class="p">)</span><span class="si">}</span><span class="s2"> short[/red],&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; [red]</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> missing[/red],&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot; </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">fetch_errors</span><span class="p">)</span><span class="si">}</span><span class="s2"> fetch-error&quot;</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">deficient</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span><span class="o">.</span><span class="n">missing_count</span><span class="p">):</span>
+            <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;  [red]</span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">batch_id</span><span class="si">}</span><span class="s2">[/red]  expected </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">expected</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">got</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;  (missing </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">missing_count</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">report</span><span class="o">.</span><span class="n">fetch_errors</span><span class="p">:</span>
+            <span class="n">errs</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">batch_id</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">fetch_errors</span><span class="p">)</span>
+            <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  [yellow]fetch-error (recheck):[/yellow] </span><span class="si">{</span><span class="n">errs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">report</span><span class="o">.</span><span class="n">deficient</span><span class="p">:</span>
+            <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[bold red]</span><span class="si">{</span><span class="n">report</span><span class="o">.</span><span class="n">total_missing_images</span><span class="si">}</span><span class="s2"> images missing across&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot; </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">deficient</span><span class="p">)</span><span class="si">}</span><span class="s2"> batches.[/bold red]&quot;</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">write_deficient</span><span class="p">:</span>
+                <span class="n">Path</span><span class="p">(</span><span class="n">write_deficient</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">batch_id</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">deficient</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;  Deficient batch IDs written to [bold]</span><span class="si">{</span><span class="n">write_deficient</span><span class="si">}</span><span class="s2">[/bold]&quot;</span>
+                <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="s2">&quot;[green]All batches complete.[/green]&quot;</span><span class="p">)</span>
+
+    <span class="n">run</span><span class="p">(</span><span class="n">_run</span><span class="p">())</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="rahcp_cli.iiif.upload" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <code class="highlight language-python"><span class="n">upload</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Target S3 bucket&#39;</span><span class="p">),</span> <span class="n">batch_ids</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Batch IDs to stream (e.g. C0074667). Omit when using --job-file.&#39;</span><span class="p">),</span> <span class="n">prefix</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;--prefix&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Key prefix prepended to &#39;&lt;batch&gt;/&lt;image&gt;&#39;&quot;</span><span class="p">),</span> <span class="n">job_file</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--job-file&#39;</span><span class="p">,</span> <span class="s1">&#39;-f&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Text file with batch IDs (one per line)&#39;</span><span class="p">),</span> <span class="n">workers</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;--workers&#39;</span><span class="p">,</span> <span class="s1">&#39;-w&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Concurrent download+upload workers&#39;</span><span class="p">),</span> <span class="n">skip_existing</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;--skip-existing/--overwrite&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Skip images already present in the bucket (HEAD check before download)&#39;</span><span class="p">),</span> <span class="n">validate</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;--validate&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Validate each image&#39;s bytes before upload&quot;</span><span class="p">),</span> <span class="n">verify</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;--verify&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Verify each upload by checking remote size after&#39;</span><span class="p">),</span> <span class="n">query_params</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--query-params&#39;</span><span class="p">,</span> <span class="s1">&#39;-q&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;IIIF params (e.g. &#39;full/,1200/0/default.jpg&#39;)&quot;</span><span class="p">),</span> <span class="n">iiif_url</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--iiif-url&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;IIIF_URL&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;IIIF server base URL&#39;</span><span class="p">),</span> <span class="n">referer</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--referer&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;IIIF_REFERER&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Referer header for servers that require one (e.g. https://sok.riksarkivet.se/)&#39;</span><span class="p">),</span> <span class="n">max_images</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--max-images&#39;</span><span class="p">,</span> <span class="s1">&#39;-n&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Limit images per batch&#39;</span><span class="p">),</span> <span class="n">tracker_db</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--tracker-db&#39;</span><span class="p">,</span> <span class="n">envvar</span><span class="o">=</span><span class="s1">&#39;RAHCP_TRACKER_DB&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Tracker DB: file path or postgresql:// DSN&#39;</span><span class="p">),</span> <span class="n">tracker_prefix</span><span class="o">=</span><span class="n">typer</span><span class="o">.</span><span class="n">Option</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;--tracker-prefix&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Prefix for tracker DB name (e.g. &#39;familysearch&#39; → familysearch.iiif-download.db)&quot;</span><span class="p">))</span></code>
+
+<a href="#rahcp_cli.iiif.upload" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Stream IIIF images straight to S3 — download and upload in one pass (no local disk).</p>
+<p>Bytes are fetched on the fly and pushed through the shared bulk transfer
+engine, so this skips images already in the bucket (--skip-existing), can
+validate bytes before upload (--validate) and verify size after (--verify) —
+the same guarantees as <code>s3 upload-all</code>, without staging anything to disk.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>packages/rahcp-cli/src/rahcp_cli/iiif.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">427</span>
 <span class="normal">428</span>
 <span class="normal">429</span>
 <span class="normal">430</span>
@@ -14611,7 +14788,119 @@ the same guarantees as <code>s3 upload-all</code>, without staging anything to d
 <span class="normal">517</span>
 <span class="normal">518</span>
 <span class="normal">519</span>
-<span class="normal">520</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;upload&quot;</span><span class="p">)</span>
+<span class="normal">520</span>
+<span class="normal">521</span>
+<span class="normal">522</span>
+<span class="normal">523</span>
+<span class="normal">524</span>
+<span class="normal">525</span>
+<span class="normal">526</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span>
+<span class="normal">540</span>
+<span class="normal">541</span>
+<span class="normal">542</span>
+<span class="normal">543</span>
+<span class="normal">544</span>
+<span class="normal">545</span>
+<span class="normal">546</span>
+<span class="normal">547</span>
+<span class="normal">548</span>
+<span class="normal">549</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span>
+<span class="normal">624</span>
+<span class="normal">625</span>
+<span class="normal">626</span>
+<span class="normal">627</span>
+<span class="normal">628</span>
+<span class="normal">629</span>
+<span class="normal">630</span>
+<span class="normal">631</span>
+<span class="normal">632</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;upload&quot;</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">upload</span><span class="p">(</span>
     <span class="n">ctx</span><span class="p">:</span> <span class="n">typer</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">typer</span><span class="o">.</span><span class="n">Argument</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Target S3 bucket&quot;</span><span class="p">),</span>
