@@ -119,8 +119,13 @@ async def test_copy_object(service: HcpStorage, mock_client: AsyncMock):
 
 
 async def test_delete_objects(service: HcpStorage, mock_client: AsyncMock):
+    mock_client.delete_objects.return_value = {}
     result = await service.delete_objects("bucket", ["f1.txt", "f2.txt"])
-    assert mock_client.delete_object.call_count == 2
+    # Native batch (one DeleteObjects call), not one delete_object per key.
+    mock_client.delete_objects.assert_called_once_with(
+        Bucket="bucket",
+        Delete={"Objects": [{"Key": "f1.txt"}, {"Key": "f2.txt"}], "Quiet": True},
+    )
     assert result == {}
 
 

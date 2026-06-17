@@ -119,6 +119,11 @@ class CacheSettings(BaseSettings):
     cache_stats_ttl: int = 60  # 1 min — statistics, chargeback
     cache_config_ttl: int = 600  # 10 min — consoleSecurity, permissions, etc.
     cache_s3_list_ttl: int = 120  # 2 min — bucket/object listings
+    # After a delete, list_objects for that bucket is served fresh but NOT
+    # cached for this many seconds, so an eventually-consistent backend that
+    # still returns a just-deleted folder can't poison the cache for the full
+    # list TTL. See CachedStorage._arm_list_nocache.
+    cache_s3_list_nocache_window: int = 15  # seconds
     cache_s3_meta_ttl: int = 300  # 5 min — head_bucket, head_object, ACLs
     cache_query_object_ttl: int = 60  # 1 min — metadata query object results
     cache_query_operation_ttl: int = 120  # 2 min — metadata query operation results

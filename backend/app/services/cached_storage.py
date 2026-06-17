@@ -61,6 +61,38 @@ class CachedStorage:
         """Invalidate all cached ``list_objects`` results for ``bucket``."""
         await self._cache.set(self._key("listgen", bucket), uuid4().hex)
 
+    async def _arm_list_nocache(self, bucket: str) -> None:
+        """Open a short window during which ``list_objects`` for ``bucket`` is
+        served fresh but NOT written to the cache.
+
+        Bumping the generation alone is not enough after a delete: the backend is
+        eventually consistent, so a fresh re-list right after the delete can still
+        return the just-deleted folder as a ``CommonPrefix``. That result is
+        non-empty, so it would be cached under the new generation for the full
+        list TTL and the deleted folder would keep showing for minutes. While this
+        window is armed, those post-delete listings bypass the cache so the view
+        self-heals as soon as the backend converges.
+        """
+        await self._cache.set(
+            self._key("nocache_list", bucket),
+            "1",
+            ttl=self._cs.cache_s3_list_nocache_window,
+        )
+
+    async def _list_nocache_active(self, bucket: str) -> bool:
+        return bool(await self._cache.get(self._key("nocache_list", bucket)))
+
+    async def invalidate_listing(self, bucket: str) -> None:
+        """Orphan cached listings for ``bucket`` and open a no-cache window.
+
+        Public so a long background delete can call it once at completion — the
+        per-batch invalidation inside ``delete_objects`` covers the delete itself,
+        but this guarantees the parent listing the UI re-fetches right after the
+        task finishes is invalidated and not re-cached stale.
+        """
+        await self._bump_list_generation(bucket)
+        await self._arm_list_nocache(bucket)
+
     # ── Lifecycle (delegate to inner) ──────────────────────────────────
 
     async def connect(self) -> None:
@@ -135,8 +167,13 @@ class CachedStorage:
             # an empty page even when objects exist; caching it would make the
             # folder appear empty for the whole TTL. Only cache non-empty pages
             # so a transient empty read self-heals on the next request.
+            #
+            # Also skip caching during the post-delete no-cache window: an
+            # eventually-consistent backend can still return a just-deleted folder
+            # here, and caching that would keep it visible for the full TTL.
             if result.get("Contents") or result.get("CommonPrefixes"):
-                await self._cache.set(key, result, ttl=self._cs.cache_s3_list_ttl)
+                if not await self._list_nocache_active(bucket):
+                    await self._cache.set(key, result, ttl=self._cs.cache_s3_list_ttl)
             return result
 
     async def head_object(self, bucket: str, key: str) -> dict:
@@ -263,6 +300,7 @@ class CachedStorage:
     ) -> dict:
         result = await self._inner.delete_object(bucket, key, version_id)
         await self._bump_list_generation(bucket)
+        await self._arm_list_nocache(bucket)
         await self._cache.delete(self._key("head_object", bucket, key))
         await self._cache.delete(self._key("object_acl", bucket, key))
         return result
@@ -270,6 +308,7 @@ class CachedStorage:
     async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
         result = await self._inner.delete_objects(bucket, keys)
         await self._bump_list_generation(bucket)
+        await self._arm_list_nocache(bucket)
         for k in keys:
             await self._cache.delete(self._key("head_object", bucket, k))
             await self._cache.delete(self._key("object_acl", bucket, k))

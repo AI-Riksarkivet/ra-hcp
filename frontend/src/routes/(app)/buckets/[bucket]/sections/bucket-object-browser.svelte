@@ -179,8 +179,8 @@
 	$effect(() => {
 		if (selectAllOnLoad && filteredObjects.length > 0) {
 			const allSelected: Record<string, boolean> = {};
-			for (let i = 0; i < filteredObjects.length; i++) {
-				allSelected[String(i)] = true;
+			for (const obj of filteredObjects) {
+				allSelected[obj.key] = true;
 			}
 			rowSelection = allSelected;
 			selectAllOnLoad = false;
@@ -368,14 +368,12 @@
 	// Row selection via TanStack
 	let rowSelection = $state<Record<string, boolean>>({});
 
+	// rowSelection is keyed by object key (see getRowId), so the selected keys
+	// are just the truthy entries — stable across pagination and sorting.
 	let selectedKeys = $derived(
 		Object.entries(rowSelection)
 			.filter(([, v]) => v)
-			.map(([idx]) => {
-				const row = objTable.getCoreRowModel().rows[Number(idx)];
-				return row?.original.key;
-			})
-			.filter((k): k is string => !!k)
+			.map(([key]) => key)
 	);
 
 	let objColumns = $derived.by((): ColumnDef<S3Object>[] => [
@@ -481,6 +479,10 @@
 			getSortedRowModel: getSortedRowModel(),
 			getPaginationRowModel: getPaginationRowModel(),
 			enableRowSelection: true,
+			// Key selection by the object key, not the (pagination-relative) row
+			// index — otherwise selections are lost/mis-mapped across pages and
+			// sorting, so you can't reliably select multiple folders.
+			getRowId: (row) => row.key,
 		})
 	);
 

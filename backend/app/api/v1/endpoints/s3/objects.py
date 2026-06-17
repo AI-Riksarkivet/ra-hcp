@@ -322,6 +322,14 @@ async def _run_delete(
                     break
                 token = result.get("NextContinuationToken")
 
+        # Re-invalidate listings at completion (and open the no-cache window) so
+        # the parent listing the UI re-fetches right after "done" isn't served —
+        # or cached — stale by an eventually-consistent backend. No-op when the
+        # storage isn't the caching wrapper (e.g. cache disabled).
+        invalidate = getattr(s3, "invalidate_listing", None)
+        if invalidate is not None:
+            await invalidate(bucket)
+
         state["status"] = "done"
         await _set_delete_state(task_id, state, cache)
         _canceled_tasks.discard(task_id)

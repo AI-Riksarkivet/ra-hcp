@@ -72,6 +72,12 @@ function poll() {
 				canceling = false;
 				taskId = null;
 				refreshCb?.();
+				// The backend is eventually consistent right after a delete, so the
+				// first re-list can still show a just-deleted folder. Re-list once
+				// more shortly after — the backend serves listings uncached during
+				// its post-delete window, so this picks up the converged state
+				// without the user having to refresh.
+				setTimeout(() => refreshCb?.(), 2500);
 				if (st.status === 'canceled') {
 					toast.info(`Delete canceled — ${st.deleted.toLocaleString()} objects removed`);
 				} else if (st.failed > 0) {

@@ -259,6 +259,25 @@ async def test_run_delete_task_counts_then_deletes_all_under_prefix(
     assert state["failed"] == 0
 
 
+async def test_run_delete_invalidates_listing_on_completion():
+    """When the storage is the caching wrapper, the task re-invalidates listings
+    at completion so the UI's post-delete re-list can't show the deleted folder.
+
+    A plain AsyncMock (no spec) has ``invalidate_listing`` like CachedStorage;
+    the spec'd mock_s3_service in the test above lacks it, exercising the no-op
+    path for raw (non-cached) storage.
+    """
+    s3 = AsyncMock()
+    page = {"Contents": [{"Key": "f/a"}], "IsTruncated": False}
+    s3.list_objects.side_effect = [page, page]
+    s3.delete_objects.return_value = {"Errors": []}
+
+    await _run_delete("task-inv-1", s3, "bucket", ["f/"], [], None)
+
+    assert _delete_tasks["task-inv-1"]["status"] == "done"
+    s3.invalidate_listing.assert_awaited_once_with("bucket")
+
+
 async def test_start_delete_task_returns_202_with_task_id(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):

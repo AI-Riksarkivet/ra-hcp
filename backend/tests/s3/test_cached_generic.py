@@ -85,6 +85,11 @@ async def test_head_bucket_cache_miss(
 async def test_list_objects_cache_miss(
     cached: CachedStorage, mock_inner: AsyncMock, mock_cache: AsyncMock
 ):
+    # Must be non-empty: empty listings are deliberately never cached.
+    mock_inner.list_objects.return_value = {
+        "Contents": [{"Key": "logs/a.txt"}],
+        "IsTruncated": False,
+    }
     await cached.list_objects("bucket", prefix="logs/")
     mock_inner.list_objects.assert_called_once()
     # Caches the list result under a generation-scoped key (a separate set for

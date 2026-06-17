@@ -107,3 +107,49 @@ async def test_empty_listing_is_not_cached():
 
     # Empty listings are never cached → the second call re-fetches (self-heals).
     assert inner.list_objects.call_count == 2
+
+
+async def test_no_cache_window_after_delete_serves_fresh():
+    """After a delete, a (possibly stale, eventually-consistent) non-empty
+    listing must NOT be cached, so a just-deleted folder can't keep showing for
+    the full list TTL. Regression for 'deleted folders still appear'."""
+    cache = _shared_cache()
+    inner = _make_inner()  # list_objects returns a non-empty page
+    cs = CachedStorage(inner, cache, CacheSettings())
+
+    await cs.delete_objects("b", ["k.jpg"])  # opens the no-cache window
+
+    await cs.list_objects("b")
+    await cs.list_objects("b")
+
+    # Non-empty, but within the post-delete window → never cached → both re-fetch.
+    assert inner.list_objects.call_count == 2
+
+
+async def test_invalidate_listing_orphans_and_opens_window():
+    """invalidate_listing (called at delete-task completion) must both orphan
+    cached listings and open the no-cache window."""
+    cache = _shared_cache()
+    inner = _make_inner()
+    cs = CachedStorage(inner, cache, CacheSettings())
+
+    await cs.list_objects("b")
+    assert inner.list_objects.call_count == 1  # cached
+
+    await cs.invalidate_listing("b")
+
+    await cs.list_objects("b")  # orphaned → miss
+    await cs.list_objects("b")  # window open → still not cached → miss
+    assert inner.list_objects.call_count == 3
+
+
+async def test_listing_caches_normally_without_recent_delete():
+    """The no-cache window must not disable caching in steady state."""
+    cache = _shared_cache()
+    inner = _make_inner()
+    cs = CachedStorage(inner, cache, CacheSettings())
+
+    await cs.list_objects("c")
+    await cs.list_objects("c")
+
+    assert inner.list_objects.call_count == 1  # second served from cache

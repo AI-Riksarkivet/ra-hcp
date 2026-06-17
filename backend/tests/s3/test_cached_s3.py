@@ -275,7 +275,7 @@ async def test_delete_objects_invalidates(
     s3: CachedStorage, mock_boto_client: AsyncMock, cache: KVCache
 ):
     mock_boto_client.head_object.return_value = {"ContentLength": 10}
-    mock_boto_client.delete_object.return_value = {}
+    mock_boto_client.delete_objects.return_value = {}  # native batch delete
 
     await s3.head_object("bucket", "a.txt")
     await s3.head_object("bucket", "b.txt")
