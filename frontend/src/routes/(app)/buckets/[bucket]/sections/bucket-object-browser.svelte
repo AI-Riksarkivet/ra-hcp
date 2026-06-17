@@ -1085,17 +1085,22 @@
 
 {#if deleteRunning}
 	<div class="fixed bottom-4 right-4 z-50 w-80 rounded-lg border bg-background p-4 shadow-lg">
-		<div class="mb-2 flex items-center justify-between text-sm">
-			<span class="font-medium">Deleting…</span>
+		<div class="mb-1 flex items-center justify-between text-sm">
+			<span class="font-medium">Deleting objects…</span>
 			<span class="text-muted-foreground">
 				{deleteProgress.deleted.toLocaleString()}{deleteProgress.total
 					? ` / ${deleteProgress.total.toLocaleString()}`
-					: ''}
+					: ''} objects
 			</span>
 		</div>
 		<Progress value={deleteProgress.deleted} max={deleteProgress.total || 1} />
+		<p class="text-muted-foreground mt-1 text-xs">
+			{deleteProgress.total
+				? `${Math.round((100 * deleteProgress.deleted) / deleteProgress.total)}% — runs in the background`
+				: 'Counting objects… runs in the background'}
+		</p>
 		{#if deleteProgress.failed > 0}
-			<p class="mt-1 text-xs text-red-600">{deleteProgress.failed} failed</p>
+			<p class="mt-1 text-xs text-red-600">{deleteProgress.failed.toLocaleString()} failed</p>
 		{/if}
 	</div>
 {/if}

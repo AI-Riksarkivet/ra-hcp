@@ -9,6 +9,7 @@ HCP-specific quirks:
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import AsyncExitStack
 
 import aioboto3
@@ -21,6 +22,10 @@ from app.services.storage.adapters._boto3_ops import Boto3Forwarder, Boto3Operat
 from app.services.storage.errors import from_client_error, from_transport_error
 
 tracer = trace.get_tracer(__name__)
+
+# HCP has no working batch multi-delete, so we delete per object — fan out this
+# many concurrent deletes so large folders don't take hours of serial requests.
+_DELETE_CONCURRENCY = 32
 
 
 class HcpStorage(Boto3Forwarder):
@@ -111,14 +116,18 @@ class HcpStorage(Boto3Forwarder):
                 raise from_transport_error(exc) from exc
 
     async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
-        """Delete multiple objects individually (HCP requires Content-MD5
-        for the multi-delete API but boto3 sends CRC32 instead)."""
-        with tracer.start_as_current_span(
-            "s3.delete_objects",
-            attributes={"s3.bucket": bucket, "s3.key_count": len(keys)},
-        ):
-            errors: list[dict] = []
-            for key in keys:
+        """Delete objects individually but **concurrently**.
+
+        HCP's batch multi-delete API needs a Content-MD5 boto3 won't send, so we
+        fall back to per-object deletes. Fanning them out with bounded
+        concurrency avoids the hours of sequential round-trips a large folder
+        would otherwise take.
+        """
+        sem = asyncio.Semaphore(_DELETE_CONCURRENCY)
+        errors: list[dict] = []
+
+        async def _delete_one(key: str) -> None:
+            async with sem:
                 try:
                     await self._ops._client.delete_object(Bucket=bucket, Key=key)
                 except ClientError as exc:
@@ -129,4 +138,10 @@ class HcpStorage(Boto3Forwarder):
                             "Message": exc.response["Error"].get("Message", ""),
                         }
                     )
-            return {"Errors": errors} if errors else {}
+
+        with tracer.start_as_current_span(
+            "s3.delete_objects",
+            attributes={"s3.bucket": bucket, "s3.key_count": len(keys)},
+        ):
+            await asyncio.gather(*(_delete_one(k) for k in keys))
+        return {"Errors": errors} if errors else {}
