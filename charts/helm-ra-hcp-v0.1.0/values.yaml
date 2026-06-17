@@ -81,7 +81,7 @@ secret:
   API_SECRET_KEY: "change-me-in-production"
 
 opentelemetry:
-  enabled: false
+  enabled: true
   # Grafana Alloy OTLP/HTTP receiver (otelcol.receiver.otlp http on :4318).
   # The app exports OTLP/HTTP, so use the 4318 endpoint (not gRPC 4317).
   endpoint: "http://grafana-alloy.grafana-alloy.svc.cluster.local:4318"
