@@ -184,8 +184,8 @@ class IpSettings(BaseModel):
             return None
         if isinstance(v, dict):
             # HCP wraps as {"ipAddress": ["10.0.0.1", ...]}
-            addrs: list[str] = v.get("ipAddress") or []  # type: ignore[assignment]
-            return addrs
+            raw = v.get("ipAddress")
+            return [str(x) for x in raw] if isinstance(raw, list) else []
         if isinstance(v, IpAddressList):
             return v.ipAddress or []
         if isinstance(v, list):

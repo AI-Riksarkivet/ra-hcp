@@ -20,6 +20,7 @@ from app.schemas.s3 import (
     AclPolicy,
     AclResponse,
     BulkDownloadRequest,
+    BulkPresignItem,
     BulkPresignRequest,
     BulkPresignResponse,
     CopyObjectRequest,
@@ -609,13 +610,13 @@ async def bulk_presign(
     body: BulkPresignRequest,
     s3: StorageProtocol = Depends(get_s3_service),
 ):
-    urls = []
+    urls: list[BulkPresignItem] = []
     for key in body.keys:
         try:
             url = await s3.generate_presigned_url(
                 bucket, key, body.expires_in, body.method
             )
-            urls.append({"key": key, "url": url})
+            urls.append(BulkPresignItem(key=key, url=url))
         except Exception:
             continue
     return BulkPresignResponse(urls=urls, expires_in=body.expires_in)
