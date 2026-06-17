@@ -129,6 +129,22 @@ async def test_delete_objects(service: HcpStorage, mock_client: AsyncMock):
     assert result == {}
 
 
+async def test_delete_object_versions(service: HcpStorage, mock_client: AsyncMock):
+    mock_client.delete_objects.return_value = {}
+    result = await service.delete_object_versions(
+        "bucket", [("a.txt", "v1"), ("b.txt", None)]
+    )
+    # One batched DeleteObjects with per-key VersionId; omitted when version is None.
+    mock_client.delete_objects.assert_called_once_with(
+        Bucket="bucket",
+        Delete={
+            "Objects": [{"Key": "a.txt", "VersionId": "v1"}, {"Key": "b.txt"}],
+            "Quiet": True,
+        },
+    )
+    assert result == {}
+
+
 # ── Versioning ──────────────────────────────────────────────────────
 
 

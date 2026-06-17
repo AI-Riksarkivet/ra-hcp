@@ -556,6 +556,8 @@
 	let usePresigned = $state(false);
 
 	async function bulkDownload() {
+		// Guard re-entry so a second click can't spawn a duplicate ZIP task.
+		if (downloading || zipDownloading) return;
 		const keys = selectedKeys;
 		if (keys.length === 0) return;
 
@@ -564,8 +566,9 @@
 
 		// Single file — direct download
 		if (fileKeys.length === 1 && folderKeys.length === 0) {
-			if (usePresigned) {
-				try {
+			downloading = true;
+			try {
+				if (usePresigned) {
 					const result = await bulk_presign({ bucket, keys: fileKeys, expires_in: 3600 });
 					if (result.urls.length > 0) {
 						const a = document.createElement('a');
@@ -576,11 +579,13 @@
 						a.click();
 						document.body.removeChild(a);
 					}
-				} catch (err) {
-					toast.error(getErrorMessage(err, 'Failed to download file'));
+				} else {
+					handleDownload(fileKeys[0]);
 				}
-			} else {
-				handleDownload(fileKeys[0]);
+			} catch (err) {
+				toast.error(getErrorMessage(err, 'Failed to download file'));
+			} finally {
+				downloading = false;
 			}
 			return;
 		}
@@ -964,8 +969,10 @@
 				>
 			{:else}
 				<span class="text-sm font-medium">{selectedKeys.length} selected</span>
-				<Button size="sm" onclick={bulkDownload} disabled={downloading}
-					>{#if downloading}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Download
+				<Button size="sm" onclick={bulkDownload} disabled={downloading || zipDownloading}
+					>{#if downloading || zipDownloading}<Loader2
+							class="h-3.5 w-3.5 animate-spin"
+						/>{:else}<Download
 							class="h-3.5 w-3.5"
 						/>{/if}Download Selected</Button
 				>

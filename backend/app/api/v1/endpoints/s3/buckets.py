@@ -207,13 +207,31 @@ async def _prepare_namespace_for_delete(
         logger.warning("force-delete: failed to disable search")
 
 
+_MAX_DELETE_ERRORS = 5
+
+
+def _format_delete_error(err: dict) -> str:
+    """Human-readable reason from one S3 ``DeleteObjects`` error entry."""
+    key = err.get("Key", "?")
+    code = err.get("Code", "Unknown")
+    msg = err.get("Message", "")
+    return f"{key}: {code} {msg}".strip()
+
+
+def _format_delete_errors(s3_errors: list[dict], limit: int) -> list[str]:
+    """Up to *limit* human-readable reasons from S3 ``DeleteObjects`` errors."""
+    if limit <= 0:
+        return []
+    return [_format_delete_error(err) for err in s3_errors[:limit]]
+
+
 async def _delete_all_versions(
     s3: StorageProtocol, bucket: str
 ) -> tuple[int, list[str]]:
     """Delete every object version and delete marker in *bucket*.
 
     Returns ``(deleted_count, errors)`` where *errors* holds the first
-    few human-readable failure reasons (capped at 5).
+    few human-readable failure reasons (capped).
     """
     deleted = 0
     errors: list[str] = []
@@ -229,21 +247,48 @@ async def _delete_all_versions(
         for dm in result.get("DeleteMarkers", []):
             items.append((dm["Key"], dm.get("VersionId")))
 
-        for key, vid in items:
+        if items:
+            # Batch (≤1000/call) instead of one DeleteObject per version — the
+            # whole page goes in a single round-trip.
             try:
-                await s3.delete_object(bucket, key, vid)
-                deleted += 1
+                res = await s3.delete_object_versions(bucket, items)
+                errs = res.get("Errors", [])
+                deleted += len(items) - len(errs)
+                errors.extend(
+                    _format_delete_errors(errs, _MAX_DELETE_ERRORS - len(errors))
+                )
             except Exception as exc:
                 logger.warning(
-                    "force-delete: failed to remove %s/%s: %s", bucket, key, exc
+                    "force-delete: batch version delete failed for %s: %s",
+                    bucket,
+                    exc,
                 )
-                if len(errors) < 5:
-                    errors.append(f"{key}: {exc}")
+                errors.extend(
+                    _format_delete_errors(
+                        [
+                            {
+                                "Key": bucket,
+                                "Code": "BatchDeleteFailed",
+                                "Message": str(exc),
+                            }
+                        ],
+                        _MAX_DELETE_ERRORS - len(errors),
+                    )
+                )
 
         if not result.get("IsTruncated", False):
             break
-        key_marker = result.get("NextKeyMarker")
-        version_marker = result.get("NextVersionIdMarker")
+        next_key = result.get("NextKeyMarker")
+        next_version = result.get("NextVersionIdMarker")
+        if next_key == key_marker and next_version == version_marker:
+            # Truncated but the markers didn't advance — stop rather than spin
+            # forever (e.g. a backend that keeps returning the same failing page).
+            logger.warning(
+                "force-delete: %s version pagination did not advance; stopping",
+                bucket,
+            )
+            break
+        key_marker, version_marker = next_key, next_version
     return deleted, errors
 
 
@@ -269,12 +314,9 @@ async def _empty_bucket(s3: StorageProtocol, bucket: str) -> list[str]:
             bulk_result = await s3.delete_objects(bucket, keys)
             bulk_errors = bulk_result.get("Errors", [])
             deleted += len(keys) - len(bulk_errors)
-            for err in bulk_errors:
-                if len(errors) < 5:
-                    key = err.get("Key", "?")
-                    code = err.get("Code", "Unknown")
-                    msg = err.get("Message", "")
-                    errors.append(f"{key}: {code} {msg}".strip())
+            errors.extend(
+                _format_delete_errors(bulk_errors, _MAX_DELETE_ERRORS - len(errors))
+            )
         if not result.get("IsTruncated", False):
             break
         token = result.get("NextContinuationToken")

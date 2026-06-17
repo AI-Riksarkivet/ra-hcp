@@ -77,6 +77,21 @@ async def test_put_object_invalidates_list_across_instances():
     assert reader_inner.list_objects.call_count == 2
 
 
+async def test_delete_object_versions_invalidates_list_across_instances():
+    cache = _shared_cache()
+    reader_inner = _make_inner()
+    reader = CachedStorage(reader_inner, cache, CacheSettings())
+    writer = CachedStorage(_make_inner(), cache, CacheSettings())
+
+    await reader.list_objects("b")
+    assert reader_inner.list_objects.call_count == 1  # cached
+
+    await writer.delete_object_versions("b", [("k.jpg", "v1")])
+
+    await reader.list_objects("b")
+    assert reader_inner.list_objects.call_count == 2  # cross-instance miss → fresh
+
+
 async def test_delete_bucket_invalidates_bucket_listing_across_instances():
     cache = _shared_cache()
     reader_inner = _make_inner()

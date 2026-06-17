@@ -11,7 +11,18 @@ from unittest.mock import MagicMock
 
 from httpx import AsyncClient
 
+from app.api.v1.endpoints.s3.buckets import _format_delete_errors
 from app.services.storage.errors import StorageError, StorageOperationNotSupported
+
+
+def test_format_delete_errors_caps_and_formats():
+    errs = [
+        {"Key": f"k{i}", "Code": "AccessDenied", "Message": "denied"} for i in range(10)
+    ]
+    out = _format_delete_errors(errs, limit=3)
+    assert out == [f"k{i}: AccessDenied denied" for i in range(3)]
+    # A non-positive limit (cap already reached) yields nothing.
+    assert _format_delete_errors(errs, limit=0) == []
 
 
 # ── Force-delete business logic ───────────────────────────────────
@@ -23,7 +34,9 @@ async def test_force_delete_empties_bucket_then_deletes(
     """force=true must empty all objects/versions before deleting."""
     # Bucket has 2 objects and no versions
     mock_s3_service.list_object_versions.return_value = {
-        "Versions": [], "DeleteMarkers": [], "IsTruncated": False,
+        "Versions": [],
+        "DeleteMarkers": [],
+        "IsTruncated": False,
     }
     mock_s3_service.list_objects.return_value = {
         "Contents": [{"Key": "a.txt"}, {"Key": "b.txt"}],
@@ -37,7 +50,9 @@ async def test_force_delete_empties_bucket_then_deletes(
     assert resp.status_code == 200
     assert resp.json()["status"] == "deleted"
     # Must have called delete_objects with the 2 keys
-    mock_s3_service.delete_objects.assert_called_once_with("my-bucket", ["a.txt", "b.txt"])
+    mock_s3_service.delete_objects.assert_called_once_with(
+        "my-bucket", ["a.txt", "b.txt"]
+    )
     # Must have called delete_bucket after emptying
     mock_s3_service.delete_bucket.assert_called()
 
@@ -45,7 +60,7 @@ async def test_force_delete_empties_bucket_then_deletes(
 async def test_force_delete_paginates_versions(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    """Version deletion must paginate through all markers."""
+    """Version deletion paginates through all markers and BATCHES each page."""
     empty_versions = {"Versions": [], "DeleteMarkers": [], "IsTruncated": False}
     mock_s3_service.list_object_versions.side_effect = [
         # First call to _delete_all_versions — 2 pages
@@ -64,43 +79,59 @@ async def test_force_delete_paginates_versions(
         # Second call to _delete_all_versions (cleanup pass) — empty
         empty_versions,
     ]
+    mock_s3_service.delete_object_versions.return_value = {"Errors": []}
     mock_s3_service.list_objects.return_value = {
-        "Contents": [], "IsTruncated": False,
+        "Contents": [],
+        "IsTruncated": False,
     }
 
     resp = await client.delete(
         "/api/v1/buckets/my-bucket?force=true", headers=auth_headers
     )
     assert resp.status_code == 200
-    # 3 individual version deletes (2 from page 1, 1 from page 2)
-    assert mock_s3_service.delete_object.call_count == 3
+    # ONE batched delete per non-empty page — never one DeleteObject per version.
+    assert mock_s3_service.delete_object.call_count == 0
+    assert mock_s3_service.delete_object_versions.call_count == 2
+    mock_s3_service.delete_object_versions.assert_any_call(
+        "my-bucket", [("f1.txt", "v1"), ("f2.txt", "dm1")]
+    )
+    mock_s3_service.delete_object_versions.assert_any_call(
+        "my-bucket", [("f3.txt", "v2")]
+    )
 
 
-async def test_force_delete_caps_errors_at_five(
+async def test_force_delete_batches_versions_and_reports_errors(
     client: AsyncClient, auth_headers: dict, mock_s3_service: MagicMock
 ):
-    """Per-object failures are collected but capped at 5."""
+    """All versions on a page go in a single batch; per-key errors are non-fatal."""
     empty_versions = {"Versions": [], "DeleteMarkers": [], "IsTruncated": False}
-    # First pass: 7 versions, all fail to delete
     mock_s3_service.list_object_versions.side_effect = [
         {
             "Versions": [{"Key": f"f{i}.txt", "VersionId": f"v{i}"} for i in range(7)],
             "DeleteMarkers": [],
             "IsTruncated": False,
         },
-        # Cleanup pass
-        empty_versions,
+        empty_versions,  # cleanup pass
     ]
-    mock_s3_service.delete_object.side_effect = Exception("permission denied")
+    mock_s3_service.delete_object_versions.return_value = {
+        "Errors": [
+            {"Key": f"f{i}.txt", "Code": "AccessDenied", "Message": "denied"}
+            for i in range(7)
+        ]
+    }
     mock_s3_service.list_objects.return_value = {
-        "Contents": [], "IsTruncated": False,
+        "Contents": [],
+        "IsTruncated": False,
     }
 
     resp = await client.delete(
         "/api/v1/buckets/my-bucket?force=true", headers=auth_headers
     )
     assert resp.status_code == 200
-    # Bucket delete still attempted — errors are non-fatal for emptying
+    # All 7 versions deleted in ONE batch call (not 7 calls); errors non-fatal.
+    mock_s3_service.delete_object_versions.assert_called_once_with(
+        "my-bucket", [(f"f{i}.txt", f"v{i}") for i in range(7)]
+    )
 
 
 async def test_delete_bucket_not_empty_without_force(

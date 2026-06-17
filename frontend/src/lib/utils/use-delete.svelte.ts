@@ -37,43 +37,9 @@ export function useDelete(opts: UseDeleteOptions) {
     }
   }
 
-  async function confirmBulkDelete(
-    names: string[],
-    deleteFn: (name: string, isLast: boolean) => Promise<unknown>,
-    onDone?: () => void,
-  ) {
-    deleting = true;
-    let successCount = 0;
-    let failCount = 0;
-    const errors: string[] = [];
-    for (let i = 0; i < names.length; i++) {
-      try {
-        await deleteFn(names[i], i === names.length - 1);
-        successCount++;
-      } catch (err) {
-        failCount++;
-        errors.push(`${names[i]}: ${getErrorMessage(err, "Unknown error")}`);
-      }
-    }
-    if (successCount > 0) {
-      toast.success(
-        `Deleted ${successCount} ${opts.entityName}${
-          successCount !== 1 ? "s" : ""
-        }`,
-      );
-    }
-    if (failCount > 0) {
-      const summary = errors.length > 0
-        ? errors.join("\n")
-        : `Failed to delete ${failCount} ${opts.entityName}${
-          failCount !== 1 ? "s" : ""
-        }`;
-      toast.error(summary);
-    }
-    onDone?.();
-    deleting = false;
-    bulkDeleteOpen = false;
-  }
+  // Bulk delete is owned by the global bulk-delete-progress store
+  // (bounded-parallel, survives navigation); this hook only manages the
+  // single-item flow + the bulk dialog's open state.
 
   return {
     get deleteTarget() {
@@ -97,6 +63,5 @@ export function useDelete(opts: UseDeleteOptions) {
     requestDelete,
     requestBulkDelete,
     confirmDelete,
-    confirmBulkDelete,
   };
 }

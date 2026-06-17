@@ -32,6 +32,12 @@ COPY --from=builder /app/build /app/build
 # svelte-adapter-bun listens on PORT (default 3000)
 ENV PORT=3000
 
+# svelte-adapter-bun defaults the request body limit to 512K, which would reject
+# the simple (non-multipart) upload proxy path for any file >512K. Uploads >=100MB
+# already go browser->S3 via presigned multipart (bypassing this proxy), so 256M
+# comfortably covers the simple path.
+ENV BODY_SIZE_LIMIT=256M
+
 # Bun writes its runtime cache to $HOME. Under a non-root UID with no /etc/passwd
 # entry (e.g. k8s podSecurityContext.runAsUser), $HOME falls back to "/" which
 # isn't writable → "bun is unable to write files: AccessDenied". Point HOME at

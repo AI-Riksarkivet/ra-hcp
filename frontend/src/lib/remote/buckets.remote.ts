@@ -171,8 +171,9 @@ export const delete_bucket = command(
         : JSON.stringify(err.detail);
       error(res.status, detail);
     }
-    // Single-flight refresh so the list reflects the deletion immediately.
-    get_buckets().refresh();
+    // Callers refresh once after the (possibly bulk) delete completes — see
+    // bucket-table's onConfirmDelete / startBulkDelete — so there's no per-item
+    // refresh here (it caused a full-list refetch storm during bulk delete).
   },
 );
 

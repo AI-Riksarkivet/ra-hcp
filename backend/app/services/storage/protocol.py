@@ -70,6 +70,14 @@ class StorageProtocol(Protocol):
 
     async def delete_objects(self, bucket: str, keys: list[str]) -> dict: ...
 
+    async def delete_object_versions(
+        self, bucket: str, items: list[tuple[str, str | None]]
+    ) -> dict: ...
+
+    async def invalidate_listing(self, bucket: str) -> None:
+        """Drop any cached listings for ``bucket`` (no-op when uncached)."""
+        ...
+
     async def copy_object(
         self,
         src_bucket: str,

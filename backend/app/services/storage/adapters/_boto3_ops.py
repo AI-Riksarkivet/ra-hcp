@@ -169,6 +169,51 @@ class Boto3Operations:
             except BotoCoreError as exc:
                 raise from_transport_error(exc) from exc
 
+    async def _delete_in_batches(self, bucket: str, objects: list[dict]) -> dict:
+        """Delete ``objects`` (``[{"Key", "VersionId"?}, ...]``) via S3
+        ``DeleteObjects`` in chunks of ≤1000, accumulating per-object errors.
+
+        Single owner of the batch-delete mechanics (chunking, ``Quiet`` mode,
+        error accumulation, error mapping) shared by :meth:`delete_objects` and
+        :meth:`delete_object_versions`. On HCP the required Content-MD5 header is
+        added by the ``before-send.s3.DeleteObjects`` hook registered on the
+        client, so this works for HCP and generic/MinIO alike.
+        """
+        errors: list[dict] = []
+        with tracer.start_as_current_span(
+            "s3.delete_objects",
+            attributes={"s3.bucket": bucket, "s3.object_count": len(objects)},
+        ):
+            for start in range(0, len(objects), 1000):
+                chunk = objects[start : start + 1000]
+                try:
+                    result = await self._client.delete_objects(
+                        Bucket=bucket,
+                        Delete={"Objects": chunk, "Quiet": True},
+                    )
+                    errors.extend(result.get("Errors", []))
+                except ClientError as exc:
+                    raise from_client_error(exc) from exc
+                except BotoCoreError as exc:
+                    raise from_transport_error(exc) from exc
+        return {"Errors": errors} if errors else {}
+
+    async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
+        """Batch-delete current versions by key (≤1000 per call)."""
+        return await self._delete_in_batches(bucket, [{"Key": k} for k in keys])
+
+    async def delete_object_versions(
+        self, bucket: str, items: list[tuple[str, str | None]]
+    ) -> dict:
+        """Batch-delete specific object versions/markers (≤1000 per call).
+
+        Each item is ``(key, version_id)``. Emptying a bucket via this is
+        ceil(N/1000) round-trips instead of N — the same speedup the object
+        delete path already gets.
+        """
+        objects = [{"Key": k, "VersionId": v} if v else {"Key": k} for k, v in items]
+        return await self._delete_in_batches(bucket, objects)
+
     async def copy_object(
         self,
         src_bucket: str,
@@ -562,6 +607,18 @@ class Boto3Forwarder:
         self, bucket: str, key: str, version_id: str | None = None
     ) -> dict:
         return await self._ops.delete_object(bucket, key, version_id)
+
+    async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
+        return await self._ops.delete_objects(bucket, keys)
+
+    async def delete_object_versions(
+        self, bucket: str, items: list[tuple[str, str | None]]
+    ) -> dict:
+        return await self._ops.delete_object_versions(bucket, items)
+
+    async def invalidate_listing(self, bucket: str) -> None:
+        # Raw storage holds no cache; the caching wrapper overrides this.
+        return None
 
     async def copy_object(
         self, src_bucket: str, src_key: str, dst_bucket: str, dst_key: str

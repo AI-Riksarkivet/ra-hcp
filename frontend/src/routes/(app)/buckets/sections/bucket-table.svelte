@@ -11,6 +11,7 @@
 	import BulkDeleteDialog from '$lib/components/custom/bulk-delete-dialog/bulk-delete-dialog.svelte';
 	import StorageProgressBar from '$lib/components/custom/storage-progress-bar/storage-progress-bar.svelte';
 	import { get_buckets, delete_bucket } from '$lib/remote/buckets.remote.js';
+	import { startBulkDelete } from '$lib/utils/bulk-delete-progress.svelte.js';
 	import {
 		get_tenant,
 		get_tenant_statistics,
@@ -115,12 +116,9 @@
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 25 });
 	let rowSelection = $state<Record<string, boolean>>({});
 
-	let selectedKeys = $derived(
-		Object.keys(rowSelection)
-			.filter((k) => rowSelection[k])
-			.map((k) => table.getCoreRowModel().rows[Number(k)]?.original.name)
-			.filter(Boolean) as string[]
-	);
+	// rowSelection is keyed by bucket name (see getRowId), so selected keys are
+	// just the truthy entries — stable across pagination and sorting.
+	let selectedKeys = $derived(Object.keys(rowSelection).filter((k) => rowSelection[k]));
 	let selectedCount = $derived(selectedKeys.length);
 
 	const del = useDelete({ entityName: 'bucket' });
@@ -137,18 +135,18 @@
 	}
 
 	function onConfirmBulkDelete() {
-		del.confirmBulkDelete(
-			selectedKeys,
-			(name, isLast) => {
-				const call = delete_bucket({ bucket: name, force: forceBulkDelete });
-				if (isLast) {
-					const queries = nsData ? [bucketData, nsData] : [bucketData];
-					return call.then(() => queries.forEach((q) => q.refresh()));
-				}
-				return call;
-			},
+		const names = selectedKeys;
+		del.bulkDeleteOpen = false;
+		rowSelection = {};
+		// Bounded-parallel via the global tray (survives navigation, shows
+		// progress) instead of a blocking serial loop. Refresh once at the end.
+		void startBulkDelete(
+			'bucket',
+			names,
+			(name) => delete_bucket({ bucket: name, force: forceBulkDelete }),
 			() => {
-				rowSelection = {};
+				const queries = nsData ? [bucketData, nsData] : [bucketData];
+				queries.forEach((q) => q.refresh());
 			}
 		);
 	}
@@ -258,6 +256,9 @@
 			getSortedRowModel: getSortedRowModel(),
 			getPaginationRowModel: getPaginationRowModel(),
 			enableRowSelection: true,
+			// Key selection by bucket name, not the pagination-relative row index,
+			// so multi-select is stable across pages and sorting.
+			getRowId: (row) => row.name,
 		})
 	);
 
@@ -373,6 +374,5 @@
 	count={selectedCount}
 	itemType="bucket"
 	showForceOption
-	loading={del.deleting}
 	onconfirm={onConfirmBulkDelete}
 />

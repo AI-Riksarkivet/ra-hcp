@@ -82,6 +82,18 @@ class CachedStorage:
     async def _list_nocache_active(self, bucket: str) -> bool:
         return bool(await self._cache.get(self._key("nocache_list", bucket)))
 
+    async def _invalidate_listings(self, bucket: str) -> None:
+        """Orphan cached listings for ``bucket`` and open the no-cache window.
+
+        Order matters: arm the no-cache window BEFORE bumping the generation. A
+        concurrent ``list_objects`` that observes the new generation must also
+        observe the armed window, otherwise it could fetch an eventually-
+        consistent (stale) page and cache it under the new generation for the
+        full TTL — the exact staleness this guards against.
+        """
+        await self._arm_list_nocache(bucket)
+        await self._bump_list_generation(bucket)
+
     async def invalidate_listing(self, bucket: str) -> None:
         """Orphan cached listings for ``bucket`` and open a no-cache window.
 
@@ -90,8 +102,7 @@ class CachedStorage:
         but this guarantees the parent listing the UI re-fetches right after the
         task finishes is invalidated and not re-cached stale.
         """
-        await self._bump_list_generation(bucket)
-        await self._arm_list_nocache(bucket)
+        await self._invalidate_listings(bucket)
 
     # ── Lifecycle (delegate to inner) ──────────────────────────────────
 
@@ -299,17 +310,25 @@ class CachedStorage:
         self, bucket: str, key: str, version_id: str | None = None
     ) -> dict:
         result = await self._inner.delete_object(bucket, key, version_id)
-        await self._bump_list_generation(bucket)
-        await self._arm_list_nocache(bucket)
+        await self._invalidate_listings(bucket)
         await self._cache.delete(self._key("head_object", bucket, key))
         await self._cache.delete(self._key("object_acl", bucket, key))
         return result
 
     async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
         result = await self._inner.delete_objects(bucket, keys)
-        await self._bump_list_generation(bucket)
-        await self._arm_list_nocache(bucket)
+        await self._invalidate_listings(bucket)
         for k in keys:
+            await self._cache.delete(self._key("head_object", bucket, k))
+            await self._cache.delete(self._key("object_acl", bucket, k))
+        return result
+
+    async def delete_object_versions(
+        self, bucket: str, items: list[tuple[str, str | None]]
+    ) -> dict:
+        result = await self._inner.delete_object_versions(bucket, items)
+        await self._invalidate_listings(bucket)
+        for k, _ in items:
             await self._cache.delete(self._key("head_object", bucket, k))
             await self._cache.delete(self._key("object_acl", bucket, k))
         return result

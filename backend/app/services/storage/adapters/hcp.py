@@ -2,8 +2,9 @@
 
 HCP-specific quirks:
   - Region redirector disabled (HCP returns non-standard redirects)
-  - Multi-delete uses individual deletes (HCP requires Content-MD5 but
-    boto3 sends CRC32 for the batch delete API)
+  - Multi-delete (S3 DeleteObjects) requires a Content-MD5 header that botocore
+    1.36+ no longer sends; added via a before-send hook registered on the client
+    in :meth:`connect`, so the shared batch delete works (no per-object fallback)
   - Path-style addressing (HCP doesn't support virtual-hosted buckets)
 """
 
@@ -133,26 +134,7 @@ class HcpStorage(Boto3Forwarder):
             except (BotoCoreError, TypeError) as exc:
                 raise from_transport_error(exc) from exc
 
-    async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
-        """Native batch delete (S3 DeleteObjects, ≤1000 keys per call).
-
-        HCP requires a Content-MD5 header on the multi-delete request; the
-        ``before-send`` handler registered in :meth:`connect` adds it, so the
-        fast batch API works instead of one request per object.
-        """
-        errors: list[dict] = []
-        with tracer.start_as_current_span(
-            "s3.delete_objects",
-            attributes={"s3.bucket": bucket, "s3.key_count": len(keys)},
-        ):
-            for start in range(0, len(keys), 1000):
-                chunk = keys[start : start + 1000]
-                try:
-                    result = await self._ops._client.delete_objects(
-                        Bucket=bucket,
-                        Delete={"Objects": [{"Key": k} for k in chunk], "Quiet": True},
-                    )
-                    errors.extend(result.get("Errors", []))
-                except ClientError as exc:
-                    raise from_client_error(exc) from exc
-        return {"Errors": errors} if errors else {}
+    # delete_objects / delete_object_versions are inherited from Boto3Forwarder
+    # (-> Boto3Operations._delete_in_batches). HCP's required Content-MD5 header
+    # is added by the before-send hook registered in connect(), so the shared
+    # batch delete works without an HCP-specific override.

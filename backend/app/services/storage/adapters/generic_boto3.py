@@ -14,19 +14,12 @@ from contextlib import AsyncExitStack
 
 import aioboto3
 from aiobotocore.config import AioConfig
-from botocore.exceptions import BotoCoreError, ClientError
-from opentelemetry import trace
 
 from app.core.config import StorageSettings
 from app.services.storage.adapters._boto3_ops import Boto3Forwarder, Boto3Operations
-from app.services.storage.errors import (
-    StorageOperationNotSupported,
-    from_client_error,
-    from_transport_error,
-)
+from app.services.storage.errors import StorageOperationNotSupported
 
 logger = logging.getLogger(__name__)
-tracer = trace.get_tracer(__name__)
 
 
 class GenericBoto3Storage(Boto3Forwarder):
@@ -97,25 +90,8 @@ class GenericBoto3Storage(Boto3Forwarder):
         """Exit the aioboto3 client context manager."""
         await self._exit_stack.aclose()
 
-    # -- GenericBoto3-specific overrides ------------------------------------
-
-    async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
-        """Native batch delete — works on standard S3-compatible backends."""
-        with tracer.start_as_current_span(
-            "s3.delete_objects",
-            attributes={"s3.bucket": bucket, "s3.key_count": len(keys)},
-        ):
-            try:
-                result = await self._ops._client.delete_objects(
-                    Bucket=bucket,
-                    Delete={"Objects": [{"Key": k} for k in keys], "Quiet": True},
-                )
-                errors = result.get("Errors", [])
-                return {"Errors": errors} if errors else {}
-            except ClientError as exc:
-                raise from_client_error(exc) from exc
-            except BotoCoreError as exc:
-                raise from_transport_error(exc) from exc
+    # delete_objects / delete_object_versions are inherited from Boto3Forwarder
+    # (-> Boto3Operations._delete_in_batches): native batch delete with chunking.
 
     # -- ACLs (not supported on MinIO) -------------------------------------
 
