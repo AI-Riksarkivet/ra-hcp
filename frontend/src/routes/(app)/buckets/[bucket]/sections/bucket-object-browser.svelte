@@ -23,11 +23,10 @@
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/custom/bulk-delete-dialog/bulk-delete-dialog.svelte';
+	import { Progress } from '$lib/components/ui/progress';
 	import {
 		get_objects,
 		start_s3_stats,
-		delete_object,
-		bulk_delete_objects,
 		start_delete_task,
 		get_delete_task,
 		bulk_presign,
@@ -497,70 +496,79 @@
 		deleteDialogOpen = true;
 	}
 
-	// Folder deletes run as a background task on the server (survives huge
-	// folders + transient endpoint blips); poll until it finishes, return the
-	// real deleted count so the toast is honest.
-	async function deleteFolderViaTask(folderPrefix: string): Promise<number> {
-		const { task_id } = await start_delete_task({ bucket, prefix: folderPrefix });
-		for (let i = 0; i < 5000; i++) {
-			await new Promise((r) => setTimeout(r, 1500));
-			const st = await get_delete_task({ bucket, task_id });
-			if (st.status === 'done') return st.deleted;
-		}
-		throw new Error('Folder delete timed out — re-run to finish');
-	}
+	// Background delete task progress (mirrors the ZIP-download pattern).
+	let deleteRunning = $state(false);
+	let deleteProgress = $state({ total: 0, deleted: 0, failed: 0 });
+	let deleteTaskId = $state<string | null>(null);
+	let deletePollInterval: ReturnType<typeof setInterval> | undefined;
+	onDestroy(() => clearInterval(deletePollInterval));
 
-	async function handleConfirmDelete() {
-		deleting = true;
-		try {
-			// A folder row's key is its prefix (ends with "/"); deleting it must
-			// remove every object underneath, not the (non-existent) prefix key.
-			const isFolder = deleteTarget.endsWith('/');
-			let count = 1;
-			if (isFolder) {
-				count = await deleteFolderViaTask(deleteTarget);
-			} else {
-				await delete_object({ bucket, key: deleteTarget });
+	function pollDeleteStatus() {
+		if (!deleteTaskId) return;
+		const tid = deleteTaskId;
+		clearInterval(deletePollInterval);
+		deletePollInterval = setInterval(async () => {
+			try {
+				const st = await get_delete_task({ bucket, task_id: tid });
+				deleteProgress = { total: st.total, deleted: st.deleted, failed: st.failed };
+				if (st.status === 'done') {
+					clearInterval(deletePollInterval);
+					deleteRunning = false;
+					deleteTaskId = null;
+					objectData.refresh();
+					if (st.failed > 0) {
+						toast.warning(
+							`Deleted ${st.deleted} object${st.deleted !== 1 ? 's' : ''}, ${st.failed} failed`
+						);
+					} else {
+						toast.success(`Deleted ${st.deleted} object${st.deleted !== 1 ? 's' : ''}`);
+					}
+				}
+			} catch (err) {
+				clearInterval(deletePollInterval);
+				deleteRunning = false;
+				deleteTaskId = null;
+				toast.error(getErrorMessage(err, 'Delete failed'));
 			}
-			objectData.refresh();
-			deleteDialogOpen = false;
-			toast.success(
-				isFolder
-					? `Deleted folder — ${count} object${count !== 1 ? 's' : ''}`
-					: 'Object deleted'
-			);
+		}, 1500);
+	}
+
+	// Starts ONE background task for all selected folders + files, then polls in
+	// the background. The dialog closes immediately and the app stays usable —
+	// progress shows in a corner card with a bar + live count.
+	async function startDeleteTask(prefixes: string[], keys: string[]) {
+		deleteRunning = true;
+		deleteProgress = { total: 0, deleted: 0, failed: 0 };
+		deleteDialogOpen = false;
+		bulkDeleteOpen = false;
+		rowSelection = {};
+		try {
+			const { task_id } = await start_delete_task({ bucket, prefixes, keys });
+			deleteTaskId = task_id;
+			pollDeleteStatus();
 		} catch (err) {
-			toast.error(getErrorMessage(err, 'Failed to delete'));
-		} finally {
-			deleting = false;
+			deleteRunning = false;
+			toast.error(getErrorMessage(err, 'Failed to start delete'));
 		}
 	}
 
-	async function handleConfirmBulkDelete() {
+	function handleConfirmDelete() {
+		// A folder row's key is its prefix (ends with "/") → recursive delete;
+		// a plain file is a single key. Both run as one background task.
+		if (deleteTarget.endsWith('/')) {
+			void startDeleteTask([deleteTarget], []);
+		} else {
+			void startDeleteTask([], [deleteTarget]);
+		}
+	}
+
+	function handleConfirmBulkDelete() {
 		const keys = selectedKeys;
 		if (keys.length === 0) return;
-		// Files go in one batched call; each selected folder is deleted as a
-		// background task. Supports select-all across many large folders.
+		// ONE task covers every selected folder + file (no per-folder storm).
 		const fileKeys = keys.filter((k) => !k.endsWith('/'));
 		const folderPrefixes = keys.filter((k) => k.endsWith('/'));
-		deleting = true;
-		try {
-			let total = 0;
-			if (fileKeys.length > 0) {
-				total += await bulk_delete_objects({ bucket, keys: fileKeys });
-			}
-			for (const prefix of folderPrefixes) {
-				total += await deleteFolderViaTask(prefix);
-			}
-			objectData.refresh();
-			rowSelection = {};
-			bulkDeleteOpen = false;
-			toast.success(`Deleted ${total} object${total !== 1 ? 's' : ''}`);
-		} catch (err) {
-			toast.error(getErrorMessage(err, 'Failed to delete objects'));
-		} finally {
-			deleting = false;
-		}
+		void startDeleteTask(folderPrefixes, fileKeys);
 	}
 
 	// --- Download a single file via proxy ---
@@ -1074,6 +1082,23 @@
 	loading={deleting}
 	onconfirm={handleConfirmBulkDelete}
 />
+
+{#if deleteRunning}
+	<div class="fixed bottom-4 right-4 z-50 w-80 rounded-lg border bg-background p-4 shadow-lg">
+		<div class="mb-2 flex items-center justify-between text-sm">
+			<span class="font-medium">Deleting…</span>
+			<span class="text-muted-foreground">
+				{deleteProgress.deleted.toLocaleString()}{deleteProgress.total
+					? ` / ${deleteProgress.total.toLocaleString()}`
+					: ''}
+			</span>
+		</div>
+		<Progress value={deleteProgress.deleted} max={deleteProgress.total || 1} />
+		{#if deleteProgress.failed > 0}
+			<p class="mt-1 text-xs text-red-600">{deleteProgress.failed} failed</p>
+		{/if}
+	</div>
+{/if}
 
 <CreateFolderDialog
 	bind:open={createFolderOpen}

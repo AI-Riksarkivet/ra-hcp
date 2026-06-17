@@ -216,17 +216,21 @@ export const bulk_delete_objects = command(
 );
 
 export const start_delete_task = command(
-  z.object({ bucket: z.string(), prefix: z.string() }),
-  async ({ bucket, prefix }) => {
+  z.object({
+    bucket: z.string(),
+    prefixes: z.array(z.string()).default([]),
+    keys: z.array(z.string()).default([]),
+  }),
+  async ({ bucket, prefixes, keys }) => {
     const res = await apiFetch(
       `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/delete-task`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prefix }),
+        body: JSON.stringify({ prefixes, keys }),
       },
     );
-    await throwIfNotOk(res, "Failed to start folder delete");
+    await throwIfNotOk(res, "Failed to start delete");
     const data = await res.json();
     return { task_id: data.task_id as string, status: data.status as string };
   },
@@ -242,6 +246,7 @@ export const get_delete_task = command(
     const data = await res.json();
     return {
       status: data.status as string,
+      total: (data.total ?? 0) as number,
       deleted: (data.deleted ?? 0) as number,
       failed: (data.failed ?? 0) as number,
     };

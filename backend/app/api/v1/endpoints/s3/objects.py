@@ -237,36 +237,72 @@ async def _set_delete_state(task_id: str, state: dict, cache: KVCache | None) ->
     _delete_tasks[task_id] = state
 
 
+async def _count_prefix(s3: StorageProtocol, bucket: str, prefix: str) -> int:
+    """Count objects under a prefix (paginated)."""
+    n = 0
+    token: str | None = None
+    while True:
+        result = await s3.list_objects(bucket, prefix, 1000, token)
+        n += len(result.get("Contents", []))
+        if not result.get("IsTruncated", False):
+            break
+        token = result.get("NextContinuationToken")
+    return n
+
+
 async def _run_delete(
     task_id: str,
     s3: StorageProtocol,
     bucket: str,
-    prefix: str,
+    prefixes: list[str],
+    keys: list[str],
     cache: KVCache | None,
 ) -> None:
-    """Background runner: recursively delete a prefix, reporting progress.
+    """Background runner: delete explicit ``keys`` + every object under each
+    prefix in ``prefixes``.
 
-    Deletes page-by-page (≤1000 keys/call), so it survives huge folders and
-    long runtimes that would exceed an HTTP timeout. Pages already deleted stay
-    deleted, so re-running resumes after a transient endpoint blip.
+    Counts the total first so the UI can show a real progress bar, then deletes
+    page-by-page (≤1000 keys/call). One task covers a whole select-all (many
+    folders). Idempotent — a re-run resumes after a transient endpoint blip.
     """
-    state: dict = {"status": "processing", "deleted": 0, "failed": 0, "failed_keys": []}
+    state: dict = {
+        "status": "processing",
+        "total": 0,
+        "deleted": 0,
+        "failed": 0,
+        "failed_keys": [],
+    }
     await _set_delete_state(task_id, state, cache)
     try:
-        token: str | None = None
-        while True:
-            result = await s3.list_objects(bucket, prefix, 1000, token)
-            batch = [obj["Key"] for obj in result.get("Contents", [])]
-            if batch:
-                res = await s3.delete_objects(bucket, batch)
-                errs = res.get("Errors", [])
-                state["deleted"] += len(batch) - len(errs)
-                state["failed"] += len(errs)
-                state["failed_keys"].extend(e.get("Key", "") for e in errs[:50])
-                await _set_delete_state(task_id, state, cache)
-            if not result.get("IsTruncated", False):
-                break
-            token = result.get("NextContinuationToken")
+        # Phase 1: count, so the progress bar has a denominator.
+        total = len(keys)
+        for prefix in prefixes:
+            total += await _count_prefix(s3, bucket, prefix)
+        state["total"] = total
+        await _set_delete_state(task_id, state, cache)
+
+        async def _delete_batch(batch: list[str]) -> None:
+            if not batch:
+                return
+            res = await s3.delete_objects(bucket, batch)
+            errs = res.get("Errors", [])
+            state["deleted"] += len(batch) - len(errs)
+            state["failed"] += len(errs)
+            state["failed_keys"].extend(e.get("Key", "") for e in errs[:50])
+            await _set_delete_state(task_id, state, cache)
+
+        # Phase 2: delete explicit keys, then each prefix, page by page.
+        for start in range(0, len(keys), 1000):
+            await _delete_batch(keys[start : start + 1000])
+        for prefix in prefixes:
+            token: str | None = None
+            while True:
+                result = await s3.list_objects(bucket, prefix, 1000, token)
+                await _delete_batch([o["Key"] for o in result.get("Contents", [])])
+                if not result.get("IsTruncated", False):
+                    break
+                token = result.get("NextContinuationToken")
+
         state["status"] = "done"
         await _set_delete_state(task_id, state, cache)
     except Exception as exc:
@@ -283,16 +319,19 @@ async def start_delete_task(
     s3: StorageProtocol = Depends(get_s3_service),
     cache: KVCache | None = Depends(get_cache_service),
 ):
-    """Start a background recursive delete of everything under ``prefix``.
+    """Start a background delete of the given folders (``prefixes``) and/or
+    ``keys``.
 
-    Returns 202 + task_id; poll ``GET /delete-task/{task_id}``. Use this rather
-    than the synchronous ``/delete`` for large folders that would exceed an
-    HTTP timeout.
+    Returns 202 + task_id; poll ``GET /delete-task/{task_id}`` for progress.
+    One task covers a whole select-all (many folders), so the UI does not fire
+    a request per folder, and it survives large folders / HTTP timeouts.
     """
-    if not body.prefix:
-        raise HTTPException(400, "Provide a 'prefix' (folder) to delete")
+    if not body.prefixes and not body.keys:
+        raise HTTPException(400, "Provide at least one prefix or key to delete")
     task_id = str(uuid.uuid4())
-    asyncio.ensure_future(_run_delete(task_id, s3, bucket, body.prefix, cache))
+    asyncio.ensure_future(
+        _run_delete(task_id, s3, bucket, body.prefixes, body.keys, cache)
+    )
     return DeleteTaskResponse(task_id=task_id, status="processing")
 
 
@@ -314,6 +353,7 @@ async def get_delete_task(
     return DeleteTaskResponse(
         task_id=task_id,
         status=state["status"],
+        total=state.get("total", 0),
         deleted=state.get("deleted", 0),
         failed=state.get("failed", 0),
     )

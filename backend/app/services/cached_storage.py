@@ -131,7 +131,12 @@ class CachedStorage:
             result = await self._inner.list_objects(
                 bucket, prefix, max_keys, continuation_token, delimiter, fetch_owner
             )
-            await self._cache.set(key, result, ttl=self._cs.cache_s3_list_ttl)
+            # Never cache an empty listing. A flaky/transient backend can return
+            # an empty page even when objects exist; caching it would make the
+            # folder appear empty for the whole TTL. Only cache non-empty pages
+            # so a transient empty read self-heals on the next request.
+            if result.get("Contents") or result.get("CommonPrefixes"):
+                await self._cache.set(key, result, ttl=self._cs.cache_s3_list_ttl)
             return result
 
     async def head_object(self, bucket: str, key: str) -> dict:

@@ -21,8 +21,8 @@ from app.services.kv import KVCache
 def _make_inner() -> AsyncMock:
     inner = AsyncMock()
     inner.list_objects.return_value = {
-        "Contents": [],
-        "KeyCount": 0,
+        "Contents": [{"Key": "k.jpg"}],
+        "KeyCount": 1,
         "IsTruncated": False,
     }
     inner.delete_object.return_value = {}
@@ -90,3 +90,20 @@ async def test_delete_bucket_invalidates_bucket_listing_across_instances():
 
     await reader.list_objects("b")
     assert reader_inner.list_objects.call_count == 2
+
+
+async def test_empty_listing_is_not_cached():
+    """A transient empty read must not poison the folder view for the TTL."""
+    inner = _make_inner()
+    inner.list_objects.return_value = {
+        "Contents": [],
+        "KeyCount": 0,
+        "IsTruncated": False,
+    }
+    cs = CachedStorage(inner, _shared_cache(), CacheSettings())
+
+    await cs.list_objects("b")
+    await cs.list_objects("b")
+
+    # Empty listings are never cached → the second call re-fetches (self-heals).
+    assert inner.list_objects.call_count == 2

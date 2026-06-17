@@ -133,16 +133,24 @@ class DeleteObjectsRequest(BaseModel):
 
 
 class DeleteTaskRequest(BaseModel):
-    """Request body to start a background recursive folder delete."""
+    """Request body to start a background recursive delete of folders and/or keys."""
 
-    prefix: str = Field(description="Folder prefix to recursively delete")
+    prefixes: list[str] = Field(
+        default_factory=list, description="Folder prefixes to recursively delete"
+    )
+    keys: list[str] = Field(
+        default_factory=list, description="Individual object keys to delete"
+    )
 
 
 class DeleteTaskResponse(BaseModel):
-    """Status of a background folder-delete task."""
+    """Status of a background delete task."""
 
     task_id: str = Field(description="Task identifier for polling")
     status: str = Field(description="processing | done | failed")
+    total: int = Field(
+        default=0, description="Total objects to delete (0 until counted)"
+    )
     deleted: int = Field(default=0, description="Objects deleted so far")
     failed: int = Field(default=0, description="Objects that failed to delete")
 
