@@ -221,6 +221,7 @@ async def delete_objects(
 # ── Async folder delete task (must be before {key:path} catch-all) ───
 
 _delete_tasks: dict[str, dict] = {}
+_canceled_tasks: set[str] = set()
 
 
 async def _get_delete_state(task_id: str, cache: KVCache | None) -> dict | None:
@@ -235,6 +236,16 @@ async def _set_delete_state(task_id: str, state: dict, cache: KVCache | None) ->
     if cache and cache.enabled:
         await cache.set(f"delete_task:{task_id}", state, ttl=600)
     _delete_tasks[task_id] = state
+
+
+async def _is_delete_canceled(task_id: str, cache: KVCache | None) -> bool:
+    """Cancel flag, checked from a separate key so a state write can't clobber
+    it (works same-pod via the in-memory set, cross-replica via the cache)."""
+    if task_id in _canceled_tasks:
+        return True
+    if cache and cache.enabled:
+        return bool(await cache.get(f"delete_cancel:{task_id}"))
+    return False
 
 
 async def _count_prefix(s3: StorageProtocol, bucket: str, prefix: str) -> int:
@@ -293,10 +304,18 @@ async def _run_delete(
 
         # Phase 2: delete explicit keys, then each prefix, page by page.
         for start in range(0, len(keys), 1000):
+            if await _is_delete_canceled(task_id, cache):
+                state["status"] = "canceled"
+                await _set_delete_state(task_id, state, cache)
+                return
             await _delete_batch(keys[start : start + 1000])
         for prefix in prefixes:
             token: str | None = None
             while True:
+                if await _is_delete_canceled(task_id, cache):
+                    state["status"] = "canceled"
+                    await _set_delete_state(task_id, state, cache)
+                    return
                 result = await s3.list_objects(bucket, prefix, 1000, token)
                 await _delete_batch([o["Key"] for o in result.get("Contents", [])])
                 if not result.get("IsTruncated", False):
@@ -305,6 +324,7 @@ async def _run_delete(
 
         state["status"] = "done"
         await _set_delete_state(task_id, state, cache)
+        _canceled_tasks.discard(task_id)
     except Exception as exc:
         logger.exception("Delete task %s failed", task_id)
         state["status"] = "failed"
@@ -353,6 +373,30 @@ async def get_delete_task(
     return DeleteTaskResponse(
         task_id=task_id,
         status=state["status"],
+        total=state.get("total", 0),
+        deleted=state.get("deleted", 0),
+        failed=state.get("failed", 0),
+    )
+
+
+@router.post("/delete-task/{task_id}/cancel", response_model=DeleteTaskResponse)
+async def cancel_delete_task(
+    bucket: str,
+    task_id: str,
+    cache: KVCache | None = Depends(get_cache_service),
+):
+    """Request cancellation of a running delete task.
+
+    Best-effort: the runner checks the flag before each page, so it stops within
+    one page. Already-deleted objects stay deleted (delete is idempotent).
+    """
+    _canceled_tasks.add(task_id)
+    if cache and cache.enabled:
+        await cache.set(f"delete_cancel:{task_id}", True, ttl=600)
+    state = await _get_delete_state(task_id, cache) or {}
+    return DeleteTaskResponse(
+        task_id=task_id,
+        status="canceling",
         total=state.get("total", 0),
         deleted=state.get("deleted", 0),
         failed=state.get("failed", 0),

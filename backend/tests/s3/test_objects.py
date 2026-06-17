@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock
 from botocore.exceptions import ClientError
 from httpx import AsyncClient
 
-from app.api.v1.endpoints.s3.objects import _delete_tasks, _run_delete
+from app.api.v1.endpoints.s3.objects import _canceled_tasks, _delete_tasks, _run_delete
 from app.services.storage.errors import StorageError
 
 
@@ -277,6 +277,32 @@ async def test_get_delete_task_unknown_is_404(client: AsyncClient, auth_headers:
         headers=auth_headers,
     )
     assert resp.status_code == 404
+
+
+async def test_run_delete_task_honors_cancel(mock_s3_service: MagicMock):
+    page = {"Contents": [{"Key": "f/a"}, {"Key": "f/b"}], "IsTruncated": False}
+    mock_s3_service.list_objects.side_effect = [page]
+    mock_s3_service.delete_objects.return_value = {"Errors": []}
+    _canceled_tasks.add("task-cancel-1")
+    try:
+        await _run_delete("task-cancel-1", mock_s3_service, "bucket", ["f/"], [], None)
+    finally:
+        _canceled_tasks.discard("task-cancel-1")
+    state = _delete_tasks["task-cancel-1"]
+    assert state["status"] == "canceled"
+    assert state["deleted"] == 0  # canceled before any page was deleted
+
+
+async def test_cancel_delete_task_endpoint_sets_canceling(
+    client: AsyncClient, auth_headers: dict
+):
+    resp = await client.post(
+        "/api/v1/buckets/my-bucket/objects/delete-task/some-task/cancel",
+        headers=auth_headers,
+    )
+    _canceled_tasks.discard("some-task")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "canceling"
 
 
 async def test_download_objects_bulk(

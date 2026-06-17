@@ -3,6 +3,9 @@
 	import AppSidebar from '$lib/components/layout/AppSidebar.svelte';
 	import AppHeader from '$lib/components/layout/AppHeader.svelte';
 	import NavigationProgress from '$lib/components/layout/NavigationProgress.svelte';
+	import { Progress } from '$lib/components/ui/progress';
+	import { Button } from '$lib/components/ui/button';
+	import { deleteProgress, cancelDelete } from '$lib/utils/delete-progress.svelte.js';
 
 	let { data, children } = $props();
 </script>
@@ -22,3 +25,27 @@
 		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
+
+{#if deleteProgress.running}
+	<div class="bg-background fixed right-4 bottom-4 z-50 w-80 rounded-lg border p-4 shadow-lg">
+		<div class="mb-1 flex items-center justify-between text-sm">
+			<span class="font-medium">Deleting objects…</span>
+			<span class="text-muted-foreground">
+				{deleteProgress.deleted.toLocaleString()}{deleteProgress.total
+					? ` / ${deleteProgress.total.toLocaleString()}`
+					: ''} objects
+			</span>
+		</div>
+		<Progress value={deleteProgress.deleted} max={deleteProgress.total || 1} />
+		<div class="mt-2 flex items-center justify-between">
+			<span class="text-muted-foreground text-xs">
+				{deleteProgress.total ? `${deleteProgress.percent}%` : 'Counting objects…'}{deleteProgress.failed
+					? ` · ${deleteProgress.failed.toLocaleString()} failed`
+					: ''}
+			</span>
+			<Button size="sm" variant="outline" disabled={deleteProgress.canceling} onclick={cancelDelete}>
+				{deleteProgress.canceling ? 'Canceling…' : 'Cancel'}
+			</Button>
+		</div>
+	</div>
+{/if}

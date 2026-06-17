@@ -23,15 +23,13 @@
 	import TableSkeleton from '$lib/components/ui/skeleton/table-skeleton.svelte';
 	import DeleteConfirmDialog from '$lib/components/custom/delete-confirm-dialog/delete-confirm-dialog.svelte';
 	import BulkDeleteDialog from '$lib/components/custom/bulk-delete-dialog/bulk-delete-dialog.svelte';
-	import { Progress } from '$lib/components/ui/progress';
 	import {
 		get_objects,
 		start_s3_stats,
-		start_delete_task,
-		get_delete_task,
 		bulk_presign,
 		start_zip_download,
 	} from '$lib/remote/buckets.remote.js';
+	import { startDelete, onDeleteComplete } from '$lib/utils/delete-progress.svelte.js';
 	import {
 		DataTable,
 		DataTableCheckbox,
@@ -44,7 +42,7 @@
 		renderComponent,
 	} from '$lib/components/ui/data-table/index.js';
 	import DataTableActions from '../data-table/data-table-actions.svelte';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import BucketShareDialog from './bucket-share-dialog.svelte';
 	import BucketCopyDialog from './bucket-copy-dialog.svelte';
 	import BucketUploadDialog from './bucket-upload-dialog.svelte';
@@ -171,6 +169,7 @@
 		void prefix;
 		void flat;
 		void debouncedSearch;
+		selectAllInFolder = false;
 		if (!selectAllOnLoad) {
 			rowSelection = {};
 		}
@@ -490,85 +489,51 @@
 	let deleteTarget = $state('');
 	let deleting = $state(false);
 	let bulkDeleteOpen = $state(false);
+	// "Select all N in this folder" — operate on the whole prefix server-side,
+	// not just the loaded rows.
+	let selectAllInFolder = $state(false);
 
 	function requestDelete(key: string) {
 		deleteTarget = key;
 		deleteDialogOpen = true;
 	}
 
-	// Background delete task progress (mirrors the ZIP-download pattern).
-	let deleteRunning = $state(false);
-	let deleteProgress = $state({ total: 0, deleted: 0, failed: 0 });
-	let deleteTaskId = $state<string | null>(null);
-	let deletePollInterval: ReturnType<typeof setInterval> | undefined;
-	onDestroy(() => clearInterval(deletePollInterval));
+	// Delete runs in the app-global store, so progress + Cancel survive navigating
+	// to another page. Refresh this folder's list when a delete finishes.
+	onMount(() => onDeleteComplete(() => objectData.refresh()));
+	onDestroy(() => onDeleteComplete(null));
 
-	function pollDeleteStatus() {
-		if (!deleteTaskId) return;
-		const tid = deleteTaskId;
-		clearInterval(deletePollInterval);
-		deletePollInterval = setInterval(async () => {
-			try {
-				const st = await get_delete_task({ bucket, task_id: tid });
-				deleteProgress = { total: st.total, deleted: st.deleted, failed: st.failed };
-				if (st.status === 'done') {
-					clearInterval(deletePollInterval);
-					deleteRunning = false;
-					deleteTaskId = null;
-					objectData.refresh();
-					if (st.failed > 0) {
-						toast.warning(
-							`Deleted ${st.deleted} object${st.deleted !== 1 ? 's' : ''}, ${st.failed} failed`
-						);
-					} else {
-						toast.success(`Deleted ${st.deleted} object${st.deleted !== 1 ? 's' : ''}`);
-					}
-				}
-			} catch (err) {
-				clearInterval(deletePollInterval);
-				deleteRunning = false;
-				deleteTaskId = null;
-				toast.error(getErrorMessage(err, 'Delete failed'));
-			}
-		}, 1500);
-	}
-
-	// Starts ONE background task for all selected folders + files, then polls in
-	// the background. The dialog closes immediately and the app stays usable —
-	// progress shows in a corner card with a bar + live count.
-	async function startDeleteTask(prefixes: string[], keys: string[]) {
-		deleteRunning = true;
-		deleteProgress = { total: 0, deleted: 0, failed: 0 };
+	function beginDelete(prefixes: string[], keys: string[]) {
 		deleteDialogOpen = false;
 		bulkDeleteOpen = false;
 		rowSelection = {};
-		try {
-			const { task_id } = await start_delete_task({ bucket, prefixes, keys });
-			deleteTaskId = task_id;
-			pollDeleteStatus();
-		} catch (err) {
-			deleteRunning = false;
-			toast.error(getErrorMessage(err, 'Failed to start delete'));
-		}
+		selectAllInFolder = false;
+		void startDelete(bucket, prefixes, keys);
 	}
 
 	function handleConfirmDelete() {
 		// A folder row's key is its prefix (ends with "/") → recursive delete;
-		// a plain file is a single key. Both run as one background task.
+		// a plain file is a single key.
 		if (deleteTarget.endsWith('/')) {
-			void startDeleteTask([deleteTarget], []);
+			beginDelete([deleteTarget], []);
 		} else {
-			void startDeleteTask([], [deleteTarget]);
+			beginDelete([], [deleteTarget]);
 		}
 	}
 
 	function handleConfirmBulkDelete() {
+		// "Select all N in this folder" → delete the whole current prefix
+		// (server-side), not just the loaded rows.
+		if (selectAllInFolder) {
+			beginDelete([prefix], []);
+			return;
+		}
 		const keys = selectedKeys;
 		if (keys.length === 0) return;
 		// ONE task covers every selected folder + file (no per-folder storm).
 		const fileKeys = keys.filter((k) => !k.endsWith('/'));
 		const folderPrefixes = keys.filter((k) => k.endsWith('/'));
-		void startDeleteTask(folderPrefixes, fileKeys);
+		beginDelete(folderPrefixes, fileKeys);
 	}
 
 	// --- Download a single file via proxy ---
@@ -976,31 +941,60 @@
 		</div>
 	</div>
 
-	{#if selectedKeys.length > 0}
-		<div class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-			<span class="text-sm font-medium">{selectedKeys.length} selected</span>
-			<Button size="sm" onclick={bulkDownload} disabled={downloading}
-				>{#if downloading}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Download
-						class="h-3.5 w-3.5"
-					/>{/if}Download Selected</Button
-			>
-			<Tooltip.Root>
-				<Tooltip.Trigger>
-					{#snippet child({ props })}
-						<label class="flex items-center gap-1.5 text-xs text-muted-foreground" {...props}>
-							<input type="checkbox" bind:checked={usePresigned} class="h-3.5 w-3.5 rounded border-muted-foreground" />
-							Presigned
-						</label>
-					{/snippet}
-				</Tooltip.Trigger>
-				<Tooltip.Content side="bottom" class="max-w-xs">
-					<strong>Presigned URLs</strong> download directly from HCP S3 — faster, but requires network access to the internal HCP endpoint. Disable if downloads are blocked by VPN/firewall.
-				</Tooltip.Content>
-			</Tooltip.Root>
-			<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}
-				><Trash2 class="h-3.5 w-3.5" />Delete Selected</Button
-			>
-			<Button variant="ghost" size="sm" onclick={() => (rowSelection = {})}>Deselect All</Button>
+	{#if selectedKeys.length > 0 || selectAllInFolder}
+		{@const totalInFolder = (prefixCount?.files ?? 0) + (prefixCount?.folders ?? 0)}
+		{@const hasMore = prefixCount != null && totalInFolder > filteredObjects.length}
+		<div class="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
+			{#if selectAllInFolder}
+				<span class="text-sm font-medium">
+					All {totalInFolder.toLocaleString()} objects in this folder selected
+				</span>
+				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}
+					><Trash2 class="h-3.5 w-3.5" />Delete all</Button
+				>
+				<Button
+					variant="ghost"
+					size="sm"
+					onclick={() => {
+						selectAllInFolder = false;
+						rowSelection = {};
+					}}>Clear</Button
+				>
+			{:else}
+				<span class="text-sm font-medium">{selectedKeys.length} selected</span>
+				<Button size="sm" onclick={bulkDownload} disabled={downloading}
+					>{#if downloading}<Loader2 class="h-3.5 w-3.5 animate-spin" />{:else}<Download
+							class="h-3.5 w-3.5"
+						/>{/if}Download Selected</Button
+				>
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<label class="flex items-center gap-1.5 text-xs text-muted-foreground" {...props}>
+								<input type="checkbox" bind:checked={usePresigned} class="h-3.5 w-3.5 rounded border-muted-foreground" />
+								Presigned
+							</label>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content side="bottom" class="max-w-xs">
+						<strong>Presigned URLs</strong> download directly from HCP S3 — faster, but requires network access to the internal HCP endpoint. Disable if downloads are blocked by VPN/firewall.
+					</Tooltip.Content>
+				</Tooltip.Root>
+				<Button variant="destructive" size="sm" onclick={() => (bulkDeleteOpen = true)}
+					><Trash2 class="h-3.5 w-3.5" />Delete Selected</Button
+				>
+				<Button variant="ghost" size="sm" onclick={() => (rowSelection = {})}>Deselect All</Button>
+				{#if hasMore}
+					<Button
+						variant="link"
+						size="sm"
+						class="ml-auto"
+						onclick={() => (selectAllInFolder = true)}
+					>
+						Select all {totalInFolder.toLocaleString()} in this folder
+					</Button>
+				{/if}
+			{/if}
 		</div>
 	{/if}
 
@@ -1077,33 +1071,13 @@
 
 <BulkDeleteDialog
 	bind:open={bulkDeleteOpen}
-	count={selectedKeys.length}
+	count={selectAllInFolder
+		? (prefixCount?.files ?? 0) + (prefixCount?.folders ?? 0)
+		: selectedKeys.length}
 	itemType="object"
 	loading={deleting}
 	onconfirm={handleConfirmBulkDelete}
 />
-
-{#if deleteRunning}
-	<div class="fixed bottom-4 right-4 z-50 w-80 rounded-lg border bg-background p-4 shadow-lg">
-		<div class="mb-1 flex items-center justify-between text-sm">
-			<span class="font-medium">Deleting objects…</span>
-			<span class="text-muted-foreground">
-				{deleteProgress.deleted.toLocaleString()}{deleteProgress.total
-					? ` / ${deleteProgress.total.toLocaleString()}`
-					: ''} objects
-			</span>
-		</div>
-		<Progress value={deleteProgress.deleted} max={deleteProgress.total || 1} />
-		<p class="text-muted-foreground mt-1 text-xs">
-			{deleteProgress.total
-				? `${Math.round((100 * deleteProgress.deleted) / deleteProgress.total)}% — runs in the background`
-				: 'Counting objects… runs in the background'}
-		</p>
-		{#if deleteProgress.failed > 0}
-			<p class="mt-1 text-xs text-red-600">{deleteProgress.failed.toLocaleString()} failed</p>
-		{/if}
-	</div>
-{/if}
 
 <CreateFolderDialog
 	bind:open={createFolderOpen}

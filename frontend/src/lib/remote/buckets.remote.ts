@@ -253,6 +253,17 @@ export const get_delete_task = command(
   },
 );
 
+export const cancel_delete_task = command(
+  z.object({ bucket: z.string(), task_id: z.string() }),
+  async ({ bucket, task_id }) => {
+    const res = await apiFetch(
+      `/api/v1/buckets/${encodeURIComponent(bucket)}/objects/delete-task/${encodeURIComponent(task_id)}/cancel`,
+      { method: "POST" },
+    );
+    await throwIfNotOk(res, "Failed to cancel delete");
+  },
+);
+
 export const get_s3_credentials = query(async () => {
   try {
     const res = await apiFetch("/api/v1/credentials");
