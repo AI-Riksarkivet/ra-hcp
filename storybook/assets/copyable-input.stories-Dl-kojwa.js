@@ -1,0 +1,13 @@
+import{i as e}from"./preload-helper-xPQekRTU.js";import{Ot as t,Qt as n,Zt as r,hn as i,jt as a,kt as o,o as s,rt as c,s as l,sn as u,t as d,tt as f,un as p,vn as m}from"./client-DASBvjj6.js";import{n as h,rt as g,t as _}from"./iframe-DqcTvzAI.js";import{i as v,n as y,r as b,t as x}from"./create-runtime-stories-BLv_IUYu.js";import{n as S,t as C}from"./copyable-input-T4MsYsPq.js";function w(e,i){n(i,!1),l();var s=k(),c=o(s);D(c,{name:`Default`,args:{value:`urn:hcp:namespace:my-namespace`,label:`Canonical ID`},parameters:{__svelteCsf:{rawCode:`<Tooltip.Provider>
+	<CopyableInput {...args} />
+</Tooltip.Provider>`}}});var d=a(c,2);D(d,{name:`Without Label`,args:{value:`https://hcp.example.com/rest/namespaces`,label:``},parameters:{__svelteCsf:{rawCode:`<Tooltip.Provider>
+	<CopyableInput {...args} />
+</Tooltip.Provider>`}}});var p=a(d,2);D(p,{name:`Secret`,args:{value:`wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY`,label:`Secret Key`,secret:!0},parameters:{__svelteCsf:{rawCode:`<Tooltip.Provider>
+	<CopyableInput {...args} />
+</Tooltip.Provider>`}}});var m=a(p,2);D(m,{name:`S3 Credentials`,template:e=>{h(e,{children:(e,n)=>{var r=O(),i=t(r);C(i,{value:`AKIAIOSFODNN7EXAMPLE`,label:`Access Key`});var o=a(i,2);C(o,{value:`wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY`,label:`Secret Key`,secret:!0}),C(a(o,2),{value:`https://s3.example.com`,label:`Endpoint`}),u(r),f(e,r)},$$slots:{default:!0}})},$$slots:{template:!0},parameters:{__svelteCsf:{rawCode:`<Tooltip.Provider>
+	<div class="space-y-3 max-w-md">
+		<CopyableInput value="AKIAIOSFODNN7EXAMPLE" label="Access Key" />
+		<CopyableInput value="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" label="Secret Key" secret />
+		<CopyableInput value="https://s3.example.com" label="Endpoint" />
+	</div>
+</Tooltip.Provider>`}}}),f(e,s),r()}var T,E,D,O,k,A,j,M,N,P,F;e((()=>{m(),g(),i(),v(),S(),_(),d(),y(),T=(e,t=p)=>{h(e,{children:(e,n)=>{C(e,s(t))},$$slots:{default:!0}})},E={title:`UI/CopyableInput`,component:C,render:T,args:{value:`urn:hcp:namespace:my-namespace`,label:`Canonical ID`,secret:!1}},{Story:D}=b(E),O=c(`<div class="space-y-3 max-w-md"><!> <!> <!></div>`),k=c(`<!> <!> <!> <!>`,1),w.__docgen={data:[],name:`copyable-input.stories.svelte`},A=x(w,E),j=[`Default`,`WithoutLabel`,`Secret`,`S3Credentials`],M={...A.Default,tags:[`svelte-csf-v5`]},N={...A.WithoutLabel,tags:[`svelte-csf-v5`]},P={...A.Secret,tags:[`svelte-csf-v5`]},F={...A.S3Credentials,tags:[`svelte-csf-v5`]}}))();export{M as Default,F as S3Credentials,P as Secret,N as WithoutLabel,j as __namedExportsOrder,E as default};
