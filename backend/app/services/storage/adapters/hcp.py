@@ -9,7 +9,8 @@ HCP-specific quirks:
 
 from __future__ import annotations
 
-import asyncio
+import base64
+import hashlib
 from contextlib import AsyncExitStack
 
 import aioboto3
@@ -23,9 +24,22 @@ from app.services.storage.errors import from_client_error, from_transport_error
 
 tracer = trace.get_tracer(__name__)
 
-# HCP has no working batch multi-delete, so we delete per object — fan out this
-# many concurrent deletes so large folders don't take hours of serial requests.
-_DELETE_CONCURRENCY = 32
+
+def _add_delete_objects_md5(request, **kwargs) -> None:
+    """Add the Content-MD5 header HCP requires for the multi-delete API.
+
+    HCP's S3 ``DeleteObjects`` rejects requests without ``Content-MD5``
+    ("Missing required header"), and botocore (1.36+) no longer sends it by
+    default. Registered on ``before-send.s3.DeleteObjects`` for the HCP client
+    only — the generic/MinIO adapter's native batch delete is untouched.
+    """
+    body = request.body
+    if body is None:
+        return
+    if isinstance(body, str):
+        body = body.encode("utf-8")
+    digest = hashlib.md5(body, usedforsecurity=False).digest()
+    request.headers["Content-MD5"] = base64.b64encode(digest).decode("ascii")
 
 
 class HcpStorage(Boto3Forwarder):
@@ -97,6 +111,10 @@ class HcpStorage(Boto3Forwarder):
         # S3RegionRedirectorv2 → TypeError on list_buckets. Safe to
         # disable for any non-AWS S3-compatible endpoint.
         client.meta.events.unregister("needs-retry.s3")
+        # HCP's multi-delete requires a Content-MD5 header boto3 (1.36+) drops.
+        client.meta.events.register(
+            "before-send.s3.DeleteObjects", _add_delete_objects_md5
+        )
         self._ops._client = client
 
     async def close(self) -> None:
@@ -116,32 +134,25 @@ class HcpStorage(Boto3Forwarder):
                 raise from_transport_error(exc) from exc
 
     async def delete_objects(self, bucket: str, keys: list[str]) -> dict:
-        """Delete objects individually but **concurrently**.
+        """Native batch delete (S3 DeleteObjects, ≤1000 keys per call).
 
-        HCP's batch multi-delete API needs a Content-MD5 boto3 won't send, so we
-        fall back to per-object deletes. Fanning them out with bounded
-        concurrency avoids the hours of sequential round-trips a large folder
-        would otherwise take.
+        HCP requires a Content-MD5 header on the multi-delete request; the
+        ``before-send`` handler registered in :meth:`connect` adds it, so the
+        fast batch API works instead of one request per object.
         """
-        sem = asyncio.Semaphore(_DELETE_CONCURRENCY)
         errors: list[dict] = []
-
-        async def _delete_one(key: str) -> None:
-            async with sem:
-                try:
-                    await self._ops._client.delete_object(Bucket=bucket, Key=key)
-                except ClientError as exc:
-                    errors.append(
-                        {
-                            "Key": key,
-                            "Code": exc.response["Error"].get("Code", "Unknown"),
-                            "Message": exc.response["Error"].get("Message", ""),
-                        }
-                    )
-
         with tracer.start_as_current_span(
             "s3.delete_objects",
             attributes={"s3.bucket": bucket, "s3.key_count": len(keys)},
         ):
-            await asyncio.gather(*(_delete_one(k) for k in keys))
+            for start in range(0, len(keys), 1000):
+                chunk = keys[start : start + 1000]
+                try:
+                    result = await self._ops._client.delete_objects(
+                        Bucket=bucket,
+                        Delete={"Objects": [{"Key": k} for k in chunk], "Quiet": True},
+                    )
+                    errors.extend(result.get("Errors", []))
+                except ClientError as exc:
+                    raise from_client_error(exc) from exc
         return {"Errors": errors} if errors else {}

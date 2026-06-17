@@ -89,7 +89,7 @@ opentelemetry:
   serviceName: "ra-hcp"
   # service.version lets Grafana group by release; deployment.environment.name
   # is the current semconv key.
-  resourceAttributes: "service.version=v0.2.7,deployment.environment.name=dev"
+  resourceAttributes: "service.version=v0.2.8,deployment.environment.name=dev"
   headers: ""
 
 frontend:
