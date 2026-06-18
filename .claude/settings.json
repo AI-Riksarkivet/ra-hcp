@@ -1,12 +1,49 @@
 {
   "enabledPlugins": {
+    "dagger@ra-skills": true,
+    "fastapi@ra-skills": true,
+    "python-infrastructure@ra-skills": true,
+    "otel@ra-skills": true,
+    "writing-python@ra-skills": true,
+    "zensical-setup@ra-skills": true,
+    "zensical-authoring@ra-skills": true,
+    "toolkit-skills@claude-code-toolkit": true,
     "mcp-essentials@claude-code-toolkit": true,
     "analytics@claude-code-toolkit": true,
-    "toolkit-skills@claude-code-toolkit": true,
-    "redis-development@redis": true,
-    "svelte@svelte": true,
     "astral@astral-sh": true,
-    "svelte-flow@linehaulai-claude-marketplace": true,
-    "svelte-skills@svelte-skills-kit": true
+    "svelte-skills@svelte-skills-kit": true,
+    "redis-development@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "ra-skills": {
+      "source": {
+        "source": "github",
+        "repo": "AI-Riksarkivet/ra-skills"
+      }
+    },
+    "claude-code-toolkit": {
+      "source": {
+        "source": "github",
+        "repo": "spences10/claude-code-toolkit"
+      }
+    },
+    "astral-sh": {
+      "source": {
+        "source": "github",
+        "repo": "astral-sh/claude-code-plugins"
+      }
+    },
+    "svelte-skills-kit": {
+      "source": {
+        "source": "github",
+        "repo": "spences10/svelte-skills-kit"
+      }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    }
   }
 }

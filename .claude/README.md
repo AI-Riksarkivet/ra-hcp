@@ -1,76 +1,43 @@
 # Claude Code Setup
 
-## Install Skills
+Skills are split into two buckets:
 
-### 1. Add marketplaces (one-time)
+- **Shared skills come from the [`ra-skills`](https://github.com/AI-Riksarkivet/ra-skills) marketplace** — the single source of truth for RA's language/toolchain skills (`dagger`, `fastapi`, `otel`, `python-infrastructure`, `writing-python`, `zensical-setup`, `zensical-authoring`, …). They are **not** vendored under `.claude/skills/` anymore; this kills the per-repo copy-drift. To change one, edit it in ra-skills.
+- **HCP-private skills stay vendored** in `.claude/skills/` — `hcp-backend`, `hcp-frontend`, `hcp-sdk`, `shadcn-svelte-skill`, and ra-hcp's own `testing-python`. These document HCP/MAPI internals and are specific to this repo, so they live here, not in the public ra-skills marketplace.
 
-```
-/plugin marketplace add spences10/svelte-skills-kit
-/plugin marketplace add astral-sh/claude-code-plugins
-/plugin marketplace add spences10/claude-code-toolkit
-/plugin marketplace add redis/agent-skills
-/plugin marketplace add sveltejs/ai-tools
-```
+The full RA Claude surface (shared skills + third-party marketplaces + MCP servers) is documented canonically in **[ra-skills' README](https://github.com/AI-Riksarkivet/ra-skills#what-we-use--the-full-ra-claude-surface)**.
 
-### 2. Install plugins
-
-```
-/plugin install svelte-skills@svelte-skills-kit
-/plugin install mcp-essentials@claude-code-toolkit
-/plugin install analytics@claude-code-toolkit
-/plugin install toolkit-skills@claude-code-toolkit
-/plugin install redis-development@redis
-/plugin install svelte@sveltejs-ai-tools
-/plugin install astral@astral-sh
-
-```
-
-These are tracked in `settings.json`:
-
-```json
-{
-  "enabledPlugins": {
-   ...
-  }
-}
-```
-
-### 3. Add activation hook (recommended)
-
-Skills don't auto-activate reliably without a hook. The forced-eval hook gets 84% activation vs 20% without:
+## Bootstrap (fresh checkout)
 
 ```bash
-pnpx claude-skills-cli add-hook
+make claude-bootstrap
 ```
 
-## Marketplaces
+Idempotent — adds every marketplace in `.claude/settings.json` → `extraKnownMarketplaces` and installs every plugin in `enabledPlugins` (project scope). `.claude/settings.json` is the **single source of truth**; the bootstrap is driven from it, so a fresh checkout reproduces the active surface. The vendored HCP skills load automatically from `.claude/skills/` — no install step.
 
-| Marketplace | Repo | Plugins |
+## The active surface
+
+| Kind | What | Where |
 |---|---|---|
-| svelte-skills-kit | [spences10/svelte-skills-kit](https://github.com/spences10/svelte-skills-kit) | svelte-skills (runes, SvelteKit data flow, components, deployment) |
-| claude-code-toolkit | [spences10/claude-code-toolkit](https://github.com/spences10/claude-code-toolkit) | mcp-essentials, analytics, toolkit-skills |
-| redis | [redis/agent-skills](https://github.com/redis/agent-skills) | redis-development |
-| sveltejs-ai-tools | [sveltejs/ai-tools](https://github.com/sveltejs/ai-tools) | svelte |
+| **Shared skills** | `*@ra-skills` (dagger, fastapi, otel, python-infrastructure, writing-python, zensical-setup, zensical-authoring) | `enabledPlugins` + `extraKnownMarketplaces.ra-skills` |
+| **HCP-private skills** | `hcp-backend`, `hcp-frontend`, `hcp-sdk`, `shadcn-svelte-skill`, `testing-python` | vendored in `.claude/skills/` |
+| **3rd-party plugins** | `toolkit-skills` / `mcp-essentials` / `analytics` (claude-code-toolkit), `astral`, `svelte-skills`, `redis-development` (claude-plugins-official) | `enabledPlugins` + `extraKnownMarketplaces` |
 
-## Creating Skills
+> Dropped during unification: the dangling `svelte@svelte` and `svelte-flow@linehaulai-claude-marketplace` enables; `redis-development` re-pointed from a missing `redis` marketplace to the installed `claude-plugins-official`.
 
-Use [claude-skills-cli](https://github.com/spences10/claude-skills-cli) for scaffolding and validation:
+## Editing skills
 
-```bash
-# Create a new skill
-pnpx claude-skills-cli init --name my-skill --description "Brief description"
+- **Shared skill** → edit it in [`ra-skills`](https://github.com/AI-Riksarkivet/ra-skills), then `make claude-bootstrap` (or `claude plugin update <name>@ra-skills`) here.
+- **HCP-private skill** → edit it directly under `.claude/skills/<name>/`. Keep the frontmatter `name` equal to the directory basename.
 
-# Validate
-pnpx claude-skills-cli validate .claude/skills/my-skill
+## Layout
 
-# Stats for all skills
-pnpx claude-skills-cli stats .claude/skills
 ```
-
-Skills load in 3 levels (progressive disclosure):
-
-| Level | Content | When Loaded | Size Limit |
-|---|---|---|---|
-| 1 | SKILL.md metadata (YAML) | Always in context | <200 chars |
-| 2 | SKILL.md body (Markdown) | When skill triggers | ~50 lines |
-| 3 | references/, scripts/, assets/ | As needed | Unlimited |
+.claude/
+├── README.md              # this file
+├── settings.json          # committed: enabledPlugins + extraKnownMarketplaces (single source of truth)
+├── settings.local.json    # personal overrides (gitignored)
+├── commands/              # project-local slash commands
+├── hooks/                 # project-local lifecycle hooks
+└── skills/                # HCP-PRIVATE skills only (hcp-*, shadcn-svelte-skill, testing-python)
+```

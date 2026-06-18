@@ -4,7 +4,7 @@
 SHELL := /bin/bash
 export PATH := $(HOME)/.bun/bin:$(PATH)
 
-.PHONY: help setup install-bun install-uv setup-hooks skills \
+.PHONY: help claude-bootstrap setup install-bun install-uv setup-hooks skills \
         fmt lint quality \
         run-api run-api-mock \
         frontend-dev frontend-build storybook build-storybook test-storybook \
@@ -16,6 +16,18 @@ export PATH := $(HOME)/.bun/bin:$(PATH)
 ## help: list available targets
 help:
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/^## /  make /' | sed 's/: /\t/'
+
+## claude-bootstrap: add the ra-skills + 3rd-party marketplaces and install the enabled plugins (from .claude/settings.json)
+claude-bootstrap:
+	@command -v claude  >/dev/null 2>&1 || { echo "  !! claude CLI not found — install Claude Code first"; exit 1; }
+	@command -v python3 >/dev/null 2>&1 || { echo "  !! python3 not found"; exit 1; }
+	@echo "==> Adding marketplaces declared in .claude/settings.json (idempotent)..."
+	@python3 -c 'import json; print("\n".join(v["source"]["repo"] for v in json.load(open(".claude/settings.json")).get("extraKnownMarketplaces",{}).values()))' \
+		| while read -r repo; do echo "    + $$repo"; claude plugin marketplace add "$$repo" >/dev/null 2>&1 || true; done
+	@echo "==> Installing enabled plugins at project scope (idempotent)..."
+	@python3 -c 'import json; print("\n".join(k for k,v in json.load(open(".claude/settings.json")).get("enabledPlugins",{}).items() if v))' \
+		| while read -r plugin; do echo "    + $$plugin"; claude plugin install "$$plugin" -s project >/dev/null 2>&1 || true; done
+	@echo "==> Done. Shared skills come from the ra-skills marketplace; hcp-* + testing-python are vendored in .claude/skills/. See .claude/README.md."
 
 # ── Setup ────────────────────────────────────────────────────────────
 
