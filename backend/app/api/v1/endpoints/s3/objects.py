@@ -12,6 +12,9 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
+from opentelemetry import trace
+from opentelemetry.context import Context
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from starlette.background import BackgroundTask as StarletteBackgroundTask
 
 from app.api.dependencies import get_cache_service, get_s3_service
@@ -42,6 +45,7 @@ from app.services.kv import KVCache
 from app.services.storage import StorageProtocol
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 # ── In-memory fallback for ZIP task state (no Redis) ──────────────────
 _zip_tasks: dict[str, dict] = {}
@@ -285,58 +289,72 @@ async def _run_delete(
         "failed_keys": [],
     }
     await _set_delete_state(task_id, state, cache)
-    try:
-        # Phase 1: count, so the progress bar has a denominator.
-        total = len(keys)
-        for prefix in prefixes:
-            total += await _count_prefix(s3, bucket, prefix)
-        state["total"] = total
-        await _set_delete_state(task_id, state, cache)
-
-        async def _delete_batch(batch: list[str]) -> None:
-            if not batch:
-                return
-            res = await s3.delete_objects(bucket, batch)
-            errs = res.get("Errors", [])
-            state["deleted"] += len(batch) - len(errs)
-            state["failed"] += len(errs)
-            state["failed_keys"].extend(e.get("Key", "") for e in errs[:50])
+    # Fresh root context: this runs after the request's 202 has returned (its
+    # SERVER span has ended), so start a new trace instead of parenting to the
+    # already-finished request span — otherwise the whole task hangs off a
+    # closed span. context=Context() drops the inherited request context.
+    with tracer.start_as_current_span(
+        "s3.folder_delete", context=Context(), kind=SpanKind.INTERNAL
+    ) as span:
+        span.set_attribute("com.rask.s3.task_id", task_id)
+        span.set_attribute("s3.bucket", bucket)
+        try:
+            # Phase 1: count, so the progress bar has a denominator.
+            total = len(keys)
+            for prefix in prefixes:
+                total += await _count_prefix(s3, bucket, prefix)
+            state["total"] = total
             await _set_delete_state(task_id, state, cache)
 
-        # Phase 2: delete explicit keys, then each prefix, page by page.
-        for start in range(0, len(keys), 1000):
-            if await _is_delete_canceled(task_id, cache):
-                state["status"] = "canceled"
+            async def _delete_batch(batch: list[str]) -> None:
+                if not batch:
+                    return
+                res = await s3.delete_objects(bucket, batch)
+                errs = res.get("Errors", [])
+                state["deleted"] += len(batch) - len(errs)
+                state["failed"] += len(errs)
+                state["failed_keys"].extend(e.get("Key", "") for e in errs[:50])
                 await _set_delete_state(task_id, state, cache)
-                return
-            await _delete_batch(keys[start : start + 1000])
-        for prefix in prefixes:
-            token: str | None = None
-            while True:
+
+            # Phase 2: delete explicit keys, then each prefix, page by page.
+            for start in range(0, len(keys), 1000):
                 if await _is_delete_canceled(task_id, cache):
                     state["status"] = "canceled"
                     await _set_delete_state(task_id, state, cache)
                     return
-                result = await s3.list_objects(bucket, prefix, 1000, token)
-                await _delete_batch([o["Key"] for o in result.get("Contents", [])])
-                if not result.get("IsTruncated", False):
-                    break
-                token = result.get("NextContinuationToken")
+                await _delete_batch(keys[start : start + 1000])
+            for prefix in prefixes:
+                token: str | None = None
+                while True:
+                    if await _is_delete_canceled(task_id, cache):
+                        state["status"] = "canceled"
+                        await _set_delete_state(task_id, state, cache)
+                        return
+                    result = await s3.list_objects(bucket, prefix, 1000, token)
+                    await _delete_batch([o["Key"] for o in result.get("Contents", [])])
+                    if not result.get("IsTruncated", False):
+                        break
+                    token = result.get("NextContinuationToken")
 
-        # Re-invalidate listings at completion (and open the no-cache window) so
-        # the parent listing the UI re-fetches right after "done" isn't served —
-        # or cached — stale by an eventually-consistent backend. No-op on raw
-        # (uncached) storage.
-        await s3.invalidate_listing(bucket)
+            # Re-invalidate listings at completion (and open the no-cache window)
+            # so the parent listing the UI re-fetches right after "done" isn't
+            # served — or cached — stale by an eventually-consistent backend.
+            # No-op on raw (uncached) storage.
+            await s3.invalidate_listing(bucket)
 
-        state["status"] = "done"
-        await _set_delete_state(task_id, state, cache)
-        _canceled_tasks.discard(task_id)
-    except Exception as exc:
-        logger.exception("Delete task %s failed", task_id)
-        state["status"] = "failed"
-        state["error"] = str(exc)
-        await _set_delete_state(task_id, state, cache)
+            state["status"] = "done"
+            await _set_delete_state(task_id, state, cache)
+            _canceled_tasks.discard(task_id)
+            span.set_attribute("com.rask.s3.total", state["total"])
+            span.set_attribute("com.rask.s3.deleted", state["deleted"])
+            span.set_attribute("com.rask.s3.failed", state["failed"])
+        except Exception as exc:
+            logger.exception("Delete task %s failed", task_id)
+            span.set_status(Status(StatusCode.ERROR, str(exc)))
+            span.set_attribute("error.type", type(exc).__name__)
+            state["status"] = "failed"
+            state["error"] = str(exc)
+            await _set_delete_state(task_id, state, cache)
 
 
 @router.post("/delete-task", response_model=DeleteTaskResponse, status_code=202)
@@ -464,36 +482,47 @@ async def _build_zip(
     }
     await _set_task_state(task_id, state, cache)
 
-    try:
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            for batch_start in range(0, len(keys), BATCH_SIZE):
-                batch = keys[batch_start : batch_start + BATCH_SIZE]
+    # Fresh root context — see _run_delete: this runs after the 202 returns.
+    with tracer.start_as_current_span(
+        "s3.zip_download", context=Context(), kind=SpanKind.INTERNAL
+    ) as span:
+        span.set_attribute("com.rask.s3.task_id", task_id)
+        span.set_attribute("s3.bucket", bucket)
+        try:
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                for batch_start in range(0, len(keys), BATCH_SIZE):
+                    batch = keys[batch_start : batch_start + BATCH_SIZE]
 
-                async def _fetch(key: str) -> tuple[str, bytes | None]:
-                    try:
-                        result = await s3.get_object(bucket, key)
-                        return key, await result["Body"].read()
-                    except Exception:
-                        return key, None
+                    async def _fetch(key: str) -> tuple[str, bytes | None]:
+                        try:
+                            result = await s3.get_object(bucket, key)
+                            return key, await result["Body"].read()
+                        except Exception:
+                            return key, None
 
-                results = await asyncio.gather(*[_fetch(k) for k in batch])
-                for key, data in results:
-                    if data is not None:
-                        zf.writestr(key, data)
-                        state["completed"] += 1
-                    else:
-                        state["failed"] += 1
-                        state["failed_keys"].append(key)
+                    results = await asyncio.gather(*[_fetch(k) for k in batch])
+                    for key, data in results:
+                        if data is not None:
+                            zf.writestr(key, data)
+                            state["completed"] += 1
+                        else:
+                            state["failed"] += 1
+                            state["failed_keys"].append(key)
 
-                await _set_task_state(task_id, state, cache)
+                    await _set_task_state(task_id, state, cache)
 
-        state["status"] = "ready"
-        await _set_task_state(task_id, state, cache)
-    except Exception as exc:
-        logger.exception("ZIP task %s failed", task_id)
-        state["status"] = "failed"
-        state["error"] = str(exc)
-        await _set_task_state(task_id, state, cache)
+            state["status"] = "ready"
+            await _set_task_state(task_id, state, cache)
+            span.set_attribute("com.rask.s3.total", state["total"])
+            span.set_attribute("com.rask.s3.completed", state["completed"])
+            span.set_attribute("com.rask.s3.failed", state["failed"])
+        except Exception as exc:
+            logger.exception("ZIP task %s failed", task_id)
+            span.set_status(Status(StatusCode.ERROR, str(exc)))
+            span.set_attribute("error.type", type(exc).__name__)
+            state["status"] = "failed"
+            state["error"] = str(exc)
+            await _set_task_state(task_id, state, cache)
 
 
 # ── Bulk download (must be before {key:path} catch-all) ──────────────

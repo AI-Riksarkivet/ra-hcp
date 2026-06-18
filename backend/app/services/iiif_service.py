@@ -10,6 +10,7 @@ import logging
 
 import httpx
 from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
@@ -54,16 +55,19 @@ class IiifService:
         manifest_url = f"{self._base_url}/arkis!{batch_id}/manifest"
         with tracer.start_as_current_span("iiif.get_image_ids") as span:
             span.set_attribute("iiif.batch_id", batch_id)
-            span.set_attribute("iiif.manifest_url", manifest_url)
             try:
                 resp = await self._client.get(manifest_url)
                 resp.raise_for_status()
                 data = resp.json()
             except httpx.HTTPStatusError as exc:
+                span.set_status(Status(StatusCode.ERROR, str(exc)))
+                span.set_attribute("error.type", type(exc).__name__)
                 raise IiifError(
                     f"Manifest fetch failed for {batch_id!r}: {exc.response.status_code}"
                 ) from exc
             except Exception as exc:
+                span.set_status(Status(StatusCode.ERROR, str(exc)))
+                span.set_attribute("error.type", type(exc).__name__)
                 raise IiifError(
                     f"Cannot fetch manifest for {batch_id!r}: {exc}"
                 ) from exc
@@ -76,9 +80,7 @@ class IiifService:
                     image_ids.append(image_id)
 
             span.set_attribute("iiif.image_count", len(image_ids))
-            logger.info(
-                "Found %d images in batch %s", len(image_ids), batch_id
-            )
+            logger.info("Found %d images in batch %s", len(image_ids), batch_id)
             return sorted(image_ids)
 
     def build_image_url(

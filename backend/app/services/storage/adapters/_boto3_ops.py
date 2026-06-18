@@ -21,6 +21,7 @@ from typing import IO, Any
 
 from botocore.exceptions import BotoCoreError, ClientError
 from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 
 from app.services.storage.errors import from_client_error, from_transport_error
 
@@ -182,8 +183,9 @@ class Boto3Operations:
         errors: list[dict] = []
         with tracer.start_as_current_span(
             "s3.delete_objects",
-            attributes={"s3.bucket": bucket, "s3.object_count": len(objects)},
+            attributes={"s3.bucket": bucket, "com.rask.s3.object_count": len(objects)},
         ):
+            span = trace.get_current_span()
             for start in range(0, len(objects), 1000):
                 chunk = objects[start : start + 1000]
                 try:
@@ -193,9 +195,22 @@ class Boto3Operations:
                     )
                     errors.extend(result.get("Errors", []))
                 except ClientError as exc:
+                    span.set_status(Status(StatusCode.ERROR, str(exc)))
+                    span.set_attribute("error.type", type(exc).__name__)
                     raise from_client_error(exc) from exc
                 except BotoCoreError as exc:
+                    span.set_status(Status(StatusCode.ERROR, str(exc)))
+                    span.set_attribute("error.type", type(exc).__name__)
                     raise from_transport_error(exc) from exc
+            if errors:
+                span.set_attribute("error.type", "PartialDeleteError")
+                span.set_status(
+                    Status(
+                        StatusCode.ERROR,
+                        f"PartialDeleteError: {len(errors)} of {len(objects)} "
+                        "objects failed",
+                    )
+                )
         return {"Errors": errors} if errors else {}
 
     async def delete_objects(self, bucket: str, keys: list[str]) -> dict:

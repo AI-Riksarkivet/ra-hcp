@@ -5,14 +5,50 @@ from __future__ import annotations
 import asyncio
 import io
 import zipfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 from botocore.exceptions import ClientError
 from httpx import AsyncClient
+from opentelemetry import trace
+from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
+from opentelemetry.trace import SpanKind, StatusCode
 
 from app.api.v1.endpoints.s3.objects import _canceled_tasks, _delete_tasks, _run_delete
 from app.services.storage.errors import StorageError
+
+
+@contextmanager
+def _captured_spans() -> Iterator[InMemorySpanExporter]:
+    """Yield an exporter that captures spans from the module tracer.
+
+    The module ``tracer`` is a proxy that delegates to the global provider.
+    Install a real SDK provider with an in-memory exporter; if one is already
+    installed (another test), attach a processor to it instead. Either way the
+    exporter only sees spans created inside this block, since it is cleared on
+    entry.
+    """
+    exporter = InMemorySpanExporter()
+    processor = SimpleSpanProcessor(exporter)
+    provider = TracerProvider()
+    provider.add_span_processor(processor)
+    trace.set_tracer_provider(provider)
+
+    active = trace.get_tracer_provider()
+    if active is not provider and hasattr(active, "add_span_processor"):
+        active.add_span_processor(processor)
+
+    exporter.clear()
+    try:
+        yield exporter
+    finally:
+        processor.shutdown()
 
 
 async def test_list_objects_empty(
@@ -257,6 +293,47 @@ async def test_run_delete_task_counts_then_deletes_all_under_prefix(
     assert state["total"] == 3
     assert state["deleted"] == 3
     assert state["failed"] == 0
+
+
+async def test_run_delete_emits_root_span(mock_s3_service: MagicMock):
+    """The headless delete runner emits one INTERNAL ROOT span carrying the
+    task_id, bucket, and final counts — even when scheduled from inside a
+    request span — so its child S3 spans are not orphaned under the already-
+    finished request span."""
+    page = {"Contents": [{"Key": "f/a"}, {"Key": "f/b"}], "IsTruncated": False}
+    mock_s3_service.list_objects.side_effect = [page, page]
+    mock_s3_service.delete_objects.return_value = {"Errors": []}
+
+    with _captured_spans() as exporter:
+        # Simulate ensure_future inheriting an active request span: the runner
+        # must still start a fresh root, not nest under this enclosing span.
+        with trace.get_tracer(__name__).start_as_current_span("fake-request"):
+            await _run_delete("task-span-ok", mock_s3_service, "bk", ["f/"], [], None)
+        spans = exporter.get_finished_spans()
+
+    root = next(s for s in spans if s.name == "s3.folder_delete")
+    assert root.kind is SpanKind.INTERNAL
+    assert root.parent is None  # fresh root, NOT parented to the enclosing span
+    assert root.attributes["com.rask.s3.task_id"] == "task-span-ok"
+    assert root.attributes["s3.bucket"] == "bk"
+    assert root.attributes["com.rask.s3.total"] == 2
+    assert root.attributes["com.rask.s3.deleted"] == 2
+    assert root.attributes["com.rask.s3.failed"] == 0
+    assert root.status.status_code is StatusCode.UNSET
+
+
+async def test_run_delete_span_records_error_on_failure(mock_s3_service: MagicMock):
+    """A failure sets the root span status to ERROR with error.type."""
+    mock_s3_service.list_objects.side_effect = RuntimeError("boom")
+
+    with _captured_spans() as exporter:
+        await _run_delete("task-span-err", mock_s3_service, "bk", ["f/"], [], None)
+        spans: list[ReadableSpan] = exporter.get_finished_spans()
+
+    root = next(s for s in spans if s.name == "s3.folder_delete")
+    assert root.status.status_code is StatusCode.ERROR
+    assert root.attributes["error.type"] == "RuntimeError"
+    assert _delete_tasks["task-span-err"]["status"] == "failed"
 
 
 async def test_run_delete_invalidates_listing_on_completion():

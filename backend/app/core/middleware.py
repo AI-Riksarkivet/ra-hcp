@@ -45,10 +45,16 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
         response.headers["X-Request-ID"] = request_id
 
+        # Label by the matched route TEMPLATE (e.g. /buckets/{bucket}/objects),
+        # never the resolved path — raw paths carry IDs and explode metric
+        # cardinality. Unmatched requests (404s) have no route in scope.
+        route = request.scope.get("route")
+        http_route = getattr(route, "path", "unmatched") if route else "unmatched"
+
         metric_attrs = {
             "http.method": request.method,
             "http.status_code": response.status_code,
-            "http.route": request.url.path,
+            "http.route": http_route,
         }
         _http_request_duration.record(duration_ms, metric_attrs)
         _http_request_count.add(1, metric_attrs)
