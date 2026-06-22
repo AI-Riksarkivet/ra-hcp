@@ -12,7 +12,8 @@
     "analytics@claude-code-toolkit": true,
     "astral@astral-sh": true,
     "svelte-skills@svelte-skills-kit": true,
-    "redis-development@claude-plugins-official": true
+    "redis-development@claude-plugins-official": true,
+    "shadcn-svelte@ra-skills": true
   },
   "extraKnownMarketplaces": {
     "ra-skills": {

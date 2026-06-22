@@ -2,8 +2,8 @@
 
 Two buckets of skills:
 
-- **Shared** language/toolchain skills come from the **[`ra-skills`](https://github.com/AI-Riksarkivet/ra-skills)** marketplace — not vendored here. Edit them in ra-skills.
-- **HCP-private** skills stay vendored in `.claude/skills/`: `hcp-backend`, `hcp-frontend`, `hcp-sdk`, `shadcn-svelte-skill`, `testing-python`. They document HCP/MAPI internals (kept out of the public marketplace). Edit them in place.
+- **Shared** language/toolchain + UI skills come from the **[`ra-skills`](https://github.com/AI-Riksarkivet/ra-skills)** marketplace — not vendored here (incl. `shadcn-svelte`). Edit them in ra-skills.
+- **HCP-private** skills stay vendored in `.claude/skills/`: `hcp-backend`, `hcp-frontend`, `hcp-sdk`, `testing-python`. They document HCP/MAPI internals (kept out of the public marketplace). Edit them in place.
 
 Full RA Claude surface: [ra-skills' README](https://github.com/AI-Riksarkivet/ra-skills#what-we-use--the-full-ra-claude-surface).
 
