@@ -68,6 +68,13 @@ class Profile(BaseModel):
     iiif_workers: int = 4
     iiif_referer: str = ""
 
+    # Transkribus
+    transkribus_url: str = "https://transkribus.eu/TrpServer/rest"
+    transkribus_username: str = ""
+    transkribus_password: str = ""
+    transkribus_timeout: float = 60.0
+    transkribus_workers: int = 8
+
     # Observability
     log_level: str = "warning"
     otel_endpoint: str = ""

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import typer
 
-from rahcp_cli import auth, iiif, namespace, s3
+from rahcp_cli import auth, iiif, namespace, s3, transkribus
 from rahcp_cli.config import CONFIG_DIR, load_config
 
 app = typer.Typer(
@@ -20,6 +20,7 @@ app.add_typer(auth.app, name="auth")
 app.add_typer(s3.app, name="s3")
 app.add_typer(namespace.app, name="ns")
 app.add_typer(iiif.app, name="iiif")
+app.add_typer(transkribus.app, name="transkribus")
 
 
 @app.callback()
@@ -133,5 +134,10 @@ def main(
     ctx.obj["iiif_query_params"] = p.iiif_query_params
     ctx.obj["iiif_workers"] = p.iiif_workers
     ctx.obj["iiif_referer"] = p.iiif_referer
+    ctx.obj["transkribus_url"] = p.transkribus_url
+    ctx.obj["transkribus_username"] = p.transkribus_username
+    ctx.obj["transkribus_password"] = p.transkribus_password
+    ctx.obj["transkribus_timeout"] = p.transkribus_timeout
+    ctx.obj["transkribus_workers"] = p.transkribus_workers
     ctx.obj["config_dir"] = str(config_dir)
     ctx.obj["json"] = output_json

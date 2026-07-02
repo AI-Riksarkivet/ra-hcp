@@ -14,11 +14,12 @@ Async Python SDK for HCP (Hitachi Content Platform) S3 storage and IIIF image do
 ## Packages
 
 ```
-pip install rahcp              # SDK + CLI
-pip install rahcp-tracker      # transfer tracking (standalone)
-pip install rahcp-iiif         # IIIF image downloader
-pip install "rahcp[validate]"  # + image validation
-pip install "rahcp[all]"       # everything
+pip install rahcp                 # SDK + CLI
+pip install rahcp-tracker         # transfer tracking (standalone)
+pip install rahcp-iiif            # IIIF image downloader
+pip install rahcp-transkribus     # Transkribus collection exporter
+pip install "rahcp[validate]"     # + image validation
+pip install "rahcp[all]"          # everything
 ```
 
 | Package | What it does |
@@ -26,7 +27,8 @@ pip install "rahcp[all]"       # everything
 | `rahcp-client` | Async HCP API client (auth, S3, MAPI, presigned URLs, bulk transfers) |
 | `rahcp-tracker` | Resumable transfer tracking with SQLite (pluggable via Protocol) |
 | `rahcp-iiif` | IIIF manifest parsing + parallel image downloads |
-| `rahcp-cli` | CLI: `rahcp s3`, `rahcp iiif`, `rahcp ns`, `rahcp auth` |
+| `rahcp-transkribus` | Export PAGE/ALTO XML + images from Transkribus collections |
+| `rahcp-cli` | CLI: `rahcp s3`, `rahcp iiif`, `rahcp transkribus`, `rahcp ns`, `rahcp auth` |
 | `rahcp-validate` | JPEG/TIFF/PNG validation |
 
 ## How data flows
@@ -161,6 +163,102 @@ rahcp iiif download-batches job.txt --tracker-prefix familysearch
 ```
 
 Or set globally in config: `bulk_tracker_prefix: andraarkiv`
+
+## Export from Transkribus
+
+Export ground-truth PAGE/ALTO XML + page images from a Transkribus collection.
+Same tracker-based resumability as IIIF; export to a local dir or stream straight
+into a bucket.
+
+```python
+import asyncio
+from pathlib import Path
+from rahcp_tracker import SqliteTracker
+from rahcp_transkribus import TranskribusClient, export_collection
+
+async def main():
+    tracker = SqliteTracker(Path(".transkribus-export.db"))
+    async with TranskribusClient("me@example.se", "password") as client:
+        stats = await export_collection(
+            client, 1944790, Path("./export"), tracker,
+            status="GT", fmt="page", include_images=True, workers=8,
+        )
+    print(f"{stats.ok} exported, {stats.skipped} skipped, {stats.errors} errors")
+    tracker.close()
+
+asyncio.run(main())
+```
+
+Output keys are relative (`{collection}/{docId}_{title}/{page|alto|images}/{name}`)
+so they double as local paths and S3 keys. `fmt="alto"` converts PAGE→ALTO on the
+fly (needs the `alto` extra: `page-to-alto`).
+
+CLI:
+```bash
+# Export to disk
+rahcp transkribus export 1944790 -o ./export -U me@example.se -P secret
+
+# Stream straight to a bucket, choosing a conflict policy for existing keys
+rahcp transkribus upload 1944790 my-bucket --prefix medieval/ --on-conflict skip
+```
+
+### Scheduled sync (export + upload in one pass)
+
+`rahcp transkribus upload` is a single idempotent job for any scheduler (cron,
+Argo `CronWorkflow`, k8s `CronJob`). `--archive-dir` tees a local copy while
+streaming to the bucket, so **one run does both the export and the upload**:
+
+```bash
+rahcp transkribus upload 1944790 my-bucket --prefix medieval/ \
+  --archive-dir /data/transkribus \   # local copy of every file (the "export")
+  --validate --verify \               # byte-check + size-verify
+  --on-conflict skip                  # keep what's already in the bucket
+# Transkribus → s3://my-bucket/medieval/…  AND  → /data/transkribus/…
+```
+
+Guarantees for repeated runs: **idempotent** (tracker skips done files — nothing
+uploaded twice; re-runs converge), **validated/verified**, **fails loud**
+(`--fail-on-error`, default on, exits non-zero so the scheduler marks the run
+failed; `--no-fail-on-error` forces 0). Exit codes: `0`=all done, `1`=failed
+(re-run resumes), `130`=interrupted. A plain re-run picks up **new** pages/docs
+and retries failures. **Persist the tracker DB** (and `--archive-dir`) across runs
+(mounted volume, or a `postgresql://` DSN) so resume works run to run.
+
+### Catching corrected transcripts — `--check-updates`
+
+A transcript re-corrected in Transkribus gets a new `tsId` but keeps the same
+object key, so a plain re-run skips it. `--check-updates` remembers each
+transcript's synced `tsId` (sidecar DB `<tracker-db>.versions.db`, or
+`--version-db`) and re-uploads **only** the changed ones (implies overwrite):
+
+```bash
+rahcp transkribus upload 1944790 my-bucket --prefix medieval/ --check-updates
+```
+
+**HCP overwrite gotcha (fixed in the engine):** HCP has no overwrite-in-place — a
+PUT over an existing key returns `409`. `ConflictPolicy.overwrite` (and
+`--check-updates`) therefore **delete then re-PUT** so overwrite genuinely
+replaces the object. Note: moto and the backend `mock_server` allow PUT-overwrite
+(in-memory), so they do NOT reproduce HCP's 409 — test overwrite paths against a
+real HCP bucket or the delete-then-put unit tests, not the mock.
+
+### Bucket conflict policy (overwrite / skip / error)
+
+`bulk_upload` / `bulk_stream_upload` now take `on_conflict: ConflictPolicy` for
+keys that already exist in the destination bucket:
+
+```python
+from rahcp_client import BulkStreamConfig, ConflictPolicy, bulk_stream_upload
+
+BulkStreamConfig(..., on_conflict=ConflictPolicy.skip)       # keep remote, count skipped (default)
+BulkStreamConfig(..., on_conflict=ConflictPolicy.overwrite)  # replace remote, no pre-flight HEAD
+BulkStreamConfig(..., on_conflict=ConflictPolicy.error)      # record a conflict error for the item
+```
+
+`on_conflict` supersedes the legacy `skip_existing` bool; when `on_conflict` is
+`None`, `skip_existing=True`→skip and `False`→overwrite (unchanged back-compat).
+The `rahcp transkribus upload` / `rahcp iiif upload` CLIs surface this as
+`--on-conflict overwrite|skip|error`.
 
 ## Transfer tracker
 

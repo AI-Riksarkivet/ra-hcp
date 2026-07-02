@@ -83,6 +83,13 @@ profiles:
     iiif_query_params: full/max/0/default.jpg   # IIIF image API params
     iiif_workers: 4                 # concurrent IIIF downloads
 
+    # Transkribus export settings (rahcp transkribus commands)
+    transkribus_url: https://transkribus.eu/TrpServer/rest
+    transkribus_username: me@example.se
+    transkribus_password: ""
+    transkribus_timeout: 60
+    transkribus_workers: 8          # concurrent export workers
+
   prod:
     endpoint: https://hcp-api.example.com/api/v1
     username: svc-account
@@ -869,3 +876,74 @@ profiles:
 ```
 
 Override priority: CLI flags > env vars (`IIIF_URL`) > config file > defaults.
+
+### `rahcp transkribus`
+
+Export ground-truth PAGE/ALTO XML transcripts and page images from a
+[Transkribus](https://transkribus.eu/) collection — to a local directory, or
+streamed straight into an HCP bucket. Both commands are resumable via the
+transfer tracker (`~/.rahcp/.transkribus-export.db` by default).
+
+```bash
+# Export a collection to disk (PAGE XML + images)
+rahcp transkribus export 1944790 -o ./export -U me@example.se -P secret
+
+# Only ground-truth, ALTO format, no images, limited to specific documents
+rahcp transkribus export 1944790 -o ./export \
+  --status GT --format alto --no-images --doc-ids 1454602,4869751
+
+# Stream a whole collection straight into an HCP bucket (no local disk)
+rahcp transkribus upload 1944790 my-bucket --prefix medieval/ --workers 8
+
+# Choose what happens when a key already exists in the bucket
+rahcp transkribus upload 1944790 my-bucket --on-conflict skip       # keep remote (default)
+rahcp transkribus upload 1944790 my-bucket --on-conflict overwrite  # replace remote
+rahcp transkribus upload 1944790 my-bucket --on-conflict error      # fail the item
+
+# Cron-ready one pass: stream to the bucket AND keep a local archive, with guards
+rahcp transkribus upload 1944790 my-bucket --prefix medieval/ \
+  --archive-dir /data/transkribus --validate --verify --on-conflict skip
+```
+
+The `upload` command is a single idempotent job you can put on any scheduler
+(Unix cron, Argo `CronWorkflow`, k8s `CronJob`) at any cadence. It is
+**idempotent** (the tracker skips already-done files on re-run, so nothing is
+uploaded twice), can **validate** image bytes (`--validate`) and **verify** remote
+size (`--verify`), tees a **local archive** alongside the bucket copy in the same
+pass (`--archive-dir`), and **fails loud**: `--fail-on-error` (default on) exits
+non-zero if any item failed so the scheduler marks the run failed and the next run
+resumes it — exit `0` = all uploaded, `1` = something failed, `130` = interrupted.
+Use `--no-fail-on-error` to always exit 0.
+
+A re-run picks up **new** pages/documents and retries failures. To also re-sync
+transcripts **corrected in place** (same key, new Transkribus `tsId`), add
+`--check-updates` — it remembers each transcript's synced version in a sidecar DB
+(`<tracker-db>.versions.db`, override with `--version-db`) and re-uploads only the
+changed ones (implies `--on-conflict overwrite`). Persist the tracker DB (and the
+versions DB and `--archive-dir`) across runs — a mounted volume in Argo/k8s, or a
+`postgresql://` tracker DSN — so resume and change detection work run to run.
+
+!!! note "Overwrite on HCP"
+    HCP has no overwrite-in-place — a PUT over an existing key returns `409`. The
+    bulk engine handles `--on-conflict overwrite` (and `--check-updates`) by
+    **deleting the object then re-uploading**, so overwrite genuinely replaces the
+    object on HCP.
+
+Credentials come from `--username`/`--password` flags, the
+`TRANSKRIBUS_USERNAME`/`TRANSKRIBUS_PASSWORD` env vars, or the profile's
+`transkribus_username`/`transkribus_password` keys. `--format alto` requires the
+`page-to-alto` tool (`uv pip install "rahcp-transkribus[alto]"`).
+
+Transkribus settings can be configured per profile in `config.yaml`:
+
+```yaml
+profiles:
+  dev:
+    transkribus_url: https://transkribus.eu/TrpServer/rest
+    transkribus_username: me@example.se
+    transkribus_password: ""
+    transkribus_timeout: 60
+    transkribus_workers: 8
+```
+
+Override priority: CLI flags > env vars (`TRANSKRIBUS_URL`, `TRANSKRIBUS_USERNAME`, `TRANSKRIBUS_PASSWORD`) > config file > defaults.

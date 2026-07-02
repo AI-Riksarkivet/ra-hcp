@@ -59,6 +59,7 @@ nav = [
       { "CLI" = "sdk/cli.md" },
       { "Transfer Tracker" = "sdk/tracker.md" },
       { "IIIF Downloader" = "sdk/iiif.md" },
+      { "Transkribus Exporter" = "sdk/transkribus.md" },
       { "ETL Pipelines" = "sdk/etl.md" },
       { "Validation" = "sdk/validation.md" },
     ]},
@@ -170,7 +171,7 @@ custom_checkbox = true
 default_handler = "python"
 
 [project.plugins.mkdocstrings.handlers.python]
-paths = ["backend", "packages/rahcp-client/src", "packages/rahcp-cli/src", "packages/rahcp-tracker/src", "packages/rahcp-iiif/src", "packages/rahcp-etl/src", "packages/rahcp-validate/src"]
+paths = ["backend", "packages/rahcp-client/src", "packages/rahcp-cli/src", "packages/rahcp-tracker/src", "packages/rahcp-iiif/src", "packages/rahcp-transkribus/src", "packages/rahcp-etl/src", "packages/rahcp-validate/src"]
 
 [project.plugins.mkdocstrings.handlers.python.options]
 docstring_style = "google"

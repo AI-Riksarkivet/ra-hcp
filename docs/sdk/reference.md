@@ -72,6 +72,30 @@ Auto-generated from source code docstrings.
 
 ---
 
+## rahcp-transkribus
+
+### Client
+
+::: rahcp_transkribus.client
+
+### Exporter
+
+::: rahcp_transkribus.exporter
+
+### Models
+
+::: rahcp_transkribus.models
+
+### Change Detection
+
+::: rahcp_transkribus.versions
+
+### ALTO Conversion
+
+::: rahcp_transkribus.alto
+
+---
+
 ## rahcp-cli
 
 ### S3 Commands
@@ -81,6 +105,10 @@ Auto-generated from source code docstrings.
 ### IIIF Commands
 
 ::: rahcp_cli.iiif
+
+### Transkribus Commands
+
+::: rahcp_cli.transkribus
 
 ### Auth Commands
 

@@ -1,6 +1,6 @@
 # Python SDK
 
-The `rahcp` Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with six installable packages:
+The `rahcp` Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with seven installable packages:
 
 ```mermaid
 graph TD
@@ -9,19 +9,24 @@ graph TD
     CLIENT["rahcp-client<br/><small>Async HTTP client</small>"]
     CLI["rahcp-cli<br/><small>Typer CLI</small>"]
     IIIF["rahcp-iiif<br/><small>IIIF image downloader</small>"]
+    TK["rahcp-transkribus<br/><small>Transkribus exporter</small>"]
     ETL["rahcp-etl<br/><small>JetStream pipelines</small>"]
     VAL["rahcp-validate<br/><small>File validation</small>"]
 
     ROOT --> CLIENT
     ROOT --> CLI
     ROOT -.->|optional| IIIF
+    ROOT -.->|optional| TK
     ROOT -.->|optional| ETL
     ROOT -.->|optional| VAL
     CLIENT --> TRACKER
     IIIF --> TRACKER
     IIIF -.->|optional| VAL
+    TK --> TRACKER
+    TK -.->|optional| VAL
     CLI --> CLIENT
     CLI --> IIIF
+    CLI --> TK
     CLI -.->|optional| VAL
     ETL --> CLIENT
 ```
@@ -45,6 +50,9 @@ uv pip install "rahcp[validate]"
 
 # With IIIF image downloader
 uv pip install "rahcp[iiif]"
+
+# With Transkribus collection exporter
+uv pip install "rahcp[transkribus]"
 
 # Everything
 uv pip install "rahcp[all]"
@@ -71,6 +79,7 @@ uv run rahcp auth whoami   # check current identity
 | [rahcp-cli](cli.md) | CLI tool | Command-line interface for S3, IIIF, and namespace operations |
 | [rahcp-tracker](tracker.md) | Transfer tracking | Resumable transfer state tracking with SQLite |
 | [rahcp-iiif](iiif.md) | IIIF downloader | Async IIIF image downloader with parallel workers |
+| [rahcp-transkribus](transkribus.md) | Transkribus exporter | Async PAGE/ALTO + image exporter for Transkribus collections |
 | [rahcp-etl](etl.md) | ETL pipelines | NATS JetStream event-driven pipelines with checkpointing |
 | [rahcp-validate](validation.md) | File validation | Format-specific file validation with composable rules |
 

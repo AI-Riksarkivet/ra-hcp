@@ -9,7 +9,8 @@ dependencies = ["rahcp-client", "rahcp-cli"]
 etl = ["rahcp-etl"]
 validate = ["rahcp-validate"]
 iiif = ["rahcp-iiif"]
-all = ["rahcp-etl", "rahcp-validate", "rahcp-iiif"]
+transkribus = ["rahcp-transkribus"]
+all = ["rahcp-etl", "rahcp-validate", "rahcp-iiif", "rahcp-transkribus"]
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -21,6 +22,7 @@ rahcp-cli = { workspace = true }
 rahcp-etl = { workspace = true }
 rahcp-validate = { workspace = true }
 rahcp-iiif = { workspace = true }
+rahcp-transkribus = { workspace = true }
 rahcp-tracker = { workspace = true }
 
 [dependency-groups]
