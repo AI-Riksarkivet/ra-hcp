@@ -20,7 +20,7 @@ jobs:
         with:
           verb: call
           args: checks --source=.
-          version: "0.20.1"
+          version: "0.21.7"
 
   test:
     name: Unit Tests
@@ -33,7 +33,7 @@ jobs:
         with:
           verb: call
           args: test-coverage --source=.
-          version: "0.20.1"
+          version: "0.21.7"
 
   test-integration:
     name: Integration Tests
@@ -46,7 +46,7 @@ jobs:
         with:
           verb: call
           args: test-integration --source=.
-          version: "0.20.1"
+          version: "0.21.7"
 
   e2e:
     name: E2E (Playwright full-stack)
@@ -61,7 +61,7 @@ jobs:
         with:
           verb: call
           args: end-to-end --source=.
-          version: "0.20.1"
+          version: "0.21.7"
 
   scan:
     name: CVE Scan (Trivy)
@@ -79,4 +79,4 @@ jobs:
         with:
           verb: call
           args: scan --source=. --severity=HIGH,CRITICAL --exit-code=0
-          version: "0.20.1"
+          version: "0.21.7"
