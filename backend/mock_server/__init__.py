@@ -10,7 +10,6 @@ All MAPI calls are intercepted by respx and return stateful fixture data.
 
 from __future__ import annotations
 
-import io
 import logging
 from contextlib import asynccontextmanager
 from unittest.mock import patch
@@ -146,7 +145,7 @@ async def presigned_download(bucket: str, key: str, request: Request):
             content=iter([b"Object not found"]),
             status_code=404,
         )
-    body: io.BytesIO = result["Body"]
+    body = result["Body"]
     return StreamingResponse(
         content=body.iter_chunks(),
         media_type=result.get("ContentType", "application/octet-stream"),

@@ -66,12 +66,16 @@ _profile = _load_rahcp_profile() or {}
 HCP_USERNAME = os.environ.get("HCP_USERNAME") or _profile.get("username", "")
 HCP_PASSWORD = os.environ.get("HCP_PASSWORD") or _profile.get("password", "")
 HCP_TENANT = os.environ.get("HCP_TENANT") or _profile.get("tenant", "dev-ai")
-HCP_S3_ENDPOINT = os.environ.get("HCP_S3_ENDPOINT", f"https://{HCP_TENANT}.hcp.ra-dev.int")
+HCP_S3_ENDPOINT = os.environ.get(
+    "HCP_S3_ENDPOINT", f"https://{HCP_TENANT}.hcp.ra-dev.int"
+)
 HCP_TEST_BUCKET = os.environ.get("HCP_TEST_BUCKET", "ra-compat-test")
 _CONNECT_TIMEOUT = int(os.environ.get("HCP_CONNECT_TIMEOUT", "10"))
 
 if not (HCP_USERNAME and HCP_PASSWORD):
-    pytest.skip("HCP credentials not configured (env or .rahcp)", allow_module_level=True)
+    pytest.skip(
+        "HCP credentials not configured (env or .rahcp)", allow_module_level=True
+    )
 
 
 def _hcp_is_reachable() -> bool:

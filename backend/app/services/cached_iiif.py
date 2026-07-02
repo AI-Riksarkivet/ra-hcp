@@ -45,7 +45,9 @@ class CachedIiifService:
 
     # ── Pure delegation (no caching needed) ──────────────────────
 
-    def build_image_url(self, image_id: str, query_params: str = "full/max/0/default.jpg") -> str:
+    def build_image_url(
+        self, image_id: str, query_params: str = "full/max/0/default.jpg"
+    ) -> str:
         return self._inner.build_image_url(image_id, query_params)
 
     def build_image_urls(

@@ -94,9 +94,7 @@ if FeatureSettings().mapi_enabled:
     api_router.include_router(ns_statistics.router, prefix="/mapi", dependencies=_auth)
 
     # Metadata Query API (HCP Metadata Query — part of the MAPI plane)
-    api_router.include_router(
-        query_search.router, prefix="/query", dependencies=_auth
-    )
+    api_router.include_router(query_search.router, prefix="/query", dependencies=_auth)
 
 # ── IIIF ──────────────────────────────────────────────────────────────
 api_router.include_router(iiif_explorer.router, dependencies=_auth)

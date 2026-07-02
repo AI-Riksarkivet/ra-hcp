@@ -8,6 +8,7 @@ import zipfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
 from botocore.exceptions import ClientError
@@ -42,7 +43,7 @@ def _captured_spans() -> Iterator[InMemorySpanExporter]:
 
     active = trace.get_tracer_provider()
     if active is not provider and hasattr(active, "add_span_processor"):
-        active.add_span_processor(processor)
+        cast(TracerProvider, active).add_span_processor(processor)
 
     exporter.clear()
     try:
@@ -314,11 +315,13 @@ async def test_run_delete_emits_root_span(mock_s3_service: MagicMock):
     root = next(s for s in spans if s.name == "s3.folder_delete")
     assert root.kind is SpanKind.INTERNAL
     assert root.parent is None  # fresh root, NOT parented to the enclosing span
-    assert root.attributes["com.rask.s3.task_id"] == "task-span-ok"
-    assert root.attributes["s3.bucket"] == "bk"
-    assert root.attributes["com.rask.s3.total"] == 2
-    assert root.attributes["com.rask.s3.deleted"] == 2
-    assert root.attributes["com.rask.s3.failed"] == 0
+    attrs = root.attributes
+    assert attrs is not None
+    assert attrs["com.rask.s3.task_id"] == "task-span-ok"
+    assert attrs["s3.bucket"] == "bk"
+    assert attrs["com.rask.s3.total"] == 2
+    assert attrs["com.rask.s3.deleted"] == 2
+    assert attrs["com.rask.s3.failed"] == 0
     assert root.status.status_code is StatusCode.UNSET
 
 
@@ -328,11 +331,13 @@ async def test_run_delete_span_records_error_on_failure(mock_s3_service: MagicMo
 
     with _captured_spans() as exporter:
         await _run_delete("task-span-err", mock_s3_service, "bk", ["f/"], [], None)
-        spans: list[ReadableSpan] = exporter.get_finished_spans()
+        spans: tuple[ReadableSpan, ...] = exporter.get_finished_spans()
 
     root = next(s for s in spans if s.name == "s3.folder_delete")
     assert root.status.status_code is StatusCode.ERROR
-    assert root.attributes["error.type"] == "RuntimeError"
+    attrs = root.attributes
+    assert attrs is not None
+    assert attrs["error.type"] == "RuntimeError"
     assert _delete_tasks["task-span-err"]["status"] == "failed"
 
 

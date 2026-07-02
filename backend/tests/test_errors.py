@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 import pytest
 from fastapi import HTTPException
@@ -208,7 +210,7 @@ def test_storage_operation_not_supported():
     ],
 )
 def test_from_client_error_maps_known_codes(error_code: str, expected_status: int):
-    exc = type("ClientError", (Exception,), {})()
+    exc: Any = type("ClientError", (Exception,), {})()
     exc.response = {  # type: ignore[attr-defined]
         "Error": {"Code": error_code, "Message": "test message"},
         "ResponseMetadata": {"HTTPStatusCode": 500},
@@ -220,7 +222,7 @@ def test_from_client_error_maps_known_codes(error_code: str, expected_status: in
 
 
 def test_from_client_error_unknown_code_uses_http_status():
-    exc = type("ClientError", (Exception,), {})()
+    exc: Any = type("ClientError", (Exception,), {})()
     exc.response = {  # type: ignore[attr-defined]
         "Error": {"Code": "WeirdError", "Message": "weird"},
         "ResponseMetadata": {"HTTPStatusCode": 422},

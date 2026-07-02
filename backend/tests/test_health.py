@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import AsyncMock, patch
 
 import httpx
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from tests.conftest import HCP_BASE
@@ -42,7 +44,7 @@ async def test_readiness_not_ready_when_hcp_unreachable(client: AsyncClient):
     # Mock ping to return False (HCP unreachable)
     transport = client._transport
     assert isinstance(transport, ASGITransport)
-    app = transport.app
+    app = cast(FastAPI, transport.app)
     with patch.object(
         app.state.mapi,  # type: ignore[union-attr]
         "ping",
@@ -78,7 +80,7 @@ async def test_readiness_s3_reachable_for_non_hcp_backend(client: AsyncClient):
     """When storage_backend is not HCP and probe succeeds, storage is reachable."""
     transport = client._transport
     assert isinstance(transport, ASGITransport)
-    app = transport.app
+    app = cast(FastAPI, transport.app)
 
     probe = AsyncMock()
     probe.list_buckets.return_value = {"Buckets": []}
@@ -100,7 +102,7 @@ async def test_readiness_s3_unreachable_for_non_hcp_backend(client: AsyncClient)
     """When storage_backend is not HCP and probe fails, storage is unreachable."""
     transport = client._transport
     assert isinstance(transport, ASGITransport)
-    app = transport.app
+    app = cast(FastAPI, transport.app)
 
     probe = AsyncMock()
     probe.list_buckets.side_effect = ConnectionError("Connection refused")
@@ -122,7 +124,7 @@ async def test_readiness_s3_no_probe_configured(client: AsyncClient):
     """When storage_backend is not HCP but no probe exists, storage is unconfigured."""
     transport = client._transport
     assert isinstance(transport, ASGITransport)
-    app = transport.app
+    app = cast(FastAPI, transport.app)
     app.state.storage_probe = None  # type: ignore[union-attr]
 
     with patch("app.main.StorageSettings") as mock_settings_cls:

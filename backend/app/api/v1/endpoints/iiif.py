@@ -72,8 +72,5 @@ async def get_image_urls(
         query_params=query_params,
         extension=extension,
         image_count=len(image_ids),
-        images=[
-            IiifImageUrl(image_id=img_id, url=url)
-            for img_id, url in urls.items()
-        ],
+        images=[IiifImageUrl(image_id=img_id, url=url) for img_id, url in urls.items()],
     )

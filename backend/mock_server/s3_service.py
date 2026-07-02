@@ -235,9 +235,9 @@ class MockS3Service:
     ) -> dict:
         self._logger.info("get_object bucket=%s key=%s", bucket, key)
         obj = self._require_object(bucket, key)
-        body = io.BytesIO(obj.data)
+        body: Any = io.BytesIO(obj.data)
         # Mimic boto3 streaming body with iter_chunks
-        body.iter_chunks = lambda chunk_size=1024: iter([obj.data])  # type: ignore[attr-defined]
+        body.iter_chunks = lambda chunk_size=1024: iter([obj.data])
         return {
             "Body": body,
             "ContentType": obj.content_type,

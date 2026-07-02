@@ -17,7 +17,12 @@ class IiifBatchParams(BaseModel):
     """Parameters identifying a IIIF batch."""
 
     batch_id: Annotated[
-        str, Field(min_length=1, pattern=r"^[A-Za-z0-9_-]+$", description="Volume/batch ID (e.g. C0074667)")
+        str,
+        Field(
+            min_length=1,
+            pattern=r"^[A-Za-z0-9_-]+$",
+            description="Volume/batch ID (e.g. C0074667)",
+        ),
     ]
     query_params: str = Field(
         "full/max/0/default.jpg",
