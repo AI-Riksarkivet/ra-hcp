@@ -6,18 +6,18 @@ import asyncio
 import logging
 from pathlib import Path
 
-import httpx
 
 from rahcp_client.bulk.config import BulkUploadConfig, TransferStats
 from rahcp_client.bulk.helpers import (
     Counters,
+    apply_conflict_policy,
     make_pool,
     mark_done,
     mark_error,
     matches_filters,
     pool_settings,
     pool_upload,
-    remote_exists_matching,
+    put_with_conflict_policy,
     run_pipeline,
     run_validation,
     verify_remote_size,
@@ -55,9 +55,8 @@ def _scan_files(
 
 async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
     """Upload a directory to S3 with batch presigning and connection pooling."""
-    from rahcp_client.errors import ConflictError
-
     src = cfg.source_dir
+    policy = cfg.conflict_policy()
     counters = Counters(done_keys=await asyncio.to_thread(cfg.tracker.done_keys))
 
     verify_ssl, pool_timeout, multipart_threshold = pool_settings(cfg.client)
@@ -83,14 +82,29 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
         validated: bool,
     ) -> tuple[str, int]:
         """Perform the actual upload and optional post-upload verification."""
-        try:
+
+        async def _put() -> str:
             if presigned_url and local_size < multipart_threshold:
-                etag = await pool_upload(
+                return await pool_upload(
                     pool, presigned_url, file_path, cfg.bucket, key
                 )
-            else:
-                etag = await cfg.client.s3.upload(cfg.bucket, key, file_path)
+            return await cfg.client.s3.upload(cfg.bucket, key, file_path)
 
+        etag, short_circuit = await put_with_conflict_policy(
+            _put,
+            cfg.client.s3,
+            cfg.bucket,
+            key,
+            local_size,
+            policy=policy,
+            tracker=cfg.tracker,
+            done_keys=counters.done_keys,
+            on_error=cfg.on_error,
+        )
+        if short_circuit is not None:
+            return short_circuit
+
+        try:
             verified = False
             if cfg.verify_upload:
                 await verify_remote_size(cfg.client.s3, cfg.bucket, key, local_size)
@@ -106,18 +120,8 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
                 verified=verified,
             )
             return "ok", local_size
-
-        except ConflictError:
-            mark_done(cfg.tracker, counters.done_keys, key, local_size)
-            return "skipped", 0
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 409:
-                mark_done(cfg.tracker, counters.done_keys, key, local_size)
-                return "skipped", 0
-            mark_error(cfg.tracker, key, local_size, exc, cfg.on_error)
-            return "error", 0
         except Exception as exc:
-            mark_error(cfg.tracker, key, local_size, exc, cfg.on_error)
+            mark_error(cfg.tracker, key, local_size, exc, cfg.on_error, phase="verify")
             return "error", 0
 
     # ── Per-file transfer logic ───────────────────────────────────
@@ -135,22 +139,20 @@ async def bulk_upload(cfg: BulkUploadConfig) -> TransferStats:
         ):
             return "error", 0
 
-        if await remote_exists_matching(
+        guard = await apply_conflict_policy(
             cfg.client.s3,
             cfg.bucket,
             key,
             local_size,
-            skip_existing=cfg.skip_existing,
+            policy=policy,
             retry_errors=cfg.retry_errors,
-        ):
-            mark_done(
-                cfg.tracker,
-                counters.done_keys,
-                key,
-                local_size,
-                validated=cfg.validate_file is not None,
-            )
-            return "skipped", 0
+            tracker=cfg.tracker,
+            done_keys=counters.done_keys,
+            on_error=cfg.on_error,
+            validated=cfg.validate_file is not None,
+        )
+        if guard is not None:
+            return guard
 
         return await _upload_and_verify(
             key,

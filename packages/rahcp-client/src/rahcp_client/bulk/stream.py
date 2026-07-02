@@ -12,17 +12,17 @@ import logging
 from collections.abc import Awaitable, Callable
 from pathlib import PurePosixPath
 
-import httpx
 
 from rahcp_client.bulk.config import BulkStreamConfig, TransferStats
 from rahcp_client.bulk.helpers import (
     Counters,
+    apply_conflict_policy,
     make_pool,
     mark_done,
     mark_error,
     pool_put_bytes,
     pool_settings,
-    remote_exists_matching,
+    put_with_conflict_policy,
     run_pipeline,
     verify_remote_size,
 )
@@ -48,8 +48,8 @@ async def bulk_stream_upload(
     ``fetch`` → optional byte validation → presigned PUT → optional verify →
     tracker mark. Reuses the same engine and guards as ``bulk_upload``.
     """
-    from rahcp_client.errors import ConflictError
 
+    policy = cfg.conflict_policy()
     counters = Counters(done_keys=await asyncio.to_thread(cfg.tracker.done_keys))
     verify_ssl, pool_timeout, _ = pool_settings(cfg.client)
     pool = make_pool(cfg.workers, verify_ssl=verify_ssl, timeout=pool_timeout)
@@ -69,16 +69,20 @@ async def bulk_stream_upload(
         if key in counters.done_keys:
             return "skipped", 0
 
-        # Skip before downloading — don't re-fetch what's already in the bucket.
-        if await remote_exists_matching(
+        # Guard before downloading — don't re-fetch what's already in the bucket.
+        guard = await apply_conflict_policy(
             cfg.client.s3,
             cfg.bucket,
             key,
-            skip_existing=cfg.skip_existing,
+            None,
+            policy=policy,
             retry_errors=cfg.retry_errors,
-        ):
-            mark_done(cfg.tracker, counters.done_keys, key, 0)
-            return "skipped", 0
+            tracker=cfg.tracker,
+            done_keys=counters.done_keys,
+            on_error=cfg.on_error,
+        )
+        if guard is not None:
+            return guard
 
         try:
             data = await fetch(fetch_id)
@@ -95,23 +99,24 @@ async def bulk_stream_upload(
                 mark_error(cfg.tracker, key, size, exc, cfg.on_error, phase="validate")
                 return "error", 0
 
-        try:
+        async def _put() -> str:
             if presigned_url:
-                etag = await pool_put_bytes(pool, presigned_url, data, cfg.bucket, key)
-            else:
-                etag = await cfg.client.s3.upload(cfg.bucket, key, data)
-        except ConflictError:
-            mark_done(cfg.tracker, counters.done_keys, key, size)
-            return "skipped", 0
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 409:
-                mark_done(cfg.tracker, counters.done_keys, key, size)
-                return "skipped", 0
-            mark_error(cfg.tracker, key, size, exc, cfg.on_error, phase="upload")
-            return "error", 0
-        except Exception as exc:
-            mark_error(cfg.tracker, key, size, exc, cfg.on_error, phase="upload")
-            return "error", 0
+                return await pool_put_bytes(pool, presigned_url, data, cfg.bucket, key)
+            return await cfg.client.s3.upload(cfg.bucket, key, data)
+
+        etag, short_circuit = await put_with_conflict_policy(
+            _put,
+            cfg.client.s3,
+            cfg.bucket,
+            key,
+            size,
+            policy=policy,
+            tracker=cfg.tracker,
+            done_keys=counters.done_keys,
+            on_error=cfg.on_error,
+        )
+        if short_circuit is not None:
+            return short_circuit
 
         verified = False
         if cfg.verify_upload:

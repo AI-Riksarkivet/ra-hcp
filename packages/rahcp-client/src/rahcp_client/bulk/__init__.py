@@ -15,6 +15,7 @@ from rahcp_client.bulk.config import (
     BulkDownloadConfig,
     BulkStreamConfig,
     BulkUploadConfig,
+    ConflictPolicy,
     TransferStats,
 )
 from rahcp_client.bulk.download import bulk_download
@@ -25,6 +26,7 @@ __all__ = [
     "BulkDownloadConfig",
     "BulkStreamConfig",
     "BulkUploadConfig",
+    "ConflictPolicy",
     "TransferStats",
     "bulk_download",
     "bulk_stream_upload",

@@ -9,6 +9,7 @@ import pytest
 from rahcp_client.bulk import (
     BulkDownloadConfig,
     BulkUploadConfig,
+    ConflictPolicy,
     TransferStats,
     bulk_download,
     bulk_upload,
@@ -411,6 +412,240 @@ async def test_verify_upload_fails_on_size_mismatch(tmp_path: Path):
     assert stats.errors == 1
     assert stats.ok == 0
     assert "file.txt" in errors_seen
+    tracker.close()
+
+
+# ── Conflict policy ─────────────────────────────────────────────────
+
+
+async def test_on_conflict_skip_skips_existing_key(tmp_path: Path):
+    src = tmp_path / "source"
+    src.mkdir()
+    (src / "file.txt").write_bytes(b"hello")
+
+    client = _make_client()
+    client.s3.head = AsyncMock(return_value={"content-length": "5"})
+    tracker = TransferTracker(tmp_path / "tracker.db")
+
+    stats = await bulk_upload(
+        BulkUploadConfig(
+            client=client,
+            bucket="b",
+            source_dir=src,
+            tracker=tracker,
+            workers=1,
+            on_conflict=ConflictPolicy.skip,
+        )
+    )
+
+    assert stats.skipped == 1
+    assert stats.ok == 0
+    assert client.s3.upload.call_count == 0
+    assert "file.txt" in tracker.done_keys()
+    tracker.close()
+
+
+async def test_on_conflict_skip_size_mismatch_still_skips(tmp_path: Path):
+    """A remote key with different content is left alone under skip (warn + skip)."""
+    src = tmp_path / "source"
+    src.mkdir()
+    (src / "file.txt").write_bytes(b"hello")
+
+    client = _make_client()
+    client.s3.head = AsyncMock(return_value={"content-length": "999"})
+    tracker = TransferTracker(tmp_path / "tracker.db")
+
+    stats = await bulk_upload(
+        BulkUploadConfig(
+            client=client,
+            bucket="b",
+            source_dir=src,
+            tracker=tracker,
+            workers=1,
+            on_conflict=ConflictPolicy.skip,
+        )
+    )
+
+    assert stats.skipped == 1
+    assert client.s3.upload.call_count == 0
+    tracker.close()
+
+
+async def test_on_conflict_error_records_conflict(tmp_path: Path):
+    src = tmp_path / "source"
+    src.mkdir()
+    (src / "file.txt").write_bytes(b"hello")
+
+    client = _make_client()
+    client.s3.head = AsyncMock(return_value={"content-length": "5"})
+    tracker = TransferTracker(tmp_path / "tracker.db")
+    errors_seen = []
+
+    stats = await bulk_upload(
+        BulkUploadConfig(
+            client=client,
+            bucket="b",
+            source_dir=src,
+            tracker=tracker,
+            workers=1,
+            on_conflict=ConflictPolicy.error,
+            on_error=lambda key, exc: errors_seen.append(key),
+        )
+    )
+
+    assert stats.errors == 1
+    assert stats.ok == 0
+    assert client.s3.upload.call_count == 0
+    assert errors_seen == ["file.txt"]
+    details = tracker.error_details()
+    assert len(details) == 1
+    assert (details[0][2] or "").startswith("conflict:")
+    tracker.close()
+
+
+async def test_overwrite_deletes_then_retries_on_409(tmp_path: Path):
+    """HCP rejects PUT over an existing key with 409; overwrite must delete then re-PUT."""
+    from rahcp_client.errors import ConflictError
+
+    src = tmp_path / "source"
+    src.mkdir()
+    (src / "file.txt").write_bytes(b"new-content")
+
+    client = _make_client()
+    # First PUT is refused (object exists), second PUT (after delete) succeeds.
+    client.s3.upload = AsyncMock(
+        side_effect=[ConflictError("exists", status_code=409), '"etag2"']
+    )
+    client.s3.delete = AsyncMock()
+    tracker = TransferTracker(tmp_path / "tracker.db")
+
+    stats = await bulk_upload(
+        BulkUploadConfig(
+            client=client,
+            bucket="b",
+            source_dir=src,
+            tracker=tracker,
+            workers=1,
+            on_conflict=ConflictPolicy.overwrite,
+        )
+    )
+
+    assert stats.ok == 1
+    assert stats.errors == 0
+    client.s3.delete.assert_awaited_once_with("b", "file.txt")
+    assert client.s3.upload.await_count == 2  # rejected, then succeeded after delete
+    tracker.close()
+
+
+async def test_overwrite_errors_if_delete_then_retry_still_fails(tmp_path: Path):
+    """If the object can't be replaced (e.g. under retention), it's a real error."""
+    from rahcp_client.errors import ConflictError
+
+    src = tmp_path / "source"
+    src.mkdir()
+    (src / "file.txt").write_bytes(b"data")
+
+    client = _make_client()
+    client.s3.upload = AsyncMock(side_effect=ConflictError("exists", status_code=409))
+    client.s3.delete = AsyncMock()
+    tracker = TransferTracker(tmp_path / "tracker.db")
+
+    stats = await bulk_upload(
+        BulkUploadConfig(
+            client=client,
+            bucket="b",
+            source_dir=src,
+            tracker=tracker,
+            workers=1,
+            on_conflict=ConflictPolicy.overwrite,
+        )
+    )
+
+    assert stats.errors == 1
+    details = tracker.error_details()
+    assert (details[0][2] or "").startswith("overwrite:")
+    tracker.close()
+
+
+async def test_on_conflict_overwrite_uploads_without_head(tmp_path: Path):
+    src = tmp_path / "source"
+    src.mkdir()
+    (src / "file.txt").write_bytes(b"hello")
+
+    client = _make_client()
+    client.s3.head = AsyncMock(return_value={"content-length": "5"})
+    tracker = TransferTracker(tmp_path / "tracker.db")
+
+    stats = await bulk_upload(
+        BulkUploadConfig(
+            client=client,
+            bucket="b",
+            source_dir=src,
+            tracker=tracker,
+            workers=1,
+            on_conflict=ConflictPolicy.overwrite,
+        )
+    )
+
+    assert stats.ok == 1
+    assert client.s3.upload.call_count == 1
+    assert client.s3.head.call_count == 0
+    tracker.close()
+
+
+async def test_conflict_409_during_put_follows_policy(tmp_path: Path):
+    from rahcp_client.errors import ConflictError
+
+    src = tmp_path / "source"
+    src.mkdir()
+    (src / "file.txt").write_bytes(b"hello")
+
+    for policy, expect in [
+        (ConflictPolicy.skip, "skipped"),
+        (ConflictPolicy.error, "errors"),
+        (ConflictPolicy.overwrite, "errors"),
+    ]:
+        client = _make_client()
+        client.s3.upload = AsyncMock(
+            side_effect=ConflictError("exists", status_code=409)
+        )
+        tracker = TransferTracker(tmp_path / f"tracker-{policy}.db")
+
+        stats = await bulk_upload(
+            BulkUploadConfig(
+                client=client,
+                bucket="b",
+                source_dir=src,
+                tracker=tracker,
+                workers=1,
+                on_conflict=policy,
+            )
+        )
+
+        assert getattr(stats, expect) == 1, policy
+        tracker.close()
+
+
+async def test_legacy_skip_existing_maps_to_policy(tmp_path: Path):
+    client = _make_client()
+    tracker = TransferTracker(tmp_path / "tracker.db")
+
+    def cfg(**overrides) -> BulkUploadConfig:
+        return BulkUploadConfig(
+            client=client,
+            bucket="b",
+            source_dir=tmp_path,
+            tracker=tracker,
+            **overrides,
+        )
+
+    assert cfg().conflict_policy() is ConflictPolicy.skip
+    assert cfg(skip_existing=False).conflict_policy() is ConflictPolicy.overwrite
+    # Explicit on_conflict wins over the legacy bool
+    assert (
+        cfg(skip_existing=False, on_conflict=ConflictPolicy.error).conflict_policy()
+        is ConflictPolicy.error
+    )
     tracker.close()
 
 

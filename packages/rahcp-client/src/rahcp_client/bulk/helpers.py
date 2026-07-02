@@ -16,7 +16,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from rahcp_tracker import TrackerProtocol, TransferStatus
 
 from rahcp_client._transfer import raise_if_transient, transfer_with_retry
-from rahcp_client.bulk.config import DEFAULT_STREAM_THRESHOLD, TransferStats
+from rahcp_client.bulk.config import (
+    DEFAULT_STREAM_THRESHOLD,
+    ConflictPolicy,
+    TransferStats,
+)
 from rahcp_client.bulk.protocol import BulkClient, S3Client
 
 # Default transfer-retry budget for pooled presigned PUT/GET (mirrors the
@@ -265,38 +269,151 @@ async def pool_upload(
     return await pool_put_bytes(pool, presigned_url, content, bucket, key)
 
 
-async def remote_exists_matching(
+async def apply_conflict_policy(
     s3: S3Client,
     bucket: str,
     key: str,
-    size: int | None = None,
+    size: int | None,
     *,
-    skip_existing: bool,
+    policy: ConflictPolicy,
     retry_errors: bool,
-) -> bool:
-    """HEAD ``key``; return True if it already exists (and matches ``size``).
+    tracker: TrackerProtocol,
+    done_keys: set[str],
+    on_error: Callable[[str, Exception], None] | None,
+    validated: bool = False,
+) -> tuple[str, int] | None:
+    """Pre-upload conflict guard: HEAD ``key`` and apply the conflict policy.
 
-    Lets callers skip re-uploading objects already in the bucket. Returns False
-    when skip-existing is off, on a retry-errors pass, or if the object is absent.
-    Pass ``size`` (file path, cheap ``stat``) to also require a size match; pass
-    ``None`` (streaming, size unknown before download) to skip on existence alone.
-    Shared by the file (``bulk_upload``) and streaming (``bulk_stream_upload``) paths.
+    Returns a short-circuit transfer result — ``("skipped", 0)`` under
+    ``skip``, ``("error", 0)`` under ``error`` — or ``None`` when the upload
+    should proceed: the key is absent, the policy is ``overwrite`` (no HEAD
+    at all), or this is a retry-errors pass (retry passes always re-upload).
+    Pass ``size`` when the local size is known (cheap ``stat``) so a
+    remote-size mismatch can be reported; ``None`` (streaming, size unknown
+    before download) decides on existence alone. If the HEAD itself fails
+    for any reason other than 404, the upload proceeds — the PUT will
+    surface any real problem. Shared by the file (``bulk_upload``) and
+    streaming (``bulk_stream_upload``) paths.
     """
-    from rahcp_client.errors import NotFoundError
+    from rahcp_client.errors import ConflictError, NotFoundError
 
-    if not skip_existing or retry_errors:
-        return False
+    if policy is ConflictPolicy.overwrite or retry_errors:
+        return None
     try:
         meta = await s3.head(bucket, key)
     except NotFoundError:
-        return False
+        return None
     except Exception:
         log.debug("HEAD check failed for %s/%s, proceeding", bucket, key)
-        return False
-    if size is None:
-        return True
+        return None
+
+    if policy is ConflictPolicy.error:
+        exc = ConflictError(f"key already exists: {bucket}/{key}", status_code=409)
+        mark_error(tracker, key, size or 0, exc, on_error, phase="conflict")
+        return "error", 0
+
     remote_size = meta.get("content-length")
-    return remote_size is None or int(remote_size) == size
+    if size is not None and remote_size is not None and int(remote_size) != size:
+        log.warning(
+            "Key exists with different size (local=%d, remote=%s), skipping: %s/%s",
+            size,
+            remote_size,
+            bucket,
+            key,
+        )
+    mark_done(tracker, done_keys, key, size or 0, validated=validated)
+    return "skipped", 0
+
+
+def conflict_during_put(
+    exc: Exception,
+    key: str,
+    size: int,
+    *,
+    policy: ConflictPolicy,
+    tracker: TrackerProtocol,
+    done_keys: set[str],
+    on_error: Callable[[str, Exception], None] | None,
+) -> tuple[str, int]:
+    """Resolve a 409 raised by the PUT itself according to the conflict policy.
+
+    Under ``skip`` the object is already there — count it as skipped. Under
+    ``error`` the server refused a write we wanted to happen, so record a
+    conflict error. (``overwrite`` is handled by :func:`put_with_conflict_policy`,
+    which deletes then retries, and never reaches here.)
+    """
+    if policy is ConflictPolicy.skip:
+        mark_done(tracker, done_keys, key, size)
+        return "skipped", 0
+    mark_error(tracker, key, size, exc, on_error, phase="conflict")
+    return "error", 0
+
+
+def _is_conflict(exc: Exception) -> bool:
+    """True if ``exc`` is a 409 (a store refusing to overwrite an existing key)."""
+    from rahcp_client.errors import ConflictError
+
+    if isinstance(exc, ConflictError):
+        return True
+    return isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 409
+
+
+async def _delete_if_present(s3: S3Client, bucket: str, key: str) -> None:
+    """Delete an object so a fresh PUT can recreate it; ignore if already absent.
+
+    HCP rejects a PUT over an existing key with 409 (no overwrite-in-place), so
+    genuine overwrite means delete-then-put.
+    """
+    from rahcp_client.errors import NotFoundError
+
+    try:
+        await s3.delete(bucket, key)
+    except NotFoundError:
+        pass
+
+
+async def put_with_conflict_policy(
+    do_put: Callable[[], Awaitable[str]],
+    s3: S3Client,
+    bucket: str,
+    key: str,
+    size: int,
+    *,
+    policy: ConflictPolicy,
+    tracker: TrackerProtocol,
+    done_keys: set[str],
+    on_error: Callable[[str, Exception], None] | None,
+) -> tuple[str | None, tuple[str, int] | None]:
+    """Run ``do_put`` and apply the conflict policy to a 409 from the store.
+
+    Returns ``(etag, short_circuit)``. When ``short_circuit`` is not ``None`` the
+    caller returns it directly (the ``skipped``/``error`` outcome). Otherwise the
+    PUT succeeded and ``etag`` holds the object ETag — under ``overwrite`` this may
+    be after a delete-then-retry (HCP won't PUT over an existing key).
+    """
+    try:
+        return await do_put(), None
+    except Exception as exc:
+        if not _is_conflict(exc):
+            mark_error(tracker, key, size, exc, on_error, phase="upload")
+            return None, ("error", 0)
+        if policy is not ConflictPolicy.overwrite:
+            return None, conflict_during_put(
+                exc,
+                key,
+                size,
+                policy=policy,
+                tracker=tracker,
+                done_keys=done_keys,
+                on_error=on_error,
+            )
+    # overwrite: the object exists — delete it, then PUT again.
+    try:
+        await _delete_if_present(s3, bucket, key)
+        return await do_put(), None
+    except Exception as exc:
+        mark_error(tracker, key, size, exc, on_error, phase="overwrite")
+        return None, ("error", 0)
 
 
 async def verify_remote_size(

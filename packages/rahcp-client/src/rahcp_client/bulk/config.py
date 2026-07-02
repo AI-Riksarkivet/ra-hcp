@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 from collections.abc import Callable
 
@@ -15,6 +16,22 @@ DEFAULT_CHUNK_SIZE = 4 * 1024 * 1024  # 4 MB
 DEFAULT_STREAM_THRESHOLD = (
     100 * 1024 * 1024
 )  # 100 MB — files below this are read in one shot
+
+
+class ConflictPolicy(StrEnum):
+    """What to do when an upload's destination key already exists in the bucket.
+
+    - ``overwrite`` — upload unconditionally, replacing the remote object
+      (no pre-flight HEAD).
+    - ``skip`` — keep the remote object and count the item as skipped; a
+      size mismatch between local and remote is logged as a warning.
+    - ``error`` — keep the remote object and record a conflict error for
+      the item (visible in the tracker and error callbacks).
+    """
+
+    overwrite = "overwrite"
+    skip = "skip"
+    error = "error"
 
 
 class TransferStats(BaseModel):
@@ -60,6 +77,7 @@ class BulkStreamConfig(BaseModel):
     workers: int = 10
     queue_depth: int = 8
     skip_existing: bool = True
+    on_conflict: ConflictPolicy | None = None
     retry_errors: bool = False
     validate_bytes: Callable[[bytes, str], None] | None = None
     verify_upload: bool = False
@@ -67,6 +85,12 @@ class BulkStreamConfig(BaseModel):
     on_progress: Callable[[TransferStats], None] | None = None
     on_error: Callable[[str, Exception], None] | None = None
     progress_interval: float = 5.0
+
+    def conflict_policy(self) -> ConflictPolicy:
+        """Effective policy — explicit ``on_conflict`` wins over legacy ``skip_existing``."""
+        if self.on_conflict is not None:
+            return self.on_conflict
+        return ConflictPolicy.skip if self.skip_existing else ConflictPolicy.overwrite
 
 
 class BulkUploadConfig(BaseModel):
@@ -82,6 +106,7 @@ class BulkUploadConfig(BaseModel):
     workers: int = 10
     queue_depth: int = 8
     skip_existing: bool = True
+    on_conflict: ConflictPolicy | None = None
     retry_errors: bool = False
     include: list[str] = Field(default_factory=list)
     exclude: list[str] = Field(default_factory=list)
@@ -92,6 +117,12 @@ class BulkUploadConfig(BaseModel):
     on_progress: Callable[[TransferStats], None] | None = None
     on_error: Callable[[str, Exception], None] | None = None
     progress_interval: float = 5.0
+
+    def conflict_policy(self) -> ConflictPolicy:
+        """Effective policy — explicit ``on_conflict`` wins over legacy ``skip_existing``."""
+        if self.on_conflict is not None:
+            return self.on_conflict
+        return ConflictPolicy.skip if self.skip_existing else ConflictPolicy.overwrite
 
 
 class BulkDownloadConfig(BaseModel):
