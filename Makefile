@@ -59,18 +59,18 @@ skills:
 
 ## fmt: format all code (backend + frontend)
 fmt:
-	cd backend && uvx ruff format .
+	cd backend && uv run ruff format .
 	cd frontend && bun run format
 
 ## lint: lint all code (backend + frontend)
 lint:
-	cd backend && uvx ruff check .
+	cd backend && uv run ruff check .
 	cd frontend && bun run check
 
 ## quality: format, lint, and type-check everything
 quality: fmt lint
 	cd frontend && bun run check || echo "Warning: frontend type errors (see above)"
-	cd backend && uvx ty check || echo "Warning: backend type errors (see above)"
+	cd backend && uv run ty check || echo "Warning: backend type errors (see above)"
 
 # ── API ──────────────────────────────────────────────────────────────
 

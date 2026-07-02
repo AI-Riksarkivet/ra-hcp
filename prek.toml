@@ -1,0 +1,54 @@
+# Pre-commit hooks, run via prek (https://github.com/j178/prek).
+# Install once:  prek install && prek install --hook-type commit-msg
+# Run manually:  prek run --all-files
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v5.0.0"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-yaml" },
+  { id = "check-toml" },
+  { id = "check-added-large-files" },
+  { id = "check-merge-conflict" },
+]
+
+# Format + lint Python. Pinned to the ruff version the backend CI uses
+# (backend runs `uv run ruff` at 0.15.17), so prek and CI never disagree.
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.17"
+hooks = [
+  { id = "ruff-format" },
+  { id = "ruff", args = ["--fix"] },
+]
+
+# Enforce Conventional Commits (matches cliff.toml / release notes).
+[[repos]]
+repo = "https://github.com/compilerla/conventional-pre-commit"
+rev = "v4.3.0"
+
+[[repos.hooks]]
+id = "conventional-pre-commit"
+stages = ["commit-msg"]
+args = ["feat", "fix", "docs", "refactor", "test", "chore", "perf", "ci", "build", "revert"]
+
+[[repos]]
+repo = "local"
+
+# Type-check the backend the same way CI does (cd backend && uv run ty check).
+[[repos.hooks]]
+id = "ty-check"
+name = "ty type check (backend)"
+entry = "bash -c 'cd backend && uv run ty check'"
+language = "system"
+pass_filenames = false
+
+# Reject Co-Authored-By: Claude trailers (project convention).
+[[repos.hooks]]
+id = "no-co-authored-by-claude"
+name = "reject Co-Authored-By Claude"
+entry = "sh -c '! grep -qi \"co-authored-by.*claude\" \"$1\"' --"
+language = "system"
+stages = ["commit-msg"]
