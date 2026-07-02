@@ -2162,6 +2162,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rahcp-transkribus" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>rahcp transkribus</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2218,6 +2229,33 @@
     
   
   IIIF Downloader
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transkribus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Transkribus Exporter
 
     
   </span>
@@ -2805,6 +2843,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#rahcp-transkribus" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>rahcp transkribus</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2983,6 +3032,13 @@ uv<span class="w"> </span>run<span class="w"> </span>rahcp<span class="w"> </spa
 <span class="w">    </span><span class="nt">iiif_timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
 <span class="w">    </span><span class="nt">iiif_query_params</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">full/max/0/default.jpg</span><span class="w">   </span><span class="c1"># IIIF image API params</span>
 <span class="w">    </span><span class="nt">iiif_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span><span class="w">                 </span><span class="c1"># concurrent IIIF downloads</span>
+
+<span class="w">    </span><span class="c1"># Transkribus export settings (rahcp transkribus commands)</span>
+<span class="w">    </span><span class="nt">transkribus_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://transkribus.eu/TrpServer/rest</span>
+<span class="w">    </span><span class="nt">transkribus_username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">me@example.se</span>
+<span class="w">    </span><span class="nt">transkribus_password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<span class="w">    </span><span class="nt">transkribus_timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+<span class="w">    </span><span class="nt">transkribus_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span><span class="w">          </span><span class="c1"># concurrent export workers</span>
 
 <span class="w">  </span><span class="nt">prod</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://hcp-api.example.com/api/v1</span>
@@ -4252,6 +4308,67 @@ rahcp<span class="w"> </span>s3<span class="w"> </span>upload-all<span class="w"
 <span class="w">    </span><span class="nt">iiif_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
 </code></pre></div>
 <p>Override priority: CLI flags &gt; env vars (<code>IIIF_URL</code>) &gt; config file &gt; defaults.</p>
+<h3 id="rahcp-transkribus"><code>rahcp transkribus</code><a class="headerlink" href="#rahcp-transkribus" title="Permanent link">&para;</a></h3>
+<p>Export ground-truth PAGE/ALTO XML transcripts and page images from a
+<a href="https://transkribus.eu/">Transkribus</a> collection — to a local directory, or
+streamed straight into an HCP bucket. Both commands are resumable via the
+transfer tracker (<code>~/.rahcp/.transkribus-export.db</code> by default).</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Export a collection to disk (PAGE XML + images)</span>
+rahcp<span class="w"> </span>transkribus<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="m">1944790</span><span class="w"> </span>-o<span class="w"> </span>./export<span class="w"> </span>-U<span class="w"> </span>me@example.se<span class="w"> </span>-P<span class="w"> </span>secret
+
+<span class="c1"># Only ground-truth, ALTO format, no images, limited to specific documents</span>
+rahcp<span class="w"> </span>transkribus<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="m">1944790</span><span class="w"> </span>-o<span class="w"> </span>./export<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--status<span class="w"> </span>GT<span class="w"> </span>--format<span class="w"> </span>alto<span class="w"> </span>--no-images<span class="w"> </span>--doc-ids<span class="w"> </span><span class="m">1454602</span>,4869751
+
+<span class="c1"># Stream a whole collection straight into an HCP bucket (no local disk)</span>
+rahcp<span class="w"> </span>transkribus<span class="w"> </span>upload<span class="w"> </span><span class="m">1944790</span><span class="w"> </span>my-bucket<span class="w"> </span>--prefix<span class="w"> </span>medieval/<span class="w"> </span>--workers<span class="w"> </span><span class="m">8</span>
+
+<span class="c1"># Choose what happens when a key already exists in the bucket</span>
+rahcp<span class="w"> </span>transkribus<span class="w"> </span>upload<span class="w"> </span><span class="m">1944790</span><span class="w"> </span>my-bucket<span class="w"> </span>--on-conflict<span class="w"> </span>skip<span class="w">       </span><span class="c1"># keep remote (default)</span>
+rahcp<span class="w"> </span>transkribus<span class="w"> </span>upload<span class="w"> </span><span class="m">1944790</span><span class="w"> </span>my-bucket<span class="w"> </span>--on-conflict<span class="w"> </span>overwrite<span class="w">  </span><span class="c1"># replace remote</span>
+rahcp<span class="w"> </span>transkribus<span class="w"> </span>upload<span class="w"> </span><span class="m">1944790</span><span class="w"> </span>my-bucket<span class="w"> </span>--on-conflict<span class="w"> </span>error<span class="w">      </span><span class="c1"># fail the item</span>
+
+<span class="c1"># Cron-ready one pass: stream to the bucket AND keep a local archive, with guards</span>
+rahcp<span class="w"> </span>transkribus<span class="w"> </span>upload<span class="w"> </span><span class="m">1944790</span><span class="w"> </span>my-bucket<span class="w"> </span>--prefix<span class="w"> </span>medieval/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-dir<span class="w"> </span>/data/transkribus<span class="w"> </span>--validate<span class="w"> </span>--verify<span class="w"> </span>--on-conflict<span class="w"> </span>skip
+</code></pre></div>
+<p>The <code>upload</code> command is a single idempotent job you can put on any scheduler
+(Unix cron, Argo <code>CronWorkflow</code>, k8s <code>CronJob</code>) at any cadence. It is
+<strong>idempotent</strong> (the tracker skips already-done files on re-run, so nothing is
+uploaded twice), can <strong>validate</strong> image bytes (<code>--validate</code>) and <strong>verify</strong> remote
+size (<code>--verify</code>), tees a <strong>local archive</strong> alongside the bucket copy in the same
+pass (<code>--archive-dir</code>), and <strong>fails loud</strong>: <code>--fail-on-error</code> (default on) exits
+non-zero if any item failed so the scheduler marks the run failed and the next run
+resumes it — exit <code>0</code> = all uploaded, <code>1</code> = something failed, <code>130</code> = interrupted.
+Use <code>--no-fail-on-error</code> to always exit 0.</p>
+<p>A re-run picks up <strong>new</strong> pages/documents and retries failures. To also re-sync
+transcripts <strong>corrected in place</strong> (same key, new Transkribus <code>tsId</code>), add
+<code>--check-updates</code> — it remembers each transcript's synced version in a sidecar DB
+(<code>&lt;tracker-db&gt;.versions.db</code>, override with <code>--version-db</code>) and re-uploads only the
+changed ones (implies <code>--on-conflict overwrite</code>). Persist the tracker DB (and the
+versions DB and <code>--archive-dir</code>) across runs — a mounted volume in Argo/k8s, or a
+<code>postgresql://</code> tracker DSN — so resume and change detection work run to run.</p>
+<div class="admonition note">
+<p class="admonition-title">Overwrite on HCP</p>
+<p>HCP has no overwrite-in-place — a PUT over an existing key returns <code>409</code>. The
+bulk engine handles <code>--on-conflict overwrite</code> (and <code>--check-updates</code>) by
+<strong>deleting the object then re-uploading</strong>, so overwrite genuinely replaces the
+object on HCP.</p>
+</div>
+<p>Credentials come from <code>--username</code>/<code>--password</code> flags, the
+<code>TRANSKRIBUS_USERNAME</code>/<code>TRANSKRIBUS_PASSWORD</code> env vars, or the profile's
+<code>transkribus_username</code>/<code>transkribus_password</code> keys. <code>--format alto</code> requires the
+<code>page-to-alto</code> tool (<code>uv pip install "rahcp-transkribus[alto]"</code>).</p>
+<p>Transkribus settings can be configured per profile in <code>config.yaml</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">profiles</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">dev</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">transkribus_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://transkribus.eu/TrpServer/rest</span>
+<span class="w">    </span><span class="nt">transkribus_username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">me@example.se</span>
+<span class="w">    </span><span class="nt">transkribus_password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<span class="w">    </span><span class="nt">transkribus_timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+<span class="w">    </span><span class="nt">transkribus_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+</code></pre></div>
+<p>Override priority: CLI flags &gt; env vars (<code>TRANSKRIBUS_URL</code>, <code>TRANSKRIBUS_USERNAME</code>, <code>TRANSKRIBUS_PASSWORD</code>) &gt; config file &gt; defaults.</p>
 
 
 

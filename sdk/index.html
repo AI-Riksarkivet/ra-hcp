@@ -1971,6 +1971,33 @@
   
   
     <li class="md-nav__item">
+      <a href="./transkribus/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Transkribus Exporter
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="./etl/" class="md-nav__link">
         
   
@@ -2378,26 +2405,31 @@
 
 
 <h1 id="python-sdk">Python SDK<a class="headerlink" href="#python-sdk" title="Permanent link">&para;</a></h1>
-<p>The <code>rahcp</code> Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a <a href="https://docs.astral.sh/uv/concepts/workspaces/">uv workspace</a> with six installable packages:</p>
+<p>The <code>rahcp</code> Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a <a href="https://docs.astral.sh/uv/concepts/workspaces/">uv workspace</a> with seven installable packages:</p>
 <pre class="mermaid"><code>graph TD
     ROOT["rahcp (umbrella)"]
     TRACKER["rahcp-tracker&lt;br/&gt;&lt;small&gt;Transfer state tracking&lt;/small&gt;"]
     CLIENT["rahcp-client&lt;br/&gt;&lt;small&gt;Async HTTP client&lt;/small&gt;"]
     CLI["rahcp-cli&lt;br/&gt;&lt;small&gt;Typer CLI&lt;/small&gt;"]
     IIIF["rahcp-iiif&lt;br/&gt;&lt;small&gt;IIIF image downloader&lt;/small&gt;"]
+    TK["rahcp-transkribus&lt;br/&gt;&lt;small&gt;Transkribus exporter&lt;/small&gt;"]
     ETL["rahcp-etl&lt;br/&gt;&lt;small&gt;JetStream pipelines&lt;/small&gt;"]
     VAL["rahcp-validate&lt;br/&gt;&lt;small&gt;File validation&lt;/small&gt;"]
 
     ROOT --&gt; CLIENT
     ROOT --&gt; CLI
     ROOT -.-&gt;|optional| IIIF
+    ROOT -.-&gt;|optional| TK
     ROOT -.-&gt;|optional| ETL
     ROOT -.-&gt;|optional| VAL
     CLIENT --&gt; TRACKER
     IIIF --&gt; TRACKER
     IIIF -.-&gt;|optional| VAL
+    TK --&gt; TRACKER
+    TK -.-&gt;|optional| VAL
     CLI --&gt; CLIENT
     CLI --&gt; IIIF
+    CLI --&gt; TK
     CLI -.-&gt;|optional| VAL
     ETL --&gt; CLIENT</code></pre>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
@@ -2416,6 +2448,9 @@ uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </s
 
 <span class="c1"># With IIIF image downloader</span>
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;rahcp[iiif]&quot;</span>
+
+<span class="c1"># With Transkribus collection exporter</span>
+uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;rahcp[transkribus]&quot;</span>
 
 <span class="c1"># Everything</span>
 uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;rahcp[all]&quot;</span>
@@ -2459,6 +2494,11 @@ uv<span class="w"> </span>run<span class="w"> </span>rahcp<span class="w"> </spa
 <td><a href="iiif/">rahcp-iiif</a></td>
 <td>IIIF downloader</td>
 <td>Async IIIF image downloader with parallel workers</td>
+</tr>
+<tr>
+<td><a href="transkribus/">rahcp-transkribus</a></td>
+<td>Transkribus exporter</td>
+<td>Async PAGE/ALTO + image exporter for Transkribus collections</td>
 </tr>
 <tr>
 <td><a href="etl/">rahcp-etl</a></td>

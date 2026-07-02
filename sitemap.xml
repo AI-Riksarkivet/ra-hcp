@@ -106,6 +106,9 @@
         <loc>https://ai-riksarkivet.github.io/hcp/sdk/iiif/</loc>
       </url>
       <url>
+        <loc>https://ai-riksarkivet.github.io/hcp/sdk/transkribus/</loc>
+      </url>
+      <url>
         <loc>https://ai-riksarkivet.github.io/hcp/sdk/etl/</loc>
       </url>
       <url>
