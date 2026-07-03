@@ -1,10 +1,21 @@
 [project]
 name = "rahcp"
-version = "0.1.0"
-description = "Python SDK & CLI for HCP Unified API"
+version = "0.1.1"
+description = "Async Python SDK & CLI for the Hitachi Content Platform (HCP) Unified API — S3, IIIF, and Transkribus with resumable bulk transfers"
+readme = "README.pypi.md"
 requires-python = ">=3.13"
 license = "Apache-2.0"
 authors = [{ name = "Riksarkivet" }]
+keywords = ["hcp", "hitachi-content-platform", "s3", "iiif", "transkribus", "async", "sdk", "cli", "riksarkivet"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "Framework :: AsyncIO",
+    "Topic :: System :: Archiving",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 # Single published distribution. The CLI lives natively at src/rahcp/cli; the
 # sibling modules stay as packages/ workspace members for development but are
 # copied into src/ and bundled into this one wheel at build time. So the deps
