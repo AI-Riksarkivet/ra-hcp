@@ -3,9 +3,9 @@
 Async Transkribus collection exporter. Downloads ground-truth PAGE/ALTO XML transcripts and page images from a [Transkribus](https://transkribus.eu/) collection in parallel, with resumable tracking. Export to a local directory, or stream straight into an HCP bucket.
 
 ```bash
-uv pip install rahcp-transkribus
-# With image validation:
-uv pip install "rahcp-transkribus[validate]"
+uv pip install rahcp
+# With image validation and/or PAGE->ALTO conversion:
+uv pip install "rahcp[validate,alto]"
 # With PAGE→ALTO conversion (pulls in ocrd-page-to-alto):
 uv pip install "rahcp-transkribus[alto]"
 ```

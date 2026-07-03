@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from typer.testing import CliRunner
 
-from rahcp_cli.main import app
+from rahcp.cli.main import app
 
 runner = CliRunner()
 
@@ -43,9 +43,9 @@ class FakeClient:
 def _invoke(args, **method_returns):
     client = FakeClient(**method_returns)
     with (
-        patch("rahcp_cli.s3.make_client", return_value=client),
-        patch("rahcp_cli.namespace.make_client", return_value=client),
-        patch("rahcp_cli.auth.make_client", return_value=client),
+        patch("rahcp.cli.s3.make_client", return_value=client),
+        patch("rahcp.cli.namespace.make_client", return_value=client),
+        patch("rahcp.cli.auth.make_client", return_value=client),
     ):
         result = runner.invoke(app, args)
     return result, client
@@ -184,9 +184,9 @@ def test_s3_download_all(tmp_path):
     client.s3.download = AsyncMock(side_effect=_fake_download(tmp_path))
 
     with (
-        patch("rahcp_cli.s3.make_client", return_value=client),
-        patch("rahcp_cli.namespace.make_client", return_value=client),
-        patch("rahcp_cli.auth.make_client", return_value=client),
+        patch("rahcp.cli.s3.make_client", return_value=client),
+        patch("rahcp.cli.namespace.make_client", return_value=client),
+        patch("rahcp.cli.auth.make_client", return_value=client),
     ):
         tracker_db = str(tmp_path / ".tracker.db")
         result = runner.invoke(
@@ -224,9 +224,9 @@ def test_s3_download_all_skips_existing(tmp_path):
     client.s3.download = AsyncMock(side_effect=_fake_download(tmp_path))
 
     with (
-        patch("rahcp_cli.s3.make_client", return_value=client),
-        patch("rahcp_cli.namespace.make_client", return_value=client),
-        patch("rahcp_cli.auth.make_client", return_value=client),
+        patch("rahcp.cli.s3.make_client", return_value=client),
+        patch("rahcp.cli.namespace.make_client", return_value=client),
+        patch("rahcp.cli.auth.make_client", return_value=client),
     ):
         tracker_db = str(tmp_path / ".tracker.db")
         result = runner.invoke(
@@ -260,7 +260,7 @@ def test_auth_whoami():
     )
     client = FakeClient()
     client.token = f"header.{payload}.signature"
-    with patch("rahcp_cli.auth.make_client", return_value=client):
+    with patch("rahcp.cli.auth.make_client", return_value=client):
         result = runner.invoke(app, ["auth", "whoami"])
     assert result.exit_code == 0
     assert "testuser" in result.output

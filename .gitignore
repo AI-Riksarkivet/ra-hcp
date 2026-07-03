@@ -13,6 +13,14 @@ __pycache__/
 *.pyc
 .venv/
 
+# SDK build: siblings are copied into src/ at build time (see .dagger BuildSdk);
+# never commit them or the build artifacts.
+/src/rahcp_*/
+/src/*.egg-info/
+/dist/
+/build/
+*.egg-info/
+
 # Frontend
 frontend/node_modules/
 frontend/.svelte-kit/
@@ -34,7 +42,7 @@ dump/
 # Docs
 site/
 
-# 
+#
 adhoc_downloader/
 
 # local trash

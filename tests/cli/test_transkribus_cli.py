@@ -6,7 +6,7 @@ import httpx
 import respx
 from typer.testing import CliRunner
 
-from rahcp_cli.main import app
+from rahcp.cli.main import app
 
 runner = CliRunner()
 
@@ -156,7 +156,7 @@ def test_export_local_writes_files(tmp_path):
 def test_upload_streams_to_bucket(tmp_path):
     _mock_transkribus(respx.mock)
     client = _FakeHCPClient()
-    with patch("rahcp_cli.transkribus.make_client", return_value=client):
+    with patch("rahcp.cli.transkribus.make_client", return_value=client):
         result = runner.invoke(
             app,
             [
@@ -193,7 +193,7 @@ def test_upload_archive_dir_tees_local_copy(tmp_path):
     _mock_transkribus(respx.mock)
     archive = tmp_path / "archive"
     client = _FakeHCPClient()
-    with patch("rahcp_cli.transkribus.make_client", return_value=client):
+    with patch("rahcp.cli.transkribus.make_client", return_value=client):
         result = runner.invoke(
             app,
             [
@@ -229,7 +229,7 @@ def test_upload_fail_on_error_exits_nonzero(tmp_path):
     client = _FakeHCPClient()
     # Key already exists → on-conflict=error records a conflict for every item.
     client.s3.head = AsyncMock(return_value={"content-length": "5"})
-    with patch("rahcp_cli.transkribus.make_client", return_value=client):
+    with patch("rahcp.cli.transkribus.make_client", return_value=client):
         result = runner.invoke(
             app,
             [
@@ -257,7 +257,7 @@ def test_upload_no_fail_on_error_exits_zero(tmp_path):
     _mock_transkribus(respx.mock)
     client = _FakeHCPClient()
     client.s3.head = AsyncMock(return_value={"content-length": "5"})
-    with patch("rahcp_cli.transkribus.make_client", return_value=client):
+    with patch("rahcp.cli.transkribus.make_client", return_value=client):
         result = runner.invoke(
             app,
             [

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import typer
 
-from rahcp_cli import auth, iiif, namespace, s3, transkribus
-from rahcp_cli.config import CONFIG_DIR, load_config
+from rahcp.cli import auth, iiif, namespace, s3, transkribus
+from rahcp.cli.config import CONFIG_DIR, load_config
 
 app = typer.Typer(
     name="rahcp",

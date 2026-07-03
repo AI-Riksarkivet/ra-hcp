@@ -27,3 +27,30 @@ jobs:
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
           body_path: RELEASE_NOTES.md
+
+  # Publish the rahcp SDK to PyPI. Runs only after a release is cut (needs:
+  # release), on the same v* tag push — so the SDK ships exactly when a release
+  # is created and never on ordinary pushes. Kept in this workflow (not a
+  # separate `release: published` one) because a release created by the default
+  # GITHUB_TOKEN does not emit events that trigger other workflows.
+  publish-sdk:
+    name: Publish rahcp SDK to PyPI
+    needs: release
+    runs-on: ubuntu-latest
+    environment: pypi # configure required reviewers here for a manual approval gate
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Builds the single rahcp wheel + sdist (siblings bundled in) and uploads
+      # via `uv publish` (--check-url skips a version already on PyPI, so
+      # re-running a release is safe). See .dagger/sdk.go :: PublishSdk.
+      - name: Build and publish rahcp SDK
+        uses: dagger/dagger-for-github@496f1b3d8b0d823834c13e67cf8a8e08ca3b9602 # v8.4.0
+        env:
+          PYPI_TOKEN: ${{ secrets.RA_SDK_PYPI_TOKEN }}
+        with:
+          verb: call
+          args: publish-sdk --source=. --token=env:PYPI_TOKEN
+          version: "0.21.7"

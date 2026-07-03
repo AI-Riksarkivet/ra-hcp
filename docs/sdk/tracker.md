@@ -1,9 +1,9 @@
 # rahcp-tracker
 
-Standalone package for pluggable transfer state tracking. Used by both `rahcp-client` (S3 bulk transfers) and `rahcp-iiif` (IIIF downloads).
+Pluggable transfer state tracking, bundled in `rahcp`. Used by both `rahcp_client` (S3 bulk transfers) and `rahcp_iiif` (IIIF downloads).
 
 ```bash
-uv pip install rahcp-tracker
+uv pip install rahcp   # rahcp_tracker is bundled — no separate install
 ```
 
 | Class | Description |

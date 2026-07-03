@@ -7,7 +7,7 @@ import sys
 from collections.abc import Coroutine
 from typing import Any
 
-from rahcp_cli._output import console
+from rahcp.cli._output import console
 
 
 def run(coro: Coroutine[Any, Any, None]) -> None:

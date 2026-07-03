@@ -7,9 +7,9 @@ from pathlib import Path
 
 import typer
 
-from rahcp_cli._client import make_client
-from rahcp_cli._output import console
-from rahcp_cli._run import run
+from rahcp.cli._client import make_client
+from rahcp.cli._output import console
+from rahcp.cli._run import run
 from rahcp_tracker import TrackerProtocol, TransferStatus
 
 app = typer.Typer(help="IIIF image download operations", no_args_is_help=True)

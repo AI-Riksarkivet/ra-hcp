@@ -1,11 +1,11 @@
 # rahcp-iiif
 
-Async IIIF image downloader with resumable tracking. Downloads images from Riksarkivet IIIF endpoints in parallel, with optional validation via `rahcp-validate`.
+Async IIIF image downloader with resumable tracking. Downloads images from Riksarkivet IIIF endpoints in parallel, with optional validation via `rahcp_validate`.
 
 ```bash
-uv pip install rahcp-iiif
+uv pip install rahcp
 # With validation:
-uv pip install "rahcp-iiif[validate]"
+uv pip install "rahcp[validate]"
 ```
 
 ## Quick start

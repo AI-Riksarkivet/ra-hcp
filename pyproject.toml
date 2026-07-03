@@ -3,14 +3,66 @@ name = "rahcp"
 version = "0.1.0"
 description = "Python SDK & CLI for HCP Unified API"
 requires-python = ">=3.13"
-dependencies = ["rahcp-client", "rahcp-cli"]
+license = "Apache-2.0"
+authors = [{ name = "Riksarkivet" }]
+# Single published distribution. The CLI lives natively at src/rahcp/cli; the
+# sibling modules stay as packages/ workspace members for development but are
+# copied into src/ and bundled into this one wheel at build time. So the deps
+# below are the real third-party deps; heavy/optional ones are extras.
+dependencies = [
+    "httpx>=0.28",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.13",
+    "tenacity>=9.0",
+    "sqlmodel>=0.0.22",
+    "typer>=0.15",
+    "rich>=13.0",
+    "pyyaml>=6.0",
+]
 
 [project.optional-dependencies]
-etl = ["rahcp-etl"]
-validate = ["rahcp-validate"]
-iiif = ["rahcp-iiif"]
-transkribus = ["rahcp-transkribus"]
-all = ["rahcp-etl", "rahcp-validate", "rahcp-iiif", "rahcp-transkribus"]
+validate = ["pillow>=11.0"]                 # rahcp_validate + --validate flag
+etl = ["nats-py>=2.9"]                       # rahcp_etl (JetStream orchestration)
+postgres = ["psycopg[binary]>=3.2"]         # rahcp_tracker Postgres backend
+alto = ["ocrd-page-to-alto>=2.1.0"]         # rahcp transkribus --fmt alto
+otel = [
+    "opentelemetry-api>=1.29",
+    "opentelemetry-sdk>=1.29",
+    "opentelemetry-exporter-otlp>=1.29",
+]
+all = [
+    "pillow>=11.0",
+    "nats-py>=2.9",
+    "psycopg[binary]>=3.2",
+    "ocrd-page-to-alto>=2.1.0",
+    "opentelemetry-api>=1.29",
+    "opentelemetry-sdk>=1.29",
+    "opentelemetry-exporter-otlp>=1.29",
+]
+
+[project.scripts]
+rahcp = "rahcp.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/AI-Riksarkivet/ra-hcp"
+Repository = "https://github.com/AI-Riksarkivet/ra-hcp"
+Issues = "https://github.com/AI-Riksarkivet/ra-hcp/issues"
+
+# The wheel ships everything under src/. In the repo src/ holds only the rahcp
+# package (umbrella + rahcp.cli); the build step (make build-sdk / .dagger
+# BuildSdk) copies the sibling modules from packages/*/src into src/ first, so
+# the one wheel is self-contained. sources=["src"] strips the src/ prefix, making
+# each dir a top-level import package; it is adaptive, so in dev (no copy) only
+# rahcp ships and the siblings resolve from the workspace instead.
+[tool.hatch.build.targets.wheel]
+sources = ["src"]
+include = ["src"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests"]
+
+[tool.uv]
+package = true # rahcp is a real package (installed editable in dev, wheel on publish)
 
 [tool.uv.workspace]
 members = ["packages/*"]
@@ -18,12 +70,11 @@ exclude = ["backend"]
 
 [tool.uv.sources]
 rahcp-client = { workspace = true }
-rahcp-cli = { workspace = true }
-rahcp-etl = { workspace = true }
-rahcp-validate = { workspace = true }
+rahcp-tracker = { workspace = true }
 rahcp-iiif = { workspace = true }
 rahcp-transkribus = { workspace = true }
-rahcp-tracker = { workspace = true }
+rahcp-validate = { workspace = true }
+rahcp-etl = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -32,13 +83,22 @@ dev = [
     "respx>=0.22",
     "moto[s3,server]>=5.0",
     "boto3>=1.35",
+    "pillow>=11.0",
+    "nats-py>=2.9",
+    "psycopg[binary]>=3.2",
+    "pytest-postgresql>=6.1",
+    # sibling workspace modules — editable in dev so the bundled code + moved
+    # tests import; never part of the published wheel's metadata (bundled instead).
+    "rahcp-client",
+    "rahcp-tracker",
+    "rahcp-iiif",
+    "rahcp-transkribus",
     "rahcp-validate",
+    "rahcp-etl",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+# Project convention: importlib import-mode (sibling test suites share basenames).
+addopts = "--import-mode=importlib"

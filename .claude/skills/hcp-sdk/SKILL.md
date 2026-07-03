@@ -11,25 +11,33 @@ description: >
 
 Async Python SDK for HCP (Hitachi Content Platform) S3 storage and IIIF image downloads.
 
-## Packages
+## Install
+
+Everything ships in **one package**, `rahcp` — there are no separate `rahcp-*`
+packages to install. Optional/heavy deps are extras:
 
 ```
-pip install rahcp                 # SDK + CLI
-pip install rahcp-tracker         # transfer tracking (standalone)
-pip install rahcp-iiif            # IIIF image downloader
-pip install rahcp-transkribus     # Transkribus collection exporter
-pip install "rahcp[validate]"     # + image validation
+pip install rahcp                 # client, CLI, IIIF, Transkribus, tracker
+pip install "rahcp[validate]"     # + image validation (Pillow)
+pip install "rahcp[etl]"          # + NATS JetStream ETL
+pip install "rahcp[alto]"         # + Transkribus PAGE->ALTO (ocrd)
+pip install "rahcp[postgres]"     # + Postgres tracker backend
 pip install "rahcp[all]"          # everything
 ```
 
-| Package | What it does |
-|---------|-------------|
-| `rahcp-client` | Async HCP API client (auth, S3, MAPI, presigned URLs, bulk transfers) |
-| `rahcp-tracker` | Resumable transfer tracking with SQLite (pluggable via Protocol) |
-| `rahcp-iiif` | IIIF manifest parsing + parallel image downloads |
-| `rahcp-transkribus` | Export PAGE/ALTO XML + images from Transkribus collections |
-| `rahcp-cli` | CLI: `rahcp s3`, `rahcp iiif`, `rahcp transkribus`, `rahcp ns`, `rahcp auth` |
-| `rahcp-validate` | JPEG/TIFF/PNG validation |
+Import names are unchanged (the modules are bundled under their own top-level
+names), so `from rahcp_client import ...` and `from rahcp_transkribus import ...`
+work straight after `pip install rahcp`:
+
+| Module | What it does |
+|--------|-------------|
+| `rahcp_client` | Async HCP API client (auth, S3, MAPI, presigned URLs, bulk transfers) |
+| `rahcp_tracker` | Resumable transfer tracking with SQLite (pluggable via Protocol) |
+| `rahcp_iiif` | IIIF manifest parsing + parallel image downloads |
+| `rahcp_transkribus` | Export PAGE/ALTO XML + images from Transkribus collections |
+| `rahcp.cli` | CLI: `rahcp s3`, `rahcp iiif`, `rahcp transkribus`, `rahcp ns`, `rahcp auth` |
+| `rahcp_validate` | JPEG/TIFF/PNG validation (extra: `rahcp[validate]`) |
+| `rahcp_etl` | NATS JetStream pipelines (extra: `rahcp[etl]`) |
 
 ## How data flows
 

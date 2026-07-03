@@ -7,9 +7,9 @@ from pathlib import Path
 
 import typer
 
-from rahcp_cli._client import make_client
-from rahcp_cli._output import console, print_json, print_table
-from rahcp_cli._run import run
+from rahcp.cli._client import make_client
+from rahcp.cli._output import console, print_json, print_table
+from rahcp.cli._run import run
 from rahcp_client.bulk import TransferStats
 from rahcp_tracker import TrackerProtocol
 

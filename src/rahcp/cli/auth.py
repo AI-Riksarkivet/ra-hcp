@@ -7,9 +7,9 @@ import json
 
 import typer
 
-from rahcp_cli._client import make_client
-from rahcp_cli._output import console, print_json
-from rahcp_cli._run import run
+from rahcp.cli._client import make_client
+from rahcp.cli._output import console, print_json
+from rahcp.cli._run import run
 
 app = typer.Typer(help="Authentication", no_args_is_help=True)
 

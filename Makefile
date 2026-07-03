@@ -11,7 +11,8 @@ export PATH := $(HOME)/.bun/bin:$(PATH)
         docs docs-build \
         checks test test-integration e2e serve-backend full-serve build \
         scan scan-backend scan-frontend scan-image \
-        publish publish-backend publish-frontend
+        publish publish-backend publish-frontend \
+        build-sdk publish-sdk publish-sdk-test
 
 ## help: list available targets
 help:
@@ -195,3 +196,20 @@ publish-frontend:
 	dagger call publish-frontend --source=. --tag=$(TAG) \
 		--docker-username=env:DOCKER_USERNAME \
 		--docker-password=env:DOCKER_PASSWORD
+
+# ── SDK (PyPI) ────────────────────────────────────────────────────────
+## build-sdk: build the rahcp wheel + sdist into ./dist
+build-sdk:
+	dagger call build-sdk --source=. export --path=dist
+
+## publish-sdk: build + publish the rahcp SDK to PyPI (RA_SDK_PYPI_TOKEN from .env)
+publish-sdk:
+	@RA_SDK_PYPI_TOKEN=$$(grep '^RA_SDK_PYPI_TOKEN=' .env | cut -d= -f2 | tr -d '"') \
+	dagger call publish-sdk --source=. --token=env:RA_SDK_PYPI_TOKEN
+
+## publish-sdk-test: build + publish the rahcp SDK to TestPyPI (TEST_PYPI_TOKEN from .env)
+publish-sdk-test:
+	@TEST_PYPI_TOKEN=$$(grep '^TEST_PYPI_TOKEN=' .env | cut -d= -f2 | tr -d '"') \
+	dagger call publish-sdk --source=. --token=env:TEST_PYPI_TOKEN \
+		--publish-url=https://test.pypi.org/legacy/ \
+		--check-url=https://test.pypi.org/simple/

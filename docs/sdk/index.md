@@ -1,6 +1,6 @@
 # Python SDK
 
-The `rahcp` Python SDK provides a lightweight, async-first client for the HCP Unified API. It is distributed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) with seven installable packages:
+The `rahcp` Python SDK provides a lightweight, async-first client for the HCP Unified API. It ships as a **single PyPI package** — `rahcp` — that bundles the client, CLI, transfer tracker, IIIF downloader, and Transkribus exporter; heavier capabilities (ETL, validation, ALTO, Postgres, OpenTelemetry) are opt-in [extras](#installation). Internally it is developed as a [uv workspace](https://docs.astral.sh/uv/concepts/workspaces/) of focused modules, all bundled into the one wheel:
 
 ```mermaid
 graph TD
@@ -36,29 +36,19 @@ graph TD
 Requires **Python >= 3.13** and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-# SDK + CLI (default)
+# Everything you normally need: client, CLI, IIIF, Transkribus, tracker
 uv pip install rahcp
 
-# With OpenTelemetry tracing
-uv pip install "rahcp-client[otel]"
-
-# With ETL pipelines (NATS JetStream)
-uv pip install "rahcp[etl]"
-
-# With image validation (Pillow)
-uv pip install "rahcp[validate]"
-
-# With IIIF image downloader
-uv pip install "rahcp[iiif]"
-
-# With Transkribus collection exporter
-uv pip install "rahcp[transkribus]"
-
-# Everything
-uv pip install "rahcp[all]"
+# Optional extras (heavier / niche deps)
+uv pip install "rahcp[validate]"   # image validation (Pillow)
+uv pip install "rahcp[etl]"        # NATS JetStream pipelines
+uv pip install "rahcp[alto]"       # Transkribus PAGE->ALTO conversion (ocrd)
+uv pip install "rahcp[postgres]"   # Postgres transfer-tracker backend
+uv pip install "rahcp[otel]"       # OpenTelemetry tracing
+uv pip install "rahcp[all]"        # all of the above
 ```
 
-The default install includes both the Python SDK (`rahcp-client`) and the CLI (`rahcp-cli`). The heavier packages (ETL, validation) are opt-in.
+The base `rahcp` install already bundles the client, the CLI (`rahcp s3` / `iiif` / `transkribus` / `ns` / `auth`), the IIIF downloader, the Transkribus exporter, and the tracker — there are no separate `rahcp-*` packages to install. The module import names are unchanged, so `from rahcp_client import HCPClient`, `from rahcp_iiif import download_batch`, and `from rahcp_transkribus import export_collection` all work after `pip install rahcp`.
 
 For local development from the repository:
 
